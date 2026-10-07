@@ -1,69 +1,234 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import {
+  getSupabase,
+  type Customer,
+  type Restaurant,
+  type Review,
+} from "@/lib/supabase";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+      <p className="text-sm font-medium uppercase tracking-wide text-orange-600">
+        Naila · test data
+      </p>
+      <Suspense fallback={<p className="mt-6 text-neutral-500">Loading data from Supabase…</p>}>
+        <Dashboard />
+      </Suspense>
+    </main>
+  );
+}
+
+// True if the birthday (any year) falls within the next 7 days, today included.
+function isBirthdayThisWeek(birthday: string | null, today: Date) {
+  if (!birthday) return false;
+  const [, m, d] = birthday.split("-").map(Number);
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(today);
+    day.setUTCDate(today.getUTCDate() + i);
+    if (day.getUTCMonth() + 1 === m && day.getUTCDate() === d) return true;
+  }
+  return false;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/London",
+  });
+}
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="text-amber-500" aria-label={`${rating} out of 5 stars`}>
+      {"★".repeat(rating)}
+      <span className="text-neutral-300">{"★".repeat(5 - rating)}</span>
+    </span>
+  );
+}
+
+async function Dashboard() {
+  // Always fetch fresh data on every visit.
+  await connection();
+  const supabase = getSupabase();
+
+  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes] =
+    await Promise.all([
+      supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
+      supabase.from("customers").select("*").order("name").returns<Customer[]>(),
+      supabase.from("reviews").select("*").order("review_date", { ascending: false }).returns<Review[]>(),
+      supabase.from("drafts").select("id", { count: "exact", head: true }),
+      supabase.from("sent_log").select("id", { count: "exact", head: true }),
+    ]);
+
+  const error =
+    restaurantRes.error ?? customersRes.error ?? reviewsRes.error ?? draftsRes.error ?? sentRes.error;
+  if (error) {
+    return (
+      <div className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">
+        <p className="font-semibold">Couldn’t load data from Supabase</p>
+        <p className="mt-1 text-sm">{error.message}</p>
+      </div>
+    );
+  }
+
+  const restaurant = restaurantRes.data;
+  const customers = customersRes.data ?? [];
+  const reviews = reviewsRes.data ?? [];
+  if (!restaurant) {
+    return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
+  }
+
+  const today = new Date();
+  const birthdaysThisWeek = customers.filter((c) => isBirthdayThisWeek(c.birthday, today));
+  const avgRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : "–";
+
+  return (
+    <div className="mt-2 space-y-10">
+      {/* Restaurant */}
+      <section>
+        <h1 className="text-3xl font-bold">{restaurant.name}</h1>
+        <p className="mt-1 text-neutral-600 dark:text-neutral-400">
+          {restaurant.cuisine} · {restaurant.address} · {restaurant.phone}
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Customers" value={customers.length} />
+          <Stat label="Birthdays this week" value={birthdaysThisWeek.length} />
+          <Stat label="Reviews (avg)" value={`${reviews.length} (${avgRating}★)`} />
+          <Stat label="Drafts / sent" value={`${draftsRes.count ?? 0} / ${sentRes.count ?? 0}`} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mt-6 grid gap-6 md:grid-cols-3">
+          <Card title="Brand voice" className="md:col-span-2">
+            <p className="text-sm leading-relaxed">{restaurant.brand_voice}</p>
+          </Card>
+          <Card title="Opening hours">
+            <dl className="space-y-1 text-sm">
+              {Object.entries(restaurant.opening_hours).map(([day, hours]) => (
+                <div key={day} className="flex justify-between gap-4">
+                  <dt>{day}</dt>
+                  <dd className="text-neutral-600 dark:text-neutral-400">{hours}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
         </div>
-      </main>
+
+        <Card title="Menu" className="mt-6">
+          <div className="grid gap-6 sm:grid-cols-2">
+            {restaurant.menu.map((cat) => (
+              <div key={cat.category}>
+                <h3 className="font-semibold">{cat.category}</h3>
+                <ul className="mt-2 space-y-2 text-sm">
+                  {cat.items.map((item) => (
+                    <li key={item.name}>
+                      <div className="flex justify-between gap-4">
+                        <span>{item.name}</span>
+                        <span className="tabular-nums">£{item.price.toFixed(2)}</span>
+                      </div>
+                      {item.description && (
+                        <p className="text-neutral-500">{item.description}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      {/* Customers */}
+      <section>
+        <h2 className="text-2xl font-bold">Customers ({customers.length})</h2>
+        <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-neutral-100 dark:bg-neutral-900">
+              <tr>
+                <th className="px-3 py-2">Name</th>
+                <th className="px-3 py-2">WhatsApp</th>
+                <th className="px-3 py-2">Birthday</th>
+                <th className="px-3 py-2">Visits</th>
+                <th className="px-3 py-2">Last visit</th>
+                <th className="px-3 py-2">Marketing</th>
+                <th className="px-3 py-2">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.map((c) => {
+                const bday = isBirthdayThisWeek(c.birthday, today);
+                return (
+                  <tr
+                    key={c.id}
+                    className={`border-t border-neutral-200 dark:border-neutral-800 ${bday ? "bg-amber-50 dark:bg-amber-950/40" : ""}`}
+                  >
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">
+                      {c.name} {bday && <span title="Birthday this week">🎂</span>}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{c.phone}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{c.birthday && formatDate(c.birthday)}</td>
+                    <td className="px-3 py-2 tabular-nums">{c.visit_count}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{c.last_visit && formatDate(c.last_visit)}</td>
+                    <td className="px-3 py-2">{c.marketing_opt_in ? "Opted in" : "Opted out"}</td>
+                    <td className="px-3 py-2 text-neutral-500">{c.notes}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Reviews */}
+      <section>
+        <h2 className="text-2xl font-bold">Google reviews ({reviews.length})</h2>
+        <ul className="mt-3 grid gap-4 md:grid-cols-2">
+          {reviews.map((r) => (
+            <li key={r.id} className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{r.author_name}</span>
+                <Stars rating={r.rating} />
+              </div>
+              <p className="mt-2 text-sm leading-relaxed">{r.text}</p>
+              <p className="mt-2 text-xs text-neutral-500">
+                {formatDate(r.review_date)} · {r.replied ? "Replied" : "Not replied yet"}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+      <p className="text-xs text-neutral-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function Card({
+  title,
+  className = "",
+  children,
+}: {
+  title: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`rounded-lg border border-neutral-200 p-4 dark:border-neutral-800 ${className}`}>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">{title}</h2>
+      {children}
     </div>
   );
 }
