@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import {
   getSupabase,
   type Customer,
+  type Message,
   type Restaurant,
   type Review,
 } from "@/lib/supabase";
@@ -55,13 +56,19 @@ async function Dashboard() {
   await connection();
   const supabase = getSupabase();
 
-  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes] =
+  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes] =
     await Promise.all([
       supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
       supabase.from("customers").select("*").order("name").returns<Customer[]>(),
       supabase.from("reviews").select("*").order("review_date", { ascending: false }).returns<Review[]>(),
       supabase.from("drafts").select("id", { count: "exact", head: true }),
       supabase.from("sent_log").select("id", { count: "exact", head: true }),
+      supabase
+        .from("messages")
+        .select("id, direction, from_number, to_number, body, status, error, created_at")
+        .order("created_at", { ascending: false })
+        .limit(30)
+        .returns<Message[]>(),
     ]);
 
   const error =
@@ -78,6 +85,8 @@ async function Dashboard() {
   const restaurant = restaurantRes.data;
   const customers = customersRes.data ?? [];
   const reviews = reviewsRes.data ?? [];
+  // The messages table is added in step 2; don't break the page if it's missing.
+  const messages = messagesRes.error ? null : (messagesRes.data ?? []);
   if (!restaurant) {
     return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
   }
@@ -142,6 +151,36 @@ async function Dashboard() {
             ))}
           </div>
         </Card>
+      </section>
+
+      {/* WhatsApp log */}
+      <section>
+        <h2 className="text-2xl font-bold">WhatsApp messages (latest 30)</h2>
+        {messages === null ? (
+          <p className="mt-2 text-neutral-500">Message log not set up yet (run supabase/002_messages.sql).</p>
+        ) : messages.length === 0 ? (
+          <p className="mt-2 text-neutral-500">No messages yet. Send one to the sandbox number.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {messages.map((m) => (
+              <li
+                key={m.id}
+                className={`rounded-lg border p-3 text-sm ${
+                  m.direction === "inbound"
+                    ? "border-neutral-200 dark:border-neutral-800"
+                    : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/40"
+                }`}
+              >
+                <p className="text-xs text-neutral-500">
+                  {m.direction === "inbound" ? `From ${m.from_number}` : `Naila → ${m.to_number}`} ·{" "}
+                  {new Date(m.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })} · {m.status}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap">{m.body}</p>
+                {m.error && <p className="mt-1 text-xs text-red-600">Error: {m.error}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* Customers */}

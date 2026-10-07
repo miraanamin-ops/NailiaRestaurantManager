@@ -40,6 +40,17 @@ export type Customer = {
   notes: string | null;
 };
 
+export type Message = {
+  id: string;
+  direction: "inbound" | "outbound";
+  from_number: string;
+  to_number: string;
+  body: string;
+  status: "received" | "sent" | "failed";
+  error: string | null;
+  created_at: string;
+};
+
 export type Review = {
   id: string;
   author_name: string;
