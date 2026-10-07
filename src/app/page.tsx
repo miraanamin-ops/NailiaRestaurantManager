@@ -21,6 +21,32 @@ export default function Home() {
   );
 }
 
+type DraftRow = {
+  id: string;
+  kind: string;
+  content: string;
+  status: string;
+  waiting_for: string | null;
+  audience: string | null;
+  version: number;
+  created_at: string;
+};
+
+type FeedbackRow = {
+  id: string;
+  draft_kind: string | null;
+  kind: "edit" | "skip";
+  note: string;
+  created_at: string;
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
+  approved: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200",
+  skipped: "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200",
+  superseded: "bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400",
+};
+
 // True if the birthday (any year) falls within the next 7 days, today included.
 function isBirthdayThisWeek(birthday: string | null, today: Date) {
   if (!birthday) return false;
@@ -56,7 +82,7 @@ async function Dashboard() {
   await connection();
   const supabase = getSupabase();
 
-  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes] =
+  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes] =
     await Promise.all([
       supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
       supabase.from("customers").select("*").order("name").returns<Customer[]>(),
@@ -69,6 +95,18 @@ async function Dashboard() {
         .order("created_at", { ascending: false })
         .limit(30)
         .returns<Message[]>(),
+      supabase
+        .from("drafts")
+        .select("id, kind, content, status, waiting_for, audience, version, created_at")
+        .order("created_at", { ascending: false })
+        .limit(15)
+        .returns<DraftRow[]>(),
+      supabase
+        .from("draft_feedback")
+        .select("id, draft_kind, kind, note, created_at")
+        .order("created_at", { ascending: false })
+        .limit(15)
+        .returns<FeedbackRow[]>(),
     ]);
 
   const error =
@@ -87,6 +125,9 @@ async function Dashboard() {
   const reviews = reviewsRes.data ?? [];
   // The messages table is added in step 2; don't break the page if it's missing.
   const messages = messagesRes.error ? null : (messagesRes.data ?? []);
+  // Same for the approval-loop columns added in step 3.
+  const draftList = draftListRes.error ? null : (draftListRes.data ?? []);
+  const feedback = feedbackRes.error ? null : (feedbackRes.data ?? []);
   if (!restaurant) {
     return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
   }
@@ -151,6 +192,50 @@ async function Dashboard() {
             ))}
           </div>
         </Card>
+      </section>
+
+      {/* Drafts + feedback */}
+      <section>
+        <h2 className="text-2xl font-bold">Drafts (latest 15)</h2>
+        {draftList === null ? (
+          <p className="mt-2 text-neutral-500">Approval loop not set up yet (run supabase/003_approval_loop.sql).</p>
+        ) : draftList.length === 0 ? (
+          <p className="mt-2 text-neutral-500">No drafts yet. Text “NEW REVIEW” to the sandbox.</p>
+        ) : (
+          <ul className="mt-3 grid gap-3 md:grid-cols-2">
+            {draftList.map((d) => (
+              <li key={d.id} className="rounded-lg border border-neutral-200 p-3 text-sm dark:border-neutral-800">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium">
+                    {d.kind.replace("_", " ")} · {d.audience}
+                  </span>
+                  <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[d.status] ?? STATUS_STYLES.superseded}`}>
+                    {d.status}
+                    {d.waiting_for ? ` · waiting for ${d.waiting_for.replace("_", " ")}` : ""}
+                  </span>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap">{d.content}</p>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Version {d.version} · {new Date(d.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {feedback && feedback.length > 0 && (
+          <>
+            <h3 className="mt-6 text-lg font-semibold">What the assistant has learned (edits and skip reasons)</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {feedback.map((f) => (
+                <li key={f.id}>
+                  <span className="font-medium">{f.kind === "edit" ? "✏️ Edit" : "⏭️ Skip"}</span>{" "}
+                  <span className="text-neutral-500">({f.draft_kind?.replace("_", " ")})</span>: {f.note}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
 
       {/* WhatsApp log */}
