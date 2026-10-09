@@ -1,7 +1,7 @@
 import "server-only";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "birthday", "promotion", "other"] as const;
+export const DRAFT_KINDS = ["review_reply", "birthday", "promotion", "other", "email_campaign"] as const;
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
 
@@ -44,6 +44,7 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   birthday: "Birthday message",
   promotion: "Offer / promotion",
   other: "Message",
+  email_campaign: "Email campaign",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {

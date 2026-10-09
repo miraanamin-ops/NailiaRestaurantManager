@@ -15,6 +15,8 @@ async function del(table, build) {
 }
 
 await del("blocked_sends", (q) => q.gte("created_at", since));
+await del("customer_events", (q) => q.gte("created_at", since));
+await del("campaigns", (q) => q.gte("created_at", since)); // campaign_sends go with them
 await del("draft_feedback", (q) => q.gte("created_at", since));
 await del("sent_log", (q) => q.gte("sent_at", since));
 await del("drafts", (q) => q.gte("created_at", since));

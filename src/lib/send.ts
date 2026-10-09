@@ -1,5 +1,6 @@
 import "server-only";
 import { formatLondon, formatWindow, isInSendWindow, nextWindowStart } from "@/lib/clock";
+import { deliverCampaign, deliveryNote, getCampaignForDraft, recipientsFor } from "@/lib/campaigns";
 import { overCap } from "@/lib/discounts";
 import { check, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -7,12 +8,12 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 // The safety rules. Plain code only: every send goes through attemptSend,
 // which checks each rule right before anything is marked as sent.
 
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients";
 
 export type SendResult =
-  | { outcome: "sent"; draft: Draft }
+  | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window"; scheduledFor: Date | null; detail: string; draft: Draft }
-  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap"; detail: string; draft: Draft };
+  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients"; detail: string; draft: Draft };
 
 // approve: the owner tapped Approve. queue: a held draft being retried. test: the TEST SEND command.
 export type SendSource = "approve" | "queue" | "test";
@@ -79,6 +80,21 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     return { outcome: "queued", reason: "outside_window", scheduledFor: at, detail, draft: updated };
   }
 
+  // Rule: email campaigns only go to customers with valid consent who haven't
+  // unsubscribed (checked now, at send time). Nobody eligible = nothing to send.
+  if (draft.kind === "email_campaign") {
+    const campaign = await getCampaignForDraft(draft.id);
+    const { eligible, excluded } = campaign
+      ? await recipientsFor(restaurant, campaign.segment, now)
+      : { eligible: [], excluded: 0 };
+    if (!eligible.length) {
+      const detail = `No customers in this segment have valid email consent${excluded ? ` (${excluded} left out: no consent or unsubscribed)` : ""}.`;
+      const updated = await updateDraft(draft.id, { status: "blocked", block_reason: detail, scheduled_for: null });
+      await logBlock(draft, "no_recipients", detail);
+      return { outcome: "blocked", reason: "no_recipients", detail, draft: updated };
+    }
+  }
+
   // All rules passed. Claim the draft in one atomic update so that two sends
   // racing each other can't both succeed.
   const claim = await supabase
@@ -102,16 +118,25 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     return { outcome: "blocked", reason: "duplicate", detail, draft };
   }
 
-  // Simulated send: logged only, nothing goes to customers or Google yet.
+  // Email campaigns really go out (to the owner only, in test mode).
+  // Everything else is still a simulated send: logged only.
+  let note: string | undefined;
+  let simulated = true;
+  if (claimed.kind === "email_campaign") {
+    const summary = await deliverCampaign(claimed, restaurant, now);
+    note = deliveryNote(summary);
+    simulated = summary.emailed === 0;
+  }
+
   const { error: logError } = await supabase.from("sent_log").insert({
     restaurant_id: claimed.restaurant_id,
     draft_id: claimed.id,
     customer_id: claimed.customer_id,
-    channel: claimed.kind === "review_reply" ? "google" : "whatsapp",
-    recipient: claimed.audience,
+    channel: claimed.kind === "review_reply" ? "google" : claimed.kind === "email_campaign" ? "email" : "whatsapp",
+    recipient: note ? `${claimed.audience}: ${note}` : claimed.audience,
     content: claimed.content,
     status: "sent",
-    simulated: true,
+    simulated,
   });
   // 23505 = the database's one-row-per-draft guard caught a duplicate.
   if (logError && logError.code === "23505") await logBlock(claimed, "duplicate", "Sent log already has this draft.");
@@ -120,7 +145,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   if (claimed.review_id) {
     check(await supabase.from("reviews").update({ replied: true }).eq("id", claimed.review_id));
   }
-  return { outcome: "sent", draft: claimed };
+  return { outcome: "sent", draft: claimed, note };
 }
 
 // Retries queued drafts that are due. Returns what happened to each one.

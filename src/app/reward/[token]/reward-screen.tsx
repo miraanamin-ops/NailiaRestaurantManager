@@ -12,6 +12,11 @@ type Props = {
   redeemedAt: string | null;
   expiresAt: string | null;
   serverNow: string;
+  // Defaults suit the welcome reward; campaign offers override them.
+  redeemPath?: string;
+  label?: string;
+  // Shown instead of the Redeem button when the offer isn't valid today.
+  unavailable?: { title: string; message: string } | null;
 };
 
 const TZ = "Europe/London";
@@ -60,9 +65,13 @@ export function RewardScreen(props: Props) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/reward/${props.token}/redeem`, { method: "POST" });
+      const res = await fetch(props.redeemPath ?? `/api/reward/${props.token}/redeem`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409 && data.message) {
+        setError(data.message);
+        return;
+      }
       if (!res.ok) throw new Error();
-      const data = await res.json();
       offset.current = new Date(data.serverNow).getTime() - Date.now();
       setRedeemedAt(data.redeemedAt);
       setExpiresAt(data.expiresAt);
@@ -112,23 +121,34 @@ export function RewardScreen(props: Props) {
       </header>
       <main className="mx-auto -mt-4 w-full max-w-md flex-1 px-4 pb-10">
         <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-          <p className="text-stone-600">Hi {props.firstName}, your welcome reward:</p>
+          <p className="text-stone-600">
+            Hi {props.firstName}, {props.label ?? "your welcome reward"}:
+          </p>
           <p className="mt-3 text-3xl font-bold" style={{ color: props.brandColor }}>
             {props.reward} 🎁
           </p>
-          <p className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Only tap <strong>Redeem now</strong> at the till, in front of staff. It works once and lasts 10 minutes.
-          </p>
-          {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
-          <button
-            type="button"
-            onClick={redeem}
-            disabled={busy}
-            className="mt-6 w-full rounded-full px-6 py-4 text-lg font-semibold text-white shadow-sm disabled:opacity-60"
-            style={{ background: props.brandColor }}
-          >
-            {busy ? "Redeeming…" : "Redeem now"}
-          </button>
+          {props.unavailable ? (
+            <div className="mt-6 rounded-xl bg-stone-100 px-4 py-4 text-stone-700">
+              <p className="font-semibold">{props.unavailable.title}</p>
+              <p className="mt-1 text-sm">{props.unavailable.message}</p>
+            </div>
+          ) : (
+            <>
+              <p className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Only tap <strong>Redeem now</strong> at the till, in front of staff. It works once and lasts 10 minutes.
+              </p>
+              {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+              <button
+                type="button"
+                onClick={redeem}
+                disabled={busy}
+                className="mt-6 w-full rounded-full px-6 py-4 text-lg font-semibold text-white shadow-sm disabled:opacity-60"
+                style={{ background: props.brandColor }}
+              >
+                {busy ? "Redeeming…" : "Redeem now"}
+              </button>
+            </>
+          )}
         </div>
       </main>
     </div>

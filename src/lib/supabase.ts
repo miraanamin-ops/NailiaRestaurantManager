@@ -41,7 +41,19 @@ export type Restaurant = {
   brand_color: string;
   brand_dark: string;
   tagline: string | null;
+  // Email campaigns (added in step 6)
+  owner_email: string | null;
+  email_test_mode: boolean;
+  last_birthday_campaign_on: string | null;
 };
+
+// The live site's address, for links in emails and WhatsApp messages sent
+// outside a web request. Vercel sets VERCEL_PROJECT_PRODUCTION_URL itself.
+export function appUrl() {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
 
 // The site's public address, from the incoming request (works locally and on Vercel).
 export function baseUrlFrom(headers: Headers) {

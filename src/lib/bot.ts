@@ -1,7 +1,26 @@
 import "server-only";
-import { chat, loadRestaurantContext, rewriteDraft, writeReviewReply, type RestaurantContext, type StoredMessage } from "@/lib/assistant";
-import { checkDraft } from "@/lib/checker";
-import { formatLondon, formatWindow, isInSendWindow, londonTimeOn } from "@/lib/clock";
+import {
+  chat,
+  loadRestaurantContext,
+  rewriteCampaign,
+  rewriteDraft,
+  writeBirthdayCampaign,
+  writeReviewReply,
+  type RestaurantContext,
+  type StoredMessage,
+} from "@/lib/assistant";
+import {
+  birthdayWeek,
+  createCampaignDraft,
+  getCampaignForDraft,
+  recentCampaignStats,
+  recipientsFor,
+  statsText,
+  updateCampaignDraft,
+  type CampaignFields,
+} from "@/lib/campaigns";
+import { checkCampaign, checkDraft } from "@/lib/checker";
+import { formatLondon, formatWindow, isInSendWindow, londonParts, londonTimeOn } from "@/lib/clock";
 import {
   applyEdit,
   approveDraft,
@@ -21,7 +40,7 @@ import { draftMessage, sendResultMessage } from "@/lib/format";
 import { releaseQueue, sendReminders, weeklySummary } from "@/lib/followups";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { attemptSend } from "@/lib/send";
-import { getSupabase, restaurantNow, type Restaurant, type Review } from "@/lib/supabase";
+import { appUrl, getSupabase, restaurantNow, type Restaurant, type Review } from "@/lib/supabase";
 import { BUTTON_IDS } from "@/lib/whatsapp";
 
 // How many earlier messages Claude sees, so it can follow the conversation.
@@ -48,7 +67,8 @@ type Command =
   | { name: "time"; hhmm: string; plusDays: number }
   | { name: "cap"; percent: number }
   | { name: "set_reward"; reward: string }
-  | { name: "reward" | "qr" };
+  | { name: "reward" | "qr" | "birthday_campaign" | "report" }
+  | { name: "my_email"; email: string };
 
 // Exact typed commands. Anything else is treated as normal chat.
 function parseCommand(body: string): Command | null {
@@ -68,10 +88,23 @@ function parseCommand(body: string): Command | null {
   if (t === "WEEKLY") return { name: "weekly" };
   if (t === "NEW REVIEW") return { name: "new_review" };
   if (/^TIME (OFF|NOW|RESET|REAL)$/.test(t)) return { name: "time_off" };
-  const time = t.match(/^TIME (TOMORROW )?(\d{1,2})[:.](\d{2})$/);
+  // "TIME 22:00", "TIME TOMORROW 09:05", "TIME THURSDAY 18:00" (the next Thursday, or today if it's Thursday)
+  const time = t.match(/^TIME (?:(TOMORROW|MON|TUE|WED|THU|FRI|SAT|SUN)[A-Z]* )?(\d{1,2})[:.](\d{2})$/);
   if (time && Number(time[2]) < 24 && Number(time[3]) < 60) {
-    return { name: "time", hhmm: `${time[2]}:${time[3]}`, plusDays: time[1] ? 1 : 0 };
+    let plusDays = 0;
+    if (time[1] === "TOMORROW") plusDays = 1;
+    else if (time[1]) {
+      const target = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].indexOf(time[1]);
+      const p = londonParts(new Date());
+      const todayDow = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay();
+      plusDays = (target - todayDow + 7) % 7;
+    }
+    return { name: "time", hhmm: `${time[2]}:${time[3]}`, plusDays };
   }
+  const email = body.trim().match(/^my\s+email(?:\s+is)?\s*:?\s+(\S+@\S+\.\S+)$/i);
+  if (email) return { name: "my_email", email: email[1].toLowerCase() };
+  if (t === "BIRTHDAY CAMPAIGN") return { name: "birthday_campaign" };
+  if (t === "REPORT" || t === "CAMPAIGN REPORT") return { name: "report" };
   const cap = t.match(/^CAP (\d{1,3})%?$/);
   if (cap && Number(cap[1]) <= 100) return { name: "cap", percent: Number(cap[1]) };
   return null;
@@ -81,7 +114,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - *NEW REVIEW*: fake a new Google review and draft a reply
 - *PAUSE* / *RESUME*: stop / restart all sending
 - *CAP 25*: set the max discount to 25%
-- *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05* for tomorrow)
+- *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work)
 - *TIME OFF*: back to the real time
 - *TEST SEND*: try to send the waiting draft *without* approving it
 - *TEST CHECKER*: run a draft full of mistakes through the checker
@@ -89,15 +122,10 @@ const HELP_TEXT = `🛠️ *Commands*
 - *STATUS*: show the current settings
 - *set sign-up reward to a free mango lassi*: change the reward for new customers
 - *REWARD*: show the current sign-up reward
-- *QR*: get the sign-up page link and printable QR code`;
-
-// The live site's address for links sent on WhatsApp. Vercel sets
-// VERCEL_PROJECT_PRODUCTION_URL automatically; locally it's the dev server.
-function appUrl() {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  return "http://localhost:3000";
-}
+- *QR*: get the sign-up page link and printable QR code
+- *MY EMAIL you@example.com*: where your copy of each campaign email goes
+- *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
+- *REPORT*: results of the latest email campaign`;
 
 async function updateRestaurant(id: string, fields: Partial<Restaurant>) {
   const res = await getSupabase().from("restaurants").update(fields).eq("id", id).select("*").single<Restaurant>();
@@ -225,6 +253,17 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
         return send(
           `📱 *Sign-up page:* ${appUrl()}/r/${r.slug}\n🖨️ *Printable QR card:* ${appUrl()}/r/${r.slug}/qr\nOpen the QR link on a computer and press Ctrl+P to print it.`,
         );
+      case "my_email":
+        await updateRestaurant(r.id, { owner_email: command.email });
+        return send(
+          `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${r.email_test_mode ? "\n_Test mode is on: that's the only real email; customers are logged as simulated._" : ""}`,
+        );
+      case "birthday_campaign":
+        return proposeBirthdayCampaign(ctx, send);
+      case "report": {
+        const [latest] = await recentCampaignStats(r.id, 1);
+        return send(latest ? statsText(latest) : "No email campaigns have been sent yet. Try: Thursday is quiet");
+      }
       case "weekly":
         return send(await weeklySummary(r, ctx.now));
       case "new_review":
@@ -271,6 +310,7 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
 
     // The owner is telling us what to change.
     if (active?.waiting_for === "edit_instructions") {
+      if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, body, send);
       const rewritten = await rewriteDraft(ctx, learning, active, body);
       return reviseAndSend(ctx, active, body, rewritten, send);
     }
@@ -303,12 +343,70 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
         customerId: result.customerId,
       }, send);
     }
+    if (result.type === "campaign") {
+      return campaignCreateAndSend(ctx, result.fields, body, send);
+    }
     if (result.type === "revise" && active?.waiting_for === "decision") {
+      if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, result.instruction, send);
       return reviseAndSend(ctx, active, result.instruction, result.content, send);
     }
     if (result.type === "text") return send(result.text);
     return send("Sorry, I lost track of that draft. Could you ask again?");
   }
+}
+
+type Send = (text: string, withButtons?: boolean) => Promise<void>;
+
+// New email campaigns go through the campaign checker, then to the owner for approval.
+async function campaignCreateAndSend(ctx: RestaurantContext, fields: CampaignFields, request: string, send: Send, intro = "", isBirthday = false) {
+  const checked = await checkCampaign(ctx, fields);
+  const { draft } = await createCampaignDraft({
+    restaurant: ctx.restaurant,
+    fields: checked.fields,
+    request,
+    checkNotes: checked.notes,
+    now: ctx.now,
+    isBirthday,
+  });
+  await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true);
+}
+
+// Campaign edits: the AI rewrites the structured campaign, then it's re-checked.
+async function reviseCampaignAndSend(ctx: RestaurantContext, draft: Draft, instruction: string, send: Send) {
+  const campaign = await getCampaignForDraft(draft.id);
+  if (!campaign) return send("Sorry, I couldn't find that campaign. Could you ask for it again?");
+  const learning = await getLearningContext(ctx.restaurantId);
+  const rewritten = await rewriteCampaign(ctx, learning, campaign, instruction);
+  const checked = await checkCampaign(ctx, rewritten);
+  const updated = await updateCampaignDraft({
+    restaurant: ctx.restaurant,
+    draft,
+    campaign,
+    fields: checked.fields,
+    instruction,
+    checkNotes: checked.notes,
+    now: ctx.now,
+  });
+  await send(draftMessage(updated, ctx.restaurant), true);
+}
+
+// The weekly birthday email. Runs from the Monday morning job, or BIRTHDAY CAMPAIGN.
+export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send) {
+  const { eligible } = await recipientsFor(ctx.restaurant, "birthdays_7d", ctx.now);
+  if (!eligible.length) {
+    return send("🎂 No customers with email consent have a birthday in the next 7 days, so there's no birthday email this week.");
+  }
+  const learning = await getLearningContext(ctx.restaurantId);
+  const fields = await writeBirthdayCampaign(ctx, learning);
+  await campaignCreateAndSend(
+    ctx,
+    // Dates and segment are fixed in plain code, not left to the AI.
+    { ...fields, segment: "birthdays_7d", ...birthdayWeek(ctx.now) },
+    "Weekly birthday email",
+    send,
+    `🎂 *This week's birthday email* (${eligible.length} customer${eligible.length === 1 ? "" : "s"}: ${eligible.map((c) => c.name.split(/\s+/)[0]).join(", ")})\n\n`,
+    true,
+  );
 }
 
 // Every new draft goes through the checker before the owner sees it.

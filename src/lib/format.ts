@@ -8,7 +8,8 @@ import type { Restaurant } from "@/lib/supabase";
 // A draft as the owner sees it on WhatsApp, with the checker's notes and a
 // plain-code warning if the discount is over the cap.
 export function draftMessage(draft: Draft, restaurant: Pick<Restaurant, "discount_cap_percent">) {
-  const header = `📝 *${KIND_LABELS[draft.kind]}*${draft.audience ? ` for ${draft.audience}` : ""}${draft.version > 1 ? ` (version ${draft.version})` : ""}`;
+  const icon = draft.kind === "email_campaign" ? "📧" : "📝";
+  const header = `${icon} *${KIND_LABELS[draft.kind]}*${draft.audience ? ` for ${draft.audience}` : ""}${draft.version > 1 ? ` (version ${draft.version})` : ""}`;
   const lines = [header, "", draft.content];
 
   const notes: string[] = [];
@@ -30,6 +31,7 @@ function draftName(draft: Draft) {
 export function sendResultMessage(result: SendResult) {
   const name = draftName(result.draft);
   if (result.outcome === "sent") {
+    if (result.note) return `✅ Approved and sent: ${name.replace(/\.$/, "")}.\n${result.note}`;
     return `✅ Approved and sent: ${name.replace(/\.$/, "")}.\n_Simulated for now: nothing actually went out._`;
   }
   if (result.outcome === "queued") {
@@ -43,6 +45,9 @@ export function sendResultMessage(result: SendResult) {
   if (result.reason === "duplicate") {
     return `⛔ *Not sent again*: ${result.detail}`;
   }
+  if (result.reason === "no_recipients") {
+    return `⛔ *Not sent*: ${result.detail} Nothing went out.`;
+  }
   return `⛔ *Blocked*: ${result.detail} Nothing was sent. Only drafts you approve can go out.`;
 }
 
@@ -52,8 +57,9 @@ export function queueResultsMessage(results: SendResult[]) {
   const other = results.filter((r) => r.outcome !== "sent");
   const lines: string[] = [];
   if (sent.length) {
-    lines.push(`📤 Sent ${sent.length} queued draft${sent.length > 1 ? "s" : ""} _(simulated)_:`);
-    for (const r of sent) lines.push(`- ${draftName(r.draft)}`);
+    const anyReal = sent.some((r) => r.outcome === "sent" && r.note);
+    lines.push(`📤 Sent ${sent.length} queued draft${sent.length > 1 ? "s" : ""}${anyReal ? "" : " _(simulated)_"}:`);
+    for (const r of sent) lines.push(`- ${draftName(r.draft)}${r.outcome === "sent" && r.note ? `\n  ${r.note}` : ""}`);
   }
   for (const r of other) lines.push(sendResultMessage(r));
   return lines.join("\n");

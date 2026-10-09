@@ -1,6 +1,19 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabase, restaurantNow, type Customer, type Restaurant, type Review } from "@/lib/supabase";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { z } from "zod";
+import {
+  formatValidity,
+  normaliseDates,
+  recentCampaignStats,
+  recipientsFor,
+  SEGMENT_LABELS,
+  SEGMENTS,
+  upcomingCalendar,
+  type CampaignFields,
+  type Segment,
+} from "@/lib/campaigns";
 import { DRAFT_KINDS, KIND_LABELS, type Draft, type DraftKind, type getLearningContext } from "@/lib/drafts";
 
 const MODEL = "claude-sonnet-5";
@@ -139,28 +152,51 @@ function learningText(learning: Learning) {
 
 // "chat": talking with the owner on WhatsApp, with drafting tools available.
 // "write": producing just the text of one draft, with no tools.
-type Mode = "chat" | "write";
+// "campaign": producing the structured fields of one email campaign.
+type Mode = "chat" | "write" | "campaign";
 
 const CHAT_INSTRUCTIONS = `Chatting with the owner:
 - This is WhatsApp. Keep replies short and easy to read on a phone, ideally under 120 words.
 - Use WhatsApp formatting only: *bold*, _italic_, and simple "- " bullet lists. No markdown headings, tables or links.
 - Talk to the owner like a helpful, friendly colleague.
-- Whenever the owner asks you to write something meant for customers or the public (a review reply, an offer or promotion, a birthday message, an announcement), call the create_draft tool instead of writing it in chat. The owner then approves, edits or skips it.`;
+- When the owner wants an offer, promotion or birthday email for customers, call create_email_campaign.
+- For a review reply or any other one-off public message, call create_draft.
+- Never write these out in chat: the tools send the owner a preview with Approve, Edit and Skip buttons.`;
 
 const WRITE_INSTRUCTIONS = `You are writing one draft right now. Reply with only the finished message text, exactly as it would be sent: no intro, no explanation, no quotes around it, no JSON or code.`;
 
-function systemPrompt(ctx: RestaurantContext, learning: Learning, activeDraft: Draft | null, mode: Mode): Anthropic.TextBlockParam[] {
+const CAMPAIGN_INSTRUCTIONS = `You are writing one email campaign right now. Fill in every field following the email campaign guidelines.`;
+
+function systemPrompt(
+  ctx: RestaurantContext,
+  learning: Learning,
+  activeDraft: Draft | null,
+  mode: Mode,
+  extra = "",
+): Anthropic.TextBlockParam[] {
   const background = `You are Naila, a WhatsApp marketing assistant for the owner of ${ctx.restaurantName}. You work for the restaurant owner (not for customers).
 
 You help the owner understand how the restaurant is doing and grow it: summarise and analyse reviews, spot patterns, know the regular customers and upcoming birthdays, suggest simple marketing ideas, and write drafts of customer-facing messages for them to approve.
 
 Base every fact on the restaurant data below. If something isn't in the data, say you don't have it rather than guessing.
 
-Writing drafts (review replies, offers, birthday messages, announcements):
+Writing drafts (review replies and other one-off messages):
 - Write in the restaurant's brand voice, ready to send as-is: no placeholders like [Name], under ${DRAFT_MAX_CHARS} characters.
 - Use real details from the data: customer first names, menu items, prices and opening hours. Offers are suggestions for the owner to approve, so you can propose a concrete deal.
 - Don't offer freebies, refunds or other promises unless the owner asks for them.
-- Nothing is sent to customers yet; approved drafts are only logged.
+- Review replies are only logged for now, not posted.
+
+Email campaigns (how customers hear about offers; customers are reached by email, never WhatsApp):
+- When the owner wants to fill a quiet time, push a dish, or run any offer for customers, create an email campaign.
+- name: a short internal label the owner will recognise later, e.g. "Quiet Thursday grill deal".
+- subject: short and inviting, no ALL CAPS, at most one emoji.
+- body: 2 to 4 short paragraphs, under 600 characters, in the brand voice. You may start with "Hi {first_name}," ({first_name} is filled in for each customer). Don't include links, the offer box, opening hours boilerplate or unsubscribe text: those are added automatically.
+- offer: short and concrete, e.g. "20% off all grills" or "Free Mango Lassi with any main". Stay within the discount cap.
+- valid_from / valid_until: the London dates the offer can be used, as YYYY-MM-DD. Use the calendar you're given. For "Thursday is quiet" that's the next Thursday only; for "this weekend" it's Saturday and Sunday (or Friday to Sunday if the owner says so).
+- segment: "everyone", "birthdays_7d" (birthdays in the next 7 days) or "unredeemed_signups" (new sign-ups who haven't used their welcome reward). Use "everyone" unless the owner's request points to one of the others.
+- Approved campaigns go through the safety rules, and only customers with email consent receive them.
+
+Campaign results: when the owner asks how a campaign did (e.g. "how did Thursday do?"), answer briefly from the campaign results you're given: sent, opened, clicked, redeemed. Be honest that simulated sends (test mode) can't be opened or redeemed.
 
 Restaurant data (JSON):
 ${JSON.stringify(ctx.data, null, 2)}`;
@@ -179,24 +215,25 @@ ${KIND_LABELS[activeDraft.kind]} for ${activeDraft.audience}: """${activeDraft.c
 If the owner's message asks for changes to this draft, call revise_current_draft rather than create_draft.`
       : "No draft is currently waiting for approval.";
 
-  const modeText = mode === "chat" ? [CHAT_INSTRUCTIONS, active] : [WRITE_INSTRUCTIONS];
+  const modeText =
+    mode === "chat" ? [CHAT_INSTRUCTIONS, active] : mode === "campaign" ? [CAMPAIGN_INSTRUCTIONS] : [WRITE_INSTRUCTIONS];
 
   return [
-    // The big background block is the same in both modes and rarely changes,
+    // The big background block is the same in every mode and rarely changes,
     // so cache it to make replies faster and cheaper.
     { type: "text", text: background, cache_control: { type: "ephemeral" } },
-    { type: "text", text: [today, learningText(learning), ...modeText].join("\n\n") },
+    { type: "text", text: [today, extra, learningText(learning), ...modeText].filter(Boolean).join("\n\n") },
   ];
 }
 
 const createDraftTool: Anthropic.Tool = {
   name: "create_draft",
   description:
-    "Save a new draft message for the owner to approve. Use for anything meant for customers or the public: review replies, offers, birthday messages, announcements.",
+    "Save a new draft for the owner to approve: a review reply or another one-off public message. For offers, promotions and birthday emails to customers, use create_email_campaign instead.",
   input_schema: {
     type: "object",
     properties: {
-      kind: { type: "string", enum: [...DRAFT_KINDS], description: "Type of draft" },
+      kind: { type: "string", enum: ["review_reply", "other"], description: "Type of draft" },
       content: { type: "string", description: "The finished message, exactly as it would be sent" },
       audience: {
         type: "string",
@@ -208,6 +245,101 @@ const createDraftTool: Anthropic.Tool = {
     required: ["kind", "content", "audience"],
   },
 };
+
+const CAMPAIGN_PROPERTIES = {
+  name: { type: "string", description: 'Short internal label, e.g. "Quiet Thursday grill deal"' },
+  subject: { type: "string", description: "Email subject line" },
+  body: { type: "string", description: "Email body, 2-4 short paragraphs; may use {first_name}" },
+  offer: { type: "string", description: 'The offer, e.g. "20% off all grills"' },
+  valid_from: { type: "string", description: "First valid day, YYYY-MM-DD (London)" },
+  valid_until: { type: "string", description: "Last valid day, YYYY-MM-DD (London)" },
+  segment: { type: "string", enum: [...SEGMENTS], description: "Who gets it" },
+} as const;
+
+const createCampaignTool: Anthropic.Tool = {
+  name: "create_email_campaign",
+  description:
+    "Draft an email campaign with an offer for customers. The owner gets a preview to approve; each customer then gets their own one-time offer link.",
+  input_schema: {
+    type: "object",
+    properties: CAMPAIGN_PROPERTIES,
+    required: ["name", "subject", "body", "offer", "valid_from", "valid_until", "segment"],
+  },
+};
+
+const CampaignSchema = z.object({
+  name: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  offer: z.string(),
+  valid_from: z.string().describe("YYYY-MM-DD"),
+  valid_until: z.string().describe("YYYY-MM-DD"),
+  segment: z.enum(SEGMENTS),
+});
+
+// Turns whatever the model produced into safe campaign fields (plain code).
+function toCampaignFields(raw: Record<string, unknown>, now: Date, fallbackSegment: Segment = "everyone"): CampaignFields | null {
+  const str = (k: string, max: number) => (typeof raw[k] === "string" ? (raw[k] as string).trim().slice(0, max) : "");
+  const fields = {
+    name: str("name", 80) || "Email offer",
+    subject: str("subject", 120),
+    body: str("body", 1200),
+    offer: str("offer", 120),
+    segment: SEGMENTS.includes(raw.segment as Segment) ? (raw.segment as Segment) : fallbackSegment,
+    ...normaliseDates(str("valid_from", 10), str("valid_until", 10), now),
+  };
+  return fields.subject && fields.body && fields.offer ? fields : null;
+}
+
+// Segment sizes, a date calendar and recent campaign results, for chat and campaign writing.
+export async function campaignContext(ctx: RestaurantContext) {
+  const [counts, stats] = await Promise.all([
+    Promise.all(SEGMENTS.map(async (s) => [s, (await recipientsFor(ctx.restaurant, s, ctx.now)).eligible.length] as const)),
+    recentCampaignStats(ctx.restaurantId),
+  ]);
+  const results = stats.length
+    ? stats
+        .map(
+          (s) =>
+            `- "${s.campaign.name}" (offer: ${s.campaign.offer}; valid ${formatValidity(s.campaign.valid_from, s.campaign.valid_until)}; to ${SEGMENT_LABELS[s.campaign.segment]}; sent ${s.campaign.sent_at?.slice(0, 10)}): ${s.emailed} real emails, ${s.simulated} simulated (test mode), ${s.excluded} left out for no consent; opened ${s.opened}, clicked ${s.clicked}, redeemed ${s.redeemed}`,
+        )
+        .join("\n")
+    : "No campaigns sent yet.";
+  return `Calendar (London):\n${upcomingCalendar(ctx.now)}\n\nCustomers with email consent per segment: ${counts.map(([s, n]) => `${s} = ${n}`).join(", ")}\n\nRecent campaign results (newest first):\n${results}`;
+}
+
+async function writeCampaign(ctx: RestaurantContext, learning: Learning, request: string, fallbackSegment: Segment) {
+  const response = await new Anthropic().messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: "medium", format: zodOutputFormat(CampaignSchema) },
+    system: systemPrompt(ctx, learning, null, "campaign", await campaignContext(ctx)),
+    messages: [{ role: "user", content: request }],
+  });
+  if (response.stop_reason === "refusal" || !response.parsed_output) throw new Error("Claude couldn't write this campaign");
+  const fields = toCampaignFields(response.parsed_output, ctx.now, fallbackSegment);
+  if (!fields) throw new Error("Claude returned an incomplete campaign");
+  return fields;
+}
+
+export function rewriteCampaign(ctx: RestaurantContext, learning: Learning, campaign: CampaignFields, instruction: string) {
+  return writeCampaign(
+    ctx,
+    learning,
+    `Here is an email campaign draft:\n${JSON.stringify(campaign, null, 2)}\n\nThe owner wants this change: "${instruction}"\n\nRewrite the campaign with that change. Keep everything else that was good about it.`,
+    campaign.segment,
+  );
+}
+
+// The Monday birthday email: offer valid from today until next Sunday.
+export function writeBirthdayCampaign(ctx: RestaurantContext, learning: Learning) {
+  return writeCampaign(
+    ctx,
+    learning,
+    `It's the start of the week. Write a warm birthday email for customers with a birthday in the next 7 days (segment "birthdays_7d"). Start with "Hi {first_name}," and wish them a happy birthday. Give a small birthday treat they can claim during their birthday week, valid from today for 7 days.`,
+    "birthdays_7d",
+  );
+}
 
 const reviseDraftTool: Anthropic.Tool = {
   name: "revise_current_draft",
@@ -258,7 +390,8 @@ export type ChatResult =
       reviewId: string | null;
       customerId: string | null;
     }
-  | { type: "revise"; instruction: string; content: string };
+  | { type: "revise"; instruction: string; content: string }
+  | { type: "campaign"; fields: CampaignFields };
 
 // A normal WhatsApp message from the owner: answer it, or produce a draft.
 export async function chat(
@@ -270,12 +403,15 @@ export async function chat(
   const messages = toClaudeMessages(history);
   if (!messages.length) return { type: "text", text: "Hi! 👋 Send me a question about the restaurant and I'll help." };
 
-  const tools = activeDraft?.waiting_for === "decision" ? [createDraftTool, reviseDraftTool] : [createDraftTool];
+  const tools =
+    activeDraft?.waiting_for === "decision"
+      ? [createCampaignTool, createDraftTool, reviseDraftTool]
+      : [createCampaignTool, createDraftTool];
   const response = await new Anthropic().messages.create({
     model: MODEL,
     max_tokens: 4000,
     output_config: { effort: "low" }, // quick chat replies keep WhatsApp responsive
-    system: systemPrompt(ctx, learning, activeDraft, "chat"),
+    system: systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx)),
     tools,
     messages,
   });
@@ -285,6 +421,10 @@ export async function chat(
   }
 
   const toolUse = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+  if (toolUse?.name === "create_email_campaign") {
+    const fields = toCampaignFields(toolUse.input as Record<string, unknown>, ctx.now);
+    if (fields) return { type: "campaign", fields };
+  }
   if (toolUse?.name === "create_draft") {
     const input = toolUse.input as Record<string, unknown>;
     const kind = DRAFT_KINDS.includes(input.kind as DraftKind) ? (input.kind as DraftKind) : "other";

@@ -17,6 +17,9 @@ const checks = [
   ["005_customer_signups.sql (consents/rewards/events)", supabase.from("consents").select("id").limit(1)],
   ["005_customer_signups.sql (rewards table)", supabase.from("rewards").select("id").limit(1)],
   ["005_customer_signups.sql (customer_events table)", supabase.from("customer_events").select("id").limit(1)],
+  ["006_email_campaigns.sql (restaurant email settings)", supabase.from("restaurants").select("owner_email, email_test_mode, last_birthday_campaign_on").limit(1)],
+  ["006_email_campaigns.sql (campaigns table)", supabase.from("campaigns").select("id").limit(1)],
+  ["006_email_campaigns.sql (campaign_sends table)", supabase.from("campaign_sends").select("id").limit(1)],
 ];
 for (const [name, query] of checks) {
   const { error } = await query;

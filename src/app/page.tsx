@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
 import {
   getSupabase,
   type Customer,
@@ -53,6 +54,7 @@ const EVENT_LABELS: Record<string, string> = {
   welcome_email_sent: "📧 Welcome email sent",
   email_failed: "⚠️ Email failed",
   redeemed: "🎁 Reward redeemed",
+  offer_redeemed: "🎟️ Campaign offer redeemed",
   unsubscribed: "🚪 Unsubscribed",
 };
 
@@ -176,6 +178,8 @@ async function Dashboard() {
   const [signupCount, redeemedCount, unsubCount] = events
     ? await Promise.all([countEvents("signup"), countEvents("redeemed"), countEvents("unsubscribed")])
     : [0, 0, 0];
+  // Email campaigns from step 6 (null until the table exists).
+  const campaigns = restaurant ? await recentCampaignStats(restaurant.id, 10).catch(() => null) : null;
   if (!restaurant) {
     return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
   }
@@ -240,6 +244,67 @@ async function Dashboard() {
             ))}
           </div>
         </Card>
+      </section>
+
+      {/* Email campaigns */}
+      <section>
+        <h2 className="text-2xl font-bold">Email campaigns</h2>
+        {campaigns === null ? (
+          <p className="mt-2 text-neutral-500">Campaigns not set up yet (run supabase/006_email_campaigns.sql).</p>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-neutral-500">
+              {restaurant.email_test_mode
+                ? `Test mode: only ${restaurant.owner_email ?? "the owner's email (text MY EMAIL …)"} gets a real email; customers are logged as simulated.`
+                : "Live mode: every customer with consent gets a real email."}
+            </p>
+            {campaigns.length === 0 ? (
+              <p className="mt-2 text-neutral-500">No campaigns sent yet. Text “Thursday is quiet” to the sandbox.</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-neutral-100 dark:bg-neutral-900">
+                    <tr>
+                      <th className="px-3 py-2">Campaign</th>
+                      <th className="px-3 py-2">Offer · valid</th>
+                      <th className="px-3 py-2">Segment</th>
+                      <th className="px-3 py-2">Sent (real + simulated)</th>
+                      <th className="px-3 py-2">Left out</th>
+                      <th className="px-3 py-2">Opened</th>
+                      <th className="px-3 py-2">Clicked</th>
+                      <th className="px-3 py-2">Redeemed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campaigns.map((s) => (
+                      <tr key={s.campaign.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                        <td className="px-3 py-2">
+                          <span className="font-medium">{s.campaign.name}</span>
+                          <br />
+                          <span className="text-neutral-500">{s.campaign.subject}</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          {s.campaign.offer}
+                          <br />
+                          <span className="text-neutral-500">{formatValidity(s.campaign.valid_from, s.campaign.valid_until)}</span>
+                        </td>
+                        <td className="px-3 py-2">{SEGMENT_LABELS[s.campaign.segment]}</td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {s.emailed} + {s.simulated}
+                          {s.failed ? ` (${s.failed} failed)` : ""}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums">{s.excluded}</td>
+                        <td className="px-3 py-2 tabular-nums">{s.opened}</td>
+                        <td className="px-3 py-2 tabular-nums">{s.clicked}</td>
+                        <td className="px-3 py-2 tabular-nums">{s.redeemed}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       {/* Email sign-ups */}

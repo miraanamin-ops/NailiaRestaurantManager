@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import type { CampaignFields as Campaign } from "@/lib/campaigns";
 import type { Reward, SignupCustomer } from "@/lib/signups";
 import type { Restaurant } from "@/lib/supabase";
 
@@ -23,8 +24,7 @@ async function sendEmail(input: {
   subject: string;
   html: string;
   text: string;
-  unsubscribeLink: string;
-  oneClickLink: string;
+  oneClickLink: string | null;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error("Missing RESEND_API_KEY");
@@ -35,10 +35,9 @@ async function sendEmail(input: {
     subject: input.subject,
     html: input.html,
     text: input.text,
-    headers: {
-      "List-Unsubscribe": `<${input.oneClickLink}>`,
-      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-    },
+    headers: input.oneClickLink
+      ? { "List-Unsubscribe": `<${input.oneClickLink}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+      : undefined,
   });
   if (error) throw new Error(`Resend: ${error.message}`);
   return data?.id ?? null;
@@ -106,7 +105,89 @@ Unsubscribe from all emails: ${unsubLink}`;
     subject: `Welcome to ${restaurant.name}! Your reward is inside 🎁`,
     html,
     text,
-    unsubscribeLink: unsubLink,
+    oneClickLink: oneClick,
+  });
+}
+
+const paragraphs = (text: string) =>
+  text
+    .split(/\n{2,}/)
+    .map((p) => `<p style="font-size:15px;line-height:1.55;margin:0 0 14px">${escapeHtml(p.trim()).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
+// A campaign email to one person, with their own one-time offer link.
+export async function sendCampaignEmail(input: {
+  restaurant: Restaurant;
+  campaign: Pick<Campaign, "subject" | "body" | "offer">;
+  validity: string; // e.g. "Thu 15 Oct only"
+  baseUrl: string;
+  token: string;
+  to: string;
+  firstName: string;
+  unsubscribeToken: string | null; // null for the owner's own copy
+  ownerCopy: boolean;
+}) {
+  const { restaurant, campaign, baseUrl, token, validity } = input;
+  const personal = (s: string) => s.replaceAll("{first_name}", input.firstName);
+  const offerLink = `${baseUrl}/offer/${token}`;
+  const unsubLink = input.unsubscribeToken ? `${baseUrl}/unsubscribe/${input.unsubscribeToken}` : null;
+  const oneClick = input.unsubscribeToken ? `${baseUrl}/api/unsubscribe/${input.unsubscribeToken}` : null;
+  const rest = escapeHtml(restaurant.name);
+  const brand = restaurant.brand_color;
+  const dark = restaurant.brand_dark;
+
+  const footer = unsubLink
+    ? `You're getting this because you signed up at ${rest} and asked for offers by email.<br><a href="${unsubLink}" style="color:#78716c">Unsubscribe</a> from all emails from ${rest}.`
+    : `This is your owner copy. Customers' emails include a one-click unsubscribe link here.`;
+
+  const html = `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f5f5f4;font-family:Arial,Helvetica,sans-serif;color:${dark}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f4;padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden">
+  <tr><td style="background:${dark};padding:24px;text-align:center">
+    <div style="color:#ffffff;font-size:22px;font-weight:bold">${rest}</div>
+    ${restaurant.tagline ? `<div style="color:#d6d3d1;font-size:13px;margin-top:4px">${escapeHtml(restaurant.tagline)}</div>` : ""}
+  </td></tr>
+  <tr><td style="padding:28px 24px 8px">
+    ${paragraphs(personal(campaign.body))}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;border:2px dashed ${brand};border-radius:12px">
+      <tr><td style="padding:18px;text-align:center">
+        <div style="font-size:20px;font-weight:bold;color:${brand}">${escapeHtml(campaign.offer)}</div>
+        <div style="font-size:13px;color:#78716c;margin-top:6px">Valid ${escapeHtml(validity)}</div>
+      </td></tr>
+    </table>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 20px"><tr><td style="background:${brand};border-radius:999px">
+      <a href="${offerLink}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none">Show at the till</a>
+    </td></tr></table>
+    <p style="font-size:12px;line-height:1.5;color:#78716c;margin:0 0 20px">One use per person. Tap "Redeem now" at the till on a valid day; it lasts 10 minutes.</p>
+  </td></tr>
+  <tr><td style="padding:16px 24px 24px;border-top:1px solid #e7e5e4;font-size:12px;line-height:1.5;color:#78716c">
+    ${rest} · ${escapeHtml(restaurant.address ?? "")}<br>${footer}
+  </td></tr>
+</table>
+</td></tr></table>
+<img src="${baseUrl}/api/t/open/${token}" width="1" height="1" alt="" style="display:block;border:0">
+</body></html>`;
+
+  const text = `${personal(campaign.body)}
+
+${campaign.offer}
+Valid ${validity}
+
+Show this at the till: ${offerLink}
+One use per person. Tap "Redeem now" at the till on a valid day; it lasts 10 minutes.
+
+--
+${restaurant.name} · ${restaurant.address ?? ""}
+${unsubLink ? `Unsubscribe from all emails: ${unsubLink}` : "This is your owner copy."}`;
+
+  return sendEmail({
+    restaurant,
+    to: input.to,
+    subject: `${input.ownerCopy ? "[Your copy] " : ""}${personal(campaign.subject)}`,
+    html,
+    text,
     oneClickLink: oneClick,
   });
 }
