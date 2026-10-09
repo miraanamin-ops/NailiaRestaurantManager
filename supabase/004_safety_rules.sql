@@ -45,3 +45,6 @@ create table if not exists blocked_sends (
 );
 create index if not exists blocked_sends_idx on blocked_sends (restaurant_id, created_at desc);
 alter table blocked_sends enable row level security;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('004_safety_rules.sql') on conflict (name) do nothing;

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Naila – test data",
+  title: "Naila",
   description: "AI marketing assistant for restaurant owners",
 };
 

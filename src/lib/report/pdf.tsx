@@ -1,5 +1,6 @@
 import "server-only";
 import { Document, Link, Page, Rect, renderToBuffer, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
+import { shorten } from "@/lib/text";
 import { bars, CHART, MUTED_BAR, weekTotals } from "./chart";
 import {
   changeText,
@@ -37,13 +38,6 @@ function clean(text: string) {
     .replace(/[^ -~ -ÿ–—…€\n]/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
-}
-
-// Cuts long text at a word boundary, with an ellipsis.
-function shorten(text: string, max: number) {
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 30)).trimEnd()}…`;
 }
 
 const s = StyleSheet.create({

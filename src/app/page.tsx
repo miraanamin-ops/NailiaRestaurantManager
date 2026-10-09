@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { connection } from "next/server";
 import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
 import { google } from "@/lib/google";
@@ -9,6 +10,9 @@ import {
   type Restaurant,
   type Review,
 } from "@/lib/supabase";
+
+// Password-protected by src/proxy.ts. Never shown in search engines.
+export const metadata: Metadata = { title: "Naila – test data", robots: { index: false, follow: false } };
 
 export default function Home() {
   return (

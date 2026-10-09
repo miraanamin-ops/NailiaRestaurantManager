@@ -68,3 +68,6 @@ create index if not exists customer_events_idx on customer_events (restaurant_id
 alter table consents        enable row level security;
 alter table rewards         enable row level security;
 alter table customer_events enable row level security;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('005_customer_signups.sql') on conflict (name) do nothing;

@@ -21,3 +21,6 @@ create index if not exists messages_from_idx on messages (from_number, created_a
 create index if not exists messages_to_idx   on messages (to_number, created_at desc);
 
 alter table messages enable row level security;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('002_messages.sql') on conflict (name) do nothing;

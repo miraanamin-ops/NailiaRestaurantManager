@@ -1,33 +1,36 @@
-// Checks that the database scripts in supabase/ have been run.
+// Shows which database files in supabase/ have been run, using the
+// schema_migrations table that every file adds its name to.
 // Usage: node --env-file=.env.local scripts/check-schema.mjs
+import { readdirSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
+// Files that must wait until the matching code is live on Vercel.
+const AFTER_DEPLOY = { "010_drop_unused.sql": "run after the step 9 code is live" };
+
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
-const checks = [
-  ["setup.sql (tables + dummy data)", supabase.from("restaurants").select("id").limit(1)],
-  ["002_messages.sql (message log)", supabase.from("messages").select("id").limit(1)],
-  ["003_approval_loop.sql (draft columns)", supabase.from("drafts").select("waiting_for, audience, version").limit(1)],
-  ["003_approval_loop.sql (feedback table)", supabase.from("draft_feedback").select("id").limit(1)],
-  ["003_approval_loop.sql (sent_log.simulated)", supabase.from("sent_log").select("simulated").limit(1)],
-  ["004_safety_rules.sql (restaurant settings)", supabase.from("restaurants").select("discount_cap_percent, paused, fake_now, owner_whatsapp").limit(1)],
-  ["004_safety_rules.sql (draft send columns)", supabase.from("drafts").select("approved_at, scheduled_for, sent_at, check_notes").limit(1)],
-  ["004_safety_rules.sql (blocked_sends table)", supabase.from("blocked_sends").select("id").limit(1)],
-  ["005_customer_signups.sql (restaurant slug/reward)", supabase.from("restaurants").select("slug, signup_reward, brand_color").limit(1)],
-  ["005_customer_signups.sql (customer columns)", supabase.from("customers").select("source, unsubscribe_token, unsubscribed_at").limit(1)],
-  ["005_customer_signups.sql (consents/rewards/events)", supabase.from("consents").select("id").limit(1)],
-  ["005_customer_signups.sql (rewards table)", supabase.from("rewards").select("id").limit(1)],
-  ["005_customer_signups.sql (customer_events table)", supabase.from("customer_events").select("id").limit(1)],
-  ["006_email_campaigns.sql (restaurant email settings)", supabase.from("restaurants").select("owner_email, email_test_mode, last_birthday_campaign_on").limit(1)],
-  ["006_email_campaigns.sql (campaigns table)", supabase.from("campaigns").select("id").limit(1)],
-  ["006_email_campaigns.sql (campaign_sends table)", supabase.from("campaign_sends").select("id").limit(1)],
-  ["007_google.sql (review reply columns)", supabase.from("reviews").select("reply_text, handled_at, source").limit(1)],
-  ["007_google.sql (google_posts table)", supabase.from("google_posts").select("id").limit(1)],
-  ["007_google.sql (photo storage bucket)", supabase.storage.from("post-photos").list("", { limit: 1 })],
-  ["008_brief_report.sql (restaurant brief dates)", supabase.from("restaurants").select("last_brief_on, last_brief_at, brief_waiting_since, last_report_on").limit(1)],
-  ["008_brief_report.sql (draft brief columns)", supabase.from("drafts").select("held_at, brief_number, briefed_at").limit(1)],
-  ["008_brief_report.sql (reports table)", supabase.from("reports").select("id").limit(1)],
-];
-for (const [name, query] of checks) {
-  const { error } = await query;
-  console.log(`${error ? "MISSING" : "ok     "}  ${name}${error ? `  (${error.message})` : ""}`);
+const files = readdirSync(new URL("../supabase/", import.meta.url))
+  .filter((f) => f.endsWith(".sql"))
+  .sort((a, b) => (a === "setup.sql" ? -1 : b === "setup.sql" ? 1 : a.localeCompare(b)));
+
+const { data, error } = await supabase.from("schema_migrations").select("name, applied_at");
+if (error) {
+  console.log(`Can't read schema_migrations (${error.message}).`);
+  console.log("Run supabase/009_housekeeping.sql in Supabase > SQL Editor: it creates the table and records files 001-008.");
+  process.exitCode = 1;
+} else {
+  report(new Map(data.map((m) => [m.name, m.applied_at])));
+}
+
+function report(applied) {
+let missing = 0;
+for (const f of files) {
+  const when = applied.get(f);
+  if (when) console.log(`ok        ${f}  (${when.slice(0, 16).replace("T", " ")})`);
+  else {
+    missing++;
+    console.log(`NOT RUN   ${f}${AFTER_DEPLOY[f] ? `  (${AFTER_DEPLOY[f]})` : ""}`);
+  }
+}
+for (const name of applied.keys()) if (!files.includes(name)) console.log(`(recorded but no such file: ${name})`);
+console.log(missing ? `\n${missing} file(s) still to run.` : "\nEverything has been run.");
 }

@@ -29,3 +29,6 @@ create table if not exists reports (
 );
 create index if not exists reports_restaurant_idx on reports (restaurant_id, created_at desc);
 alter table reports enable row level security;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('008_brief_report.sql') on conflict (name) do nothing;

@@ -45,7 +45,7 @@ async function runJob(job: "hourly" | "daily") {
     const entry: Record<string, unknown> = { restaurant: r.id };
     if (job === "hourly") {
       if (channel) {
-        const ctx = await loadRestaurantContext();
+        const ctx = await loadRestaurantContext({ realTime: true });
         // Only 1-3 star alerts are messaged now; 4-5 star replies wait for the brief.
         entry.reviews = await runReviewCheck(ctx, (text, withButtons) => messageOwner(channel, text, withButtons));
       } else {

@@ -70,3 +70,6 @@ alter table customer_events add constraint customer_events_type_check
 
 alter table campaigns      enable row level security;
 alter table campaign_sends enable row level security;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('006_email_campaigns.sql') on conflict (name) do nothing;

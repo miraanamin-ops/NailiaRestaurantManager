@@ -52,6 +52,10 @@ export type Restaurant = {
   last_brief_at: string | null;
   brief_waiting_since: string | null;
   last_report_on: string | null;
+  // Morning job retries (added in step 9)
+  morning_lock_until: string | null;
+  morning_failures: number;
+  morning_failed_on: string | null;
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent

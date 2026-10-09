@@ -44,3 +44,6 @@ alter table restaurants add column if not exists last_post_draft_on date;
 insert into storage.buckets (id, name, public)
 values ('post-photos', 'post-photos', true)
 on conflict (id) do nothing;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('007_google.sql') on conflict (name) do nothing;

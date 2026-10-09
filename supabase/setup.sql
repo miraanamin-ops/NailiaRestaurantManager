@@ -6,6 +6,16 @@
 -- whatever is in them. That's fine while we're testing with dummy data.
 -- =====================================================================
 
+-- SAFETY GUARD: if Naila is already set up, stop here before anything is
+-- deleted. Supabase runs the whole file as one go, so nothing below happens.
+-- To really wipe everything and start again, delete this block first.
+do $$
+begin
+  if to_regclass('public.restaurants') is not null then
+    raise exception 'Naila is already set up, so this file stopped before deleting anything. To wipe ALL data and start again, delete the SAFETY GUARD block at the top first.';
+  end if;
+end $$;
+
 drop table if exists sent_log cascade;
 drop table if exists drafts cascade;
 drop table if exists reviews cascade;
@@ -176,3 +186,14 @@ insert into reviews (restaurant_id, author_name, rating, text, review_date, repl
   ('11111111-1111-1111-1111-111111111111', 'Peter W.',     1, 'Booked a table for 6 and they had no record of it. We left and went elsewhere. Very disappointing.', now() - interval '27 days', false),
   ('11111111-1111-1111-1111-111111111111', 'Imran S.',     5, 'Family-run and you can tell. The owner came over to check on us. Seekh kebabs were perfect.', now() - interval '31 days', true),
   ('11111111-1111-1111-1111-111111111111', 'Grace L.',     2, 'Lamb chops were overcooked and a bit dry. Service was friendly though, so might give it another go.', now() - interval '36 days', false);
+
+-- ---------------------------------------------------------------------
+-- Which database files have been run (see scripts/check-schema.mjs).
+-- Every file in supabase/ ends by adding its own name here.
+-- ---------------------------------------------------------------------
+create table if not exists schema_migrations (
+  name        text primary key,
+  applied_at  timestamptz not null default now()
+);
+alter table schema_migrations enable row level security;
+insert into schema_migrations (name) values ('setup.sql') on conflict (name) do nothing;
