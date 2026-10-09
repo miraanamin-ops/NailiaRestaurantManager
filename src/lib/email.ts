@@ -43,6 +43,16 @@ async function sendEmail(input: {
   return data?.id ?? null;
 }
 
+// A plain email to the builder (alerts about the system itself, never to customers or owners).
+export async function sendBuilderEmail(to: string, subject: string, text: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("Missing RESEND_API_KEY");
+  const fromAddress = process.env.EMAIL_FROM_ADDRESS || DEFAULT_FROM_ADDRESS;
+  const { data, error } = await new Resend(apiKey).emails.send({ from: `Naila alerts <${fromAddress}>`, to, subject, text });
+  if (error) throw new Error(`Resend: ${error.message}`);
+  return data?.id ?? null;
+}
+
 export async function sendWelcomeEmail(input: {
   restaurant: Restaurant;
   customer: SignupCustomer;

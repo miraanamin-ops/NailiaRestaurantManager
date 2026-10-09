@@ -23,6 +23,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
   const learning = await getLearningContext(ctx.restaurantId);
   let alerts = 0;
   let held = 0;
+  let failed = 0;
 
   for (const review of reviews) {
     const urgent = review.rating <= 3;
@@ -45,10 +46,14 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
         checks: checked.checks,
         mode: urgent ? "urgent" : "hold",
       });
+      // Only now, with its reply draft saved, does the review count as handled.
+      await google().markReviewHandled(review.id);
     } catch (err) {
       // Put it back so the next check tries again, then carry on with the rest.
+      // (If even this fails, the claim simply expires and the review is retried.)
       console.error("Drafting a review reply failed", err);
-      await google().releaseReview(review.id);
+      failed++;
+      await google().releaseReview(review.id).catch(() => {});
       continue;
     }
 
@@ -63,7 +68,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
       held++; // no message: it's in tomorrow's brief
     }
   }
-  return { found: reviews.length, alerts, held };
+  return { found: reviews.length, alerts, held, failed };
 }
 
 // Drafts one Google post and holds it for the morning brief. Runs Mondays and Thursdays.

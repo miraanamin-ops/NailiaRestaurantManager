@@ -23,6 +23,7 @@ export const liveGoogle: GoogleConnector = {
   mode: "live",
   listReviews: async () => notYet(),
   claimNewReviews: async () => notYet(),
+  markReviewHandled: async () => notYet(),
   releaseReview: async () => notYet(),
   replyToReview: async () => notYet(),
   removeReply: async () => notYet(), // DELETE .../reviews/{id}/reply

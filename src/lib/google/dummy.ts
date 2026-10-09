@@ -3,6 +3,9 @@ import { check, checkRow } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 import type { GoogleConnector, GooglePost, GoogleReview } from "./types";
 
+// A review claimed by a check that hasn't finished within this long is retried.
+const CLAIM_MINUTES = 15;
+
 // Dummy mode: our own database plays the part of Google.
 // reviews = the reviews on the listing; google_posts with published_at = live posts.
 export const dummyGoogle: GoogleConnector = {
@@ -19,20 +22,30 @@ export const dummyGoogle: GoogleConnector = {
   },
 
   async claimNewReviews(restaurantId) {
-    // One UPDATE ... WHERE handled_at IS NULL: the database hands each review to one check only.
+    // One UPDATE in the database hands each unhandled review to one check only.
+    // The claim lasts CLAIM_MINUTES: if a check dies mid-way (e.g. a timeout),
+    // the next one picks the review up again. It's only "handled" once its reply
+    // draft exists (markReviewHandled).
+    const now = new Date();
+    const expired = new Date(now.getTime() - CLAIM_MINUTES * 60_000).toISOString();
     const res = await getSupabase()
       .from("reviews")
-      .update({ handled_at: new Date().toISOString() })
+      .update({ claimed_at: now.toISOString() })
       .eq("restaurant_id", restaurantId)
       .is("handled_at", null)
+      .or(`claimed_at.is.null,claimed_at.lt.${expired}`)
       .select("*")
       .order("review_date")
       .returns<GoogleReview[]>();
     return check(res) ?? [];
   },
 
+  async markReviewHandled(reviewId) {
+    check(await getSupabase().from("reviews").update({ handled_at: new Date().toISOString(), claimed_at: null }).eq("id", reviewId));
+  },
+
   async releaseReview(reviewId) {
-    check(await getSupabase().from("reviews").update({ handled_at: null }).eq("id", reviewId));
+    check(await getSupabase().from("reviews").update({ claimed_at: null }).eq("id", reviewId));
   },
 
   async replyToReview(restaurantId, reviewId, text) {
