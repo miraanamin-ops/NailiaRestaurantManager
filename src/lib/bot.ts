@@ -46,11 +46,19 @@ function parseAction(buttonPayload: string | undefined, body: string): Action | 
 type Command =
   | { name: "help" | "status" | "pause" | "resume" | "time_off" | "test_send" | "test_checker" | "weekly" | "new_review" }
   | { name: "time"; hhmm: string; plusDays: number }
-  | { name: "cap"; percent: number };
+  | { name: "cap"; percent: number }
+  | { name: "set_reward"; reward: string }
+  | { name: "reward" | "qr" };
 
 // Exact typed commands. Anything else is treated as normal chat.
 function parseCommand(body: string): Command | null {
+  // "set sign-up reward to a free mango lassi" (keeps the owner's wording)
+  const reward = body.trim().match(/^set\s+(?:the\s+)?sign[\s-]?up\s+reward\s*(?:to|:|=)\s*(.+?)[.!]?$/i);
+  if (reward && reward[1].trim()) return { name: "set_reward", reward: reward[1].trim().slice(0, 100) };
+
   const t = body.trim().toUpperCase().replace(/\s+/g, " ");
+  if (t === "REWARD" || t === "SIGNUP REWARD" || t === "SIGN-UP REWARD") return { name: "reward" };
+  if (t === "QR" || t === "QR CODE" || t === "SIGNUP LINK" || t === "SIGN-UP LINK") return { name: "qr" };
   if (t === "HELP" || t === "COMMANDS") return { name: "help" };
   if (t === "STATUS") return { name: "status" };
   if (t === "PAUSE") return { name: "pause" };
@@ -78,7 +86,18 @@ const HELP_TEXT = `🛠️ *Commands*
 - *TEST SEND*: try to send the waiting draft *without* approving it
 - *TEST CHECKER*: run a draft full of mistakes through the checker
 - *WEEKLY*: show the weekly round-up now
-- *STATUS*: show the current settings`;
+- *STATUS*: show the current settings
+- *set sign-up reward to a free mango lassi*: change the reward for new customers
+- *REWARD*: show the current sign-up reward
+- *QR*: get the sign-up page link and printable QR code`;
+
+// The live site's address for links sent on WhatsApp. Vercel sets
+// VERCEL_PROJECT_PRODUCTION_URL automatically; locally it's the dev server.
+function appUrl() {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return "http://localhost:3000";
+}
 
 async function updateRestaurant(id: string, fields: Partial<Restaurant>) {
   const res = await getSupabase().from("restaurants").update(fields).eq("id", id).select("*").single<Restaurant>();
@@ -191,6 +210,20 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
           },
           send,
           "🧪 *Checker test.* I wrote this draft with deliberate mistakes. Here's what the checker made of it:\n\n",
+        );
+      case "set_reward": {
+        await updateRestaurant(r.id, { signup_reward: command.reward });
+        return send(
+          `🎁 Sign-up reward set to *${command.reward}*.\nEveryone who signs up from now on gets this. (Rewards already emailed stay as they were.)\nSign-up page: ${appUrl()}/r/${r.slug}`,
+        );
+      }
+      case "reward":
+        return send(
+          `🎁 Current sign-up reward: *${r.signup_reward ?? "not set"}*\nChange it with: set sign-up reward to …`,
+        );
+      case "qr":
+        return send(
+          `📱 *Sign-up page:* ${appUrl()}/r/${r.slug}\n🖨️ *Printable QR card:* ${appUrl()}/r/${r.slug}/qr\nOpen the QR link on a computer and press Ctrl+P to print it.`,
         );
       case "weekly":
         return send(await weeklySummary(r, ctx.now));

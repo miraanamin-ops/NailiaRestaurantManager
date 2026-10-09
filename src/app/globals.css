@@ -24,3 +24,31 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Live reward screen: constantly moving, so a screenshot is easy to spot. */
+.reward-live {
+  background: linear-gradient(120deg, #15803d, #22c55e, #16a34a, #4ade80, #15803d);
+  background-size: 400% 400%;
+  animation: reward-shift 6s ease-in-out infinite;
+}
+.reward-shine {
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.18) 50%, transparent 60%);
+  animation: reward-sweep 3s linear infinite;
+}
+.reward-ring {
+  animation: reward-pulse 1.6s ease-in-out infinite;
+}
+@keyframes reward-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes reward-sweep {
+  from { transform: translateX(-40%); }
+  to { transform: translateX(40%); }
+}
+@keyframes reward-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); transform: scale(1); }
+  50% { box-shadow: 0 0 0 24px rgba(255, 255, 255, 0); transform: scale(1.06); }
+}

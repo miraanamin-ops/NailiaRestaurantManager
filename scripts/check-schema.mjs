@@ -12,6 +12,11 @@ const checks = [
   ["004_safety_rules.sql (restaurant settings)", supabase.from("restaurants").select("discount_cap_percent, paused, fake_now, owner_whatsapp").limit(1)],
   ["004_safety_rules.sql (draft send columns)", supabase.from("drafts").select("approved_at, scheduled_for, sent_at, check_notes").limit(1)],
   ["004_safety_rules.sql (blocked_sends table)", supabase.from("blocked_sends").select("id").limit(1)],
+  ["005_customer_signups.sql (restaurant slug/reward)", supabase.from("restaurants").select("slug, signup_reward, brand_color").limit(1)],
+  ["005_customer_signups.sql (customer columns)", supabase.from("customers").select("source, unsubscribe_token, unsubscribed_at").limit(1)],
+  ["005_customer_signups.sql (consents/rewards/events)", supabase.from("consents").select("id").limit(1)],
+  ["005_customer_signups.sql (rewards table)", supabase.from("rewards").select("id").limit(1)],
+  ["005_customer_signups.sql (customer_events table)", supabase.from("customer_events").select("id").limit(1)],
 ];
 for (const [name, query] of checks) {
   const { error } = await query;

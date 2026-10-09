@@ -39,6 +39,23 @@ type BlockRow = {
   created_at: string;
 };
 
+type EventRow = {
+  id: string;
+  type: string;
+  detail: string | null;
+  created_at: string;
+  customers: { name: string; email: string | null } | null;
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  signup: "📝 Signed up",
+  repeat_signup: "🔁 Signed up again",
+  welcome_email_sent: "📧 Welcome email sent",
+  email_failed: "⚠️ Email failed",
+  redeemed: "🎁 Reward redeemed",
+  unsubscribed: "🚪 Unsubscribed",
+};
+
 type FeedbackRow = {
   id: string;
   draft_kind: string | null;
@@ -92,7 +109,7 @@ async function Dashboard() {
   await connection();
   const supabase = getSupabase();
 
-  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes, blocksRes] =
+  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes, blocksRes, eventsRes] =
     await Promise.all([
       supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
       supabase.from("customers").select("*").order("name").returns<Customer[]>(),
@@ -123,6 +140,12 @@ async function Dashboard() {
         .order("created_at", { ascending: false })
         .limit(20)
         .returns<BlockRow[]>(),
+      supabase
+        .from("customer_events")
+        .select("id, type, detail, created_at, customers(name, email)")
+        .order("created_at", { ascending: false })
+        .limit(40)
+        .returns<EventRow[]>(),
     ]);
 
   const error =
@@ -146,6 +169,13 @@ async function Dashboard() {
   const feedback = feedbackRes.error ? null : (feedbackRes.data ?? []);
   // And the safety-rule log from step 4.
   const blocks = blocksRes.error ? null : (blocksRes.data ?? []);
+  // And the email sign-up log from step 5.
+  const events = eventsRes.error ? null : (eventsRes.data ?? []);
+  const countEvents = async (type: string) =>
+    (await supabase.from("customer_events").select("id", { count: "exact", head: true }).eq("type", type)).count ?? 0;
+  const [signupCount, redeemedCount, unsubCount] = events
+    ? await Promise.all([countEvents("signup"), countEvents("redeemed"), countEvents("unsubscribed")])
+    : [0, 0, 0];
   if (!restaurant) {
     return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
   }
@@ -210,6 +240,55 @@ async function Dashboard() {
             ))}
           </div>
         </Card>
+      </section>
+
+      {/* Email sign-ups */}
+      <section>
+        <h2 className="text-2xl font-bold">Email sign-ups</h2>
+        {events === null ? (
+          <p className="mt-2 text-neutral-500">Sign-ups not set up yet (run supabase/005_customer_signups.sql).</p>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="Sign-up reward" value={restaurant.signup_reward ?? "–"} />
+              <Stat label="Sign-ups" value={signupCount} />
+              <Stat label="Redeemed" value={redeemedCount} />
+              <Stat label="Unsubscribed" value={unsubCount} />
+            </div>
+            <p className="mt-3 text-sm">
+              Sign-up page:{" "}
+              <a className="underline" href={`/r/${restaurant.slug}`}>
+                /r/{restaurant.slug}
+              </a>{" "}
+              · Printable QR:{" "}
+              <a className="underline" href={`/r/${restaurant.slug}/qr`}>
+                /r/{restaurant.slug}/qr
+              </a>
+            </p>
+            <h3 className="mt-6 text-lg font-semibold">Activity (latest 40)</h3>
+            {events.length === 0 ? (
+              <p className="mt-2 text-neutral-500">No sign-ups yet. Scan the QR code to try it.</p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-sm">
+                {events.map((e) => (
+                  <li key={e.id}>
+                    <span className="font-medium">{EVENT_LABELS[e.type] ?? e.type}</span>
+                    {e.customers && (
+                      <>
+                        {" "}
+                        · {e.customers.name} ({e.customers.email})
+                      </>
+                    )}
+                    {e.detail && <span className="text-neutral-500"> · {e.detail}</span>}{" "}
+                    <span className="text-neutral-500">
+                      ({new Date(e.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
       </section>
 
       {/* Safety rules */}

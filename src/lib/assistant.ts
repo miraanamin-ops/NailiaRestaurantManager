@@ -78,6 +78,7 @@ export async function loadRestaurantContext() {
       opening_hours: restaurant.opening_hours,
       menu: restaurant.menu,
       brand_voice: restaurant.brand_voice,
+      signup_reward: restaurant.signup_reward,
     },
     review_summary: { count: reviews.length, average_rating: avg, not_replied: reviews.filter((r) => !r.replied).length },
     reviews: reviews.map((r) => ({

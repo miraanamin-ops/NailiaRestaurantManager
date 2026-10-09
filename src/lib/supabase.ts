@@ -35,7 +35,20 @@ export type Restaurant = {
   fake_now: string | null;
   owner_whatsapp: string | null;
   whatsapp_from: string | null;
+  // Customer sign-up page (added in step 5)
+  slug: string | null;
+  signup_reward: string | null;
+  brand_color: string;
+  brand_dark: string;
+  tagline: string | null;
 };
+
+// The site's public address, from the incoming request (works locally and on Vercel).
+export function baseUrlFrom(headers: Headers) {
+  const host = headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
+  const proto = headers.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 // The clock the rules use: the fake test time if one is set, otherwise now.
 export function restaurantNow(restaurant: Pick<Restaurant, "fake_now">) {
