@@ -1,12 +1,10 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
 import { z } from "zod";
 import type { RestaurantContext } from "@/lib/assistant";
 import { formatValidity, SEGMENT_LABELS, type CampaignFields } from "@/lib/campaigns";
 import { KIND_LABELS, type CheckNotes, type DraftKind } from "@/lib/drafts";
-
-const MODEL = "claude-sonnet-5";
 
 const CheckResult = z.object({
   content: z.string().describe("The draft, with clear factual errors fixed. Unchanged if nothing needed fixing."),
@@ -27,11 +25,12 @@ const CampaignCheckResult = z.object({
 export async function checkCampaign(ctx: RestaurantContext, fields: CampaignFields): Promise<{ fields: CampaignFields; notes: CheckNotes }> {
   const content = `Subject: ${fields.subject}\n\nBody:\n${fields.body}\n\nOffer: ${fields.offer}\nValid: ${formatValidity(fields.valid_from, fields.valid_until)} (${fields.valid_from} to ${fields.valid_until})\nSegment: ${SEGMENT_LABELS[fields.segment]}`;
   try {
-    const response = await new Anthropic().messages.parse({
+    const response = await claude().beta.messages.parse({
+      ...WITH_FALLBACK,
       model: MODEL,
-      max_tokens: 4000,
-      output_config: { effort: "medium", format: zodOutputFormat(CampaignCheckResult) },
-      system: checkerSystem(ctx),
+      max_tokens: MAX_TOKENS,
+      output_config: { effort: "medium", format: betaZodOutputFormat(CampaignCheckResult) },
+      system: cachedSystem(ctx),
       messages: [
         {
           role: "user",
@@ -57,19 +56,18 @@ export async function checkDraft(
   ctx: RestaurantContext,
   draft: { kind: DraftKind; audience: string; content: string; context?: string },
 ): Promise<{ content: string; notes: CheckNotes }> {
-  const system = checkerSystem(ctx);
-
   const user = `${KIND_LABELS[draft.kind]} for ${draft.audience}.${draft.context ? `\n\nContext:\n${draft.context}` : ""}
 
 Draft to check:
 """${draft.content}"""`;
 
   try {
-    const response = await new Anthropic().messages.parse({
+    const response = await claude().beta.messages.parse({
+      ...WITH_FALLBACK,
       model: MODEL,
-      max_tokens: 4000,
-      output_config: { effort: "medium", format: zodOutputFormat(CheckResult) },
-      system,
+      max_tokens: MAX_TOKENS,
+      output_config: { effort: "medium", format: betaZodOutputFormat(CheckResult) },
+      system: cachedSystem(ctx),
       messages: [{ role: "user", content: user }],
     });
     const result = response.parsed_output;
@@ -82,6 +80,12 @@ Draft to check:
     console.error("Checker failed", err);
     return { content: draft.content, notes: { fixes: [], flags: ["The checker couldn't run, so please read this one carefully."] } };
   }
+}
+
+// The instructions are the same for every check that day, so they're cached:
+// repeat checks (e.g. several review replies in one run) cost far less.
+function cachedSystem(ctx: RestaurantContext) {
+  return [{ type: "text" as const, text: checkerSystem(ctx), cache_control: { type: "ephemeral" as const } }];
 }
 
 // The checker's instructions, shared by drafts and campaigns.

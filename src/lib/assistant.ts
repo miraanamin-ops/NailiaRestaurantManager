@@ -2,7 +2,8 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { google } from "@/lib/google";
 import { getSupabase, restaurantNow, type Customer, type Restaurant } from "@/lib/supabase";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
 import { z } from "zod";
 import {
   formatValidity,
@@ -17,7 +18,6 @@ import {
 } from "@/lib/campaigns";
 import { DRAFT_KINDS, KIND_LABELS, type Draft, type DraftKind, type getLearningContext } from "@/lib/drafts";
 
-const MODEL = "claude-sonnet-5";
 // Drafts must fit in a WhatsApp button message (1024 chars) with a header.
 const DRAFT_MAX_CHARS = 700;
 const CHAT_MAX_CHARS = 1600;
@@ -177,7 +177,7 @@ function systemPrompt(
   activeDraft: Draft | null,
   mode: Mode,
   extra = "",
-): Anthropic.TextBlockParam[] {
+): Anthropic.Beta.BetaTextBlockParam[] {
   const background = `You are Naila, a WhatsApp marketing assistant for the owner of ${ctx.restaurantName}. You work for the restaurant owner (not for customers).
 
 You help the owner understand how the restaurant is doing and grow it: summarise and analyse reviews, spot patterns, know the regular customers and upcoming birthdays, suggest simple marketing ideas, and write drafts of customer-facing messages for them to approve.
@@ -238,7 +238,7 @@ If the owner's message asks for changes to this draft, call revise_current_draft
   ];
 }
 
-const createDraftTool: Anthropic.Tool = {
+const createDraftTool: Anthropic.Beta.BetaTool = {
   name: "create_draft",
   description:
     "Save a new draft for the owner to approve: a review reply or another one-off public message. For offers, promotions and birthday emails to customers, use create_email_campaign instead.",
@@ -268,7 +268,7 @@ const CAMPAIGN_PROPERTIES = {
   segment: { type: "string", enum: [...SEGMENTS], description: "Who gets it" },
 } as const;
 
-const createCampaignTool: Anthropic.Tool = {
+const createCampaignTool: Anthropic.Beta.BetaTool = {
   name: "create_email_campaign",
   description:
     "Draft an email campaign with an offer for customers. The owner gets a preview to approve; each customer then gets their own one-time offer link.",
@@ -321,10 +321,11 @@ export async function campaignContext(ctx: RestaurantContext) {
 }
 
 async function writeCampaign(ctx: RestaurantContext, learning: Learning, request: string, fallbackSegment: Segment) {
-  const response = await new Anthropic().messages.parse({
+  const response = await claude().beta.messages.parse({
+    ...WITH_FALLBACK,
     model: MODEL,
-    max_tokens: 4000,
-    output_config: { effort: "medium", format: zodOutputFormat(CampaignSchema) },
+    max_tokens: MAX_TOKENS,
+    output_config: { effort: "medium", format: betaZodOutputFormat(CampaignSchema) },
     system: systemPrompt(ctx, learning, null, "campaign", await campaignContext(ctx)),
     messages: [{ role: "user", content: request }],
   });
@@ -353,7 +354,7 @@ export function writeBirthdayCampaign(ctx: RestaurantContext, learning: Learning
   );
 }
 
-const pastedReviewTool: Anthropic.Tool = {
+const pastedReviewTool: Anthropic.Beta.BetaTool = {
   name: "draft_pasted_review_reply",
   description:
     "The owner pasted or forwarded a review and wants a reply they can copy into Google themselves. Pass the review details exactly as given.",
@@ -368,7 +369,7 @@ const pastedReviewTool: Anthropic.Tool = {
   },
 };
 
-const reviseDraftTool: Anthropic.Tool = {
+const reviseDraftTool: Anthropic.Beta.BetaTool = {
   name: "revise_current_draft",
   description: "Rewrite the draft that is waiting for approval, following the owner's requested changes.",
   input_schema: {
@@ -382,8 +383,8 @@ const reviseDraftTool: Anthropic.Tool = {
 };
 
 // Turns stored WhatsApp messages (oldest first) into a Claude conversation.
-function toClaudeMessages(history: StoredMessage[]): Anthropic.MessageParam[] {
-  const messages: Anthropic.MessageParam[] = history
+function toClaudeMessages(history: StoredMessage[]): Anthropic.Beta.BetaMessageParam[] {
+  const messages: Anthropic.Beta.BetaMessageParam[] = history
     .filter((m) => m.body.trim() && m.status !== "failed")
     .map((m) => ({
       role: m.direction === "inbound" ? "user" : "assistant",
@@ -395,9 +396,9 @@ function toClaudeMessages(history: StoredMessage[]): Anthropic.MessageParam[] {
   return messages;
 }
 
-function textOf(response: Anthropic.Message) {
+function textOf(response: Anthropic.Beta.BetaMessage) {
   return response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
     .map((b) => b.text)
     .join("\n")
     .trim();
@@ -435,9 +436,10 @@ export async function chat(
     activeDraft?.waiting_for === "decision"
       ? [createCampaignTool, createDraftTool, pastedReviewTool, reviseDraftTool]
       : [createCampaignTool, createDraftTool, pastedReviewTool];
-  const response = await new Anthropic().messages.create({
+  const response = await claude().beta.messages.create({
+    ...WITH_FALLBACK,
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: MAX_TOKENS,
     output_config: { effort: "low" }, // quick chat replies keep WhatsApp responsive
     system: systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx)),
     tools,
@@ -448,7 +450,7 @@ export async function chat(
     return { type: "text", text: "Sorry, I can't help with that one. Try asking me something else about the restaurant." };
   }
 
-  const toolUse = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+  const toolUse = response.content.find((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
   if (toolUse?.name === "draft_pasted_review_reply") {
     const input = toolUse.input as Record<string, unknown>;
     if (typeof input.text === "string" && input.text.trim()) {
@@ -497,9 +499,10 @@ export async function chat(
 }
 
 async function writeOnly(ctx: RestaurantContext, learning: Learning, request: string) {
-  const response = await new Anthropic().messages.create({
+  const response = await claude().beta.messages.create({
+    ...WITH_FALLBACK,
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: MAX_TOKENS,
     output_config: { effort: "medium" },
     system: systemPrompt(ctx, learning, null, "write"),
     messages: [{ role: "user", content: request }],
@@ -544,11 +547,12 @@ const PostSchema = z.object({
 });
 const POST_GUIDE = `Google posts appear on the restaurant's Google listing. Write 2 to 4 short sentences (under 600 characters) in the brand voice, about something concrete from the data: a dish with its price, an offer within the discount cap, or an event or occasion. End with a simple call to action like "Pop in tonight" or "See you this weekend". No hashtags, at most two emojis, no links.`;
 
-async function writePostFields(ctx: RestaurantContext, learning: Learning, content: Anthropic.MessageParam["content"]) {
-  const response = await new Anthropic().messages.parse({
+async function writePostFields(ctx: RestaurantContext, learning: Learning, content: Anthropic.Beta.BetaMessageParam["content"]) {
+  const response = await claude().beta.messages.parse({
+    ...WITH_FALLBACK,
     model: MODEL,
-    max_tokens: 4000,
-    output_config: { effort: "medium", format: zodOutputFormat(PostSchema) },
+    max_tokens: MAX_TOKENS,
+    output_config: { effort: "medium", format: betaZodOutputFormat(PostSchema) },
     system: systemPrompt(ctx, learning, null, "post"),
     messages: [{ role: "user", content }],
   });
@@ -601,10 +605,11 @@ export type ReportInsights = z.infer<typeof ReportInsightsSchema>;
 // The weekly report's words: summary sentence, review themes and next week's
 // actions. The numbers themselves are worked out in plain code and given here.
 export async function writeReportInsights(ctx: RestaurantContext, facts: string, reviewTexts: string[]) {
-  const response = await new Anthropic().messages.parse({
+  const response = await claude().beta.messages.parse({
+    ...WITH_FALLBACK,
     model: MODEL,
-    max_tokens: 4000,
-    output_config: { effort: "medium", format: zodOutputFormat(ReportInsightsSchema) },
+    max_tokens: MAX_TOKENS,
+    output_config: { effort: "medium", format: betaZodOutputFormat(ReportInsightsSchema) },
     system: `You write the weekly report for the owner of ${ctx.restaurantName}, a ${ctx.restaurant.cuisine ?? "restaurant"} at ${ctx.restaurant.address ?? "an independent site"}. The owner reads it on their phone: plain English, short, specific, no jargon, no hype.
 
 Only use facts you're given. Don't invent numbers, dishes or events.
