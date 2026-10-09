@@ -36,3 +36,6 @@ create table if not exists draft_feedback (
 create index if not exists draft_feedback_idx on draft_feedback (restaurant_id, created_at desc);
 
 alter table draft_feedback enable row level security;
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('003_approval_loop.sql') on conflict (name) do nothing;

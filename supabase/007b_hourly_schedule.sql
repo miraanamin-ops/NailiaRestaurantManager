@@ -43,3 +43,6 @@ select cron.schedule(
 
 -- To check it's working:  select * from cron.job_run_details order by start_time desc limit 5;
 -- To stop it:             select cron.unschedule('naila-hourly-reviews');
+
+-- Record that this file has been run (see scripts/check-schema.mjs).
+insert into schema_migrations (name) values ('007b_hourly_schedule.sql') on conflict (name) do nothing;
