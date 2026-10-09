@@ -4,6 +4,7 @@ import { google } from "@/lib/google";
 import { getSupabase, restaurantNow, type Customer, type Restaurant } from "@/lib/supabase";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
+import { customerSummary, lookUpCustomers, lookUpReviews, reviewSummary } from "@/lib/claude-data";
 import { londonLongDate } from "@/lib/clock";
 import { clip } from "@/lib/text";
 import { z } from "zod";
@@ -70,10 +71,10 @@ export async function loadRestaurantContext({ realTime = false }: { realTime?: b
 
   const customers = customersRes.data ?? [];
   const today = realTime ? new Date() : restaurantNow(restaurant);
-  const avg = reviews.length
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-    : "n/a";
 
+  // What Claude sees on every message: the profile and short summaries only.
+  // Specific reviews and customers are looked up when a message needs them
+  // (look_up_reviews / look_up_customers in chat). Customer contact details are never sent.
   const data = {
     restaurant: {
       name: restaurant.name,
@@ -85,26 +86,8 @@ export async function loadRestaurantContext({ realTime = false }: { realTime?: b
       brand_voice: restaurant.brand_voice,
       signup_reward: restaurant.signup_reward,
     },
-    review_summary: { count: reviews.length, average_rating: avg, not_replied: reviews.filter((r) => !r.replied).length },
-    reviews: reviews.map((r) => ({
-      id: r.id,
-      author: r.author_name,
-      rating: r.rating,
-      text: r.text,
-      date: r.review_date.slice(0, 10),
-      replied: r.replied,
-      reply: r.reply_text,
-    })),
-    customers: customers.map((c) => ({
-      id: c.id,
-      name: c.name,
-      whatsapp: c.phone,
-      birthday: c.birthday,
-      visits: c.visit_count,
-      last_visit: c.last_visit,
-      marketing_opt_in: c.marketing_opt_in,
-      notes: c.notes,
-    })),
+    review_summary: reviewSummary(reviews, today),
+    customer_summary: customerSummary(customers, today),
   };
 
   return {
@@ -155,7 +138,8 @@ const CHAT_INSTRUCTIONS = `Chatting with the owner:
 - Talk to the owner like a helpful, friendly colleague.
 - When the owner wants an offer, promotion or birthday email for customers, call create_email_campaign.
 - For a review reply or any other one-off public message, call create_draft.
-- Never write these out in chat: the tools send the owner a preview with Approve, Edit and Skip buttons.`;
+- Never write these out in chat: the tools send the owner a preview with Approve, Edit and Skip buttons.
+- For specific reviews (what someone said, which ones need replies, the id a review reply needs), call look_up_reviews. For specific customers (a name, a birthday, the id a message needs), call look_up_customers. Look up just what this message needs.`;
 
 const WRITE_INSTRUCTIONS = `You are writing one draft right now. Reply with only the finished message text, exactly as it would be sent: no intro, no explanation, no quotes around it, no JSON or code.`;
 
@@ -174,7 +158,7 @@ function systemPrompt(
 
 You help the owner understand how the restaurant is doing and grow it: summarise and analyse reviews, spot patterns, know the regular customers and upcoming birthdays, suggest simple marketing ideas, and write drafts of customer-facing messages for them to approve.
 
-Base every fact on the restaurant data below. If something isn't in the data, say you don't have it rather than guessing.
+Base every fact on the restaurant data below. It has the restaurant's profile and summaries of its reviews and customers, not every review and customer. If something isn't in the data (or in what you look up), say you don't have it rather than guessing.
 
 Writing drafts (review replies and other one-off messages):
 - Write in the restaurant's brand voice, ready to send as-is: no placeholders like [Name], under ${DRAFT_MAX_CHARS} characters.
@@ -374,6 +358,53 @@ const reviseDraftTool: Anthropic.Beta.BetaTool = {
   },
 };
 
+// Look-ups: only the specific reviews or customers a message needs reach Claude.
+const lookUpReviewsTool: Anthropic.Beta.BetaTool = {
+  name: "look_up_reviews",
+  description: `Find specific Google reviews (newest first, at most 10): by stars, unreplied only, or words in the author or text. Returns each review's id (needed to draft a reply), author, rating, date, text and any posted reply.`,
+  input_schema: {
+    type: "object",
+    properties: {
+      min_rating: { type: "integer", minimum: 1, maximum: 5 },
+      max_rating: { type: "integer", minimum: 1, maximum: 5 },
+      unreplied_only: { type: "boolean", description: "Only reviews without a posted reply" },
+      search: { type: "string", description: "Words to find in the reviewer's name or the review text" },
+      limit: { type: "integer", minimum: 1, maximum: 10 },
+    },
+  },
+};
+
+const lookUpCustomersTool: Anthropic.Beta.BetaTool = {
+  name: "look_up_customers",
+  description: `Find specific customers (at most 10): by name, or with a birthday within N days. Returns id, name, birthday, visits, last visit, email consent and notes (no contact details).`,
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "All or part of the customer's name" },
+      birthday_within_days: { type: "integer", minimum: 0, maximum: 60 },
+      limit: { type: "integer", minimum: 1, maximum: 10 },
+    },
+  },
+};
+
+const LOOKUP_ROUNDS = 4;
+
+function runLookUp(ctx: RestaurantContext, tool: Anthropic.Beta.BetaToolUseBlock) {
+  const input = (tool.input ?? {}) as Record<string, unknown>;
+  const num = (k: string) => (typeof input[k] === "number" ? (input[k] as number) : undefined);
+  const str = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : undefined);
+  if (tool.name === "look_up_reviews") {
+    return lookUpReviews(ctx.reviews, {
+      min_rating: num("min_rating"),
+      max_rating: num("max_rating"),
+      unreplied_only: input.unreplied_only === true,
+      search: str("search"),
+      limit: num("limit"),
+    });
+  }
+  return lookUpCustomers(ctx.customers, { name: str("name"), birthday_within_days: num("birthday_within_days"), limit: num("limit") }, ctx.now);
+}
+
 // Turns stored WhatsApp messages (oldest first) into a Claude conversation.
 function toClaudeMessages(history: StoredMessage[]): Anthropic.Beta.BetaMessageParam[] {
   const messages: Anthropic.Beta.BetaMessageParam[] = history
@@ -420,25 +451,46 @@ export async function chat(
   const messages = toClaudeMessages(history);
   if (!messages.length) return { type: "text", text: "Hi! 👋 Send me a question about the restaurant and I'll help." };
 
-  const tools =
-    activeDraft?.waiting_for === "decision"
-      ? [createCampaignTool, createDraftTool, pastedReviewTool, reviseDraftTool]
-      : [createCampaignTool, createDraftTool, pastedReviewTool];
-  const response = await claude().beta.messages.create({
-    ...WITH_FALLBACK,
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    output_config: { effort: "low" }, // quick chat replies keep WhatsApp responsive
-    system: systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx)),
-    tools,
-    messages,
-  });
+  const tools = [
+    createCampaignTool,
+    createDraftTool,
+    pastedReviewTool,
+    ...(activeDraft?.waiting_for === "decision" ? [reviseDraftTool] : []),
+    lookUpReviewsTool,
+    lookUpCustomersTool,
+  ];
+  const system = systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx));
+  const isLookUp = (b: Anthropic.Beta.BetaContentBlock): b is Anthropic.Beta.BetaToolUseBlock =>
+    b.type === "tool_use" && (b.name === "look_up_reviews" || b.name === "look_up_customers");
 
-  if (response.stop_reason === "refusal") {
-    return { type: "text", text: "Sorry, I can't help with that one. Try asking me something else about the restaurant." };
+  // Claude may look things up first (a few rounds at most), then answer or draft.
+  let response: Anthropic.Beta.BetaMessage | null = null;
+  for (let round = 0; round < LOOKUP_ROUNDS; round++) {
+    response = await claude().beta.messages.create({
+      ...WITH_FALLBACK,
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      output_config: { effort: "low" }, // quick chat replies keep WhatsApp responsive
+      system,
+      tools,
+      messages,
+    });
+    if (response.stop_reason === "refusal") {
+      return { type: "text", text: "Sorry, I can't help with that one. Try asking me something else about the restaurant." };
+    }
+    const lookUps = response.content.filter(isLookUp);
+    const action = response.content.some((b) => b.type === "tool_use" && !isLookUp(b));
+    if (action || !lookUps.length || response.stop_reason !== "tool_use") break;
+    // Pass the whole turn back unchanged (including any thinking), then the results.
+    messages.push({ role: "assistant", content: response.content });
+    messages.push({
+      role: "user",
+      content: lookUps.map((t) => ({ type: "tool_result" as const, tool_use_id: t.id, content: JSON.stringify(runLookUp(ctx, t)) })),
+    });
   }
+  if (!response) return { type: "text", text: "Sorry, I couldn't come up with an answer. Could you rephrase that?" };
 
-  const toolUse = response.content.find((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
+  const toolUse = response.content.find((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use" && !isLookUp(b));
   if (toolUse?.name === "draft_pasted_review_reply") {
     const input = toolUse.input as Record<string, unknown>;
     if (typeof input.text === "string" && input.text.trim()) {
