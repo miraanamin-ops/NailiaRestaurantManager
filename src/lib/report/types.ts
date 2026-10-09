@@ -96,3 +96,10 @@ export function formatValue(v: number, format: "rating" | "count") {
 export function whatsappLink(number: string | null, message: string) {
   return number ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : null;
 }
+
+// Report links stop working after this many days (the owner gets a new one every Monday).
+export const REPORT_LINK_DAYS = 30;
+
+export function reportExpired(expiresAt: string | null, now: Date) {
+  return Boolean(expiresAt) && new Date(expiresAt!).getTime() <= now.getTime();
+}

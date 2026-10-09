@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { logOut } from "@/app/login/actions";
+import { requireOwner } from "@/lib/auth";
 import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
 import { google } from "@/lib/google";
 import {
@@ -11,7 +13,7 @@ import {
   type Review,
 } from "@/lib/supabase";
 
-// Password-protected by src/proxy.ts. Never shown in search engines.
+// Owner page: needs a login (src/proxy.ts and lib/auth.ts). Never shown in search engines.
 export const metadata: Metadata = { title: "Naila – test data", robots: { index: false, follow: false } };
 
 export default function Home() {
@@ -114,6 +116,7 @@ function Stars({ rating }: { rating: number }) {
 async function Dashboard() {
   // Always fetch fresh data on every visit.
   await connection();
+  const owner = await requireOwner("/");
   const supabase = getSupabase();
 
   const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes, blocksRes, eventsRes] =
@@ -194,6 +197,9 @@ async function Dashboard() {
   if (!restaurant) {
     return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
   }
+  if (!owner.restaurantIds.includes(restaurant.id)) {
+    return <p className="mt-6">You&apos;re logged in as {owner.email}, which isn&apos;t this restaurant&apos;s owner email.</p>;
+  }
 
   const today = new Date();
   const birthdaysThisWeek = customers.filter((c) => isBirthdayThisWeek(c.birthday, today));
@@ -205,6 +211,13 @@ async function Dashboard() {
     <div className="mt-2 space-y-10">
       {/* Restaurant */}
       <section>
+        <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+          <a href="/log" className="font-medium text-orange-700 underline">Activity log</a>
+          <span className="text-neutral-500">Logged in as {owner.email}</span>
+          <form action={logOut}>
+            <button type="submit" className="text-neutral-600 underline">Log out</button>
+          </form>
+        </div>
         <h1 className="text-3xl font-bold">{restaurant.name}</h1>
         <p className="mt-1 text-neutral-600 dark:text-neutral-400">
           {restaurant.cuisine} · {restaurant.address} · {restaurant.phone}

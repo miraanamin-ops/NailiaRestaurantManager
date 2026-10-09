@@ -1,0 +1,14 @@
+<!-- Paste into Supabase > Authentication > Emails > Templates, for BOTH
+     "Magic Link" and "Confirm signup" (a first-time login uses the second).
+     Subject for both: Your Naila login link
+     The link goes to /auth/confirm with a token_hash, so it works even if the
+     email opens in a different browser app from the one you logged in from. -->
+<h2>Log in to Naila</h2>
+<p>Tap the button below to log in. It works once and expires after an hour.</p>
+<p>
+  <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email"
+     style="display:inline-block;padding:12px 22px;background:#1c1917;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:bold">
+    Log in
+  </a>
+</p>
+<p style="color:#78716c;font-size:13px">If you didn't ask for this, you can ignore this email.</p>

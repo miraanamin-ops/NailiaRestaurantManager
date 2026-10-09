@@ -8,6 +8,7 @@ import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural } from "@/lib/text";
 import {
   direction,
+  REPORT_LINK_DAYS,
   type ActionsSection,
   type Compare,
   type CustomersSection,
@@ -326,6 +327,7 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
         token,
         period_start: period.start.toISOString(),
         period_end: period.end.toISOString(),
+        expires_at: new Date(Date.now() + REPORT_LINK_DAYS * DAY).toISOString(),
         headline: text,
         data,
       })
@@ -337,6 +339,10 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
 
 export async function getReportByToken(token: string) {
   return check(
-    await getSupabase().from("reports").select("token, data, created_at").eq("token", token).maybeSingle<{ token: string; data: ReportData; created_at: string }>(),
+    await getSupabase()
+      .from("reports")
+      .select("token, restaurant_id, data, created_at, expires_at")
+      .eq("token", token)
+      .maybeSingle<{ token: string; restaurant_id: string; data: ReportData; created_at: string; expires_at: string | null }>(),
   );
 }

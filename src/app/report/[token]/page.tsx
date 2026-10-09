@@ -1,8 +1,20 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { NotFoundCard } from "@/components/brand-shell";
+import { requireOwner } from "@/lib/auth";
 import { getReportByToken } from "@/lib/report/build";
+import { REPORT_LINK_DAYS, reportExpired } from "@/lib/report/types";
 import { Section } from "./sections";
+
+function ExpiredCard() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-stone-100 p-6 text-center text-stone-700">
+      <p>
+        This report link has expired (links last {REPORT_LINK_DAYS} days). Your newest report link arrives on WhatsApp every Monday morning.
+      </p>
+    </div>
+  );
+}
 
 export const metadata: Metadata = { title: "Weekly report", robots: { index: false } };
 
@@ -17,8 +29,11 @@ export default function ReportPage({ params }: PageProps<"/report/[token]">) {
 
 async function Report({ params }: Pick<PageProps<"/report/[token]">, "params">) {
   const { token } = await params;
+  // Owner page: needs a login (and the right restaurant), and the link lasts 30 days.
+  const owner = await requireOwner(`/report/${token}`);
   const report = await getReportByToken(token);
-  if (!report) return <NotFoundCard />;
+  if (!report || !owner.restaurantIds.includes(report.restaurant_id)) return <NotFoundCard />;
+  if (reportExpired(report.expires_at, new Date())) return <ExpiredCard />;
   const { data } = report;
   const brand = data.restaurant.brandColor;
 
