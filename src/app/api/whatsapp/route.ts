@@ -59,6 +59,13 @@ export async function POST(req: NextRequest) {
     status: "received",
     error: restaurant ? null : "Ignored: not a registered owner number",
   });
+  // Twilio sometimes delivers the same message twice. Each message id can only be
+  // logged once (unique index), so a second copy is a duplicate: do nothing.
+  // (23505 = the database refused a duplicate.)
+  if (inboundError?.code === "23505") {
+    console.warn("Ignored a duplicate delivery of a WhatsApp message");
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
 
   // Anyone else gets no reply and can't trigger anything.
