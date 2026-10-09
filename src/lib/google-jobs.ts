@@ -1,6 +1,6 @@
 import "server-only";
 import { writeGooglePost, writeReviewReply, type RestaurantContext } from "@/lib/assistant";
-import { checkDraft } from "@/lib/checker";
+import { checkDraft } from "@/lib/checks";
 import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, type Draft } from "@/lib/drafts";
 import { draftMessage } from "@/lib/format";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
@@ -42,7 +42,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
         audience: `Google review by ${review.author_name}`,
         request: urgent ? "Review check: low rating alert" : "Review check",
         reviewId: review.id,
-        checkNotes: checked.notes,
+        checks: checked.checks,
         mode: urgent ? "urgent" : "hold",
       });
     } catch (err) {
@@ -100,7 +100,7 @@ export async function createPostDraft(
     content: checked.content,
     audience: "your Google listing",
     request: input.request,
-    checkNotes: checked.notes,
+    checks: checked.checks,
     mode: input.mode,
   });
   check(

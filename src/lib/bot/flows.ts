@@ -14,7 +14,8 @@ import {
   updateCampaignDraft,
   type CampaignFields,
 } from "@/lib/campaigns";
-import { checkCampaign, checkDraft } from "@/lib/checker";
+import { checkCampaign, checkDraft } from "@/lib/checks";
+import { checkNoteLines, checksLine } from "@/lib/checks/types";
 import { applyEdit, createDraft, getLearningContext, type Draft, type DraftKind } from "@/lib/drafts";
 import { randomDummyReview } from "@/lib/dummy-reviews";
 import { draftMessage } from "@/lib/format";
@@ -46,7 +47,7 @@ export async function checkCreateAndSend(
     request: input.request,
     reviewId: input.reviewId,
     customerId: input.customerId,
-    checkNotes: checked.notes,
+    checks: checked.checks,
   });
   await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true);
 }
@@ -60,7 +61,7 @@ export async function reviseAndSend(ctx: RestaurantContext, draft: Draft, instru
     content,
     context: review ? `Replying to this ${review.rating}-star review: "${review.text}"` : undefined,
   });
-  const updated = await applyEdit(draft, instruction, checked.content, checked.notes);
+  const updated = await applyEdit(draft, instruction, checked.content, checked.checks);
   await send(draftMessage(updated, ctx.restaurant), true);
 }
 
@@ -80,7 +81,7 @@ export async function campaignCreateAndSend(
     restaurant: ctx.restaurant,
     fields: checked.fields,
     request,
-    checkNotes: checked.notes,
+    checks: checked.checks,
     now: ctx.now,
     isBirthday,
     mode,
@@ -101,7 +102,7 @@ export async function reviseCampaignAndSend(ctx: RestaurantContext, draft: Draft
     campaign,
     fields: checked.fields,
     instruction,
-    checkNotes: checked.notes,
+    checks: checked.checks,
     now: ctx.now,
   });
   await send(draftMessage(updated, ctx.restaurant), true);
@@ -157,12 +158,9 @@ export async function pastedReviewReply(
     content,
     context: `Replying to this ${review.rating ? `${review.rating}-star ` : ""}review: "${review.text}"`,
   });
-  const notes = [
-    ...checked.notes.fixes.map((f) => `🔍 _Checker fixed: ${f}_`),
-    ...checked.notes.flags.map((f) => `⚠️ _Check: ${f}_`),
-  ];
+  const notes = checkNoteLines(checked.checks);
   await send(
-    `✍️ Here's a reply to ${review.authorName}'s review. *Copy the next message* and paste it as your reply on Google.${notes.length ? `\n\n${notes.join("\n")}` : ""}`,
+    `✍️ Here's a reply to ${review.authorName}'s review. *Copy the next message* and paste it as your reply on Google.\n\n${checksLine(checked.checks)}${notes.length ? `\n${notes.join("\n")}` : ""}`,
   );
   // On its own, so it's easy to copy in one go.
   await send(checked.content);

@@ -1,5 +1,5 @@
 // Unit tests for the weekly report's plain-code parts. Run with: npm test
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { bars, weekTotals } from "../src/lib/report/chart.ts";
 import { changeText, direction, formatValue, whatsappLink } from "../src/lib/report/types.ts";

@@ -1,4 +1,5 @@
 import "server-only";
+import { allNotes, type DraftChecks } from "@/lib/checks/types";
 import { getSupabase } from "@/lib/supabase";
 
 export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post"] as const;
@@ -12,7 +13,7 @@ export type Draft = {
   customer_id: string | null;
   review_id: string | null;
   content: string;
-  status: "pending" | "approved" | "queued" | "sent" | "blocked" | "skipped" | "superseded" | "rejected";
+  status: "pending" | "approved" | "queued" | "sent" | "blocked" | "skipped" | "superseded" | "rejected" | "withdrawn";
   waiting_for: WaitingFor | null;
   audience: string | null;
   request: string | null;
@@ -24,13 +25,15 @@ export type Draft = {
   sent_at: string | null;
   block_reason: string | null;
   check_notes: CheckNotes | null;
+  // The four checks and what each found (step 10). Older drafts only have check_notes.
+  checks: DraftChecks | null;
   // Morning brief (step 8)
   held_at: string | null;
   brief_number: number | null;
   briefed_at: string | null;
 };
 
-// What the checker changed or wants the owner to look at.
+// Everything the checks changed or want the owner to look at, all together.
 export type CheckNotes = { fixes: string[]; flags: string[] };
 
 export type Feedback = {
@@ -83,7 +86,7 @@ export async function createDraft(input: {
   request: string | null;
   reviewId?: string | null;
   customerId?: string | null;
-  checkNotes: CheckNotes;
+  checks: DraftChecks;
   // present: the owner asked for it, so it replaces the draft on screen (default).
   // hold:    made by a scheduled job; waits quietly for the morning brief.
   // urgent:  jumps the queue (e.g. a bad review); the draft on screen goes back into the queue.
@@ -122,7 +125,8 @@ export async function createDraft(input: {
       customer_id: input.customerId ?? null,
       status: "pending",
       waiting_for: waitingFor,
-      check_notes: input.checkNotes,
+      checks: input.checks,
+      check_notes: allNotes(input.checks),
       held_at: mode === "hold" ? new Date().toISOString() : null,
     })
     .select("*")
@@ -205,7 +209,7 @@ export function startEdit(draft: Draft) {
   return focusDraft(draft, "edit_instructions");
 }
 
-export async function applyEdit(draft: Draft, instruction: string, newContent: string, checkNotes: CheckNotes) {
+export async function applyEdit(draft: Draft, instruction: string, newContent: string, checks: DraftChecks) {
   check(
     await getSupabase().from("draft_feedback").insert({
       restaurant_id: draft.restaurant_id,
@@ -222,7 +226,8 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
     version: draft.version + 1,
     status: "pending",
     waiting_for: "decision",
-    check_notes: checkNotes,
+    checks,
+    check_notes: allNotes(checks),
   });
 }
 

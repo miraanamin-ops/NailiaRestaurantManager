@@ -1,5 +1,5 @@
 // Unit tests for the plain-code safety rules. Run with: npm test
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { formatLondon, isInSendWindow, londonTimeOn, nextWindowStart } from "../src/lib/clock.ts";
 import { findDiscounts, overCap } from "../src/lib/discounts.ts";

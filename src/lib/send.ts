@@ -1,23 +1,24 @@
 import "server-only";
-import { formatLondon, formatWindow, isInSendWindow, nextWindowStart } from "@/lib/clock";
-import { deliverCampaign, deliveryNote, getCampaignForDraft, recipientsFor } from "@/lib/campaigns";
-import { overCap } from "@/lib/discounts";
+import { deliverCampaign, deliveryNote, ensureUnsubscribeTokens, getCampaignForDraft, recipientsFor } from "@/lib/campaigns";
+import { emailComplianceProblems } from "@/lib/checks/compliance";
+import { moneyAndRisk, type SendSource } from "@/lib/checks/money";
+import { checkResult, type CheckResult, type DraftChecks } from "@/lib/checks/types";
 import { google, type GooglePost } from "@/lib/google";
 import { check, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
-// The safety rules. Plain code only: every send goes through attemptSend,
-// which checks each rule right before anything is marked as sent.
+// Sending. Every send goes through attemptSend, which runs the two code checks
+// right before anything goes out and records the result on the draft:
+//   money and risk (lib/checks/money.ts): duplicates, approval, discount cap, PAUSE, sending hours
+//   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
 
+export type { SendSource };
 export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window"; scheduledFor: Date | null; detail: string; draft: Draft }
   | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients"; detail: string; draft: Draft };
-
-// approve: the owner tapped Approve. queue: a held draft being retried. test: the TEST SEND command.
-export type SendSource = "approve" | "queue" | "test";
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
@@ -31,72 +32,62 @@ async function logBlock(draft: Draft, reason: BlockReason, detail: string) {
   if (error) console.error("Failed to log blocked send", error);
 }
 
+// The send-time results of the two code checks, kept alongside the draft-time ones.
+function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money", CheckResult>>): DraftChecks {
+  return { ...(draft.checks ?? {}), send: { ...(draft.checks?.send ?? {}), ...send } };
+}
+
 export async function attemptSend(draftId: string, restaurant: Restaurant, now: Date, source: SendSource): Promise<SendResult> {
   const supabase = getSupabase();
   const draft = await getDraft(draftId);
 
-  // Rule: a draft can only be sent once.
-  if (draft.status === "sent" || draft.sent_at) {
-    const detail = `Already sent${draft.sent_at ? ` (${formatLondon(new Date(draft.sent_at))})` : ""}. Duplicates are blocked.`;
-    await logBlock(draft, "duplicate", detail);
-    return { outcome: "blocked", reason: "duplicate", detail, draft };
+  // 1. Money and risk.
+  const rules = moneyAndRisk(draft, restaurant, now, source);
+  if (rules.outcome === "blocked") {
+    await logBlock(draft, rules.reason, rules.detail);
+    // A duplicate attempt leaves the draft as it was; anything else is marked blocked.
+    if (rules.reason === "duplicate" || rules.reason === "not_approved") return { ...rules, draft };
+    const updated = await updateDraft(draft.id, {
+      status: "blocked",
+      block_reason: rules.detail,
+      scheduled_for: null,
+      checks: withSendChecks(draft, { money: checkResult([], [rules.detail], "blocked") }),
+    });
+    return { ...rules, draft: updated };
   }
-  if (draft.status === "queued" && source === "approve") {
-    const when = draft.scheduled_for ? `for ${formatLondon(new Date(draft.scheduled_for))}` : "until you text RESUME";
-    const detail = `Already approved and queued ${when}. It will only go out once.`;
-    await logBlock(draft, "duplicate", detail);
-    return { outcome: "blocked", reason: "duplicate", detail, draft };
-  }
-
-  // Rule: nothing sends without an Approve.
-  if (!draft.approved_at || !(SENDABLE_STATUSES as readonly string[]).includes(draft.status)) {
-    const detail = `Draft hasn't been approved (status: ${draft.status}).`;
-    await logBlock(draft, "not_approved", detail);
-    return { outcome: "blocked", reason: "not_approved", detail, draft };
-  }
-
-  // Rule: no discount above the restaurant's cap.
-  const over = overCap(draft.content, restaurant.discount_cap_percent);
-  if (over) {
-    const detail = `Offers ${over.percent}% off ("${over.phrase}"), above the ${restaurant.discount_cap_percent}% cap.`;
-    const updated = await updateDraft(draft.id, { status: "blocked", block_reason: detail, scheduled_for: null });
-    await logBlock(draft, "discount_cap", detail);
-    return { outcome: "blocked", reason: "discount_cap", detail, draft: updated };
+  if (rules.outcome === "queued") {
+    await logBlock(draft, rules.reason, rules.detail);
+    const updated = await updateDraft(draft.id, {
+      status: "queued",
+      scheduled_for: rules.scheduledFor?.toISOString() ?? null,
+      block_reason: rules.detail,
+      checks: withSendChecks(draft, { money: checkResult([], [rules.detail], "held") }),
+    });
+    return { ...rules, draft: updated };
   }
 
-  // Rule: nothing sends while PAUSED. Held until RESUME.
-  if (restaurant.paused) {
-    const detail = "Sending is paused. Held until RESUME.";
-    const updated = await updateDraft(draft.id, { status: "queued", scheduled_for: null, block_reason: detail });
-    await logBlock(draft, "paused", detail);
-    return { outcome: "queued", reason: "paused", scheduledFor: null, detail, draft: updated };
-  }
-
-  // Rule: only send inside the window (9am–9pm UK time by default).
-  if (!isInSendWindow(now, restaurant.send_window_start, restaurant.send_window_end)) {
-    const at = nextWindowStart(now, restaurant.send_window_start);
-    const detail = `Outside sending hours (${formatWindow(restaurant.send_window_start, restaurant.send_window_end)}, it's ${formatLondon(now)}). Queued for ${formatLondon(at)}.`;
-    const updated = await updateDraft(draft.id, { status: "queued", scheduled_for: at.toISOString(), block_reason: detail });
-    await logBlock(draft, "outside_window", detail);
-    return { outcome: "queued", reason: "outside_window", scheduledFor: at, detail, draft: updated };
-  }
-
-  // Rule: email campaigns only go to customers with valid consent who haven't
-  // unsubscribed (checked now, at send time). Nobody eligible = nothing to send.
+  // 2. Compliance: email campaigns only go to customers with valid consent right
+  //    now (not unsubscribed), and every one of those emails has an unsubscribe link.
+  const compliance = checkResult([], []);
   if (draft.kind === "email_campaign") {
     const campaign = await getCampaignForDraft(draft.id);
-    const { eligible, excluded } = campaign
-      ? await recipientsFor(restaurant, campaign.segment, now)
-      : { eligible: [], excluded: 0 };
-    if (!eligible.length) {
-      const detail = `No customers in this segment have valid email consent${excluded ? ` (${excluded} left out: no consent or unsubscribed)` : ""}.`;
-      const updated = await updateDraft(draft.id, { status: "blocked", block_reason: detail, scheduled_for: null });
+    const { eligible, excluded } = campaign ? await recipientsFor(restaurant, campaign.segment, now) : { eligible: [], excluded: 0 };
+    const missingUnsubscribe = await ensureUnsubscribeTokens(eligible.map((c) => c.id));
+    const problems = emailComplianceProblems({ eligible: eligible.length, excluded, missingUnsubscribe });
+    if (problems.length) {
+      const detail = problems.join(" ");
       await logBlock(draft, "no_recipients", detail);
+      const updated = await updateDraft(draft.id, {
+        status: "blocked",
+        block_reason: detail,
+        scheduled_for: null,
+        checks: withSendChecks(draft, { money: checkResult([], []), compliance: checkResult([], problems, "blocked") }),
+      });
       return { outcome: "blocked", reason: "no_recipients", detail, draft: updated };
     }
   }
 
-  // All rules passed. Claim the draft in one atomic update so that two sends
+  // All checks passed. Claim the draft in one atomic update so that two sends
   // racing each other can't both succeed.
   const claim = await supabase
     .from("drafts")
@@ -106,6 +97,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       scheduled_for: null,
       block_reason: null,
       updated_at: new Date().toISOString(),
+      checks: withSendChecks(draft, { money: checkResult([], []), compliance }),
     })
     .eq("id", draft.id)
     .in("status", [...SENDABLE_STATUSES])
