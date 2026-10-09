@@ -1,0 +1,58 @@
+// What UNDO can do about one logged action. Plain code with no imports, so
+// every case is unit-tested (tests/undo.test.ts); lib/undo.ts carries it out.
+
+export type UndoEntry = { action: string; data: Record<string, unknown> | null };
+export type UndoDraft = { kind: string; status: string; review_id: string | null };
+
+export type UndoPlan =
+  | { type: "reopen" } // approved but not sent (queued or blocked): back to pending
+  | { type: "withdraw_reply" } // a review reply posted on (dummy) Google: take it down
+  | { type: "withdraw_post" } // a Google post published on (dummy) Google: take it down
+  | { type: "withdraw_simulated" } // "sent" but only simulated: nothing reached anyone
+  | { type: "restore_skip" }
+  | { type: "restore_edit" }
+  | { type: "restore_setting"; field: string; value: unknown }
+  | { type: "cannot"; reason: string };
+
+const SETTINGS = ["paused", "discount_cap_percent", "fake_now", "signup_reward", "owner_email"];
+
+export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "live"): UndoPlan {
+  if (entry.action === "setting") {
+    const field = String(entry.data?.field ?? "");
+    if (!SETTINGS.includes(field)) return { type: "cannot", reason: "That setting can't be changed back automatically." };
+    return { type: "restore_setting", field, value: entry.data?.before ?? null };
+  }
+  if (!draft) return { type: "cannot", reason: "That draft no longer exists." };
+
+  if (entry.action === "approved") {
+    if (draft.status === "queued" || draft.status === "blocked" || draft.status === "approved") return { type: "reopen" };
+    if (draft.status === "withdrawn") return { type: "cannot", reason: "It's already been taken back." };
+    if (draft.status !== "sent") return { type: "cannot", reason: `It's no longer approved (it's ${draft.status}).` };
+    if (draft.kind === "email_campaign") {
+      return { type: "cannot", reason: "The emails have already been sent, and emails can't be unsent." };
+    }
+    if (draft.kind === "review_reply" && draft.review_id) {
+      return googleMode === "dummy"
+        ? { type: "withdraw_reply" }
+        : { type: "cannot", reason: "The reply is live on Google. Delete it in your Google Business Profile." };
+    }
+    if (draft.kind === "google_post") {
+      return googleMode === "dummy"
+        ? { type: "withdraw_post" }
+        : { type: "cannot", reason: "The post is live on Google. Delete it in your Google Business Profile." };
+    }
+    return { type: "withdraw_simulated" };
+  }
+
+  if (entry.action === "skipped") {
+    return draft.status === "skipped" ? { type: "restore_skip" } : { type: "cannot", reason: `It's no longer skipped (it's ${draft.status}).` };
+  }
+
+  if (entry.action === "edited") {
+    if (typeof entry.data?.before_content !== "string") return { type: "cannot", reason: "The earlier version wasn't saved." };
+    return draft.status === "pending"
+      ? { type: "restore_edit" }
+      : { type: "cannot", reason: `It's already ${draft.status}, so the earlier version can't be put back.` };
+  }
+  return { type: "cannot", reason: "That kind of action can't be undone." };
+}

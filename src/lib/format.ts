@@ -1,17 +1,41 @@
 import "server-only";
+import { checkNoteLines, checksLine } from "@/lib/checks/types";
 import { formatLondon } from "@/lib/clock";
 import { overCap } from "@/lib/discounts";
 import { KIND_LABELS, type Draft } from "@/lib/drafts";
 import type { SendResult } from "@/lib/send";
 import type { Restaurant } from "@/lib/supabase";
 
-// A draft as the owner sees it on WhatsApp, with the checker's notes and a
-// plain-code warning if the discount is over the cap.
+// WhatsApp buttons only work on messages up to 1024 characters; leave room for a header.
+const BUTTON_MESSAGE_BUDGET = 900;
+
+// A draft as the owner sees it on WhatsApp: the text, then one line saying how
+// it did on the four checks, then what each check fixed or flagged.
 export function draftMessage(draft: Draft, restaurant: Pick<Restaurant, "discount_cap_percent">) {
   const icon = draft.kind === "email_campaign" ? "📧" : draft.kind === "google_post" ? "📍" : "📝";
   const header = `${icon} *${KIND_LABELS[draft.kind]}*${draft.audience ? ` for ${draft.audience}` : ""}${draft.version > 1 ? ` (version ${draft.version})` : ""}`;
   const lines = [header, "", draft.content];
 
+  if (draft.checks) {
+    // The money check ran when the draft was made; re-check the cap in case it's changed since.
+    const over = overCap(draft.content, restaurant.discount_cap_percent);
+    const checks = over && draft.checks.money?.status === "pass"
+      ? { ...draft.checks, money: { ...draft.checks.money, status: "flagged" as const, flags: [`${over.percent}% off is above your ${restaurant.discount_cap_percent}% cap, so it will be blocked if you approve it`] } }
+      : draft.checks;
+    // Flags (for the owner to decide) come before fixes (already done). If the
+    // message would be too long for WhatsApp's buttons, the last notes give way.
+    const notes = checkNoteLines(checks).sort((a, b) => Number(a.startsWith("🔍")) - Number(b.startsWith("🔍")));
+    const base = [...lines, "", checksLine(checks)].join("\n");
+    const kept: string[] = [];
+    for (const n of notes) {
+      if (base.length + [...kept, n].join("\n").length + 60 > BUTTON_MESSAGE_BUDGET) break;
+      kept.push(n);
+    }
+    const dropped = notes.length - kept.length;
+    return [base, ...kept, ...(dropped ? [`_…and ${dropped} more note${dropped === 1 ? "" : "s"}._`] : [])].join("\n");
+  }
+
+  // Drafts from before the four checks (step 10).
   const notes: string[] = [];
   for (const fix of draft.check_notes?.fixes ?? []) notes.push(`🔍 _Checker fixed: ${fix}_`);
   for (const flag of draft.check_notes?.flags ?? []) notes.push(`⚠️ _Check: ${flag}_`);

@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { approveDraft, check, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
 import { approveAllMessage, draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -127,12 +128,37 @@ export async function sendBrief(
   const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(items)]);
   const briefAt = new Date().toISOString();
   const send = (text: string, withButtons: Parameters<typeof messageOwner>[2] = false) => messageOwner(channel, text, withButtons);
+  const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, note, restaurant });
 
+  // Number the items first, so a fast tap on a button finds its brief.
+  for (const [i, d] of items.entries()) await updateDraft(d.id, { brief_number: i + 1, briefed_at: briefAt });
+  check(
+    await getSupabase().from("restaurants").update({ last_brief_at: briefAt, brief_waiting_since: null }).eq("id", restaurant.id),
+  );
+
+  await send(brief.summary);
+  for (const [i, d] of items.entries()) await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1 });
+  return { sent: true, items: items.length, tally };
+}
+
+// The brief's wording: one numbered summary, then each item's own message.
+// No database or sending here, so it's unit-tested (tests/brief.test.ts).
+export function composeBrief(input: {
+  items: Draft[];
+  totalWaiting: number;
+  reviews: Map<string, ReviewInfo>;
+  names: Map<string, string>;
+  tally: string[];
+  extra?: string[];
+  note?: string;
+  restaurant: Pick<Restaurant, "discount_cap_percent">;
+}) {
+  const { items, reviews, names, tally, extra = [], note } = input;
   const lines: string[] = [];
   if (items.length) {
     lines.push(`☀️ *Good morning! ${plural(items.length, "thing")} need${items.length === 1 ? "s" : ""} your OK*`);
     items.forEach((d, i) => lines.push(`${i + 1}. ${itemLine(d, d.review_id ? reviews.get(d.review_id) : undefined, names.get(d.id))}`));
-    if (all.length > items.length) lines.push(`_…and ${all.length - items.length} more, in tomorrow's brief (or text NEXT)._`);
+    if (input.totalWaiting > items.length) lines.push(`_…and ${input.totalWaiting - items.length} more, in tomorrow's brief (or text NEXT)._`);
   } else {
     lines.push("☀️ *Good morning!* Nothing needs your OK today.");
   }
@@ -148,19 +174,10 @@ export async function sendBrief(
     );
   }
   if (note) lines.push("", note);
-
-  // Number the items first, so a fast tap on a button finds its brief.
-  for (const [i, d] of items.entries()) await updateDraft(d.id, { brief_number: i + 1, briefed_at: briefAt });
-  check(
-    await getSupabase().from("restaurants").update({ last_brief_at: briefAt, brief_waiting_since: null }).eq("id", restaurant.id),
+  const itemMessages = items.map((d, i) =>
+    itemMessage(d, i + 1, items.length, d.review_id ? reviews.get(d.review_id) : undefined, input.restaurant as Restaurant),
   );
-
-  await send(lines.join("\n"));
-  for (const [i, d] of items.entries()) {
-    const review = d.review_id ? reviews.get(d.review_id) : undefined;
-    await send(itemMessage(d, i + 1, items.length, review, restaurant), { draftId: d.id, briefNumber: i + 1 });
-  }
-  return { sent: true, items: items.length, tally };
+  return { summary: lines.join("\n"), itemMessages };
 }
 
 // WhatsApp rule: outside 24 hours since the owner's last message, a business can
@@ -228,8 +245,9 @@ export async function approveAll(restaurant: Restaurant, now: Date) {
       : "There's no brief to approve yet. Text RUN BRIEF to get one now.";
   }
   const results: { n: number; result: SendResult }[] = [];
+  const batchId = randomUUID(); // one UNDO reverses the whole APPROVE ALL
   for (const d of left) {
-    const approved = await approveDraft(d);
+    const approved = await approveDraft(d, batchId);
     results.push({ n: d.brief_number ?? 0, result: await attemptSend(approved.id, restaurant, now, "approve") });
   }
   return approveAllMessage(results);

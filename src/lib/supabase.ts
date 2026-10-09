@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import { isTestMode } from "@/lib/test-mode";
 
 // Server-side Supabase client. Uses the secret key, so it must never be
 // imported into browser code ("server-only" makes the build fail if it is).
@@ -56,6 +57,8 @@ export type Restaurant = {
   morning_lock_until: string | null;
   morning_failures: number;
   morning_failed_on: string | null;
+  // A demo restaurant: everything belonging to it is dummy data (step 10).
+  is_demo: boolean;
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent
@@ -73,9 +76,9 @@ export function baseUrlFrom(headers: Headers) {
   return `${proto}://${host}`;
 }
 
-// The clock the rules use: the fake test time if one is set, otherwise now.
+// The clock the rules use: the fake test time if one is set (test mode only), otherwise now.
 export function restaurantNow(restaurant: Pick<Restaurant, "fake_now">) {
-  return restaurant.fake_now ? new Date(restaurant.fake_now) : new Date();
+  return restaurant.fake_now && isTestMode() ? new Date(restaurant.fake_now) : new Date();
 }
 
 export type Customer = {

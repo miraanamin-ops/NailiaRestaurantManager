@@ -1,4 +1,5 @@
 import "server-only";
+import { logSetting } from "@/lib/audit";
 import { approveAll, sendBrief } from "@/lib/brief";
 import { recentCampaignStats, statsText } from "@/lib/campaigns";
 import { formatLondon, formatWindow, isInSendWindow, londonTimeOn } from "@/lib/clock";
@@ -8,28 +9,22 @@ import { releaseQueue } from "@/lib/followups";
 import { presentNext, runPostJob, runReviewCheck } from "@/lib/google-jobs";
 import { createReport, reportPeriod } from "@/lib/report/build";
 import { attemptSend } from "@/lib/send";
+import { undoLast } from "@/lib/undo";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
+import { isTestCommand, isTestMode, TEST_MODE_OFF_MESSAGE } from "@/lib/test-mode";
 import type { Command } from "./parse";
 import { updateRestaurant, type Turn } from "./turn";
 
 // Exact typed commands: settings, test commands and shortcuts. (Parsing is in ./parse.ts.)
 
 const HELP_TEXT = `🛠️ *Commands*
-- *RUN BRIEF*: the 9am morning brief, now
 - *APPROVE ALL*: approve everything in the latest brief (or *APPROVE 2*, *EDIT 2*, *SKIP 2* for one item)
-- *RUN REPORT*: the Monday weekly report (last 7 days), now
-- *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars. 1-3 stars alert you at once; 4-5 stars wait for the brief
-- *RUN REVIEWS*: run the hourly review check now
-- *RUN POSTS*: draft a Google post now and hold it for the brief (normally Mondays and Thursdays)
+- *UNDO*: reverse your last approval, skip, edit or setting change (where possible)
 - *QUEUE*: see drafts waiting for you · *NEXT*: bring up the next one
 - Send a *photo* (with a note if you like) to turn it into a Google post
 - *PAUSE* / *RESUME*: stop / restart all sending
 - *CAP 25*: set the max discount to 25%
-- *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work)
-- *TIME OFF*: back to the real time
-- *TEST SEND*: try to send the waiting draft *without* approving it
-- *TEST CHECKER*: run a draft full of mistakes through the checker
 - *STATUS*: show the current settings
 - *set sign-up reward to a free mango lassi*: change the reward for new customers
 - *REWARD*: show the current sign-up reward
@@ -37,6 +32,17 @@ const HELP_TEXT = `🛠️ *Commands*
 - *MY EMAIL you@example.com*: where your copy of each campaign email goes
 - *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
 - *CAMPAIGN RESULTS*: how the latest email campaign did`;
+
+// Only listed (and only working) when TEST_MODE is on.
+const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
+- *RUN BRIEF*: the 9am morning brief, now
+- *RUN REPORT*: the Monday weekly report (last 7 days), now
+- *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars. 1-3 stars alert you at once; 4-5 stars wait for the brief
+- *RUN REVIEWS*: run the hourly review check now
+- *RUN POSTS*: draft a Google post now and hold it for the brief (normally Mondays and Thursdays)
+- *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work) · *TIME OFF*: back to the real time
+- *TEST SEND*: try to send the waiting draft *without* approving it
+- *TEST CHECKER*: run a draft full of mistakes through the four checks`;
 
 async function statusText(restaurant: Restaurant) {
   const now = restaurantNow(restaurant);
@@ -49,7 +55,8 @@ async function statusText(restaurant: Restaurant) {
   return [
     "⚙️ *Status*",
     `- Sending: ${restaurant.paused ? "⏸️ *PAUSED*" : "▶️ on"}`,
-    `- Clock: ${formatLondon(now)}${restaurant.fake_now ? " _(test time; TIME OFF to reset)_" : ""}`,
+    `- Clock: ${formatLondon(now)}${restaurant.fake_now && isTestMode() ? " _(test time; TIME OFF to reset)_" : ""}`,
+    `- Test mode: ${isTestMode() ? "on" : "off"}`,
     `- Sending hours: ${formatWindow(restaurant.send_window_start, restaurant.send_window_end)} (${inWindow ? "open now" : "closed now"})`,
     `- Discount cap: ${restaurant.discount_cap_percent}%`,
     `- Queued drafts: ${count ?? 0}`,
@@ -59,18 +66,22 @@ async function statusText(restaurant: Restaurant) {
 export async function runCommand(command: Command, turn: Turn) {
   const { ctx, channel, send } = turn;
   const r = ctx.restaurant;
+  // Test commands do nothing unless TEST_MODE is on (it's off in production by default).
+  if (isTestCommand(command.name) && !isTestMode()) return send(TEST_MODE_OFF_MESSAGE);
   switch (command.name) {
     case "help":
-      return send(HELP_TEXT);
+      return send(isTestMode() ? `${HELP_TEXT}\n\n${TEST_HELP_TEXT}` : HELP_TEXT);
     case "status":
       return send(await statusText(r));
     case "pause":
       if (r.paused) return send("⏸️ Sending is already *paused*. Text RESUME to restart it.");
       await updateRestaurant(r.id, { paused: true, paused_at: new Date().toISOString() });
+      await logSetting(r.id, "paused", false, true, "Paused all sending");
       return send("⏸️ *Paused.* Nothing will be sent until you text *RESUME*. Approved drafts will be held.");
     case "resume": {
       if (!r.paused) return send("▶️ Sending is already on. (Text PAUSE to stop it.)");
       const resumed = await updateRestaurant(r.id, { paused: false, paused_at: null });
+      await logSetting(r.id, "paused", true, false, "Resumed sending");
       await send("▶️ *Resumed.* Sending is back on.");
       const results = await releaseQueue(resumed, restaurantNow(resumed));
       if (!results.length) await send("There was nothing held, so nothing went out.");
@@ -78,11 +89,13 @@ export async function runCommand(command: Command, turn: Turn) {
     }
     case "cap":
       await updateRestaurant(r.id, { discount_cap_percent: command.percent });
+      await logSetting(r.id, "discount_cap_percent", r.discount_cap_percent, command.percent, `Changed the discount cap from ${r.discount_cap_percent}% to ${command.percent}%`);
       return send(`💷 Discount cap set to *${command.percent}%*. Any offer above that will be blocked.`);
     case "time":
     case "time_off": {
       const fake = command.name === "time" ? londonTimeOn(new Date(), command.hhmm, command.plusDays) : null;
       const updated = await updateRestaurant(r.id, { fake_now: fake ? fake.toISOString() : null });
+      await logSetting(r.id, "fake_now", r.fake_now, updated.fake_now, fake ? `Set the test clock to ${formatLondon(fake)}` : "Turned the test clock off");
       const now = restaurantNow(updated);
       const open = isInSendWindow(now, updated.send_window_start, updated.send_window_end);
       await send(
@@ -115,6 +128,7 @@ export async function runCommand(command: Command, turn: Turn) {
       );
     case "set_reward":
       await updateRestaurant(r.id, { signup_reward: command.reward });
+      await logSetting(r.id, "signup_reward", r.signup_reward, command.reward, `Changed the sign-up reward to "${command.reward}"`);
       return send(
         `🎁 Sign-up reward set to *${command.reward}*.\nEveryone who signs up from now on gets this. (Rewards already emailed stay as they were.)\nSign-up page: ${appUrl()}/r/${r.slug}`,
       );
@@ -126,6 +140,7 @@ export async function runCommand(command: Command, turn: Turn) {
       );
     case "my_email":
       await updateRestaurant(r.id, { owner_email: command.email });
+      await logSetting(r.id, "owner_email", r.owner_email, command.email, `Changed your email to ${command.email}`);
       return send(
         `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${r.email_test_mode ? "\n_Test mode is on: that's the only real email; customers are logged as simulated._" : ""}`,
       );
@@ -147,6 +162,8 @@ export async function runCommand(command: Command, turn: Turn) {
       }
       return;
     }
+    case "undo":
+      return send(await undoLast(r, ctx.now));
     case "approve_all":
       return send(await approveAll(r, ctx.now));
     case "run_report": {

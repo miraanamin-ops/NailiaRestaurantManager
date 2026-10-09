@@ -1,0 +1,15 @@
+<!-- OPTIONAL. Login works with Supabase's standard email, no template needed.
+     Only if custom email is set up in Supabase (templates can't be edited on the
+     free plan without it), this nicer email can be pasted into
+     Authentication > Emails > Templates, for BOTH "Magic Link" and "Confirm signup".
+     Subject: Your Naila login link
+     The link carries a token_hash to /auth/confirm, which also works in any browser. -->
+<h2>Log in to Naila</h2>
+<p>Tap the button below to log in. It works once and expires after an hour.</p>
+<p>
+  <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email"
+     style="display:inline-block;padding:12px 22px;background:#1c1917;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:bold">
+    Log in
+  </a>
+</p>
+<p style="color:#78716c;font-size:13px">If you didn't ask for this, you can ignore this email.</p>

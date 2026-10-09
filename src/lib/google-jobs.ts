@@ -1,6 +1,6 @@
 import "server-only";
 import { writeGooglePost, writeReviewReply, type RestaurantContext } from "@/lib/assistant";
-import { checkDraft } from "@/lib/checker";
+import { checkDraft } from "@/lib/checks";
 import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, type Draft } from "@/lib/drafts";
 import { draftMessage } from "@/lib/format";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
@@ -23,6 +23,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
   const learning = await getLearningContext(ctx.restaurantId);
   let alerts = 0;
   let held = 0;
+  let failed = 0;
 
   for (const review of reviews) {
     const urgent = review.rating <= 3;
@@ -42,13 +43,17 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
         audience: `Google review by ${review.author_name}`,
         request: urgent ? "Review check: low rating alert" : "Review check",
         reviewId: review.id,
-        checkNotes: checked.notes,
+        checks: checked.checks,
         mode: urgent ? "urgent" : "hold",
       });
+      // Only now, with its reply draft saved, does the review count as handled.
+      await google().markReviewHandled(review.id);
     } catch (err) {
       // Put it back so the next check tries again, then carry on with the rest.
+      // (If even this fails, the claim simply expires and the review is retried.)
       console.error("Drafting a review reply failed", err);
-      await google().releaseReview(review.id);
+      failed++;
+      await google().releaseReview(review.id).catch(() => {});
       continue;
     }
 
@@ -63,7 +68,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
       held++; // no message: it's in tomorrow's brief
     }
   }
-  return { found: reviews.length, alerts, held };
+  return { found: reviews.length, alerts, held, failed };
 }
 
 // Drafts one Google post and holds it for the morning brief. Runs Mondays and Thursdays.
@@ -100,7 +105,7 @@ export async function createPostDraft(
     content: checked.content,
     audience: "your Google listing",
     request: input.request,
-    checkNotes: checked.notes,
+    checks: checked.checks,
     mode: input.mode,
   });
   check(

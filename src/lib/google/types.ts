@@ -12,6 +12,7 @@ export type GoogleReview = {
   reply_text: string | null;
   reply_posted_at: string | null;
   handled_at: string | null;
+  claimed_at?: string | null;
   source: string;
 };
 
@@ -36,16 +37,24 @@ export interface GoogleConnector {
   listReviews(restaurantId: string): Promise<GoogleReview[]>;
   /**
    * Reviews the check hasn't handled yet, claimed in one step: two checks
-   * running at once can never both get the same review.
+   * running at once can never both get the same review. A claim that's never
+   * finished (e.g. the check timed out) expires, so the review is retried.
    */
   claimNewReviews(restaurantId: string): Promise<GoogleReview[]>;
+  /** Marks a claimed review as handled. Only call once its reply draft exists. */
+  markReviewHandled(reviewId: string): Promise<void>;
   /** Puts a claimed review back (e.g. drafting its reply failed) so the next check retries it. */
   releaseReview(reviewId: string): Promise<void>;
   /** Posts the owner's reply under a review. */
   replyToReview(restaurantId: string, reviewId: string, text: string): Promise<void>;
 
+  /** Takes a posted reply down again (UNDO). */
+  removeReply(restaurantId: string, reviewId: string): Promise<void>;
+
   /** Publishes a post; returns Google's id for it. */
   publishPost(restaurantId: string, post: Pick<GooglePost, "id" | "topic" | "text" | "photo_url">): Promise<{ googlePostId: string }>;
+  /** Takes a published post down again (UNDO). */
+  unpublishPost(restaurantId: string, postId: string): Promise<void>;
   /** Published posts, newest first. */
   listPublishedPosts(restaurantId: string): Promise<GooglePost[]>;
 

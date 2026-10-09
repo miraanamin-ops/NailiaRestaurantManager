@@ -1,35 +1,36 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// The test-data dashboard (/) shows every customer, message and draft, so it
-// needs a password: the DASHBOARD_PASSWORD environment variable. The browser
-// asks for a username and password; any username works. With no password set,
-// the page stays locked. (Customer pages, report links and the webhooks are not affected.)
-export function proxy(req: NextRequest) {
-  const password = process.env.DASHBOARD_PASSWORD;
-  if (!password) {
-    return new NextResponse("The dashboard is locked: set DASHBOARD_PASSWORD in Vercel to open it.", { status: 503 });
+// Owner pages need a login (Supabase magic link). This keeps the login fresh
+// and sends anyone not logged in to /login. The pages themselves then check the
+// email is allowed (lib/auth.ts). Sign-up, reward, offer and unsubscribe pages,
+// and the webhooks, aren't covered by this at all.
+export async function proxy(req: NextRequest) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) {
+    return new NextResponse("Owner pages are locked: set SUPABASE_PUBLISHABLE_KEY to turn on login.", { status: 503 });
   }
-  const header = req.headers.get("authorization") ?? "";
-  if (header.startsWith("Basic ")) {
-    try {
-      const decoded = atob(header.slice(6));
-      const given = decoded.slice(decoded.indexOf(":") + 1);
-      if (given.length === password.length && safeEqual(given, password)) return NextResponse.next();
-    } catch {
-      // Malformed header: ask again.
-    }
-  }
-  return new NextResponse("Password required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Naila dashboard", charset="UTF-8"' },
+
+  let response = NextResponse.next({ request: req });
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => req.cookies.getAll(),
+      setAll: (list) => {
+        for (const { name, value } of list) req.cookies.set(name, value);
+        response = NextResponse.next({ request: req });
+        for (const { name, value, options } of list) response.cookies.set(name, value, options);
+      },
+    },
   });
+
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) {
+    const login = new URL("/login", req.url);
+    login.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
+    return NextResponse.redirect(login);
+  }
+  return response;
 }
 
-// Compares every character, so the time taken doesn't hint at how much was right.
-function safeEqual(a: string, b: string) {
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-export const config = { matcher: "/" };
+export const config = { matcher: ["/", "/log", "/report/:path*"] };

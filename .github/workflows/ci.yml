@@ -1,0 +1,25 @@
+# Runs on every push and pull request: type-check, lint and all automated tests.
+# A red ❌ on GitHub means something is broken. (Vercel also runs the tests
+# before every deploy, so a failing change never goes live: see vercel.json.)
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npx next typegen && npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm test

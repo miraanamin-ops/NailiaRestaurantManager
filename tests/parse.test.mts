@@ -1,5 +1,5 @@
 // Unit tests for reading the owner's WhatsApp messages, and the shared helpers. Run with: npm test
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import { parseAction, parseButtonPayload, parseCommand, parseTargetedAction } from "../src/lib/bot/parse.ts";
 import { londonLongDate, londonWeekday, londonYmd, startOfLondonDay } from "../src/lib/clock.ts";

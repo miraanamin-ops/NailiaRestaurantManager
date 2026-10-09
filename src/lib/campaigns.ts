@@ -1,6 +1,7 @@
 import "server-only";
 import { londonTime, londonYmd } from "@/lib/clock";
-import { check, checkRow, createDraft, applyEdit, type CheckNotes, type Draft } from "@/lib/drafts";
+import type { DraftChecks } from "@/lib/checks/types";
+import { check, checkRow, createDraft, applyEdit, type Draft } from "@/lib/drafts";
 import { sendCampaignEmail } from "@/lib/email";
 import { newToken } from "@/lib/signups";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
@@ -135,6 +136,18 @@ function hasBirthdayInNext7Days(birthday: string | null, now: Date) {
 }
 
 // Everyone in the segment, then split by consent. Only `eligible` are emailed.
+// Plain code (no database), so it's unit-tested. unredeemedIds: customers whose
+// welcome reward is still unused (for the "unredeemed_signups" segment).
+export function segmentRecipients(customers: SegmentCustomer[], segment: Segment, now: Date, unredeemedIds: Set<string>) {
+  let inSegment = customers.filter((c) => c.email);
+  if (segment === "birthdays_7d") inSegment = inSegment.filter((c) => hasBirthdayInNext7Days(c.birthday, now));
+  else if (segment === "unredeemed_signups") inSegment = inSegment.filter((c) => c.source === "signup" && unredeemedIds.has(c.id));
+
+  // Safety rule: only customers with valid consent who haven't unsubscribed.
+  const eligible = inSegment.filter((c) => c.marketing_opt_in && !c.unsubscribed_at);
+  return { eligible, excluded: inSegment.length - eligible.length };
+}
+
 export async function recipientsFor(restaurant: Restaurant, segment: Segment, now: Date) {
   const supabase = getSupabase();
   const customers =
@@ -145,12 +158,9 @@ export async function recipientsFor(restaurant: Restaurant, segment: Segment, no
         .eq("restaurant_id", restaurant.id)
         .returns<SegmentCustomer[]>(),
     ) ?? [];
-
-  let inSegment = customers.filter((c) => c.email);
-  if (segment === "birthdays_7d") {
-    inSegment = inSegment.filter((c) => hasBirthdayInNext7Days(c.birthday, now));
-  } else if (segment === "unredeemed_signups") {
-    const unredeemed =
+  let unredeemed: { customer_id: string }[] = [];
+  if (segment === "unredeemed_signups") {
+    unredeemed =
       check(
         await supabase
           .from("rewards")
@@ -159,13 +169,26 @@ export async function recipientsFor(restaurant: Restaurant, segment: Segment, no
           .is("redeemed_at", null)
           .returns<{ customer_id: string }[]>(),
       ) ?? [];
-    const ids = new Set(unredeemed.map((r) => r.customer_id));
-    inSegment = inSegment.filter((c) => c.source === "signup" && ids.has(c.id));
   }
+  return segmentRecipients(customers, segment, now, new Set(unredeemed.map((r) => r.customer_id)));
+}
 
-  // Safety rule: only customers with valid consent who haven't unsubscribed.
-  const eligible = inSegment.filter((c) => c.marketing_opt_in && !c.unsubscribed_at);
-  return { eligible, excluded: inSegment.length - eligible.length };
+// Every customer email needs an unsubscribe link. Customers who don't have an
+// unsubscribe token yet (e.g. added before sign-ups existed) get one now.
+// Returns how many still have none (0 unless the database refused).
+export async function ensureUnsubscribeTokens(customerIds: string[]) {
+  if (!customerIds.length) return 0;
+  const supabase = getSupabase();
+  const missing =
+    check(
+      await supabase.from("customers").select("id").in("id", customerIds).is("unsubscribe_token", null).returns<{ id: string }[]>(),
+    ) ?? [];
+  let failed = 0;
+  for (const c of missing) {
+    const { error } = await supabase.from("customers").update({ unsubscribe_token: newToken() }).eq("id", c.id);
+    if (error) failed++;
+  }
+  return failed;
 }
 
 export function audienceLabel(segment: Segment, eligible: number) {
@@ -183,7 +206,7 @@ export async function createCampaignDraft(input: {
   restaurant: Restaurant;
   fields: CampaignFields;
   request: string;
-  checkNotes: CheckNotes;
+  checks: DraftChecks;
   now: Date;
   isBirthday?: boolean;
   mode?: "present" | "hold";
@@ -195,7 +218,7 @@ export async function createCampaignDraft(input: {
     content: campaignPreviewText(input.fields),
     audience: audienceLabel(input.fields.segment, eligible.length),
     request: input.request,
-    checkNotes: input.checkNotes,
+    checks: input.checks,
     mode: input.mode,
   });
   const campaign = checkRow(
@@ -219,7 +242,7 @@ export async function updateCampaignDraft(input: {
   campaign: Campaign;
   fields: CampaignFields;
   instruction: string;
-  checkNotes: CheckNotes;
+  checks: DraftChecks;
   now: Date;
 }) {
   const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now);
@@ -229,7 +252,7 @@ export async function updateCampaignDraft(input: {
       .update({ ...input.fields, updated_at: new Date().toISOString() })
       .eq("id", input.campaign.id),
   );
-  const updated = await applyEdit(input.draft, input.instruction, campaignPreviewText(input.fields), input.checkNotes);
+  const updated = await applyEdit(input.draft, input.instruction, campaignPreviewText(input.fields), input.checks);
   // Keep the audience count current after a segment change.
   return checkRow(
     await getSupabase()
