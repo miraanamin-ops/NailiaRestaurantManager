@@ -11,6 +11,8 @@ import type { GoogleConnector } from "./types";
 // - replyToReview: PUT .../reviews/{id}/reply
 // - publishPost: POST .../localPosts (photo via media URL)
 // - listPublishedPosts: GET .../localPosts
+// - getInsights: Business Profile Performance API fetchMultiDailyMetricsTimeSeries
+//   (BUSINESS_IMPRESSIONS_*, CALL_CLICKS, BUSINESS_DIRECTION_REQUESTS)
 // It needs Google API access approval, an OAuth login per restaurant, and
 // the restaurant's account and location IDs.
 function notYet(): never {
@@ -25,4 +27,5 @@ export const liveGoogle: GoogleConnector = {
   replyToReview: async () => notYet(),
   publishPost: async () => notYet(),
   listPublishedPosts: async () => notYet(),
+  getInsights: async () => notYet(),
 };

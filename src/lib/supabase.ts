@@ -47,6 +47,11 @@ export type Restaurant = {
   last_birthday_campaign_on: string | null;
   // Google posts (added in step 7)
   last_post_draft_on: string | null;
+  // Morning brief and Monday report (added in step 8)
+  last_brief_on: string | null;
+  last_brief_at: string | null;
+  brief_waiting_since: string | null;
+  last_report_on: string | null;
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent

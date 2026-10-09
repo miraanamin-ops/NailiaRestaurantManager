@@ -23,6 +23,9 @@ const checks = [
   ["007_google.sql (review reply columns)", supabase.from("reviews").select("reply_text, handled_at, source").limit(1)],
   ["007_google.sql (google_posts table)", supabase.from("google_posts").select("id").limit(1)],
   ["007_google.sql (photo storage bucket)", supabase.storage.from("post-photos").list("", { limit: 1 })],
+  ["008_brief_report.sql (restaurant brief dates)", supabase.from("restaurants").select("last_brief_on, last_brief_at, brief_waiting_since, last_report_on").limit(1)],
+  ["008_brief_report.sql (draft brief columns)", supabase.from("drafts").select("held_at, brief_number, briefed_at").limit(1)],
+  ["008_brief_report.sql (reports table)", supabase.from("reports").select("id").limit(1)],
 ];
 for (const [name, query] of checks) {
   const { error } = await query;
