@@ -581,6 +581,63 @@ export function captionPhoto(
   ]);
 }
 
+const ReportInsightsSchema = z.object({
+  sentence: z.string().describe("One plain-English sentence summing up the week, under 25 words"),
+  praise: z.array(z.string()).describe("Up to 3 things customers praised, a few words each"),
+  complaints: z.array(z.string()).describe("Up to 3 things customers complained about, a few words each"),
+  actions: z
+    .array(
+      z.object({
+        title: z.string().describe("The action, under 8 words, e.g. 'Fill quiet Tuesday with a grill offer'"),
+        why: z.string().describe("Why, in one short sentence based on the numbers"),
+        message: z.string().describe("What the owner sends to their WhatsApp assistant to start it, e.g. 'Tuesday is quiet, draft a 15% off grills email for everyone'"),
+      }),
+    )
+    .describe("Exactly 3 actions for next week"),
+});
+export type ReportInsights = z.infer<typeof ReportInsightsSchema>;
+
+// The weekly report's words: summary sentence, review themes and next week's
+// actions. The numbers themselves are worked out in plain code and given here.
+export async function writeReportInsights(ctx: RestaurantContext, facts: string, reviewTexts: string[]) {
+  const response = await new Anthropic().messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: "medium", format: zodOutputFormat(ReportInsightsSchema) },
+    system: `You write the weekly report for the owner of ${ctx.restaurantName}, a ${ctx.restaurant.cuisine ?? "restaurant"} at ${ctx.restaurant.address ?? "an independent site"}. The owner reads it on their phone: plain English, short, specific, no jargon, no hype.
+
+Only use facts you're given. Don't invent numbers, dishes or events.
+
+Actions must be things the owner's WhatsApp assistant can start right now:
+- an email campaign with an offer (segments: everyone, birthdays in the next 7 days, new sign-ups who haven't used their welcome reward), within a ${ctx.discountCapPercent}% discount cap
+- a Google post about a dish, offer or event
+- replying to reviews, or changing the sign-up reward
+- a practical fix suggested by a complaint (the assistant can help word a reply or a post about it)
+Each action's "message" is written as the owner talking to the assistant, ready to send.
+
+Menu: ${ctx.restaurant.menu.flatMap((c) => c.items.map((i) => `${i.name} £${i.price.toFixed(2)}`)).join(", ")}
+Opening hours: ${Object.entries(ctx.restaurant.opening_hours).map(([d, h]) => `${d} ${h}`).join(", ")}`,
+    messages: [
+      {
+        role: "user",
+        content: `Last week's numbers (vs the week before):\n${facts}\n\nRecent review texts (newest first):\n${reviewTexts.length ? reviewTexts.map((t) => `- ${t}`).join("\n") : "(none)"}`,
+      },
+    ],
+  });
+  if (response.stop_reason === "refusal" || !response.parsed_output) throw new Error("Claude couldn't write the report insights");
+  const out = response.parsed_output;
+  const tidy = (list: string[], n: number, max: number) => list.map((s) => clip(s.trim(), max)).filter(Boolean).slice(0, n);
+  return {
+    sentence: clip(out.sentence.trim(), 200),
+    praise: tidy(out.praise, 3, 80),
+    complaints: tidy(out.complaints, 3, 80),
+    actions: out.actions
+      .filter((a) => a.title.trim() && a.message.trim())
+      .slice(0, 3)
+      .map((a) => ({ title: clip(a.title.trim(), 70), why: clip(a.why.trim(), 160), message: clip(a.message.trim(), 300) })),
+  };
+}
+
 export function rewriteDraft(ctx: RestaurantContext, learning: Learning, draft: Draft, instruction: string) {
   return writeOnly(
     ctx,

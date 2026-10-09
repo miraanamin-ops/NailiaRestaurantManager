@@ -25,6 +25,10 @@ export type Draft = {
   block_reason: string | null;
   reminded_at: string | null;
   check_notes: CheckNotes | null;
+  // Morning brief (step 8)
+  held_at: string | null;
+  brief_number: number | null;
+  briefed_at: string | null;
 };
 
 // What the checker changed or wants the owner to look at.
@@ -83,30 +87,29 @@ export async function createDraft(input: {
   customerId?: string | null;
   checkNotes: CheckNotes;
   // present: the owner asked for it, so it replaces the draft on screen (default).
-  // queue:   made by a scheduled job; waits its turn if the owner is busy with another draft.
+  // hold:    made by a scheduled job; waits quietly for the morning brief.
   // urgent:  jumps the queue (e.g. a bad review); the draft on screen goes back into the queue.
-  mode?: "present" | "queue" | "urgent";
+  mode?: "present" | "hold" | "urgent";
 }) {
   const supabase = getSupabase();
   const mode = input.mode ?? "present";
-  const active = await getActiveDraft(input.restaurantId);
   let waitingFor: WaitingFor | null = "decision";
 
-  if (mode === "queue" && active) {
-    waitingFor = null; // stays in the queue until the owner is free
-  } else if (active) {
-    const stillPending = active.status === "pending";
-    check(
-      await supabase
-        .from("drafts")
-        .update({
-          // Urgent: put the current draft back in the queue. Present: the new request replaces it.
-          status: stillPending && mode === "present" ? "superseded" : active.status,
-          waiting_for: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", active.id),
-    );
+  if (mode === "hold") {
+    waitingFor = null;
+  } else {
+    const active = await getActiveDraft(input.restaurantId);
+    if (active) {
+      // A new request replaces a draft the owner asked for earlier. Drafts from
+      // a brief (or held for one) are never thrown away: they go back in the queue.
+      const replace = mode === "present" && active.status === "pending" && !active.held_at && !active.briefed_at;
+      check(
+        await supabase
+          .from("drafts")
+          .update({ status: replace ? "superseded" : active.status, waiting_for: null, updated_at: new Date().toISOString() })
+          .eq("id", active.id),
+      );
+    }
   }
 
   const res = await supabase
@@ -122,6 +125,7 @@ export async function createDraft(input: {
       status: "pending",
       waiting_for: waitingFor,
       check_notes: input.checkNotes,
+      held_at: mode === "hold" ? new Date().toISOString() : null,
     })
     .select("*")
     .single<Draft>();
@@ -142,11 +146,28 @@ export async function getQueue(restaurantId: string) {
 }
 
 // If the owner isn't busy with a draft, brings the next queued one forward.
-export async function takeNextFromQueue(restaurantId: string) {
+// Drafts held for (or already shown in) the morning brief only come forward
+// when the owner asks (NEXT); otherwise they wait for the brief.
+export async function takeNextFromQueue(restaurantId: string, includeBrief = false) {
   if (await getActiveDraft(restaurantId)) return null;
-  const [next] = await getQueue(restaurantId);
+  const queue = await getQueue(restaurantId);
+  const next = includeBrief ? queue[0] : queue.find((d) => !d.held_at && !d.briefed_at);
   if (!next) return null;
   return updateDraft(next.id, { waiting_for: "decision" });
+}
+
+// Makes this draft the one the owner is dealing with (e.g. they tapped a
+// button on brief item 3). Any other draft on screen goes back in the queue.
+export async function focusDraft(draft: Draft, waitingFor: WaitingFor) {
+  check(
+    await getSupabase()
+      .from("drafts")
+      .update({ waiting_for: null, updated_at: new Date().toISOString() })
+      .eq("restaurant_id", draft.restaurant_id)
+      .neq("id", draft.id)
+      .not("waiting_for", "is", null),
+  );
+  return updateDraft(draft.id, { waiting_for: waitingFor });
 }
 
 export async function getDraft(id: string) {
@@ -183,7 +204,7 @@ export function approveDraft(draft: Draft) {
 }
 
 export function startEdit(draft: Draft) {
-  return updateDraft(draft.id, { waiting_for: "edit_instructions" });
+  return focusDraft(draft, "edit_instructions");
 }
 
 export async function applyEdit(draft: Draft, instruction: string, newContent: string, checkNotes: CheckNotes) {
@@ -208,8 +229,9 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
   });
 }
 
-export function skipDraft(draft: Draft) {
-  return updateDraft(draft.id, { status: "skipped", waiting_for: "skip_reason" });
+export async function skipDraft(draft: Draft) {
+  await focusDraft(draft, "skip_reason");
+  return updateDraft(draft.id, { status: "skipped" });
 }
 
 export async function saveSkipReason(draft: Draft, reason: string) {

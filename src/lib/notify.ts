@@ -1,18 +1,19 @@
 import "server-only";
 import { getSupabase } from "@/lib/supabase";
-import { sendText, sendWithApprovalButtons } from "@/lib/whatsapp";
+import { sendText, sendWithApprovalButtons, type ButtonTarget } from "@/lib/whatsapp";
 
 export type OwnerChannel = { restaurantId: string; from: string; to: string };
 
 // Sends a WhatsApp message to the owner and records it in the messages table.
 // (Messages to the owner aren't customer sends, so the safety rules don't apply.)
-export async function messageOwner(channel: OwnerChannel, text: string, withButtons = false) {
+// withButtons: true = Approve / Edit / Skip for the draft on screen; a target = for that one draft.
+export async function messageOwner(channel: OwnerChannel, text: string, withButtons: boolean | ButtonTarget = false) {
   let sid: string | null = null;
   let sentBody = text;
   let error: string | null = null;
   try {
     const sent = withButtons
-      ? await sendWithApprovalButtons(channel.from, channel.to, text)
+      ? await sendWithApprovalButtons(channel.from, channel.to, text, withButtons === true ? undefined : withButtons)
       : await sendText(channel.from, channel.to, text);
     sid = sent.sid;
     sentBody = sent.body;

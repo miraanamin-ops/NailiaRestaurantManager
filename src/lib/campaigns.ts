@@ -191,7 +191,7 @@ export async function createCampaignDraft(input: {
   checkNotes: CheckNotes;
   now: Date;
   isBirthday?: boolean;
-  mode?: "present" | "queue";
+  mode?: "present" | "hold";
 }) {
   const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now);
   const draft = await createDraft({

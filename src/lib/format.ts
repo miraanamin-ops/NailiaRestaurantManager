@@ -51,6 +51,20 @@ export function sendResultMessage(result: SendResult) {
   return `⛔ *Blocked*: ${result.detail} Nothing was sent. Only drafts you approve can go out.`;
 }
 
+// After APPROVE ALL: one line per brief item, with what the safety rules did.
+export function approveAllMessage(results: { n: number; result: SendResult }[]) {
+  const sent = results.filter((r) => r.result.outcome === "sent").length;
+  const lines = [`👍 *Approved ${results.length} item${results.length === 1 ? "" : "s"}* (${sent} sent now)`];
+  for (const { n, result } of results) {
+    const name = draftName(result.draft).replace(/\.$/, "");
+    if (result.outcome === "sent") lines.push(`${n}. ✅ ${name}${result.note ? `\n   ${result.note}` : " _(simulated)_"}`);
+    else if (result.outcome === "queued")
+      lines.push(`${n}. ${result.reason === "paused" ? "⏸️" : "🕘"} ${name}: ${result.reason === "paused" ? "held until RESUME" : `queued for ${formatLondon(result.scheduledFor!)}`}`);
+    else lines.push(`${n}. ⛔ ${name}: not sent. ${result.detail}`);
+  }
+  return lines.join("\n");
+}
+
 // Short summary when queued drafts are released.
 export function queueResultsMessage(results: SendResult[]) {
   const sent = results.filter((r) => r.outcome === "sent");

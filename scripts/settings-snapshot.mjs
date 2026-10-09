@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 const [mode, file] = process.argv.slice(2);
 if (!["save", "restore"].includes(mode) || !file) throw new Error("Usage: save|restore <file>");
 const FIELDS =
-  "id, discount_cap_percent, paused, paused_at, fake_now, owner_whatsapp, whatsapp_from, signup_reward, owner_email, email_test_mode, last_birthday_campaign_on";
+  "id, discount_cap_percent, paused, paused_at, fake_now, owner_whatsapp, whatsapp_from, signup_reward, owner_email, email_test_mode, last_birthday_campaign_on, last_post_draft_on, last_brief_on, last_brief_at, brief_waiting_since, last_report_on";
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 
 if (mode === "save") {

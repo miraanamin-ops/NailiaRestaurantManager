@@ -49,6 +49,13 @@ export interface GoogleConnector {
   /** Published posts, newest first. */
   listPublishedPosts(restaurantId: string): Promise<GooglePost[]>;
 
+  /**
+   * Live mode only: how people found and contacted the listing in a period
+   * (Business Profile Performance API). Dummy mode has no such numbers, so the
+   * weekly report hides them.
+   */
+  getInsights?(restaurantId: string, start: Date, end: Date): Promise<{ views: number; calls: number; directions: number }>;
+
   /** Dummy mode only: pretend a new review has appeared on Google. */
   addDummyReview?(restaurantId: string, review: { author: string; rating: number; text: string }): Promise<GoogleReview>;
 }
