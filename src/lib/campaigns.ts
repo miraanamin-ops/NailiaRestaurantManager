@@ -1,5 +1,5 @@
 import "server-only";
-import { londonParts, londonTime } from "@/lib/clock";
+import { londonTime, londonYmd } from "@/lib/clock";
 import { check, checkRow, createDraft, applyEdit, type CheckNotes, type Draft } from "@/lib/drafts";
 import { sendCampaignEmail } from "@/lib/email";
 import { newToken } from "@/lib/signups";
@@ -65,11 +65,6 @@ type SegmentCustomer = {
 
 // ---------- Dates (London) ----------
 
-export function londonDate(d: Date) {
-  const p = londonParts(d);
-  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
-}
-
 function addDays(ymd: string, days: number) {
   const [y, m, d] = ymd.split("-").map(Number);
   const t = new Date(Date.UTC(y, m - 1, d + days));
@@ -92,7 +87,7 @@ export function formatValidity(from: string, until: string) {
 
 // Makes the AI's dates safe: real dates, not in the past, at most 31 days long.
 export function normaliseDates(from: string, until: string, now: Date) {
-  const today = londonDate(now);
+  const today = londonYmd(now);
   const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
   let f = isDate(from) ? from : today;
   if (f < today) f = today;
@@ -104,13 +99,13 @@ export function normaliseDates(from: string, until: string, now: Date) {
 
 // The birthday email's offer: today plus the next 6 days (7 days in total).
 export function birthdayWeek(now: Date) {
-  const today = londonDate(now);
+  const today = londonYmd(now);
   return { valid_from: today, valid_until: addDays(today, 6) };
 }
 
 // The 14 days ahead as "Thu 15 Oct = 2026-10-15", so the AI gets dates right.
 export function upcomingCalendar(now: Date) {
-  const today = londonDate(now);
+  const today = londonYmd(now);
   return Array.from({ length: 14 }, (_, i) => {
     const d = addDays(today, i);
     return `${formatDay(d)} = ${d}${i === 0 ? " (today)" : ""}`;
@@ -134,7 +129,7 @@ export function offerValidity(campaign: Pick<Campaign, "valid_from" | "valid_unt
 function hasBirthdayInNext7Days(birthday: string | null, now: Date) {
   if (!birthday) return false;
   const md = birthday.slice(5); // "MM-DD"
-  const today = londonDate(now);
+  const today = londonYmd(now);
   for (let i = 0; i < 7; i++) if (addDays(today, i).slice(5) === md) return true;
   return false;
 }

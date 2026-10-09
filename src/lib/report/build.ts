@@ -1,10 +1,11 @@
 import "server-only";
 import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
-import { londonParts, londonTime } from "@/lib/clock";
+import { startOfLondonDay } from "@/lib/clock";
 import { check, checkRow } from "@/lib/drafts";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
 import { newToken } from "@/lib/signups";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
+import { plural } from "@/lib/text";
 import {
   direction,
   type ActionsSection,
@@ -23,11 +24,6 @@ const DAY = 24 * 60 * 60 * 1000;
 // ---------- Periods ----------
 
 export type Period = { prevStart: Date; start: Date; end: Date };
-
-export function startOfLondonDay(d: Date) {
-  const p = londonParts(d);
-  return londonTime(p.year, p.month, p.day, 0, 0);
-}
 
 // Scheduled (Monday 9am): last Monday to Sunday. RUN REPORT: the last 7 days
 // including today (so far), in whole London days.
@@ -69,7 +65,6 @@ function daily(times: When[], p: Period): Daily {
   return { days, values };
 }
 const average = (nums: number[]) => (nums.length ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10 : 0);
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 // ---------- Data sections ----------
 // Each section says whether its data is connected, and builds its numbers.

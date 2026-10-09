@@ -4,6 +4,8 @@ import { google } from "@/lib/google";
 import { getSupabase, restaurantNow, type Customer, type Restaurant } from "@/lib/supabase";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
+import { londonLongDate } from "@/lib/clock";
+import { clip } from "@/lib/text";
 import { z } from "zod";
 import {
   formatValidity,
@@ -30,16 +32,6 @@ export type StoredMessage = {
 
 type Learning = Awaited<ReturnType<typeof getLearningContext>>;
 
-function londonDate(d: Date) {
-  return d.toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Europe/London",
-  });
-}
-
 // Birthdays (any year) in the next 7 days, today included.
 function upcomingBirthdays(customers: Customer[], today: Date) {
   const result: { name: string; date: string }[] = [];
@@ -50,7 +42,7 @@ function upcomingBirthdays(customers: Customer[], today: Date) {
       if (!c.birthday) continue;
       const [, m, d] = c.birthday.split("-").map(Number);
       if (day.getUTCMonth() + 1 === m && day.getUTCDate() === d) {
-        result.push({ name: c.name, date: londonDate(day) });
+        result.push({ name: c.name, date: londonLongDate(day) });
       }
     }
   }
@@ -124,7 +116,7 @@ export async function loadRestaurantContext({ realTime = false }: { realTime?: b
     data,
     reviews,
     customers,
-    today: londonDate(today),
+    today: londonLongDate(today),
     birthdaysThisWeek: upcomingBirthdays(customers, today),
   };
 }
@@ -402,10 +394,6 @@ function textOf(response: Anthropic.Beta.BetaMessage) {
     .map((b) => b.text)
     .join("\n")
     .trim();
-}
-
-function clip(text: string, max: number) {
-  return text.length > max ? text.slice(0, max - 1) + "…" : text;
 }
 
 export type ChatResult =

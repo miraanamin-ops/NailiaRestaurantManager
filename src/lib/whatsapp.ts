@@ -1,5 +1,7 @@
 import "server-only";
 import twilio from "twilio";
+import { BUTTON_IDS } from "@/lib/bot/parse";
+import { clip } from "@/lib/text";
 
 // Quick-reply template with Approve / Edit / Skip buttons. Created in the
 // Twilio account automatically the first time it's needed.
@@ -8,17 +10,11 @@ const TEMPLATE_NAME = "naila_draft_approval_v1";
 const BUTTON_BODY_MAX = 1024;
 const TEXT_MAX = 1600;
 
-export const BUTTON_IDS = { approve: "approve", edit: "edit", skip: "skip" } as const;
-
 // Morning-brief items: each button carries its draft's id ("approve:<id>"),
 // so tapping Approve on item 3 approves item 3, whatever else is on screen.
+// (Reading the taps back is in lib/bot/parse.ts.)
 const TARGETED_TEMPLATE_NAME = "naila_draft_buttons_targeted_v1";
 export type ButtonTarget = { draftId: string; briefNumber: number };
-
-export function parseButtonPayload(payload: string | undefined) {
-  const m = payload?.match(/^(approve|edit|skip):([0-9a-f-]{36})$/);
-  return m ? { action: m[1] as keyof typeof BUTTON_IDS, draftId: m[2] } : null;
-}
 
 export function getTwilio() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -66,10 +62,6 @@ function templateSid(targeted: boolean) {
     templateSids.set(name, sid);
   }
   return sid;
-}
-
-function clip(text: string, max: number) {
-  return text.length > max ? text.slice(0, max - 1) + "…" : text;
 }
 
 export async function sendText(from: string, to: string, body: string) {

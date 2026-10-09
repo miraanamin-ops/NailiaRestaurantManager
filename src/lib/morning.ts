@@ -1,9 +1,9 @@
 import "server-only";
 import { loadRestaurantContext } from "@/lib/assistant";
-import { proposeBirthdayCampaign } from "@/lib/bot";
+import { proposeBirthdayCampaign } from "@/lib/bot/flows";
 import { canMessageFreely, markBriefWaiting, sendBrief } from "@/lib/brief";
-import { londonDate } from "@/lib/campaigns";
-import { formatLondon, londonParts } from "@/lib/clock";
+
+import { formatLondon, londonParts, londonWeekday, londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { queueResultsMessage } from "@/lib/format";
 import { ownerChannel } from "@/lib/followups";
@@ -25,11 +25,6 @@ const MAX_FAILURES = 3;
 // that a crashed run doesn't block the next hour's retry.
 const LOCK_MINUTES = 10;
 
-export function londonWeekday(now: Date) {
-  const p = londonParts(now);
-  return new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay(); // 0 = Sunday
-}
-
 async function setFields(r: Restaurant, fields: Partial<Restaurant>) {
   check(await getSupabase().from("restaurants").update(fields).eq("id", r.id));
 }
@@ -49,7 +44,7 @@ async function takeLock(r: Restaurant, now: Date) {
 // This Monday's report, if the morning job has made it (it covers last Monday to Sunday,
 // so a report asked for with RUN REPORT never matches).
 async function mondayReportHeadline(r: Restaurant, due: Date) {
-  if (r.last_report_on !== londonDate(due)) return null;
+  if (r.last_report_on !== londonYmd(due)) return null;
   const row = check(
     await getSupabase()
       .from("reports")
@@ -64,7 +59,7 @@ async function mondayReportHeadline(r: Restaurant, due: Date) {
 }
 
 export async function runMorning(restaurant: Restaurant, now: Date) {
-  const today = londonDate(now);
+  const today = londonYmd(now);
   if (londonParts(now).hour < BRIEF_HOUR) return { skipped: "before 9am" };
   if (restaurant.last_brief_on === today) return { skipped: "already done today" };
   const failuresToday = restaurant.morning_failed_on === today ? restaurant.morning_failures : 0;

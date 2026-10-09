@@ -6,6 +6,7 @@ import { stars } from "@/lib/google-jobs";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { attemptSend, type SendResult } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { plural, shorten } from "@/lib/text";
 
 // The morning brief: everything waiting for approval, numbered, each with its
 // own buttons, plus a one-line "done for you" tally. Plain code, no AI.
@@ -48,11 +49,6 @@ async function campaignNames(drafts: Draft[]) {
   return new Map(rows.map((r) => [r.draft_id, r.name]));
 }
 
-const firstWords = (text: string, max: number) => {
-  const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
-};
-
 // One line per item for the numbered summary.
 function itemLine(d: Draft, review: ReviewInfo | undefined, campaignName: string | undefined) {
   const flag = d.check_notes?.flags?.length ? " ⚠️" : "";
@@ -60,20 +56,18 @@ function itemLine(d: Draft, review: ReviewInfo | undefined, campaignName: string
     const name = review.author_name.replace(/\.$/, "");
     return `📝 Reply to ${name}'s ${review.rating}⭐ review${review.rating <= 3 ? " 🚨" : ""}${flag}`;
   }
-  if (d.kind === "google_post") return `📍 Google post: "${firstWords(d.content, 40)}"${flag}`;
+  if (d.kind === "google_post") return `📍 Google post: "${shorten(d.content, 40)}"${flag}`;
   if (d.kind === "email_campaign") return `📧 Email: ${campaignName ?? "offer"} · ${d.audience ?? ""}${flag}`;
   return `📝 ${KIND_LABELS[d.kind]}${d.audience ? ` for ${d.audience}` : ""}${flag}`;
 }
 
 // The full item, sent as its own message with Approve / Edit / Skip.
 function itemMessage(d: Draft, n: number, total: number, review: ReviewInfo | undefined, restaurant: Restaurant) {
-  const quote = review ? `${review.author_name} ${stars(review.rating)}\n_"${firstWords(review.text ?? "(rating only)", 220)}"_\n\n` : "";
+  const quote = review ? `${review.author_name} ${stars(review.rating)}\n_"${shorten(review.text ?? "(rating only)", 220)}"_\n\n` : "";
   return `*${n} of ${total}*\n${quote}${draftMessage(d, restaurant)}`;
 }
 
 // ---------- "Done for you" tally ----------
-
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 // What happened in the window, as short phrases. Empty = no activity.
 export async function doneTally(restaurantId: string, since: Date, until: Date) {

@@ -70,6 +70,29 @@ export function londonTimeOn(now: Date, hhmm: string, plusDays: number) {
   return londonTime(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate(), h, m);
 }
 
+// London's date as "2026-10-09" (for database dates and comparisons).
+export function londonYmd(d: Date) {
+  const p = londonParts(d);
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+}
+
+// London's date in words, "Friday, 9 October 2026" (for Claude's prompts).
+export function londonLongDate(d: Date) {
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: TZ });
+}
+
+// 0 = Sunday ... 6 = Saturday, in London.
+export function londonWeekday(d: Date) {
+  const p = londonParts(d);
+  return new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay();
+}
+
+// Midnight at the start of this London day.
+export function startOfLondonDay(d: Date) {
+  const p = londonParts(d);
+  return londonTime(p.year, p.month, p.day, 0, 0);
+}
+
 export function formatLondon(d: Date) {
   return d.toLocaleString("en-GB", {
     timeZone: TZ,
