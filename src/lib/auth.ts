@@ -66,6 +66,23 @@ export async function requireOwner(nextPath: string): Promise<Owner> {
   return owner;
 }
 
+// Which restaurant an owner page shows: the one asked for (?r=…) if this person
+// may see it, otherwise their first. Never one they can't see.
+export function pickRestaurantId(owner: Owner, requested: string | string[] | undefined) {
+  const want = Array.isArray(requested) ? requested[0] : requested;
+  return want && owner.restaurantIds.includes(want) ? want : (owner.restaurantIds[0] ?? null);
+}
+
+// Names of the restaurants this person can switch between (the builder sees all).
+export async function restaurantChoices(owner: Owner) {
+  if (owner.restaurantIds.length < 2) return [];
+  return (
+    check(
+      await getSupabase().from("restaurants").select("id, name").in("id", owner.restaurantIds).order("created_at").returns<{ id: string; name: string }[]>(),
+    ) ?? []
+  );
+}
+
 // Only ever redirect within this site after logging in.
 export function safeNext(next: string | null | undefined) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";

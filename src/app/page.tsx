@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { logOut } from "@/app/login/actions";
-import { requireOwner } from "@/lib/auth";
+import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
 import { google } from "@/lib/google";
 import {
@@ -16,16 +16,34 @@ import {
 // Owner page: needs a login (src/proxy.ts and lib/auth.ts). Never shown in search engines.
 export const metadata: Metadata = { title: "Naila – test data", robots: { index: false, follow: false } };
 
-export default function Home() {
+export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
       <p className="text-sm font-medium uppercase tracking-wide text-orange-600">
         Naila · test data
       </p>
       <Suspense fallback={<p className="mt-6 text-neutral-500">Loading data from Supabase…</p>}>
-        <Dashboard />
+        <Dashboard searchParams={searchParams} />
       </Suspense>
     </main>
+  );
+}
+
+// For the builder (who can see every restaurant): links to switch between them.
+function RestaurantSwitcher({ choices, current, path }: { choices: { id: string; name: string }[]; current: string; path: string }) {
+  if (!choices.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2 text-sm">
+      {choices.map((c) => (
+        <a
+          key={c.id}
+          href={`${path}?r=${c.id}`}
+          className={`rounded-full px-3 py-1 ${c.id === current ? "bg-orange-600 text-white" : "bg-neutral-100 text-neutral-700 underline"}`}
+        >
+          {c.name}
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -113,52 +131,58 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-async function Dashboard() {
+async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   // Always fetch fresh data on every visit.
   await connection();
   const owner = await requireOwner("/");
+  // Only ever a restaurant this person may see; everything below is filtered by it.
+  const rid = pickRestaurantId(owner, (await searchParams).r);
+  if (!rid) return <p className="mt-6">You&apos;re logged in as {owner.email}, but no restaurant uses that email yet.</p>;
+  const choices = await restaurantChoices(owner);
   const supabase = getSupabase();
 
   const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes, blocksRes, eventsRes] =
     await Promise.all([
-      supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
-      supabase.from("customers").select("*").order("name").returns<Customer[]>(),
+      supabase.from("restaurants").select("*").eq("id", rid).maybeSingle<Restaurant>(),
+      supabase.from("customers").select("*").eq("restaurant_id", rid).order("name").returns<Customer[]>(),
       // Reviews come through the Google connector, like everywhere else.
-      supabase
-        .from("restaurants")
-        .select("id")
-        .limit(1)
-        .single<{ id: string }>()
-        .then(async ({ data }) => ({ data: (data ? await google().listReviews(data.id) : []) as Review[], error: null })),
-      supabase.from("drafts").select("id", { count: "exact", head: true }),
-      supabase.from("sent_log").select("id", { count: "exact", head: true }),
+      google()
+        .listReviews(rid)
+        .then((data) => ({ data: data as Review[], error: null })),
+      supabase.from("drafts").select("id", { count: "exact", head: true }).eq("restaurant_id", rid),
+      supabase.from("sent_log").select("id", { count: "exact", head: true }).eq("restaurant_id", rid),
       supabase
         .from("messages")
         .select("id, direction, from_number, to_number, body, status, error, created_at")
+        .eq("restaurant_id", rid)
         .order("created_at", { ascending: false })
         .limit(30)
         .returns<Message[]>(),
       supabase
         .from("drafts")
         .select("id, kind, content, status, waiting_for, audience, version, created_at")
+        .eq("restaurant_id", rid)
         .order("created_at", { ascending: false })
         .limit(15)
         .returns<DraftRow[]>(),
       supabase
         .from("draft_feedback")
         .select("id, draft_kind, kind, note, created_at")
+        .eq("restaurant_id", rid)
         .order("created_at", { ascending: false })
         .limit(15)
         .returns<FeedbackRow[]>(),
       supabase
         .from("blocked_sends")
         .select("id, reason, detail, created_at")
+        .eq("restaurant_id", rid)
         .order("created_at", { ascending: false })
         .limit(20)
         .returns<BlockRow[]>(),
       supabase
         .from("customer_events")
         .select("id, type, detail, created_at, customers(name, email)")
+        .eq("restaurant_id", rid)
         .order("created_at", { ascending: false })
         .limit(40)
         .returns<EventRow[]>(),
@@ -188,7 +212,7 @@ async function Dashboard() {
   // And the email sign-up log from step 5.
   const events = eventsRes.error ? null : (eventsRes.data ?? []);
   const countEvents = async (type: string) =>
-    (await supabase.from("customer_events").select("id", { count: "exact", head: true }).eq("type", type)).count ?? 0;
+    (await supabase.from("customer_events").select("id", { count: "exact", head: true }).eq("restaurant_id", rid).eq("type", type)).count ?? 0;
   const [signupCount, redeemedCount, unsubCount] = events
     ? await Promise.all([countEvents("signup"), countEvents("redeemed"), countEvents("unsubscribed")])
     : [0, 0, 0];
@@ -211,8 +235,9 @@ async function Dashboard() {
     <div className="mt-2 space-y-10">
       {/* Restaurant */}
       <section>
-        <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
-          <a href="/log" className="font-medium text-orange-700 underline">Activity log</a>
+        <RestaurantSwitcher choices={choices} current={restaurant.id} path="/" />
+        <div className="mb-3 mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <a href={`/log?r=${restaurant.id}`} className="font-medium text-orange-700 underline">Activity log</a>
           <span className="text-neutral-500">Logged in as {owner.email}</span>
           <form action={logOut}>
             <button type="submit" className="text-neutral-600 underline">Log out</button>

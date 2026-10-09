@@ -1,6 +1,7 @@
 import { after, type NextRequest } from "next/server";
 import twilio from "twilio";
 import { handleMessage } from "@/lib/bot";
+import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
 
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -40,14 +41,13 @@ export async function POST(req: NextRequest) {
       ? { url: params.MediaUrl0, contentType: params.MediaContentType0 ?? "" }
       : null;
 
-  // Only the restaurant's registered owner number can use the assistant. The
-  // number is a fixed setting (restaurants.owner_whatsapp), never taken from a message.
+  // Every restaurant is identified by its owner's WhatsApp number (a fixed setting,
+  // restaurants.owner_whatsapp, unique per restaurant; never taken from a message).
   const supabase = getSupabase();
   const { data: restaurant } = await supabase
     .from("restaurants")
     .select("id")
     .eq("owner_whatsapp", owner)
-    .limit(1)
     .maybeSingle<{ id: string }>();
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? null,
@@ -68,15 +68,18 @@ export async function POST(req: NextRequest) {
   }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
 
-  // Anyone else gets no reply and can't trigger anything.
+  // Anyone else can't trigger anything: they get one polite "not registered" reply
+  // (at most once a day) and nothing else.
   if (!restaurant) {
-    console.warn("Ignored WhatsApp message from an unregistered number");
+    console.warn("WhatsApp message from an unregistered number");
+    after(() => replyUnregistered(owner, sandbox));
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
   // Reply to Twilio straight away (it gives up after 15 seconds), then do the
-  // slow work and send answers as separate WhatsApp messages.
-  after(() => handleMessage({ owner, sandbox, body, buttonPayload: params.ButtonPayload, media }));
+  // slow work and send answers as separate WhatsApp messages. Everything from
+  // here on works with this one restaurant only.
+  after(() => handleMessage({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, media }));
 
   return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
 }

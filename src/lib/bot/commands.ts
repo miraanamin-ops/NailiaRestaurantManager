@@ -44,6 +44,16 @@ const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
 - *TEST SEND*: try to send the waiting draft *without* approving it
 - *TEST CHECKER*: run a draft full of mistakes through the four checks`;
 
+// TEST CHECKER: a draft with deliberate mistakes taken from THIS restaurant's own
+// menu (a wrong price, wrong opening hours, an unagreed freebie).
+function testCheckerDraft(r: Restaurant) {
+  const items = (r.menu ?? []).flatMap((c) => c.items);
+  const dish = items[0] ?? { name: "our special", price: 10 };
+  const treat = items.at(-1)?.name ?? "dessert";
+  const wrongPrice = Math.max(1, dish.price - 4).toFixed(2);
+  return `${dish.name} is just £${wrongPrice} this week, and we're open till 2am every Friday! Every table gets a free ${treat} too 🎉`;
+}
+
 async function statusText(restaurant: Restaurant) {
   const now = restaurantNow(restaurant);
   const { count } = await getSupabase()
@@ -119,7 +129,7 @@ export async function runCommand(command: Command, turn: Turn) {
         {
           kind: "promotion",
           content:
-            "Lamb Chops (4 pcs) are just £9.95 this week, and we're open till 2am every Friday! Every table gets a free kunafa too 🎉",
+            testCheckerDraft(r),
           audience: "All opted-in customers",
           request: "TEST CHECKER command",
         },

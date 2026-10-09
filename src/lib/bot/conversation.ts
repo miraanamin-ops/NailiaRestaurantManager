@@ -40,6 +40,8 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   const { data: rows, error } = await getSupabase()
     .from("messages")
     .select("direction, body, status")
+    // This restaurant's own conversation only.
+    .eq("restaurant_id", ctx.restaurantId)
     // Quoted because numbers look like "whatsapp:+44…" and ":" is special in this filter.
     .or(`from_number.eq."${owner}",to_number.eq."${owner}"`)
     .order("created_at", { ascending: false })

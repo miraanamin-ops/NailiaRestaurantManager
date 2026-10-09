@@ -50,18 +50,19 @@ function upcomingBirthdays(customers: Customer[], today: Date) {
   return result;
 }
 
-// Loads the restaurant, its customers and reviews from the database and
-// turns them into the background knowledge Claude gets on every message.
+// Loads ONE restaurant (always by its id), its customers and reviews, and turns
+// them into the background knowledge Claude gets. Nothing from any other
+// restaurant is ever loaded into the same context.
 // realTime: scheduled jobs always run on the real clock, never the TIME test clock.
-export async function loadRestaurantContext({ realTime = false }: { realTime?: boolean } = {}) {
+export async function loadRestaurantContext(restaurantId: string, { realTime = false }: { realTime?: boolean } = {}) {
   const supabase = getSupabase();
   const { data: restaurant, error } = await supabase
     .from("restaurants")
     .select("*")
-    .limit(1)
+    .eq("id", restaurantId)
     .maybeSingle<Restaurant>();
   if (error) throw error;
-  if (!restaurant) throw new Error("No restaurant in the database");
+  if (!restaurant) throw new Error(`Restaurant ${restaurantId} not found`);
 
   const [customersRes, reviews] = await Promise.all([
     supabase.from("customers").select("*").eq("restaurant_id", restaurant.id).order("name").returns<Customer[]>(),

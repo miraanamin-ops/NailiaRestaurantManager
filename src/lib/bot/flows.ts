@@ -134,7 +134,7 @@ export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send
 export async function newReview(ctx: RestaurantContext, rating: number | null, send: Send) {
   const g = google();
   if (!g.addDummyReview) return send("NEW REVIEW only works in dummy Google mode.");
-  const pick = randomDummyReview(rating ?? undefined);
+  const pick = randomDummyReview(rating ?? undefined, ctx.restaurant.cuisine);
   const review = await g.addDummyReview(ctx.restaurantId, pick);
   const name = review.author_name.replace(/\.$/, "");
   await send(`🌐 A new ${review.rating}-star review from ${name} just appeared on (dummy) Google. Running the review check now…`);

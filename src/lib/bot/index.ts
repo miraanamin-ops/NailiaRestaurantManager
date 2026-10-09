@@ -19,14 +19,20 @@ import { updateRestaurant, type Turn } from "./turn";
 //   conversation.ts edits, skip reasons and chat with Claude
 //   flows.ts        writing, checking and showing each kind of draft
 export async function handleMessage(input: {
+  restaurantId: string; // found by the webhook from the owner's number
   owner: string;
   sandbox: string;
   body: string;
   buttonPayload: string | undefined;
   media?: { url: string; contentType: string } | null;
 }) {
-  const { owner, sandbox, body } = input;
-  let ctx = await loadRestaurantContext();
+  const { owner, sandbox, body, restaurantId } = input;
+  let ctx = await loadRestaurantContext(restaurantId);
+  // Belt and braces: only this restaurant's own owner can act on it.
+  if (ctx.restaurant.owner_whatsapp !== owner) {
+    console.error("handleMessage: the sender isn't this restaurant's owner; ignoring");
+    return;
+  }
   const channel: OwnerChannel = { restaurantId: ctx.restaurantId, from: sandbox, to: owner };
   const send: Send = (text, withButtons = false) => messageOwner(channel, text, withButtons);
 
@@ -34,7 +40,7 @@ export async function handleMessage(input: {
     // The owner number itself is a fixed setting; just remember which of our numbers they're talking to.
     if (ctx.restaurant.whatsapp_from !== sandbox) {
       await updateRestaurant(ctx.restaurantId, { whatsapp_from: sandbox });
-      ctx = await loadRestaurantContext();
+      ctx = await loadRestaurantContext(restaurantId);
     }
 
     const command = input.media ? null : parseCommand(body, londonWeekday(new Date()));
@@ -43,7 +49,7 @@ export async function handleMessage(input: {
     // now they have, so it goes first (unless they're asking for it anyway).
     if (ctx.restaurant.brief_waiting_since && command?.name !== "run_brief") {
       await deliverWaitingBrief(ctx.restaurant, channel, ctx.now);
-      ctx = await loadRestaurantContext();
+      ctx = await loadRestaurantContext(restaurantId);
     }
 
     const turn: Turn = { ctx, channel, owner, send };
@@ -52,7 +58,7 @@ export async function handleMessage(input: {
     else await handleConversation(turn, body, input.buttonPayload);
 
     // Any queued drafts that are now due go out whenever the owner is active.
-    const fresh = await loadRestaurantContext();
+    const fresh = await loadRestaurantContext(restaurantId);
     if (command?.name !== "time" && command?.name !== "resume") await releaseQueue(fresh.restaurant, fresh.now);
   } catch (err) {
     console.error("Failed to handle message", err);

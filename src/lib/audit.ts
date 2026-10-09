@@ -88,6 +88,7 @@ export async function lastUndoable(restaurantId: string, now: Date) {
       await getSupabase()
         .from("audit_log")
         .select("*")
+        .eq("restaurant_id", restaurantId)
         .eq("batch_id", latest.batch_id)
         .eq("actor", "owner")
         .in("action", UNDOABLE)

@@ -59,6 +59,8 @@ export type Restaurant = {
   morning_failed_on: string | null;
   // A demo restaurant: everything belonging to it is dummy data (step 10).
   is_demo: boolean;
+  // Scheduled jobs only run for active restaurants (step 11).
+  active: boolean;
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent

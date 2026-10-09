@@ -3,7 +3,7 @@
 // "done for you" line has something from the last 24 hours. Last week is busier.
 // Everything it adds is tagged, so running it again replaces it, and --remove
 // takes it all out. Existing data is never touched.
-// Usage: node --env-file=.env.local scripts/seed-two-weeks.mjs [--remove]
+// Usage: node --env-file=.env.local scripts/seed-two-weeks.mjs [--remove]  (seeds the Ember & Spice demo; the texts are grill-specific)
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
@@ -21,7 +21,7 @@ const ok = (res, what) => {
 };
 
 // Dummy data only ever goes into a demo restaurant (restaurants.is_demo).
-const { data: restaurant } = await s.from("restaurants").select("id, name, is_demo").eq("is_demo", true).limit(1).maybeSingle();
+const { data: restaurant } = await s.from("restaurants").select("id, name, is_demo").eq("slug", "ember-spice").eq("is_demo", true).maybeSingle();
 if (!restaurant) throw new Error("No demo restaurant (restaurants.is_demo = true). Dummy data is never added to a real restaurant.");
 const rid = restaurant.id;
 
