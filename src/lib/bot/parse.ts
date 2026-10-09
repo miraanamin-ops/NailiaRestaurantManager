@@ -37,7 +37,7 @@ export function parseAction(buttonPayload: string | undefined, body: string): Ac
 
 export type Command =
   | { name: "help" | "status" | "pause" | "resume" | "time_off" | "test_send" | "test_checker" }
-  | { name: "run_brief" | "run_report" | "approve_all" }
+  | { name: "run_brief" | "run_report" | "approve_all" | "undo" }
   | { name: "new_review"; rating: number | null }
   | { name: "run_reviews" | "run_posts" | "queue" | "next" }
   | { name: "time"; hhmm: string; plusDays: number }
@@ -68,6 +68,7 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   // WEEKLY was the old Sunday round-up; the Monday report replaced it.
   if (t === "RUN REPORT" || t === "WEEKLY" || t === "WEEKLY REPORT") return { name: "run_report" };
   if (/^APPROVE ALL[.!]?$/.test(t)) return { name: "approve_all" };
+  if (t === "UNDO" || t === "UNDO!") return { name: "undo" };
   const newReview = t.match(/^NEW REVIEW(?: ([1-5])(?: ?STARS?)?)?$/);
   if (newReview) return { name: "new_review", rating: newReview[1] ? Number(newReview[1]) : null };
   if (t === "RUN REVIEWS") return { name: "run_reviews" };

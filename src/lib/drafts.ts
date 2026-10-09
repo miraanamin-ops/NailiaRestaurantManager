@@ -1,5 +1,6 @@
 import "server-only";
-import { allNotes, type DraftChecks } from "@/lib/checks/types";
+import { logAction, type Actor } from "@/lib/audit";
+import { allNotes, checksLine, type DraftChecks } from "@/lib/checks/types";
 import { getSupabase } from "@/lib/supabase";
 
 export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post"] as const;
@@ -91,6 +92,9 @@ export async function createDraft(input: {
   // hold:    made by a scheduled job; waits quietly for the morning brief.
   // urgent:  jumps the queue (e.g. a bad review); the draft on screen goes back into the queue.
   mode?: "present" | "hold" | "urgent";
+  // Who made it, for the audit log. Defaults: present = the assistant (the owner asked),
+  // hold = a scheduled job, urgent = the hourly review check.
+  actor?: Actor;
 }) {
   const supabase = getSupabase();
   const mode = input.mode ?? "present";
@@ -131,7 +135,19 @@ export async function createDraft(input: {
     })
     .select("*")
     .single<Draft>();
-  return checkRow(res);
+  const draft = checkRow(res);
+  await logAction({
+    restaurantId: draft.restaurant_id,
+    draftId: draft.id,
+    actor: input.actor ?? (mode === "present" ? "assistant" : mode === "hold" ? "scheduled job" : "hourly job"),
+    action: "created",
+    detail: `Drafted ${draftName(draft)}${mode === "hold" ? ", held for the morning brief" : ""}. Checks: ${checksLine(input.checks)}`,
+  });
+  return draft;
+}
+
+export function draftName(d: Pick<Draft, "kind" | "audience">) {
+  return `${KIND_LABELS[d.kind].toLowerCase()}${d.audience ? ` for ${d.audience}` : ""}`.replace(/\.$/, "");
 }
 
 // Drafts waiting their turn: pending, but not yet shown to the owner.
@@ -201,8 +217,18 @@ export async function updateDraft(id: string, fields: Partial<Draft>) {
 
 // Approve only records the owner's decision. Sending is a separate step
 // (lib/send.ts) that checks every safety rule first.
-export function approveDraft(draft: Draft) {
-  return updateDraft(draft.id, { status: "approved", approved_at: new Date().toISOString(), waiting_for: null });
+// batchId groups decisions taken together (APPROVE ALL), so UNDO reverses them together.
+export async function approveDraft(draft: Draft, batchId?: string) {
+  const approved = await updateDraft(draft.id, { status: "approved", approved_at: new Date().toISOString(), waiting_for: null });
+  await logAction({
+    restaurantId: draft.restaurant_id,
+    draftId: draft.id,
+    batchId,
+    actor: "owner",
+    action: "approved",
+    detail: `Approved ${draftName(draft)}`,
+  });
+  return approved;
 }
 
 export function startEdit(draft: Draft) {
@@ -210,18 +236,22 @@ export function startEdit(draft: Draft) {
 }
 
 export async function applyEdit(draft: Draft, instruction: string, newContent: string, checks: DraftChecks) {
-  check(
-    await getSupabase().from("draft_feedback").insert({
-      restaurant_id: draft.restaurant_id,
-      draft_id: draft.id,
-      draft_kind: draft.kind,
-      kind: "edit",
-      note: instruction,
-      before_content: draft.content,
-      after_content: newContent,
-    }),
+  const feedback = checkRow(
+    await getSupabase()
+      .from("draft_feedback")
+      .insert({
+        restaurant_id: draft.restaurant_id,
+        draft_id: draft.id,
+        draft_kind: draft.kind,
+        kind: "edit",
+        note: instruction,
+        before_content: draft.content,
+        after_content: newContent,
+      })
+      .select("id")
+      .single<{ id: string }>(),
   );
-  return updateDraft(draft.id, {
+  const updated = await updateDraft(draft.id, {
     content: newContent,
     version: draft.version + 1,
     status: "pending",
@@ -229,11 +259,36 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
     checks,
     check_notes: allNotes(checks),
   });
+  // The previous version is kept so UNDO can put it back.
+  await logAction({
+    restaurantId: draft.restaurant_id,
+    draftId: draft.id,
+    actor: "owner",
+    action: "edited",
+    detail: `Edited ${draftName(draft)}: "${instruction.slice(0, 120)}"`,
+    data: {
+      before_content: draft.content,
+      before_version: draft.version,
+      before_checks: draft.checks,
+      before_check_notes: draft.check_notes,
+      feedback_id: feedback.id,
+    },
+  });
+  return updated;
 }
 
 export async function skipDraft(draft: Draft) {
   await focusDraft(draft, "skip_reason");
-  return updateDraft(draft.id, { status: "skipped" });
+  const skipped = await updateDraft(draft.id, { status: "skipped" });
+  await logAction({
+    restaurantId: draft.restaurant_id,
+    draftId: draft.id,
+    actor: "owner",
+    action: "skipped",
+    detail: `Skipped ${draftName(draft)}`,
+    data: { before_status: draft.status, before_waiting_for: draft.waiting_for },
+  });
+  return skipped;
 }
 
 export async function saveSkipReason(draft: Draft, reason: string) {

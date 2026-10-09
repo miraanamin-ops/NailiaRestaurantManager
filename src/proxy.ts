@@ -32,4 +32,4 @@ function safeEqual(a: string, b: string) {
   return diff === 0;
 }
 
-export const config = { matcher: "/" };
+export const config = { matcher: ["/", "/log"] };

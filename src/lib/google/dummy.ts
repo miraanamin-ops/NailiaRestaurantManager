@@ -45,6 +45,26 @@ export const dummyGoogle: GoogleConnector = {
     );
   },
 
+  async removeReply(restaurantId, reviewId) {
+    check(
+      await getSupabase()
+        .from("reviews")
+        .update({ reply_text: null, reply_posted_at: null, replied: false })
+        .eq("id", reviewId)
+        .eq("restaurant_id", restaurantId),
+    );
+  },
+
+  async unpublishPost(restaurantId, postId) {
+    check(
+      await getSupabase()
+        .from("google_posts")
+        .update({ published_at: null, withdrawn_at: new Date().toISOString() })
+        .eq("id", postId)
+        .eq("restaurant_id", restaurantId),
+    );
+  },
+
   async publishPost(restaurantId, post) {
     const googlePostId = `dummy-${post.id.slice(0, 8)}`;
     check(

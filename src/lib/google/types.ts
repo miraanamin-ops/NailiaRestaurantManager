@@ -44,8 +44,13 @@ export interface GoogleConnector {
   /** Posts the owner's reply under a review. */
   replyToReview(restaurantId: string, reviewId: string, text: string): Promise<void>;
 
+  /** Takes a posted reply down again (UNDO). */
+  removeReply(restaurantId: string, reviewId: string): Promise<void>;
+
   /** Publishes a post; returns Google's id for it. */
   publishPost(restaurantId: string, post: Pick<GooglePost, "id" | "topic" | "text" | "photo_url">): Promise<{ googlePostId: string }>;
+  /** Takes a published post down again (UNDO). */
+  unpublishPost(restaurantId: string, postId: string): Promise<void>;
   /** Published posts, newest first. */
   listPublishedPosts(restaurantId: string): Promise<GooglePost[]>;
 

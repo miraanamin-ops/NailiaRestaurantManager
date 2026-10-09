@@ -4,7 +4,8 @@ import { emailComplianceProblems } from "@/lib/checks/compliance";
 import { moneyAndRisk, type SendSource } from "@/lib/checks/money";
 import { checkResult, type CheckResult, type DraftChecks } from "@/lib/checks/types";
 import { google, type GooglePost } from "@/lib/google";
-import { check, getDraft, updateDraft, type Draft } from "@/lib/drafts";
+import { logAction } from "@/lib/audit";
+import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
 // Sending. Every send goes through attemptSend, which runs the two code checks
@@ -23,6 +24,14 @@ export type SendResult =
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
 async function logBlock(draft: Draft, reason: BlockReason, detail: string) {
+  const held = reason === "paused" || reason === "outside_window";
+  await logAction({
+    restaurantId: draft.restaurant_id,
+    draftId: draft.id,
+    actor: "safety rules",
+    action: held ? "queued" : "blocked",
+    detail: `${held ? "Held" : "Blocked"} ${draftName(draft)}: ${detail}`,
+  });
   const { error } = await getSupabase().from("blocked_sends").insert({
     restaurant_id: draft.restaurant_id,
     draft_id: draft.id,
@@ -150,6 +159,14 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   if (logError && logError.code === "23505") await logBlock(claimed, "duplicate", "Sent log already has this draft.");
   else if (logError) throw new Error(logError.message);
 
+  await logAction({
+    restaurantId: claimed.restaurant_id,
+    draftId: claimed.id,
+    actor: "system",
+    action: "sent",
+    detail: `Sent ${draftName(claimed)}${simulated ? " (simulated)" : ""}${note ? `: ${note.replace(/[_*]/g, "")}` : ""}`,
+    data: { source, simulated },
+  });
   return { outcome: "sent", draft: claimed, note };
 }
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { logSetting } from "@/lib/audit";
 import { approveAll, sendBrief } from "@/lib/brief";
 import { recentCampaignStats, statsText } from "@/lib/campaigns";
 import { formatLondon, formatWindow, isInSendWindow, londonTimeOn } from "@/lib/clock";
@@ -8,6 +9,7 @@ import { releaseQueue } from "@/lib/followups";
 import { presentNext, runPostJob, runReviewCheck } from "@/lib/google-jobs";
 import { createReport, reportPeriod } from "@/lib/report/build";
 import { attemptSend } from "@/lib/send";
+import { undoLast } from "@/lib/undo";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
 import type { Command } from "./parse";
@@ -18,6 +20,7 @@ import { updateRestaurant, type Turn } from "./turn";
 const HELP_TEXT = `🛠️ *Commands*
 - *RUN BRIEF*: the 9am morning brief, now
 - *APPROVE ALL*: approve everything in the latest brief (or *APPROVE 2*, *EDIT 2*, *SKIP 2* for one item)
+- *UNDO*: reverse your last approval, skip, edit or setting change (where possible)
 - *RUN REPORT*: the Monday weekly report (last 7 days), now
 - *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars. 1-3 stars alert you at once; 4-5 stars wait for the brief
 - *RUN REVIEWS*: run the hourly review check now
@@ -67,10 +70,12 @@ export async function runCommand(command: Command, turn: Turn) {
     case "pause":
       if (r.paused) return send("⏸️ Sending is already *paused*. Text RESUME to restart it.");
       await updateRestaurant(r.id, { paused: true, paused_at: new Date().toISOString() });
+      await logSetting(r.id, "paused", false, true, "Paused all sending");
       return send("⏸️ *Paused.* Nothing will be sent until you text *RESUME*. Approved drafts will be held.");
     case "resume": {
       if (!r.paused) return send("▶️ Sending is already on. (Text PAUSE to stop it.)");
       const resumed = await updateRestaurant(r.id, { paused: false, paused_at: null });
+      await logSetting(r.id, "paused", true, false, "Resumed sending");
       await send("▶️ *Resumed.* Sending is back on.");
       const results = await releaseQueue(resumed, restaurantNow(resumed));
       if (!results.length) await send("There was nothing held, so nothing went out.");
@@ -78,11 +83,13 @@ export async function runCommand(command: Command, turn: Turn) {
     }
     case "cap":
       await updateRestaurant(r.id, { discount_cap_percent: command.percent });
+      await logSetting(r.id, "discount_cap_percent", r.discount_cap_percent, command.percent, `Changed the discount cap from ${r.discount_cap_percent}% to ${command.percent}%`);
       return send(`💷 Discount cap set to *${command.percent}%*. Any offer above that will be blocked.`);
     case "time":
     case "time_off": {
       const fake = command.name === "time" ? londonTimeOn(new Date(), command.hhmm, command.plusDays) : null;
       const updated = await updateRestaurant(r.id, { fake_now: fake ? fake.toISOString() : null });
+      await logSetting(r.id, "fake_now", r.fake_now, updated.fake_now, fake ? `Set the test clock to ${formatLondon(fake)}` : "Turned the test clock off");
       const now = restaurantNow(updated);
       const open = isInSendWindow(now, updated.send_window_start, updated.send_window_end);
       await send(
@@ -115,6 +122,7 @@ export async function runCommand(command: Command, turn: Turn) {
       );
     case "set_reward":
       await updateRestaurant(r.id, { signup_reward: command.reward });
+      await logSetting(r.id, "signup_reward", r.signup_reward, command.reward, `Changed the sign-up reward to "${command.reward}"`);
       return send(
         `🎁 Sign-up reward set to *${command.reward}*.\nEveryone who signs up from now on gets this. (Rewards already emailed stay as they were.)\nSign-up page: ${appUrl()}/r/${r.slug}`,
       );
@@ -126,6 +134,7 @@ export async function runCommand(command: Command, turn: Turn) {
       );
     case "my_email":
       await updateRestaurant(r.id, { owner_email: command.email });
+      await logSetting(r.id, "owner_email", r.owner_email, command.email, `Changed your email to ${command.email}`);
       return send(
         `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${r.email_test_mode ? "\n_Test mode is on: that's the only real email; customers are logged as simulated._" : ""}`,
       );
@@ -147,6 +156,8 @@ export async function runCommand(command: Command, turn: Turn) {
       }
       return;
     }
+    case "undo":
+      return send(await undoLast(r, ctx.now));
     case "approve_all":
       return send(await approveAll(r, ctx.now));
     case "run_report": {

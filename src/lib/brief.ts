@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { approveDraft, check, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
 import { approveAllMessage, draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -228,8 +229,9 @@ export async function approveAll(restaurant: Restaurant, now: Date) {
       : "There's no brief to approve yet. Text RUN BRIEF to get one now.";
   }
   const results: { n: number; result: SendResult }[] = [];
+  const batchId = randomUUID(); // one UNDO reverses the whole APPROVE ALL
   for (const d of left) {
-    const approved = await approveDraft(d);
+    const approved = await approveDraft(d, batchId);
     results.push({ n: d.brief_number ?? 0, result: await attemptSend(approved.id, restaurant, now, "approve") });
   }
   return approveAllMessage(results);
