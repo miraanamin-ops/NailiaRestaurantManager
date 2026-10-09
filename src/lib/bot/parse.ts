@@ -43,7 +43,7 @@ export type Command =
   | { name: "time"; hhmm: string; plusDays: number }
   | { name: "cap"; percent: number }
   | { name: "set_reward"; reward: string }
-  | { name: "reward" | "qr" | "birthday_campaign" | "report" }
+  | { name: "reward" | "qr" | "birthday_campaign" | "campaign_results" | "which_report" }
   | { name: "my_email"; email: string };
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -86,7 +86,9 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   const email = body.trim().match(/^my\s+email(?:\s+is)?\s*:?\s+(\S+@\S+\.\S+)$/i);
   if (email) return { name: "my_email", email: email[1].toLowerCase() };
   if (t === "BIRTHDAY CAMPAIGN") return { name: "birthday_campaign" };
-  if (t === "REPORT" || t === "CAMPAIGN REPORT") return { name: "report" };
+  if (t === "CAMPAIGN RESULTS" || t === "CAMPAIGN RESULT" || t === "CAMPAIGN REPORT") return { name: "campaign_results" };
+  // REPORT on its own was easy to confuse with RUN REPORT, so it asks which one.
+  if (t === "REPORT") return { name: "which_report" };
   const cap = t.match(/^CAP (\d{1,3})%?$/);
   if (cap && Number(cap[1]) <= 100) return { name: "cap", percent: Number(cap[1]) };
   return null;

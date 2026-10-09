@@ -37,6 +37,8 @@ test("commands are exact; everything else is chat", () => {
   assert.deepEqual(parseCommand("set sign-up reward to a free mango lassi!", FRIDAY), { name: "set_reward", reward: "a free mango lassi" });
   assert.deepEqual(parseCommand("my email is Owner@Example.com", FRIDAY), { name: "my_email", email: "owner@example.com" });
   assert.equal(parseCommand("Thursday is quiet", FRIDAY), null);
+  assert.deepEqual(parseCommand("campaign results", FRIDAY), { name: "campaign_results" });
+  assert.deepEqual(parseCommand("REPORT", FRIDAY), { name: "which_report" });
 });
 
 test("TIME picks the next matching day", () => {

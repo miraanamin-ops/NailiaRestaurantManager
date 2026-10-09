@@ -36,7 +36,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - *QR*: get the sign-up page link and printable QR code
 - *MY EMAIL you@example.com*: where your copy of each campaign email goes
 - *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
-- *REPORT*: results of the latest email campaign`;
+- *CAMPAIGN RESULTS*: how the latest email campaign did`;
 
 async function statusText(restaurant: Restaurant) {
   const now = restaurantNow(restaurant);
@@ -131,10 +131,12 @@ export async function runCommand(command: Command, turn: Turn) {
       );
     case "birthday_campaign":
       return proposeBirthdayCampaign(ctx, send);
-    case "report": {
+    case "campaign_results": {
       const [latest] = await recentCampaignStats(r.id, 1);
       return send(latest ? statsText(latest) : "No email campaigns have been sent yet. Try: Thursday is quiet");
     }
+    case "which_report":
+      return send("Which one? 📊\n- *RUN REPORT*: your weekly report (last 7 days)\n- *CAMPAIGN RESULTS*: how the latest email campaign did");
     case "run_brief": {
       // Exactly what 9am sends, minus the once-a-day jobs (so tomorrow's real brief still comes).
       const outcome = await sendBrief(r, channel, ctx.now);

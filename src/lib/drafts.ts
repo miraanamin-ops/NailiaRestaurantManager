@@ -1,7 +1,7 @@
 import "server-only";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "birthday", "promotion", "other", "email_campaign", "google_post"] as const;
+export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post"] as const;
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
 
@@ -23,7 +23,6 @@ export type Draft = {
   scheduled_for: string | null;
   sent_at: string | null;
   block_reason: string | null;
-  reminded_at: string | null;
   check_notes: CheckNotes | null;
   // Morning brief (step 8)
   held_at: string | null;
@@ -45,7 +44,6 @@ export type Feedback = {
 
 export const KIND_LABELS: Record<DraftKind, string> = {
   review_reply: "Review reply",
-  birthday: "Birthday message",
   promotion: "Offer / promotion",
   other: "Message",
   email_campaign: "Email campaign",
@@ -225,7 +223,6 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
     status: "pending",
     waiting_for: "decision",
     check_notes: checkNotes,
-    reminded_at: null,
   });
 }
 
