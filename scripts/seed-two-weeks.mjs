@@ -20,7 +20,9 @@ const ok = (res, what) => {
   return res.data;
 };
 
-const { data: restaurant } = await s.from("restaurants").select("id, name").limit(1).single();
+// Dummy data only ever goes into a demo restaurant (restaurants.is_demo).
+const { data: restaurant } = await s.from("restaurants").select("id, name, is_demo").eq("is_demo", true).limit(1).maybeSingle();
+if (!restaurant) throw new Error("No demo restaurant (restaurants.is_demo = true). Dummy data is never added to a real restaurant.");
 const rid = restaurant.id;
 
 async function remove() {

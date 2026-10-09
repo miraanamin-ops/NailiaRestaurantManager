@@ -12,27 +12,19 @@ import { attemptSend } from "@/lib/send";
 import { undoLast } from "@/lib/undo";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
+import { isTestCommand, isTestMode, TEST_MODE_OFF_MESSAGE } from "@/lib/test-mode";
 import type { Command } from "./parse";
 import { updateRestaurant, type Turn } from "./turn";
 
 // Exact typed commands: settings, test commands and shortcuts. (Parsing is in ./parse.ts.)
 
 const HELP_TEXT = `🛠️ *Commands*
-- *RUN BRIEF*: the 9am morning brief, now
 - *APPROVE ALL*: approve everything in the latest brief (or *APPROVE 2*, *EDIT 2*, *SKIP 2* for one item)
 - *UNDO*: reverse your last approval, skip, edit or setting change (where possible)
-- *RUN REPORT*: the Monday weekly report (last 7 days), now
-- *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars. 1-3 stars alert you at once; 4-5 stars wait for the brief
-- *RUN REVIEWS*: run the hourly review check now
-- *RUN POSTS*: draft a Google post now and hold it for the brief (normally Mondays and Thursdays)
 - *QUEUE*: see drafts waiting for you · *NEXT*: bring up the next one
 - Send a *photo* (with a note if you like) to turn it into a Google post
 - *PAUSE* / *RESUME*: stop / restart all sending
 - *CAP 25*: set the max discount to 25%
-- *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work)
-- *TIME OFF*: back to the real time
-- *TEST SEND*: try to send the waiting draft *without* approving it
-- *TEST CHECKER*: run a draft full of mistakes through the checker
 - *STATUS*: show the current settings
 - *set sign-up reward to a free mango lassi*: change the reward for new customers
 - *REWARD*: show the current sign-up reward
@@ -40,6 +32,17 @@ const HELP_TEXT = `🛠️ *Commands*
 - *MY EMAIL you@example.com*: where your copy of each campaign email goes
 - *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
 - *CAMPAIGN RESULTS*: how the latest email campaign did`;
+
+// Only listed (and only working) when TEST_MODE is on.
+const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
+- *RUN BRIEF*: the 9am morning brief, now
+- *RUN REPORT*: the Monday weekly report (last 7 days), now
+- *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars. 1-3 stars alert you at once; 4-5 stars wait for the brief
+- *RUN REVIEWS*: run the hourly review check now
+- *RUN POSTS*: draft a Google post now and hold it for the brief (normally Mondays and Thursdays)
+- *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work) · *TIME OFF*: back to the real time
+- *TEST SEND*: try to send the waiting draft *without* approving it
+- *TEST CHECKER*: run a draft full of mistakes through the four checks`;
 
 async function statusText(restaurant: Restaurant) {
   const now = restaurantNow(restaurant);
@@ -52,7 +55,8 @@ async function statusText(restaurant: Restaurant) {
   return [
     "⚙️ *Status*",
     `- Sending: ${restaurant.paused ? "⏸️ *PAUSED*" : "▶️ on"}`,
-    `- Clock: ${formatLondon(now)}${restaurant.fake_now ? " _(test time; TIME OFF to reset)_" : ""}`,
+    `- Clock: ${formatLondon(now)}${restaurant.fake_now && isTestMode() ? " _(test time; TIME OFF to reset)_" : ""}`,
+    `- Test mode: ${isTestMode() ? "on" : "off"}`,
     `- Sending hours: ${formatWindow(restaurant.send_window_start, restaurant.send_window_end)} (${inWindow ? "open now" : "closed now"})`,
     `- Discount cap: ${restaurant.discount_cap_percent}%`,
     `- Queued drafts: ${count ?? 0}`,
@@ -62,9 +66,11 @@ async function statusText(restaurant: Restaurant) {
 export async function runCommand(command: Command, turn: Turn) {
   const { ctx, channel, send } = turn;
   const r = ctx.restaurant;
+  // Test commands do nothing unless TEST_MODE is on (it's off in production by default).
+  if (isTestCommand(command.name) && !isTestMode()) return send(TEST_MODE_OFF_MESSAGE);
   switch (command.name) {
     case "help":
-      return send(HELP_TEXT);
+      return send(isTestMode() ? `${HELP_TEXT}\n\n${TEST_HELP_TEXT}` : HELP_TEXT);
     case "status":
       return send(await statusText(r));
     case "pause":
