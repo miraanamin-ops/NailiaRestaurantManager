@@ -1,6 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { getSupabase, restaurantNow, type Customer, type Restaurant, type Review } from "@/lib/supabase";
+import { google } from "@/lib/google";
+import { getSupabase, restaurantNow, type Customer, type Restaurant } from "@/lib/supabase";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import {
@@ -68,15 +69,13 @@ export async function loadRestaurantContext() {
   if (error) throw error;
   if (!restaurant) throw new Error("No restaurant in the database");
 
-  const [customersRes, reviewsRes] = await Promise.all([
+  const [customersRes, reviews] = await Promise.all([
     supabase.from("customers").select("*").eq("restaurant_id", restaurant.id).order("name").returns<Customer[]>(),
-    supabase.from("reviews").select("*").eq("restaurant_id", restaurant.id).order("review_date", { ascending: false }).returns<Review[]>(),
+    google().listReviews(restaurant.id),
   ]);
   if (customersRes.error) throw customersRes.error;
-  if (reviewsRes.error) throw reviewsRes.error;
 
   const customers = customersRes.data ?? [];
-  const reviews = reviewsRes.data ?? [];
   const today = restaurantNow(restaurant);
   const avg = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
@@ -101,6 +100,7 @@ export async function loadRestaurantContext() {
       text: r.text,
       date: r.review_date.slice(0, 10),
       replied: r.replied,
+      reply: r.reply_text,
     })),
     customers: customers.map((c) => ({
       id: c.id,
@@ -153,7 +153,8 @@ function learningText(learning: Learning) {
 // "chat": talking with the owner on WhatsApp, with drafting tools available.
 // "write": producing just the text of one draft, with no tools.
 // "campaign": producing the structured fields of one email campaign.
-type Mode = "chat" | "write" | "campaign";
+// "post": producing one Google post.
+type Mode = "chat" | "write" | "campaign" | "post";
 
 const CHAT_INSTRUCTIONS = `Chatting with the owner:
 - This is WhatsApp. Keep replies short and easy to read on a phone, ideally under 120 words.
@@ -166,6 +167,8 @@ const CHAT_INSTRUCTIONS = `Chatting with the owner:
 const WRITE_INSTRUCTIONS = `You are writing one draft right now. Reply with only the finished message text, exactly as it would be sent: no intro, no explanation, no quotes around it, no JSON or code.`;
 
 const CAMPAIGN_INSTRUCTIONS = `You are writing one email campaign right now. Fill in every field following the email campaign guidelines.`;
+
+const POST_INSTRUCTIONS = `You are writing one Google post right now.`;
 
 function systemPrompt(
   ctx: RestaurantContext,
@@ -184,7 +187,9 @@ Writing drafts (review replies and other one-off messages):
 - Write in the restaurant's brand voice, ready to send as-is: no placeholders like [Name], under ${DRAFT_MAX_CHARS} characters.
 - Use real details from the data: customer first names, menu items, prices and opening hours. Offers are suggestions for the owner to approve, so you can propose a concrete deal.
 - Don't offer freebies, refunds or other promises unless the owner asks for them.
-- Review replies are only logged for now, not posted.
+- Approved review replies are posted under the review on Google.
+
+Google reviews pasted by the owner: if the owner pastes or forwards a review (from Google or anywhere else) and wants a reply they can post themselves, call draft_pasted_review_reply with the review details. They'll get a reply to copy and paste.
 
 Email campaigns (how customers hear about offers; customers are reached by email, never WhatsApp):
 - When the owner wants to fill a quiet time, push a dish, or run any offer for customers, create an email campaign.
@@ -216,7 +221,13 @@ If the owner's message asks for changes to this draft, call revise_current_draft
       : "No draft is currently waiting for approval.";
 
   const modeText =
-    mode === "chat" ? [CHAT_INSTRUCTIONS, active] : mode === "campaign" ? [CAMPAIGN_INSTRUCTIONS] : [WRITE_INSTRUCTIONS];
+    mode === "chat"
+      ? [CHAT_INSTRUCTIONS, active]
+      : mode === "campaign"
+        ? [CAMPAIGN_INSTRUCTIONS]
+        : mode === "post"
+          ? [POST_INSTRUCTIONS, POST_GUIDE]
+          : [WRITE_INSTRUCTIONS];
 
   return [
     // The big background block is the same in every mode and rarely changes,
@@ -341,6 +352,21 @@ export function writeBirthdayCampaign(ctx: RestaurantContext, learning: Learning
   );
 }
 
+const pastedReviewTool: Anthropic.Tool = {
+  name: "draft_pasted_review_reply",
+  description:
+    "The owner pasted or forwarded a review and wants a reply they can copy into Google themselves. Pass the review details exactly as given.",
+  input_schema: {
+    type: "object",
+    properties: {
+      author_name: { type: "string", description: "Reviewer's name, or 'the reviewer' if unknown" },
+      rating: { type: "integer", minimum: 1, maximum: 5, description: "Star rating, if known" },
+      text: { type: "string", description: "The review text, word for word" },
+    },
+    required: ["author_name", "text"],
+  },
+};
+
 const reviseDraftTool: Anthropic.Tool = {
   name: "revise_current_draft",
   description: "Rewrite the draft that is waiting for approval, following the owner's requested changes.",
@@ -391,7 +417,8 @@ export type ChatResult =
       customerId: string | null;
     }
   | { type: "revise"; instruction: string; content: string }
-  | { type: "campaign"; fields: CampaignFields };
+  | { type: "campaign"; fields: CampaignFields }
+  | { type: "pasted_review"; authorName: string; rating: number | null; text: string };
 
 // A normal WhatsApp message from the owner: answer it, or produce a draft.
 export async function chat(
@@ -405,8 +432,8 @@ export async function chat(
 
   const tools =
     activeDraft?.waiting_for === "decision"
-      ? [createCampaignTool, createDraftTool, reviseDraftTool]
-      : [createCampaignTool, createDraftTool];
+      ? [createCampaignTool, createDraftTool, pastedReviewTool, reviseDraftTool]
+      : [createCampaignTool, createDraftTool, pastedReviewTool];
   const response = await new Anthropic().messages.create({
     model: MODEL,
     max_tokens: 4000,
@@ -421,6 +448,18 @@ export async function chat(
   }
 
   const toolUse = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+  if (toolUse?.name === "draft_pasted_review_reply") {
+    const input = toolUse.input as Record<string, unknown>;
+    if (typeof input.text === "string" && input.text.trim()) {
+      const rating = typeof input.rating === "number" && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null;
+      return {
+        type: "pasted_review",
+        authorName: typeof input.author_name === "string" && input.author_name.trim() ? input.author_name.trim().slice(0, 80) : "the reviewer",
+        rating,
+        text: input.text.trim().slice(0, 4000),
+      };
+    }
+  }
   if (toolUse?.name === "create_email_campaign") {
     const fields = toCampaignFields(toolUse.input as Record<string, unknown>, ctx.now);
     if (fields) return { type: "campaign", fields };
@@ -482,12 +521,64 @@ function unwrapJson(text: string) {
   }
 }
 
-export function writeReviewReply(ctx: RestaurantContext, learning: Learning, review: Review) {
+type ReviewInput = { author_name: string; rating: number | null; text: string | null };
+
+// Low ratings (1-3) get a careful reply: apologise, don't argue, take it offline.
+export function writeReviewReply(ctx: RestaurantContext, learning: Learning, review: ReviewInput) {
+  const careful =
+    review.rating !== null && review.rating <= 3
+      ? `\n\nThis is a ${review.rating}-star review, so be careful: thank them, apologise sincerely for the specific problem without making excuses or arguing, don't promise refunds or freebies, and invite them to contact the restaurant directly (phone ${ctx.data.restaurant.phone}) so the owner can put it right. Keep it short, warm and public-facing.`
+      : "";
   return writeOnly(
     ctx,
     learning,
-    `A new ${review.rating}-star Google review just came in from ${review.author_name}:\n"""${review.text}"""\n\nWrite the restaurant's public reply to this review.`,
+    `A ${review.rating ? `${review.rating}-star ` : ""}Google review from ${review.author_name}:\n"""${review.text ?? "(no text, just a rating)"}"""\n\nWrite the restaurant's public reply to this review.${careful}`,
   );
+}
+
+export const POST_TOPICS = ["update", "offer", "event"] as const;
+const PostSchema = z.object({
+  topic: z.enum(POST_TOPICS).describe("update = a dish or news, offer = a deal, event = something happening on a date"),
+  text: z.string().describe("The Google post text"),
+});
+const POST_GUIDE = `Google posts appear on the restaurant's Google listing. Write 2 to 4 short sentences (under 600 characters) in the brand voice, about something concrete from the data: a dish with its price, an offer within the discount cap, or an event or occasion. End with a simple call to action like "Pop in tonight" or "See you this weekend". No hashtags, at most two emojis, no links.`;
+
+async function writePostFields(ctx: RestaurantContext, learning: Learning, content: Anthropic.MessageParam["content"]) {
+  const response = await new Anthropic().messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    output_config: { effort: "medium", format: zodOutputFormat(PostSchema) },
+    system: systemPrompt(ctx, learning, null, "post"),
+    messages: [{ role: "user", content }],
+  });
+  const out = response.parsed_output;
+  if (response.stop_reason === "refusal" || !out?.text.trim()) throw new Error("Claude couldn't write this post");
+  return { topic: out.topic, text: clip(out.text.trim(), DRAFT_MAX_CHARS + 200) };
+}
+
+// The twice-weekly post. `avoid` lists recent posts so they don't repeat.
+export function writeGooglePost(ctx: RestaurantContext, learning: Learning, avoid: string[]) {
+  return writePostFields(
+    ctx,
+    learning,
+    `Write this week's Google post. Pick one of: a dish worth shouting about, an offer, or an event/occasion coming up. Make it different from these recent posts:\n${avoid.length ? avoid.map((p) => `- ${p}`).join("\n") : "(none yet)"}`,
+  );
+}
+
+// A photo the owner sent on WhatsApp: Claude looks at it and writes the caption.
+export function captionPhoto(
+  ctx: RestaurantContext,
+  learning: Learning,
+  photo: { base64: string; mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp" },
+  ownerNote: string,
+) {
+  return writePostFields(ctx, learning, [
+    { type: "image", source: { type: "base64", media_type: photo.mediaType, data: photo.base64 } },
+    {
+      type: "text",
+      text: `The owner sent this photo to post on Google.${ownerNote ? ` Their note: "${ownerNote}"` : ""}\n\nWrite the post that goes with it. Describe what's actually in the photo, and only name a dish if you can tell what it is (or the owner said). Don't invent prices or offers that aren't in the data or the note.`,
+    },
+  ]);
 }
 
 export function rewriteDraft(ctx: RestaurantContext, learning: Learning, draft: Draft, instruction: string) {

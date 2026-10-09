@@ -45,6 +45,8 @@ export type Restaurant = {
   owner_email: string | null;
   email_test_mode: boolean;
   last_birthday_campaign_on: string | null;
+  // Google posts (added in step 7)
+  last_post_draft_on: string | null;
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent

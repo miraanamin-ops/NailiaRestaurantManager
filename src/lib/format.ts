@@ -8,7 +8,7 @@ import type { Restaurant } from "@/lib/supabase";
 // A draft as the owner sees it on WhatsApp, with the checker's notes and a
 // plain-code warning if the discount is over the cap.
 export function draftMessage(draft: Draft, restaurant: Pick<Restaurant, "discount_cap_percent">) {
-  const icon = draft.kind === "email_campaign" ? "📧" : "📝";
+  const icon = draft.kind === "email_campaign" ? "📧" : draft.kind === "google_post" ? "📍" : "📝";
   const header = `${icon} *${KIND_LABELS[draft.kind]}*${draft.audience ? ` for ${draft.audience}` : ""}${draft.version > 1 ? ` (version ${draft.version})` : ""}`;
   const lines = [header, "", draft.content];
 

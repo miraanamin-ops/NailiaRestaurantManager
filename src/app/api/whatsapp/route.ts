@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   const sandbox = params.To; // the sandbox number
   const body = params.Body ?? "";
   if (!owner || !sandbox) return new Response("Missing From/To", { status: 400 });
+  // A photo (or other file) sent on WhatsApp. We only use the first one.
+  const media =
+    Number(params.NumMedia ?? 0) > 0 && params.MediaUrl0
+      ? { url: params.MediaUrl0, contentType: params.MediaContentType0 ?? "" }
+      : null;
 
   const supabase = getSupabase();
   const { data: restaurant } = await supabase.from("restaurants").select("id").limit(1).maybeSingle<{ id: string }>();
@@ -42,7 +47,7 @@ export async function POST(req: NextRequest) {
     direction: "inbound",
     from_number: owner,
     to_number: sandbox,
-    body,
+    body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
   });
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   // Reply to Twilio straight away (it gives up after 15 seconds), then do the
   // slow work and send answers as separate WhatsApp messages.
-  after(() => handleMessage({ owner, sandbox, body, buttonPayload: params.ButtonPayload }));
+  after(() => handleMessage({ owner, sandbox, body, buttonPayload: params.ButtonPayload, media }));
 
   return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
 }

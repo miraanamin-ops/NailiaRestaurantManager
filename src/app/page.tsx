@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
+import { google } from "@/lib/google";
 import {
   getSupabase,
   type Customer,
@@ -115,7 +116,13 @@ async function Dashboard() {
     await Promise.all([
       supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
       supabase.from("customers").select("*").order("name").returns<Customer[]>(),
-      supabase.from("reviews").select("*").order("review_date", { ascending: false }).returns<Review[]>(),
+      // Reviews come through the Google connector, like everywhere else.
+      supabase
+        .from("restaurants")
+        .select("id")
+        .limit(1)
+        .single<{ id: string }>()
+        .then(async ({ data }) => ({ data: (data ? await google().listReviews(data.id) : []) as Review[], error: null })),
       supabase.from("drafts").select("id", { count: "exact", head: true }),
       supabase.from("sent_log").select("id", { count: "exact", head: true }),
       supabase
@@ -510,6 +517,12 @@ async function Dashboard() {
       {/* Reviews */}
       <section>
         <h2 className="text-2xl font-bold">Google reviews ({reviews.length})</h2>
+        <p className="mt-1 text-sm">
+          See how it looks on Google:{" "}
+          <a className="underline" href={`/google/${restaurant.slug}`}>
+            listing preview (reviews, replies and posts)
+          </a>
+        </p>
         <ul className="mt-3 grid gap-4 md:grid-cols-2">
           {reviews.map((r) => (
             <li key={r.id} className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">

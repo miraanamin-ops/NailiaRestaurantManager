@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  captionPhoto,
   chat,
   loadRestaurantContext,
   rewriteCampaign,
@@ -29,6 +30,8 @@ import {
   getActiveDraft,
   getLastApprovedDraft,
   getLearningContext,
+  getQueue,
+  KIND_LABELS,
   saveSkipReason,
   skipDraft,
   startEdit,
@@ -38,9 +41,12 @@ import {
 import { randomDummyReview } from "@/lib/dummy-reviews";
 import { draftMessage, sendResultMessage } from "@/lib/format";
 import { releaseQueue, sendReminders, weeklySummary } from "@/lib/followups";
+import { google } from "@/lib/google";
+import { createPostDraft, postMessage, presentNext, runPostJob, runReviewCheck, type Send } from "@/lib/google-jobs";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
+import { downloadTwilioMedia, isSupportedImage, savePostPhoto } from "@/lib/photos";
 import { attemptSend } from "@/lib/send";
-import { appUrl, getSupabase, restaurantNow, type Restaurant, type Review } from "@/lib/supabase";
+import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
 import { BUTTON_IDS } from "@/lib/whatsapp";
 
 // How many earlier messages Claude sees, so it can follow the conversation.
@@ -63,7 +69,9 @@ function parseAction(buttonPayload: string | undefined, body: string): Action | 
 }
 
 type Command =
-  | { name: "help" | "status" | "pause" | "resume" | "time_off" | "test_send" | "test_checker" | "weekly" | "new_review" }
+  | { name: "help" | "status" | "pause" | "resume" | "time_off" | "test_send" | "test_checker" | "weekly" }
+  | { name: "new_review"; rating: number | null }
+  | { name: "run_reviews" | "run_posts" | "queue" | "next" }
   | { name: "time"; hhmm: string; plusDays: number }
   | { name: "cap"; percent: number }
   | { name: "set_reward"; reward: string }
@@ -86,7 +94,12 @@ function parseCommand(body: string): Command | null {
   if (t === "TEST SEND") return { name: "test_send" };
   if (t === "TEST CHECKER") return { name: "test_checker" };
   if (t === "WEEKLY") return { name: "weekly" };
-  if (t === "NEW REVIEW") return { name: "new_review" };
+  const newReview = t.match(/^NEW REVIEW(?: ([1-5])(?: ?STARS?)?)?$/);
+  if (newReview) return { name: "new_review", rating: newReview[1] ? Number(newReview[1]) : null };
+  if (t === "RUN REVIEWS") return { name: "run_reviews" };
+  if (t === "RUN POSTS") return { name: "run_posts" };
+  if (t === "QUEUE") return { name: "queue" };
+  if (t === "NEXT") return { name: "next" };
   if (/^TIME (OFF|NOW|RESET|REAL)$/.test(t)) return { name: "time_off" };
   // "TIME 22:00", "TIME TOMORROW 09:05", "TIME THURSDAY 18:00" (the next Thursday, or today if it's Thursday)
   const time = t.match(/^TIME (?:(TOMORROW|MON|TUE|WED|THU|FRI|SAT|SUN)[A-Z]* )?(\d{1,2})[:.](\d{2})$/);
@@ -111,7 +124,11 @@ function parseCommand(body: string): Command | null {
 }
 
 const HELP_TEXT = `🛠️ *Commands*
-- *NEW REVIEW*: fake a new Google review and draft a reply
+- *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars
+- *RUN REVIEWS*: run the hourly review check now
+- *RUN POSTS*: draft a Google post now (normally Mondays and Thursdays)
+- *QUEUE*: see drafts waiting for you · *NEXT*: bring up the next one
+- Send a *photo* (with a note if you like) to turn it into a Google post
 - *PAUSE* / *RESUME*: stop / restart all sending
 - *CAP 25*: set the max discount to 25%
 - *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work)
@@ -152,7 +169,13 @@ async function statusText(restaurant: Restaurant) {
   ].join("\n");
 }
 
-export async function handleMessage(input: { owner: string; sandbox: string; body: string; buttonPayload: string | undefined }) {
+export async function handleMessage(input: {
+  owner: string;
+  sandbox: string;
+  body: string;
+  buttonPayload: string | undefined;
+  media?: { url: string; contentType: string } | null;
+}) {
   const { owner, sandbox, body } = input;
   const supabase = getSupabase();
   let ctx = await loadRestaurantContext();
@@ -166,8 +189,10 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
       ctx = await loadRestaurantContext();
     }
 
-    const command = parseCommand(body);
-    if (command) {
+    const command = input.media ? null : parseCommand(body);
+    if (input.media) {
+      await photoPost(ctx, input.media, body, send);
+    } else if (command) {
       await runCommand(command, ctx, send);
     } else {
       await handleConversation(ctx, body, input.buttonPayload, send);
@@ -267,7 +292,32 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
       case "weekly":
         return send(await weeklySummary(r, ctx.now));
       case "new_review":
-        return newReview(ctx, send);
+        return newReview(ctx, command.rating, send);
+      case "run_reviews": {
+        const result = await runReviewCheck(ctx, send);
+        if (!result.found) await send("🔎 Review check done: no new reviews since the last check.");
+        return;
+      }
+      case "run_posts":
+        await runPostJob(ctx, send);
+        return;
+      case "queue": {
+        const [active, queue] = await Promise.all([getActiveDraft(r.id), getQueue(r.id)]);
+        const lines = ["📋 *Your approval queue*"];
+        lines.push(active ? `- On screen now: ${KIND_LABELS[active.kind]} for ${active.audience}` : "- Nothing on screen right now");
+        for (const d of queue) lines.push(`- Waiting: ${KIND_LABELS[d.kind]} for ${d.audience}`);
+        if (!queue.length) lines.push("- Nothing else waiting 🎉");
+        else if (!active) lines.push("\nText NEXT to bring up the next one.");
+        return send(lines.join("\n"));
+      }
+      case "next": {
+        const active = await getActiveDraft(r.id);
+        if (active?.waiting_for === "decision") {
+          return send(`👀 This one is still waiting for you:\n\n${draftMessage(active, r)}`, true);
+        }
+        if (!(await presentNext(ctx, send))) await send("Your queue is empty. 🎉");
+        return;
+      }
     }
   }
 
@@ -287,7 +337,9 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
     if (action === "approve") {
       if (decisionDraft) {
         const approved = await approveDraft(decisionDraft);
-        return send(sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve")));
+        await send(sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve")));
+        await presentNext(ctx, send);
+        return;
       }
       // A second tap on an already-approved draft: the rules decide (and log) it.
       const last = await getLastApprovedDraft(r.id);
@@ -318,7 +370,9 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
     // The owner is telling us why they skipped.
     if (active?.waiting_for === "skip_reason") {
       await saveSkipReason(active, body);
-      return send("Thanks, noted. I'll keep that in mind for next time. 🙏");
+      await send("Thanks, noted. I'll keep that in mind for next time. 🙏");
+      await presentNext(ctx, send);
+      return;
     }
 
     // Anything else: a normal chat, which may produce a new or revised draft.
@@ -346,6 +400,9 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
     if (result.type === "campaign") {
       return campaignCreateAndSend(ctx, result.fields, body, send);
     }
+    if (result.type === "pasted_review") {
+      return pastedReviewReply(ctx, result, send);
+    }
     if (result.type === "revise" && active?.waiting_for === "decision") {
       if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, result.instruction, send);
       return reviseAndSend(ctx, active, result.instruction, result.content, send);
@@ -355,10 +412,16 @@ export async function handleMessage(input: { owner: string; sandbox: string; bod
   }
 }
 
-type Send = (text: string, withButtons?: boolean) => Promise<void>;
-
 // New email campaigns go through the campaign checker, then to the owner for approval.
-async function campaignCreateAndSend(ctx: RestaurantContext, fields: CampaignFields, request: string, send: Send, intro = "", isBirthday = false) {
+async function campaignCreateAndSend(
+  ctx: RestaurantContext,
+  fields: CampaignFields,
+  request: string,
+  send: Send,
+  intro = "",
+  isBirthday = false,
+  mode: "present" | "queue" = "present",
+) {
   const checked = await checkCampaign(ctx, fields);
   const { draft } = await createCampaignDraft({
     restaurant: ctx.restaurant,
@@ -367,8 +430,10 @@ async function campaignCreateAndSend(ctx: RestaurantContext, fields: CampaignFie
     checkNotes: checked.notes,
     now: ctx.now,
     isBirthday,
+    mode,
   });
-  await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true);
+  if (draft.waiting_for === "decision") await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true);
+  else await send(`📥 ${intro.split("\n")[0]} is drafted and in your queue. It'll come up after the draft you're on.`);
 }
 
 // Campaign edits: the AI rewrites the structured campaign, then it's re-checked.
@@ -391,7 +456,7 @@ async function reviseCampaignAndSend(ctx: RestaurantContext, draft: Draft, instr
 }
 
 // The weekly birthday email. Runs from the Monday morning job, or BIRTHDAY CAMPAIGN.
-export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send) {
+export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send, mode: "present" | "queue" = "present") {
   const { eligible } = await recipientsFor(ctx.restaurant, "birthdays_7d", ctx.now);
   if (!eligible.length) {
     return send("🎂 No customers with email consent have a birthday in the next 7 days, so there's no birthday email this week.");
@@ -406,6 +471,7 @@ export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send
     send,
     `🎂 *This week's birthday email* (${eligible.length} customer${eligible.length === 1 ? "" : "s"}: ${eligible.map((c) => c.name.split(/\s+/)[0]).join(", ")})\n\n`,
     true,
+    mode,
   );
 }
 
@@ -449,28 +515,55 @@ async function reviseAndSend(
   await send(draftMessage(updated, ctx.restaurant), true);
 }
 
-// Test command: a random new review arrives and gets a drafted reply.
-async function newReview(ctx: RestaurantContext, send: (text: string, withButtons?: boolean) => Promise<void>) {
-  const pick = randomDummyReview();
-  const { data: review, error } = await getSupabase()
-    .from("reviews")
-    .insert({ restaurant_id: ctx.restaurantId, author_name: pick.author, rating: pick.rating, text: pick.text, replied: false })
-    .select("*")
-    .single<Review>();
-  if (error) throw new Error(error.message);
-  const learning = await getLearningContext(ctx.restaurantId);
-  const content = await writeReviewReply(ctx, learning, review);
-  await checkCreateAndSend(
-    ctx,
-    {
-      kind: "review_reply",
-      content,
-      audience: `Google review by ${review.author_name}`,
-      request: "NEW REVIEW test command",
-      reviewId: review.id,
-      context: `Replying to this ${review.rating}-star review: "${review.text}"`,
-    },
-    send,
-    `🔔 *New Google review* from ${review.author_name} ${"⭐".repeat(review.rating)}\n_"${review.text}"_\n\n`,
+// Test command: a new review "appears on Google" (dummy mode), then the
+// normal review check runs straight away instead of waiting for the hour.
+async function newReview(ctx: RestaurantContext, rating: number | null, send: Send) {
+  const g = google();
+  if (!g.addDummyReview) return send("NEW REVIEW only works in dummy Google mode.");
+  const pick = randomDummyReview(rating ?? undefined);
+  const review = await g.addDummyReview(ctx.restaurantId, pick);
+  await send(
+    `🌐 A new ${review.rating}-star review from ${review.author_name.replace(/\.$/, "")} just appeared on (dummy) Google. Running the review check now…`,
   );
+  await runReviewCheck(ctx, send);
+}
+
+// The manual fallback: the owner pastes a review from anywhere; they get a
+// checked reply to copy into Google themselves. Nothing is posted for them.
+async function pastedReviewReply(
+  ctx: RestaurantContext,
+  review: { authorName: string; rating: number | null; text: string },
+  send: Send,
+) {
+  const learning = await getLearningContext(ctx.restaurantId);
+  const content = await writeReviewReply(ctx, learning, { author_name: review.authorName, rating: review.rating, text: review.text });
+  const checked = await checkDraft(ctx, {
+    kind: "review_reply",
+    audience: `review by ${review.authorName}`,
+    content,
+    context: `Replying to this ${review.rating ? `${review.rating}-star ` : ""}review: "${review.text}"`,
+  });
+  const notes = [
+    ...checked.notes.fixes.map((f) => `🔍 _Checker fixed: ${f}_`),
+    ...checked.notes.flags.map((f) => `⚠️ _Check: ${f}_`),
+  ];
+  await send(
+    `✍️ Here's a reply to ${review.authorName}'s review. *Copy the next message* and paste it as your reply on Google.${notes.length ? `\n\n${notes.join("\n")}` : ""}`,
+  );
+  // On its own, so it's easy to copy in one go.
+  await send(checked.content);
+}
+
+// A photo sent on WhatsApp becomes a captioned Google post, waiting for approval.
+async function photoPost(ctx: RestaurantContext, media: { url: string; contentType: string }, note: string, send: Send) {
+  if (!isSupportedImage(media.contentType)) {
+    return send("I can only turn photos (JPEG, PNG or WebP) into Google posts. Videos and documents aren't supported yet.");
+  }
+  await send("📷 Got your photo! Writing a caption…");
+  const bytes = await downloadTwilioMedia(media.url);
+  const photoUrl = await savePostPhoto(ctx.restaurantId, bytes, media.contentType);
+  const learning = await getLearningContext(ctx.restaurantId);
+  const post = await captionPhoto(ctx, learning, { base64: bytes.toString("base64"), mediaType: media.contentType }, note.trim());
+  const draft = await createPostDraft(ctx, { topic: post.topic, text: post.text, photoUrl, request: note || "Photo post", mode: "present" });
+  await send(`📷 *Photo post for Google*\n\n${postMessage(draft, post.topic, photoUrl, ctx)}`, true);
 }

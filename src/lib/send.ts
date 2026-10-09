@@ -2,6 +2,7 @@ import "server-only";
 import { formatLondon, formatWindow, isInSendWindow, nextWindowStart } from "@/lib/clock";
 import { deliverCampaign, deliveryNote, getCampaignForDraft, recipientsFor } from "@/lib/campaigns";
 import { overCap } from "@/lib/discounts";
+import { google, type GooglePost } from "@/lib/google";
 import { check, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -126,13 +127,28 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     const summary = await deliverCampaign(claimed, restaurant, now);
     note = deliveryNote(summary);
     simulated = summary.emailed === 0;
+  } else if (claimed.kind === "review_reply" && claimed.review_id) {
+    // Posted under the review (in dummy mode: saved against it).
+    await google().replyToReview(restaurant.id, claimed.review_id, claimed.content);
+    note = `💬 Reply posted on Google${google().mode === "dummy" ? " _(dummy Google: see the listing preview)_" : ""}.`;
+    simulated = google().mode === "dummy";
+  } else if (claimed.kind === "google_post") {
+    const post = check(await supabase.from("google_posts").select("*").eq("draft_id", claimed.id).maybeSingle<GooglePost>());
+    if (post) {
+      // Publish the approved wording, which may have been edited since it was drafted.
+      check(await supabase.from("google_posts").update({ text: claimed.content }).eq("id", post.id));
+      await google().publishPost(restaurant.id, { ...post, text: claimed.content });
+      note = `📍 Post published on Google${google().mode === "dummy" ? " _(dummy Google: see the listing preview)_" : ""}.`;
+      simulated = google().mode === "dummy";
+    }
   }
 
   const { error: logError } = await supabase.from("sent_log").insert({
     restaurant_id: claimed.restaurant_id,
     draft_id: claimed.id,
     customer_id: claimed.customer_id,
-    channel: claimed.kind === "review_reply" ? "google" : claimed.kind === "email_campaign" ? "email" : "whatsapp",
+    channel:
+      claimed.kind === "review_reply" || claimed.kind === "google_post" ? "google" : claimed.kind === "email_campaign" ? "email" : "whatsapp",
     recipient: note ? `${claimed.audience}: ${note}` : claimed.audience,
     content: claimed.content,
     status: "sent",
@@ -142,9 +158,6 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   if (logError && logError.code === "23505") await logBlock(claimed, "duplicate", "Sent log already has this draft.");
   else if (logError) throw new Error(logError.message);
 
-  if (claimed.review_id) {
-    check(await supabase.from("reviews").update({ replied: true }).eq("id", claimed.review_id));
-  }
   return { outcome: "sent", draft: claimed, note };
 }
 

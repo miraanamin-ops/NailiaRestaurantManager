@@ -109,6 +109,7 @@ How to respond:
 - Fix clear factual mistakes directly in the content (wrong price, wrong hours, wrong dish name, wrong address or phone) and list each one in "fixes".
 - Do not change judgement calls. For freebies, compensation, other promises, a discount above the cap, or a tone problem the owner should decide on, leave the text as it is and add a short note to "flags".
 - Keep the rest of the message exactly as written. If everything is fine, return the content unchanged with empty lists.
+- Don't flag normal hospitality: thanking people, apologising, inviting them to call or come back, "we'd love the chance to put it right" or "see you soon" are fine. Only flag a concrete promise (a freebie, refund, discount or guarantee) or a factual problem. Don't nitpick emoji choice.
 
 Today is ${ctx.today} (London time).
 

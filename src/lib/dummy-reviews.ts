@@ -14,6 +14,8 @@ const POOL: { author: string; rating: number; text: string }[] = [
   { author: "Farzana Q.", rating: 4, text: "Great family spot. Kids loved the wings. Would be 5 stars with a few more veggie mains." },
 ];
 
-export function randomDummyReview() {
-  return POOL[Math.floor(Math.random() * POOL.length)];
+// A random review, optionally with a given star rating (the pool has every rating).
+export function randomDummyReview(rating?: number) {
+  const pool = rating ? POOL.filter((r) => r.rating === rating) : POOL;
+  return pool[Math.floor(Math.random() * pool.length)];
 }

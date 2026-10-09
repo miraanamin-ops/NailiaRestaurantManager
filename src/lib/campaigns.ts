@@ -191,6 +191,7 @@ export async function createCampaignDraft(input: {
   checkNotes: CheckNotes;
   now: Date;
   isBirthday?: boolean;
+  mode?: "present" | "queue";
 }) {
   const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now);
   const draft = await createDraft({
@@ -200,6 +201,7 @@ export async function createCampaignDraft(input: {
     audience: audienceLabel(input.fields.segment, eligible.length),
     request: input.request,
     checkNotes: input.checkNotes,
+    mode: input.mode,
   });
   const campaign = checkRow(
     await getSupabase()

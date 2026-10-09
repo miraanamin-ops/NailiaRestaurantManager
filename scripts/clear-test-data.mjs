@@ -22,3 +22,18 @@ await del("sent_log", (q) => q.gte("sent_at", since));
 await del("drafts", (q) => q.gte("created_at", since));
 await del("reviews", (q) => q.gte("created_at", since));
 await del("messages", (q) => q.or(`from_number.eq."${TEST_NUMBER}",to_number.eq."${TEST_NUMBER}"`));
+await del("google_posts", (q) => q.gte("created_at", since));
+
+// Photos uploaded during the test run.
+const storage = supabase.storage.from("post-photos");
+const { data: folders } = await storage.list("", { limit: 100 });
+let removed = 0;
+for (const folder of folders ?? []) {
+  const { data: files } = await storage.list(folder.name, { limit: 1000 });
+  const recent = (files ?? []).filter((f) => f.created_at && f.created_at >= since).map((f) => `${folder.name}/${f.name}`);
+  if (recent.length) {
+    await storage.remove(recent);
+    removed += recent.length;
+  }
+}
+console.log(`post-photos: deleted ${removed}`);

@@ -1,7 +1,7 @@
 import "server-only";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "birthday", "promotion", "other", "email_campaign"] as const;
+export const DRAFT_KINDS = ["review_reply", "birthday", "promotion", "other", "email_campaign", "google_post"] as const;
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
 
@@ -45,6 +45,7 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   promotion: "Offer / promotion",
   other: "Message",
   email_campaign: "Email campaign",
+  google_post: "Google post",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {
@@ -81,23 +82,32 @@ export async function createDraft(input: {
   reviewId?: string | null;
   customerId?: string | null;
   checkNotes: CheckNotes;
+  // present: the owner asked for it, so it replaces the draft on screen (default).
+  // queue:   made by a scheduled job; waits its turn if the owner is busy with another draft.
+  // urgent:  jumps the queue (e.g. a bad review); the draft on screen goes back into the queue.
+  mode?: "present" | "queue" | "urgent";
 }) {
   const supabase = getSupabase();
-  // Only one draft is "live" at a time: retire anything still waiting.
-  check(
-    await supabase
-      .from("drafts")
-      .update({ status: "superseded", waiting_for: null, updated_at: new Date().toISOString() })
-      .eq("restaurant_id", input.restaurantId)
-      .eq("status", "pending"),
-  );
-  check(
-    await supabase
-      .from("drafts")
-      .update({ waiting_for: null })
-      .eq("restaurant_id", input.restaurantId)
-      .not("waiting_for", "is", null),
-  );
+  const mode = input.mode ?? "present";
+  const active = await getActiveDraft(input.restaurantId);
+  let waitingFor: WaitingFor | null = "decision";
+
+  if (mode === "queue" && active) {
+    waitingFor = null; // stays in the queue until the owner is free
+  } else if (active) {
+    const stillPending = active.status === "pending";
+    check(
+      await supabase
+        .from("drafts")
+        .update({
+          // Urgent: put the current draft back in the queue. Present: the new request replaces it.
+          status: stillPending && mode === "present" ? "superseded" : active.status,
+          waiting_for: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", active.id),
+    );
+  }
 
   const res = await supabase
     .from("drafts")
@@ -110,12 +120,33 @@ export async function createDraft(input: {
       review_id: input.reviewId ?? null,
       customer_id: input.customerId ?? null,
       status: "pending",
-      waiting_for: "decision",
+      waiting_for: waitingFor,
       check_notes: input.checkNotes,
     })
     .select("*")
     .single<Draft>();
   return checkRow(res);
+}
+
+// Drafts waiting their turn: pending, but not yet shown to the owner.
+export async function getQueue(restaurantId: string) {
+  const res = await getSupabase()
+    .from("drafts")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "pending")
+    .is("waiting_for", null)
+    .order("created_at")
+    .returns<Draft[]>();
+  return check(res) ?? [];
+}
+
+// If the owner isn't busy with a draft, brings the next queued one forward.
+export async function takeNextFromQueue(restaurantId: string) {
+  if (await getActiveDraft(restaurantId)) return null;
+  const [next] = await getQueue(restaurantId);
+  if (!next) return null;
+  return updateDraft(next.id, { waiting_for: "decision" });
 }
 
 export async function getDraft(id: string) {

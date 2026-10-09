@@ -20,6 +20,9 @@ const checks = [
   ["006_email_campaigns.sql (restaurant email settings)", supabase.from("restaurants").select("owner_email, email_test_mode, last_birthday_campaign_on").limit(1)],
   ["006_email_campaigns.sql (campaigns table)", supabase.from("campaigns").select("id").limit(1)],
   ["006_email_campaigns.sql (campaign_sends table)", supabase.from("campaign_sends").select("id").limit(1)],
+  ["007_google.sql (review reply columns)", supabase.from("reviews").select("reply_text, handled_at, source").limit(1)],
+  ["007_google.sql (google_posts table)", supabase.from("google_posts").select("id").limit(1)],
+  ["007_google.sql (photo storage bucket)", supabase.storage.from("post-photos").list("", { limit: 1 })],
 ];
 for (const [name, query] of checks) {
   const { error } = await query;
