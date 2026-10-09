@@ -7,7 +7,7 @@ import { ownerChannel } from "@/lib/followups";
 import { runReviewCheck } from "@/lib/google-jobs";
 import { briefIsLate } from "@/lib/job-health";
 import { checkJobHealth, finishRun, startRun, type Job } from "@/lib/job-runs";
-import { MAX_FAILURES, runMorning } from "@/lib/morning";
+import { runMorning } from "@/lib/morning";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -96,7 +96,6 @@ async function runJob(job: Job) {
         today,
         lastBriefOn: fresh.last_brief_on,
         failuresToday: fresh.morning_failed_on === today ? fresh.morning_failures : 0,
-        maxFailures: MAX_FAILURES,
       })
     ) {
       await alertBuilder(`brief-late:${r.id}:${today}`, `${r.name}'s morning brief still hasn't gone out (it's after 11am).`);

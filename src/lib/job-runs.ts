@@ -54,7 +54,8 @@ export async function checkJobHealth(current: Job, now: Date) {
 
   if (current === "daily") {
     const lastHourly = runs.find((r) => r.job === "hourly")?.started_at ?? null;
-    if (hourlyIsLate(lastHourly, now)) {
+    const trackingSince = runs.at(-1)?.started_at ?? null; // oldest run in the last 24 hours
+    if (hourlyIsLate(lastHourly, now, trackingSince)) {
       await alertBuilder(
         "hourly-missing",
         `The hourly job hasn't run since ${lastHourly ?? "at least 24 hours ago"}. Check the Supabase schedule: select * from cron.job_run_details order by start_time desc limit 5;`,

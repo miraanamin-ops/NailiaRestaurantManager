@@ -48,7 +48,8 @@ Check:
 How to respond:
 - Make small wording fixes yourself (spelling, a pushy phrase, too many emojis) and list each one in "fixes".
 - If the whole message is in the wrong tone, or something needs the owner's judgement, leave it and add a short note to "flags".
-- Keep {first_name} placeholders exactly as they are. If all is fine, return the fields unchanged with empty lists.`;
+- Only comment on voice, language and style. Prices, offers, freebies, dates and facts are another check's job: never fix or flag them.
+- Keep {first_name} placeholders exactly as they are, and never add placeholders that weren't there. If all is fine, return the fields unchanged with empty lists.`;
 
 function system(ctx: RestaurantContext, rules: string) {
   // Same text for every check that day, so it's cached: repeat checks cost far less.
@@ -80,7 +81,8 @@ async function runCheck(ctx: RestaurantContext, which: "facts" | "tone", item: C
   if (response.stop_reason === "refusal" || !out) throw new Error(`The ${which} check gave no result (${response.stop_reason})`);
   // Keep the original wording for any field that came back empty.
   const fields = Object.fromEntries(keys.map((k) => [k, (out.fields as Record<string, string>)[k]?.trim() || item.fields[k]]));
-  return { fields, fixes: out.fixes.slice(0, 3), flags: out.flags.slice(0, 3) };
+  // At most two notes of each kind per check, so the WhatsApp message stays readable.
+  return { fields, fixes: out.fixes.slice(0, 2), flags: out.flags.slice(0, 2) };
 }
 
 // Runs one AI check. If it can't run, the draft is unchanged and flagged for a careful read.

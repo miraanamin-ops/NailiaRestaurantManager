@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { logOut } from "@/app/login/actions";
 import { recentLog, type AuditEntry } from "@/lib/audit";
 import { requireOwner } from "@/lib/auth";
@@ -37,6 +38,7 @@ type JobRun = { id: string; job: string; status: string; started_at: string; fin
 type Alert = { id: string; message: string; channels: string | null; created_at: string };
 
 async function Log() {
+  await connection(); // always fresh, never prerendered
   const owner = await requireOwner("/log");
   const supabase = getSupabase();
   const restaurant = owner.restaurantIds.length

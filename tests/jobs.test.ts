@@ -35,16 +35,20 @@ describe("spotting jobs that failed, got stuck or didn't run", () => {
     expect(stuckRuns(runs, now).map((r) => r.started_at)).toEqual(["2026-10-09T11:40:00Z"]);
   });
   test("the hourly job is late after two missed runs", () => {
-    expect(hourlyIsLate("2026-10-09T11:05:00Z", now)).toBe(false);
-    expect(hourlyIsLate("2026-10-09T09:05:00Z", now)).toBe(true);
-    expect(hourlyIsLate(null, now)).toBe(true);
+    expect(hourlyIsLate("2026-10-09T11:05:00Z", now, "2026-10-08T12:00:00Z")).toBe(false);
+    expect(hourlyIsLate("2026-10-09T09:05:00Z", now, "2026-10-08T12:00:00Z")).toBe(true);
+    // never ran, and runs have been recorded for hours: late
+    expect(hourlyIsLate(null, now, "2026-10-09T08:00:00Z")).toBe(true);
+    // never ran, but recording only just started (fresh deploy): not late yet
+    expect(hourlyIsLate(null, now, "2026-10-09T11:59:00Z")).toBe(false);
+    expect(hourlyIsLate(null, now, null)).toBe(false);
   });
-  test("the brief is late if it's not out by 11am, unless the job already gave up (and alerted)", () => {
-    const base = { today: "2026-10-09", lastBriefOn: null, failuresToday: 0, maxFailures: 3 };
+  test("the brief is late if it's not out by 11am, unless the job is failing (it alerts for itself)", () => {
+    const base = { today: "2026-10-09", lastBriefOn: null, failuresToday: 0 };
     expect(briefIsLate({ ...base, londonHour: 10 })).toBe(false);
     expect(briefIsLate({ ...base, londonHour: 11 })).toBe(true);
     expect(briefIsLate({ ...base, londonHour: 11, lastBriefOn: "2026-10-09" })).toBe(false);
-    expect(briefIsLate({ ...base, londonHour: 13, failuresToday: 3 })).toBe(false);
+    expect(briefIsLate({ ...base, londonHour: 13, failuresToday: 1 })).toBe(false);
   });
   test("a run's real outcome, and which failures still need an alert", () => {
     const ok = [{ restaurant: "a", reviews: { found: 1, failed: 0 }, morning: { skipped: "already done today" } }];

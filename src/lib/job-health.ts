@@ -14,18 +14,20 @@ export function stuckRuns<T extends RunRow>(runs: T[], now: Date) {
   return runs.filter((r) => r.status === "running" && now.getTime() - new Date(r.started_at).getTime() > STUCK_AFTER_MINUTES * 60_000);
 }
 
-// The latest hourly run started too long ago (or there's never been one).
-export function hourlyIsLate(lastHourlyStart: string | null, now: Date) {
-  if (!lastHourlyStart) return true;
-  return now.getTime() - new Date(lastHourlyStart).getTime() > HOURLY_LATE_AFTER_MINUTES * 60_000;
+// The latest hourly run started too long ago. trackingSince: the earliest run
+// recorded at all, so a freshly set-up system (no runs yet) isn't reported as late.
+export function hourlyIsLate(lastHourlyStart: string | null, now: Date, trackingSince: string | null) {
+  const late = (iso: string) => now.getTime() - new Date(iso).getTime() > HOURLY_LATE_AFTER_MINUTES * 60_000;
+  if (lastHourlyStart) return late(lastHourlyStart);
+  return trackingSince ? late(trackingSince) : false;
 }
 
 // The morning job should have sent (or deliberately held) today's brief by 11am UK.
-// Not late if it gave up after its retries: that already alerted the builder.
-export function briefIsLate(input: { londonHour: number; today: string; lastBriefOn: string | null; failuresToday: number; maxFailures: number }) {
+// Not late if it has failed today: it alerts the builder itself (first failure, and giving up).
+export function briefIsLate(input: { londonHour: number; today: string; lastBriefOn: string | null; failuresToday: number }) {
   if (input.londonHour < BRIEF_LATE_HOUR) return false;
   if (input.lastBriefOn === input.today) return false;
-  return input.failuresToday < input.maxFailures;
+  return input.failuresToday === 0;
 }
 
 type Part = Record<string, unknown>;

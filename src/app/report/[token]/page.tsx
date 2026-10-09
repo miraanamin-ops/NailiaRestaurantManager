@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { NotFoundCard } from "@/components/brand-shell";
 import { requireOwner } from "@/lib/auth";
 import { getReportByToken } from "@/lib/report/build";
@@ -29,6 +30,7 @@ export default function ReportPage({ params }: PageProps<"/report/[token]">) {
 
 async function Report({ params }: Pick<PageProps<"/report/[token]">, "params">) {
   const { token } = await params;
+  await connection(); // always fresh (the expiry depends on today's date)
   // Owner page: needs a login (and the right restaurant), and the link lasts 30 days.
   const owner = await requireOwner(`/report/${token}`);
   const report = await getReportByToken(token);
