@@ -1,4 +1,5 @@
 "use server";
+import { createClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { accessFor, authClient, safeNext } from "@/lib/auth";
@@ -17,7 +18,13 @@ export async function sendLoginLink(form: FormData) {
   const access = await accessFor(email);
   if (access.allowed) {
     const base = baseUrlFrom(await headers());
-    const { error } = await (await authClient()).auth.signInWithOtp({
+    // "implicit": the link in Supabase's standard email brings the login back after a
+    // "#" in the address, so it works in whichever browser opens it (no email template
+    // changes needed). /auth/confirm picks it up.
+    const sender = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { error } = await sender.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${base}/auth/confirm?next=${encodeURIComponent(next)}`, shouldCreateUser: true },
     });

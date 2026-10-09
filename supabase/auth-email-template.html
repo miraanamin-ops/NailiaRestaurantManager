@@ -1,8 +1,9 @@
-<!-- Paste into Supabase > Authentication > Emails > Templates, for BOTH
-     "Magic Link" and "Confirm signup" (a first-time login uses the second).
-     Subject for both: Your Naila login link
-     The link goes to /auth/confirm with a token_hash, so it works even if the
-     email opens in a different browser app from the one you logged in from. -->
+<!-- OPTIONAL. Login works with Supabase's standard email, no template needed.
+     Only if custom email is set up in Supabase (templates can't be edited on the
+     free plan without it), this nicer email can be pasted into
+     Authentication > Emails > Templates, for BOTH "Magic Link" and "Confirm signup".
+     Subject: Your Naila login link
+     The link carries a token_hash to /auth/confirm, which also works in any browser. -->
 <h2>Log in to Naila</h2>
 <p>Tap the button below to log in. It works once and expires after an hour.</p>
 <p>
