@@ -40,8 +40,15 @@ export async function POST(req: NextRequest) {
       ? { url: params.MediaUrl0, contentType: params.MediaContentType0 ?? "" }
       : null;
 
+  // Only the restaurant's registered owner number can use the assistant. The
+  // number is a fixed setting (restaurants.owner_whatsapp), never taken from a message.
   const supabase = getSupabase();
-  const { data: restaurant } = await supabase.from("restaurants").select("id").limit(1).maybeSingle<{ id: string }>();
+  const { data: restaurant } = await supabase
+    .from("restaurants")
+    .select("id")
+    .eq("owner_whatsapp", owner)
+    .limit(1)
+    .maybeSingle<{ id: string }>();
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? null,
     direction: "inbound",
@@ -50,8 +57,15 @@ export async function POST(req: NextRequest) {
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
+    error: restaurant ? null : "Ignored: not a registered owner number",
   });
   if (inboundError) console.error("Failed to log inbound message", inboundError);
+
+  // Anyone else gets no reply and can't trigger anything.
+  if (!restaurant) {
+    console.warn("Ignored WhatsApp message from an unregistered number");
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
 
   // Reply to Twilio straight away (it gives up after 15 seconds), then do the
   // slow work and send answers as separate WhatsApp messages.

@@ -204,9 +204,10 @@ export async function handleMessage(input: {
   const send: Send = (text, withButtons = false) => messageOwner(channel, text, withButtons);
 
   try {
-    // Remember where reminders and reports should go.
-    if (ctx.restaurant.owner_whatsapp !== owner || ctx.restaurant.whatsapp_from !== sandbox) {
-      await updateRestaurant(ctx.restaurantId, { owner_whatsapp: owner, whatsapp_from: sandbox });
+    // The webhook only lets the registered owner number through, so owner_whatsapp
+    // is never changed here. Remember which of our numbers they're talking to.
+    if (ctx.restaurant.whatsapp_from !== sandbox) {
+      await updateRestaurant(ctx.restaurantId, { whatsapp_from: sandbox });
       ctx = await loadRestaurantContext();
     }
 
