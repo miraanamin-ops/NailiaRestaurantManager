@@ -134,12 +134,7 @@ function Headline({ s, ctx }: { s: HeadlineSection; ctx: Ctx }) {
 function Reputation({ s, ctx }: { s: ReputationSection; ctx: Ctx }) {
   return (
     <Card title={SECTION_TITLES.reputation}>
-      <div className="flex items-end gap-3">
-        <Stat label={`Google rating · ${s.totalReviews} reviews`} value={s.rating} format="rating" big />
-        <span className="mb-9 text-2xl" style={{ color: "#eab308" }} aria-hidden>
-          ★
-        </span>
-      </div>
+      <Stat label={`★ Google rating (out of 5) · ${s.totalReviews} reviews`} value={s.rating} format="rating" big />
       <div className="mt-5 grid grid-cols-2 gap-4">
         <Stat label="New reviews" value={s.newReviews} />
         <Stat label="Reviews answered" value={s.answered} />

@@ -29,9 +29,10 @@ export function startOfLondonDay(d: Date) {
   return londonTime(p.year, p.month, p.day, 0, 0);
 }
 
-// Scheduled (Monday 9am): last Monday to Sunday. RUN REPORT: the 7 days up to now.
+// Scheduled (Monday 9am): last Monday to Sunday. RUN REPORT: the last 7 days
+// including today (so far), in whole London days.
 export function reportPeriod(now: Date, scheduled: boolean): Period {
-  const end = scheduled ? startOfLondonDay(now) : now;
+  const end = scheduled ? startOfLondonDay(now) : startOfLondonDay(new Date(now.getTime() + DAY));
   return { prevStart: new Date(end.getTime() - 14 * DAY), start: new Date(end.getTime() - 7 * DAY), end };
 }
 

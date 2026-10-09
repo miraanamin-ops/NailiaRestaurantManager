@@ -50,7 +50,7 @@ import { downloadTwilioMedia, isSupportedImage, savePostPhoto } from "@/lib/phot
 import { createReport, reportPeriod } from "@/lib/report/build";
 import { attemptSend } from "@/lib/send";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
-import { BUTTON_IDS, parseButtonPayload, type ButtonTarget } from "@/lib/whatsapp";
+import { BUTTON_IDS, parseButtonPayload } from "@/lib/whatsapp";
 
 // How many earlier messages Claude sees, so it can follow the conversation.
 const HISTORY_LIMIT = 20;

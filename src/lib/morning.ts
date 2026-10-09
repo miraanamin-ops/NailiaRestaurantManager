@@ -81,17 +81,22 @@ export async function runMorning(r: Restaurant, now: Date) {
 // The owner just messaged and this morning's brief was waiting for them.
 export async function deliverWaitingBrief(r: Restaurant, channel: OwnerChannel, now: Date) {
   if (!r.brief_waiting_since) return;
-  const since = new Date(new Date(r.brief_waiting_since).getTime() - 60 * 60 * 1000).toISOString();
-  const report = check(
-    await getSupabase()
-      .from("reports")
-      .select("headline")
-      .eq("restaurant_id", r.id)
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<{ headline: string }>(),
-  );
+  // Only the Monday report the morning job made (it ends at midnight on the day
+  // the brief was due), never one asked for with RUN REPORT.
+  const due = new Date(r.brief_waiting_since);
+  const report =
+    r.last_report_on === londonDate(due)
+      ? check(
+          await getSupabase()
+            .from("reports")
+            .select("headline")
+            .eq("restaurant_id", r.id)
+            .eq("period_end", reportPeriod(due, true).end.toISOString())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle<{ headline: string }>(),
+        )
+      : null;
   const note = "_This morning's brief, held until you messaged (WhatsApp only lets me message you within 24 hours of your last message)._";
   const outcome = await sendBrief(r, channel, now, { note });
   if (!outcome.sent) check(await getSupabase().from("restaurants").update({ brief_waiting_since: null }).eq("id", r.id));

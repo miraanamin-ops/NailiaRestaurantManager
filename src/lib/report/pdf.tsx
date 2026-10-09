@@ -39,9 +39,17 @@ function clean(text: string) {
     .trim();
 }
 
+// Cuts long text at a word boundary, with an ellipsis.
+function shorten(text: string, max: number) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 30)).trimEnd()}…`;
+}
+
 const s = StyleSheet.create({
-  page: { paddingBottom: 40, fontFamily: "Helvetica", fontSize: 10, color: INK, backgroundColor: "#ffffff" },
-  header: { paddingHorizontal: 40, paddingTop: 32, paddingBottom: 24, color: "#ffffff" },
+  // Top padding gives every page a margin; the header cancels it on page 1 so it runs to the edge.
+  page: { paddingTop: 32, paddingBottom: 40, fontFamily: "Helvetica", fontSize: 10, color: INK, backgroundColor: "#ffffff" },
+  header: { marginTop: -32, paddingHorizontal: 40, paddingTop: 32, paddingBottom: 24, color: "#ffffff" },
   accent: { width: 28, height: 3, borderRadius: 2, marginBottom: 10 },
   small: { fontSize: 9, color: "#d6d3d1" },
   title: { fontSize: 22, fontFamily: "Helvetica-Bold", marginTop: 4 },
@@ -206,7 +214,7 @@ function GoogleVisibility({ x }: { x: GoogleSection }) {
       </View>
       {x.recentPosts.map((p) => (
         <Text key={p.publishedAt} style={[s.item, { marginTop: 6 }]}>
-          - {clean(p.text).slice(0, 220)}
+          - {shorten(clean(p.text), 220)}
         </Text>
       ))}
     </View>
