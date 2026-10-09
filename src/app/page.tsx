@@ -32,6 +32,13 @@ type DraftRow = {
   created_at: string;
 };
 
+type BlockRow = {
+  id: string;
+  reason: string;
+  detail: string | null;
+  created_at: string;
+};
+
 type FeedbackRow = {
   id: string;
   draft_kind: string | null;
@@ -43,6 +50,9 @@ type FeedbackRow = {
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
   approved: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200",
+  sent: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200",
+  queued: "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200",
+  blocked: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200",
   skipped: "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200",
   superseded: "bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400",
 };
@@ -82,7 +92,7 @@ async function Dashboard() {
   await connection();
   const supabase = getSupabase();
 
-  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes] =
+  const [restaurantRes, customersRes, reviewsRes, draftsRes, sentRes, messagesRes, draftListRes, feedbackRes, blocksRes] =
     await Promise.all([
       supabase.from("restaurants").select("*").limit(1).maybeSingle<Restaurant>(),
       supabase.from("customers").select("*").order("name").returns<Customer[]>(),
@@ -107,6 +117,12 @@ async function Dashboard() {
         .order("created_at", { ascending: false })
         .limit(15)
         .returns<FeedbackRow[]>(),
+      supabase
+        .from("blocked_sends")
+        .select("id, reason, detail, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20)
+        .returns<BlockRow[]>(),
     ]);
 
   const error =
@@ -128,6 +144,8 @@ async function Dashboard() {
   // Same for the approval-loop columns added in step 3.
   const draftList = draftListRes.error ? null : (draftListRes.data ?? []);
   const feedback = feedbackRes.error ? null : (feedbackRes.data ?? []);
+  // And the safety-rule log from step 4.
+  const blocks = blocksRes.error ? null : (blocksRes.data ?? []);
   if (!restaurant) {
     return <p className="mt-6">No restaurant found. Run supabase/setup.sql in Supabase first.</p>;
   }
@@ -192,6 +210,42 @@ async function Dashboard() {
             ))}
           </div>
         </Card>
+      </section>
+
+      {/* Safety rules */}
+      <section>
+        <h2 className="text-2xl font-bold">Safety rules</h2>
+        {blocks === null ? (
+          <p className="mt-2 text-neutral-500">Safety rules not set up yet (run supabase/004_safety_rules.sql).</p>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="Sending" value={restaurant.paused ? "⏸️ Paused" : "▶️ On"} />
+              <Stat label="Sending hours" value={`${restaurant.send_window_start?.slice(0, 5)}–${restaurant.send_window_end?.slice(0, 5)}`} />
+              <Stat label="Discount cap" value={`${restaurant.discount_cap_percent}%`} />
+              <Stat
+                label="Clock"
+                value={restaurant.fake_now ? `Test: ${new Date(restaurant.fake_now).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "short", timeStyle: "short" })}` : "Real time"}
+              />
+            </div>
+            <h3 className="mt-6 text-lg font-semibold">Blocked or held sends (latest 20)</h3>
+            {blocks.length === 0 ? (
+              <p className="mt-2 text-neutral-500">Nothing blocked yet.</p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-sm">
+                {blocks.map((b) => (
+                  <li key={b.id}>
+                    <span className="font-medium">{b.reason.replace("_", " ")}</span>{" "}
+                    <span className="text-neutral-500">
+                      ({new Date(b.created_at).toLocaleString("en-GB", { timeZone: "Europe/London" })})
+                    </span>
+                    : {b.detail}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
       </section>
 
       {/* Drafts + feedback */}

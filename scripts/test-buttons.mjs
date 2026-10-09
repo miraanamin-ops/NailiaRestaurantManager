@@ -1,4 +1,4 @@
-﻿// Checks whether WhatsApp quick-reply buttons work: makes sure the approval
+// Checks whether WhatsApp quick-reply buttons work: makes sure the approval
 // template exists, sends it to the owner's phone, then reports delivery status.
 // Usage: node --env-file=.env.local scripts/test-buttons.mjs
 import twilio from "twilio";

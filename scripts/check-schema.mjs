@@ -9,6 +9,9 @@ const checks = [
   ["003_approval_loop.sql (draft columns)", supabase.from("drafts").select("waiting_for, audience, version").limit(1)],
   ["003_approval_loop.sql (feedback table)", supabase.from("draft_feedback").select("id").limit(1)],
   ["003_approval_loop.sql (sent_log.simulated)", supabase.from("sent_log").select("simulated").limit(1)],
+  ["004_safety_rules.sql (restaurant settings)", supabase.from("restaurants").select("discount_cap_percent, paused, fake_now, owner_whatsapp").limit(1)],
+  ["004_safety_rules.sql (draft send columns)", supabase.from("drafts").select("approved_at, scheduled_for, sent_at, check_notes").limit(1)],
+  ["004_safety_rules.sql (blocked_sends table)", supabase.from("blocked_sends").select("id").limit(1)],
 ];
 for (const [name, query] of checks) {
   const { error } = await query;

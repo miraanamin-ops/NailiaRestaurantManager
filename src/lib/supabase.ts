@@ -26,7 +26,21 @@ export type Restaurant = {
   opening_hours: Record<string, string>;
   menu: MenuCategory[];
   brand_voice: string | null;
+  // Safety-rule settings (added in step 4)
+  discount_cap_percent: number;
+  send_window_start: string; // "09:00:00"
+  send_window_end: string; // "21:00:00"
+  paused: boolean;
+  paused_at: string | null;
+  fake_now: string | null;
+  owner_whatsapp: string | null;
+  whatsapp_from: string | null;
 };
+
+// The clock the rules use: the fake test time if one is set, otherwise now.
+export function restaurantNow(restaurant: Pick<Restaurant, "fake_now">) {
+  return restaurant.fake_now ? new Date(restaurant.fake_now) : new Date();
+}
 
 export type Customer = {
   id: string;

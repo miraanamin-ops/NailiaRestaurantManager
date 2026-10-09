@@ -1,6 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { getSupabase, type Customer, type Restaurant, type Review } from "@/lib/supabase";
+import { getSupabase, restaurantNow, type Customer, type Restaurant, type Review } from "@/lib/supabase";
 import { DRAFT_KINDS, KIND_LABELS, type Draft, type DraftKind, type getLearningContext } from "@/lib/drafts";
 
 const MODEL = "claude-sonnet-5";
@@ -64,7 +64,7 @@ export async function loadRestaurantContext() {
 
   const customers = customersRes.data ?? [];
   const reviews = reviewsRes.data ?? [];
-  const today = new Date();
+  const today = restaurantNow(restaurant);
   const avg = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : "n/a";
@@ -101,8 +101,11 @@ export async function loadRestaurantContext() {
   };
 
   return {
+    restaurant,
     restaurantId: restaurant.id,
     restaurantName: restaurant.name,
+    discountCapPercent: restaurant.discount_cap_percent,
+    now: today,
     data,
     reviews,
     customers,
@@ -155,6 +158,7 @@ Base every fact on the restaurant data below. If something isn't in the data, sa
 Writing drafts (review replies, offers, birthday messages, announcements):
 - Write in the restaurant's brand voice, ready to send as-is: no placeholders like [Name], under ${DRAFT_MAX_CHARS} characters.
 - Use real details from the data: customer first names, menu items, prices and opening hours. Offers are suggestions for the owner to approve, so you can propose a concrete deal.
+- Don't offer freebies, refunds or other promises unless the owner asks for them.
 - Nothing is sent to customers yet; approved drafts are only logged.
 
 Restaurant data (JSON):
@@ -164,7 +168,8 @@ ${JSON.stringify(ctx.data, null, 2)}`;
     ctx.birthdaysThisWeek.length
       ? ctx.birthdaysThisWeek.map((b) => `${b.name} (${b.date})`).join(", ")
       : "none"
-  }.`;
+  }.
+Discount cap: offers can be at most ${ctx.discountCapPercent}% off, unless the owner explicitly asks for more (anything above the cap will be blocked when sending).`;
 
   const active =
     activeDraft?.waiting_for === "decision"

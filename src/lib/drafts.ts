@@ -12,13 +12,23 @@ export type Draft = {
   customer_id: string | null;
   review_id: string | null;
   content: string;
-  status: "pending" | "approved" | "skipped" | "superseded" | "rejected" | "sent";
+  status: "pending" | "approved" | "queued" | "sent" | "blocked" | "skipped" | "superseded" | "rejected";
   waiting_for: WaitingFor | null;
   audience: string | null;
   request: string | null;
   version: number;
   created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  scheduled_for: string | null;
+  sent_at: string | null;
+  block_reason: string | null;
+  reminded_at: string | null;
+  check_notes: CheckNotes | null;
 };
+
+// What the checker changed or wants the owner to look at.
+export type CheckNotes = { fixes: string[]; flags: string[] };
 
 export type Feedback = {
   draft_kind: string | null;
@@ -36,13 +46,13 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   other: "Message",
 };
 
-function check<T>(res: { data: T; error: { message: string } | null }): T {
+export function check<T>(res: { data: T; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
   return res.data;
 }
 
 // For queries that must return exactly one row.
-function checkRow<T>(res: { data: T | null; error: { message: string } | null }): T {
+export function checkRow<T>(res: { data: T | null; error: { message: string } | null }): T {
   const row = check(res);
   if (!row) throw new Error("Expected a row but got none");
   return row;
@@ -69,6 +79,7 @@ export async function createDraft(input: {
   request: string | null;
   reviewId?: string | null;
   customerId?: string | null;
+  checkNotes: CheckNotes;
 }) {
   const supabase = getSupabase();
   // Only one draft is "live" at a time: retire anything still waiting.
@@ -99,13 +110,31 @@ export async function createDraft(input: {
       customer_id: input.customerId ?? null,
       status: "pending",
       waiting_for: "decision",
+      check_notes: input.checkNotes,
     })
     .select("*")
     .single<Draft>();
   return checkRow(res);
 }
 
-async function updateDraft(id: string, fields: Partial<Draft>) {
+export async function getDraft(id: string) {
+  return checkRow(await getSupabase().from("drafts").select("*").eq("id", id).single<Draft>());
+}
+
+// The draft most recently approved: where a second tap on Approve lands.
+export async function getLastApprovedDraft(restaurantId: string) {
+  const res = await getSupabase()
+    .from("drafts")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .not("approved_at", "is", null)
+    .order("approved_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<Draft>();
+  return check(res);
+}
+
+export async function updateDraft(id: string, fields: Partial<Draft>) {
   const res = await getSupabase()
     .from("drafts")
     .update({ ...fields, updated_at: new Date().toISOString() })
@@ -115,32 +144,17 @@ async function updateDraft(id: string, fields: Partial<Draft>) {
   return checkRow(res);
 }
 
-// Approve = mark approved and log a simulated send. Nothing actually goes out yet.
-export async function approveDraft(draft: Draft) {
-  const supabase = getSupabase();
-  await updateDraft(draft.id, { status: "approved", waiting_for: null });
-  check(
-    await supabase.from("sent_log").insert({
-      restaurant_id: draft.restaurant_id,
-      draft_id: draft.id,
-      customer_id: draft.customer_id,
-      channel: draft.kind === "review_reply" ? "google" : "whatsapp",
-      recipient: draft.audience,
-      content: draft.content,
-      status: "sent",
-      simulated: true,
-    }),
-  );
-  if (draft.review_id) {
-    check(await supabase.from("reviews").update({ replied: true }).eq("id", draft.review_id));
-  }
+// Approve only records the owner's decision. Sending is a separate step
+// (lib/send.ts) that checks every safety rule first.
+export function approveDraft(draft: Draft) {
+  return updateDraft(draft.id, { status: "approved", approved_at: new Date().toISOString(), waiting_for: null });
 }
 
 export function startEdit(draft: Draft) {
   return updateDraft(draft.id, { waiting_for: "edit_instructions" });
 }
 
-export async function applyEdit(draft: Draft, instruction: string, newContent: string) {
+export async function applyEdit(draft: Draft, instruction: string, newContent: string, checkNotes: CheckNotes) {
   check(
     await getSupabase().from("draft_feedback").insert({
       restaurant_id: draft.restaurant_id,
@@ -157,6 +171,8 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
     version: draft.version + 1,
     status: "pending",
     waiting_for: "decision",
+    check_notes: checkNotes,
+    reminded_at: null,
   });
 }
 
