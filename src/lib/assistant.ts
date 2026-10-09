@@ -59,7 +59,8 @@ function upcomingBirthdays(customers: Customer[], today: Date) {
 
 // Loads the restaurant, its customers and reviews from the database and
 // turns them into the background knowledge Claude gets on every message.
-export async function loadRestaurantContext() {
+// realTime: scheduled jobs always run on the real clock, never the TIME test clock.
+export async function loadRestaurantContext({ realTime = false }: { realTime?: boolean } = {}) {
   const supabase = getSupabase();
   const { data: restaurant, error } = await supabase
     .from("restaurants")
@@ -76,7 +77,7 @@ export async function loadRestaurantContext() {
   if (customersRes.error) throw customersRes.error;
 
   const customers = customersRes.data ?? [];
-  const today = restaurantNow(restaurant);
+  const today = realTime ? new Date() : restaurantNow(restaurant);
   const avg = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : "n/a";
