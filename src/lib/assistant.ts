@@ -6,6 +6,7 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
 import { customerSummary, lookUpCustomers, lookUpReviews, reviewSummary } from "@/lib/claude-data";
 import { londonLongDate } from "@/lib/clock";
+import { customerSafeMenu } from "@/lib/onboarding/profile-data";
 import { clip } from "@/lib/text";
 import { z } from "zod";
 import {
@@ -83,7 +84,8 @@ export async function loadRestaurantContext(restaurantId: string, { realTime = f
       address: restaurant.address,
       phone: restaurant.phone,
       opening_hours: restaurant.opening_hours,
-      menu: restaurant.menu,
+      // Allergens only once the owner has confirmed them (never guesses, in anything customers see).
+      menu: customerSafeMenu(restaurant.menu ?? []),
       brand_voice: restaurant.brand_voice,
       signup_reward: restaurant.signup_reward,
     },
