@@ -30,18 +30,18 @@ async function readSample(name: string) {
 describe("Claude reads the sample till reports", () => {
   test.concurrent("sample 1: Thu 8 Oct, a classic Z reading", async () => {
     const { reply } = await readSample("1");
-    expect(reply).toBe("Thu 8 Oct: £2,340 net, 118 sales. Saved.");
+    expect(reply).toBe("Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved.");
   });
 
   test.concurrent("sample 2: Fri 9 Oct, with sales by hour and a delivery app", async () => {
     const { reply, read } = await readSample("2");
-    expect(reply).toBe("Fri 9 Oct: £3,531 net, 171 sales. Saved.");
+    expect(reply).toBe("Fri 9 Oct: £4,236.60 sales, £706.10 VAT, £3,530.50 net, 171 transactions. Saved.");
     expect(read.hourly).toHaveLength(10);
   });
 
   test.concurrent("sample 3: Cardamom Corner, Wed 7 Oct", async () => {
     const { reply } = await readSample("3");
-    expect(reply).toBe("Wed 7 Oct: £887 net, 112 sales. Saved.");
+    expect(reply).toBe("Wed 7 Oct: £1,064.85 sales, £177.47 VAT, £887.38 net, 112 transactions. Saved.");
   });
 
   test.concurrent("the bad photo gets a question, not a save", async () => {
