@@ -44,7 +44,8 @@ export type Command =
   | { name: "cap"; percent: number }
   | { name: "set_reward"; reward: string }
   | { name: "reward" | "qr" | "birthday_campaign" | "campaign_results" | "which_report" }
-  | { name: "my_email"; email: string };
+  | { name: "my_email"; email: string }
+  | { name: "reset_onboarding" };
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -86,6 +87,7 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   }
   const email = body.trim().match(/^my\s+email(?:\s+is)?\s*:?\s+(\S+@\S+\.\S+)$/i);
   if (email) return { name: "my_email", email: email[1].toLowerCase() };
+  if (t === "RESET ONBOARDING" || t === "RESET SETUP") return { name: "reset_onboarding" };
   if (t === "BIRTHDAY CAMPAIGN") return { name: "birthday_campaign" };
   if (t === "CAMPAIGN RESULTS" || t === "CAMPAIGN RESULT" || t === "CAMPAIGN REPORT") return { name: "campaign_results" };
   // REPORT on its own was easy to confuse with RUN REPORT, so it asks which one.

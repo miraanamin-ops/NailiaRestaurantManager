@@ -119,3 +119,25 @@ export function parsePrice(text: string) {
 export function formatPrice(p: number) {
   return `£${p.toFixed(2)}`;
 }
+
+// One day's hours as typed on the settings page: "12:00 – 22:00", "12-10pm",
+// "12:00-15:00, 18:00-23:00" or "closed" -> tidy text, or null if unclear.
+export function parseHoursText(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  if (/^closed$/i.test(t)) return "Closed";
+  const ranges = t.split(/\s*,\s*/).map((range) => {
+    const [a, b] = range.split(/\s*(?:–|-|to)\s*/i);
+    if (!a || !b) return null;
+    const suffix = b.match(/[ap]m/i)?.[0] ?? "";
+    const close = to24h(b.replace(/\s+/g, " "));
+    // "12-10pm": the opening time has no am/pm; use the closing time's if that makes sense.
+    let open = to24h(a);
+    if (!/[ap]m/i.test(a) && suffix) {
+      const withSuffix = to24h(`${a} ${suffix}`);
+      if (withSuffix && close && withSuffix < close) open = withSuffix;
+    }
+    return open && close ? `${open} – ${close}` : null;
+  });
+  return ranges.every(Boolean) ? ranges.join(", ") : null;
+}

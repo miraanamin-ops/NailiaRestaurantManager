@@ -2,6 +2,8 @@ import "server-only";
 import { chat, rewriteDraft, type StoredMessage } from "@/lib/assistant";
 import { getActiveDraft, getLearningContext, saveSkipReason } from "@/lib/drafts";
 import { presentNext } from "@/lib/google-jobs";
+import { getRestaurant } from "@/lib/onboarding/store";
+import { applyProfileChanges } from "@/lib/profile-edits";
 import { getSupabase } from "@/lib/supabase";
 import { decideOnScreen, decideTargeted } from "./decisions";
 import { campaignCreateAndSend, checkCreateAndSend, pastedReviewReply, reviseAndSend, reviseCampaignAndSend } from "./flows";
@@ -59,6 +61,7 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   }
   if (result.type === "campaign") return campaignCreateAndSend(ctx, result.fields, body, send);
   if (result.type === "pasted_review") return pastedReviewReply(ctx, result, send);
+  if (result.type === "profile_changes") return send(await applyProfileChanges(await getRestaurant(ctx.restaurantId), result.changes));
   if (result.type === "revise" && active?.waiting_for === "decision") {
     if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, result.instruction, send);
     return reviseAndSend(ctx, active, result.instruction, result.content, send);

@@ -14,7 +14,21 @@ export type UndoPlan =
   | { type: "restore_setting"; field: string; value: unknown }
   | { type: "cannot"; reason: string };
 
-const SETTINGS = ["paused", "discount_cap_percent", "fake_now", "signup_reward", "owner_email"];
+// Restaurant details (hours, menu, voice, phone, address, website) come from onboarding,
+// "change Friday hours to 11pm" messages and the settings page.
+const SETTINGS = [
+  "paused",
+  "discount_cap_percent",
+  "fake_now",
+  "signup_reward",
+  "owner_email",
+  "opening_hours",
+  "menu",
+  "brand_voice",
+  "phone",
+  "address",
+  "website",
+];
 
 export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "live"): UndoPlan {
   if (entry.action === "setting") {

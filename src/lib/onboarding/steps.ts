@@ -49,10 +49,91 @@ export function newLinkCode(random: () => number = Math.random) {
   return Array.from({ length: 6 }, () => CODE_ALPHABET[Math.floor(random() * CODE_ALPHABET.length)]).join("");
 }
 
-// Finds a link code in a WhatsApp message, e.g. "Link my restaurant: K7Q2MZ" or just "K7Q2MZ".
+// Finds a link code in a WhatsApp message: "Link my restaurant: K7Q2MZ" (the
+// pre-filled message). Never a code on its own: STATUS or THANKS would look like one.
 export function findLinkCode(text: string) {
-  const m = text.toUpperCase().match(/(?:^|[^A-Z0-9])([A-HJ-NP-Z2-9]{6})(?:[^A-Z0-9]|$)/);
+  const m = text.trim().toUpperCase().match(/^LINK\b[^:]*:\s*([A-HJ-NP-Z2-9]{6})[.!]?$/);
   return m ? m[1] : null;
+}
+
+// What the owner typed as their WhatsApp number -> "whatsapp:+447700900123".
+// UK numbers by default: "07700 900123", "+44 7700 900123" and "0044..." all work.
+export function normaliseWhatsApp(raw: string) {
+  const digits = raw.replace(/[^\d+]/g, "");
+  if (!digits) return null;
+  const intl = digits.startsWith("+")
+    ? digits
+    : digits.startsWith("00")
+      ? `+${digits.slice(2)}`
+      : digits.startsWith("0")
+        ? `+44${digits.slice(1)}`
+        : `+${digits}`;
+  return /^\+[1-9]\d{7,14}$/.test(intl) ? `whatsapp:${intl}` : null;
+}
+
+// "whatsapp:+447700900123" -> "+44 7700 900123" (for showing on screen).
+export function showNumber(whatsapp: string | null) {
+  const n = (whatsapp ?? "").replace(/^whatsapp:/, "");
+  const uk = n.match(/^\+44(\d{4})(\d{6})$/);
+  return uk ? `+44 ${uk[1]} ${uk[2]}` : n;
+}
+
+// A wa.me link that opens WhatsApp with a message ready to send to our number.
+export function whatsAppLink(ourNumber: string, text: string) {
+  return `https://wa.me/${ourNumber.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+}
+
+// ---------- Replies on WhatsApp during onboarding ----------
+
+export type OnboardingReply =
+  | { kind: "yes" | "no" | "skip" | "done" | "web" | "help" }
+  | { kind: "pick"; n: number }
+  | { kind: "text"; text: string };
+
+export function parseOnboardingReply(body: string): OnboardingReply {
+  const t = body.trim().toLowerCase().replace(/[.!👍]+$/u, "").trim();
+  if (/^(yes|y|yep|yeah|ok|okay|correct|looks good|that's right|thats right|perfect|confirm)$/.test(t)) return { kind: "yes" };
+  if (/^(no|n|nope|none|none of these|not me|neither)$/.test(t)) return { kind: "no" };
+  if (/^(skip|later|skip this|next)$/.test(t)) return { kind: "skip" };
+  if (/^(done|finish|finished|that's all|thats all|all done|that's it|thats it)$/.test(t)) return { kind: "done" };
+  if (/^(web|website|online|link|on the web)$/.test(t)) return { kind: "web" };
+  if (/^(help|\?|where was i|status|continue|carry on|carry on setting up|start|hi|hello|hey)$/.test(t)) return { kind: "help" };
+  const n = t.match(/^#?([1-9])$/);
+  if (n) return { kind: "pick", n: Number(n[1]) };
+  return { kind: "text", text: body.trim() };
+}
+
+// The reward step on WhatsApp: "cap 20", "20%", or a new reward ("a free samosa").
+export function parseRewardReply(text: string): { cap?: number; reward?: string } {
+  const cap = text.match(/(?:\bcap\b\D*)?(\d{1,3})\s*%/i) ?? text.match(/\bcap\s*(?:of|at|to)?\s*(\d{1,3})\b/i);
+  if (cap && Number(cap[1]) <= 100) {
+    const rest = text
+      .replace(cap[0], "")
+      .replace(/[\s,.]*\b(and|with)\b[\s,.]*$/i, "")
+      .replace(/^[\s,.]+|[\s,.]+$/g, "");
+    return { cap: Number(cap[1]), ...(rest.length > 3 ? { reward: tidyReward(rest) } : {}) };
+  }
+  return { reward: tidyReward(text) };
+}
+
+function tidyReward(text: string) {
+  const t = text.trim().replace(/[.!]+$/, "").slice(0, 100);
+  return /^(a|an|one|two|\d+%?|free)\b/i.test(t) ? t : `a ${t}`;
+}
+
+// Long WhatsApp messages split on line breaks (WhatsApp's limit is 1600 characters).
+export function splitMessage(text: string, max = 1500) {
+  const parts: string[] = [];
+  let current = "";
+  for (const line of text.split("\n")) {
+    if (current && current.length + line.length + 1 > max) {
+      parts.push(current);
+      current = "";
+    }
+    current = current ? `${current}\n${line}` : line.slice(0, max);
+  }
+  if (current) parts.push(current);
+  return parts;
 }
 
 // The text pre-filled in WhatsApp when the owner taps "Set up on WhatsApp".

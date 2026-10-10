@@ -1,7 +1,7 @@
 import "server-only";
 import { logSetting } from "@/lib/audit";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
-import { DEFAULT_DISCOUNT_CAP, draftVoices, extractMenu, suggestAllergens, suggestReward, type MenuImage } from "./ai";
+import { applyMenuCorrection, DEFAULT_DISCOUNT_CAP, draftVoices, extractMenu, suggestAllergens, suggestReward, type MenuImage } from "./ai";
 import { placesAvailable, profileFromPlace, searchPlaces } from "./places";
 import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
 import { canFinish, mark, nextStep, STEP_LABELS, STEPS, stepsDone, type StepId } from "./steps";
@@ -64,26 +64,44 @@ export async function confirmGoogle(restaurantId: string, placeId: string) {
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 
+// Menu photos are files in storage (<restaurant>/menu/...), not a list in the
+// database: on WhatsApp several photos arrive at the same moment, and a list
+// updated by each of them at once would lose some.
+const menuFolder = (restaurantId: string) => `${restaurantId}/menu`;
+
+export async function menuPhotos(restaurantId: string) {
+  const storage = getSupabase().storage.from(PHOTO_BUCKET);
+  const { data, error } = await storage.list(menuFolder(restaurantId), { limit: 50, sortBy: { column: "name", order: "asc" } });
+  if (error) throw new Error(`Couldn't list the menu photos: ${error.message}`);
+  return (data ?? []).filter((f) => f.id).map((f) => storage.getPublicUrl(`${menuFolder(restaurantId)}/${f.name}`).data.publicUrl);
+}
+
 // Saves menu photos (from the web form or WhatsApp) until the owner says that's all.
+// Returns how many there are now.
 export async function addMenuPhotos(restaurantId: string, photos: { bytes: Buffer; contentType: MenuImage["mediaType"] }[]) {
   const storage = getSupabase().storage.from(PHOTO_BUCKET);
-  const urls: string[] = [];
   for (const p of photos) {
-    const path = `${restaurantId}/menu-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${EXT[p.contentType] ?? "jpg"}`;
+    const path = `${menuFolder(restaurantId)}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${EXT[p.contentType] ?? "jpg"}`;
     const { error } = await storage.upload(path, p.bytes, { contentType: p.contentType });
     if (error) throw new Error(`Couldn't save the menu photo: ${error.message}`);
-    urls.push(storage.getPublicUrl(path).data.publicUrl);
   }
+  return (await menuPhotos(restaurantId)).length;
+}
+
+// Starting the menu again: the photos so far are removed.
+export async function clearMenuPhotos(restaurantId: string) {
+  const storage = getSupabase().storage.from(PHOTO_BUCKET);
+  const { data } = await storage.list(menuFolder(restaurantId), { limit: 100 });
+  const paths = (data ?? []).filter((f) => f.id).map((f) => `${menuFolder(restaurantId)}/${f.name}`);
+  if (paths.length) await storage.remove(paths);
   const o = (await getOnboarding(restaurantId))!;
-  const all = [...(o.data.menu?.photos ?? []), ...urls];
-  await patchData(restaurantId, { menu: { ...o.data.menu, photos: all } });
-  return all.length;
+  await patchData(restaurantId, { menu: { ...o.data.menu, draft: undefined } });
 }
 
 // Reads every saved menu photo and keeps the result as a draft for the owner to check.
 export async function readMenuPhotos(restaurantId: string) {
   const o = (await getOnboarding(restaurantId))!;
-  const urls = o.data.menu?.photos ?? [];
+  const urls = await menuPhotos(restaurantId);
   if (!urls.length) return [];
   const images: MenuImage[] = [];
   for (const url of urls) {
@@ -105,18 +123,36 @@ export async function confirmMenu(restaurantId: string, menu: MenuCategory[]) {
   const o = (await getOnboarding(restaurantId))!;
   let steps = mark(o.steps, "menu", "done");
   if (!menuItemCount(menu)) steps = mark(steps, "allergens", "skipped");
-  await saveOnboarding(restaurantId, { steps, data: { ...o.data, menu: { photos: o.data.menu?.photos ?? [], draft: menu } } });
+  await saveOnboarding(restaurantId, { steps, data: { ...o.data, menu: { ...o.data.menu, draft: menu } } });
+}
+
+// A correction typed on WhatsApp ("Lamb Chops is £14", "remove the samosa") applied to the draft menu.
+export async function correctMenuDraft(restaurantId: string, instruction: string) {
+  const o = (await getOnboarding(restaurantId))!;
+  const draft = await applyMenuCorrection(o.data.menu?.draft ?? [], instruction);
+  await patchData(restaurantId, { menu: { ...o.data.menu, draft } });
+  return draft;
+}
+
+// A correction to the suggested allergens ("Samosa: gluten, mustard"), still unconfirmed.
+export async function correctAllergens(restaurantId: string, instruction: string) {
+  const r = await getRestaurant(restaurantId);
+  const menu = await applyMenuCorrection(r.menu ?? [], instruction, { allergens: true });
+  await updateRestaurantFields(restaurantId, { menu });
+  return menu;
 }
 
 // ---------- 3. Allergens ----------
 
 // Suggestions are saved on the menu but marked unconfirmed, so they're never
 // shown to customers or used in their messages until the owner confirms.
+// Suggests once; after that (and after any corrections) it returns what's saved.
 export async function suggestMenuAllergens(restaurantId: string) {
-  const r = await getRestaurant(restaurantId);
-  if (!menuItemCount(r.menu)) return r.menu;
+  const [r, o] = await Promise.all([getRestaurant(restaurantId), getOnboarding(restaurantId)]);
+  if (!menuItemCount(r.menu) || o?.data.allergens?.suggested) return r.menu;
   const withSuggestions = await suggestAllergens(r.menu);
   await updateRestaurantFields(restaurantId, { menu: withSuggestions });
+  await patchData(restaurantId, { allergens: { suggested: true } });
   return withSuggestions;
 }
 
@@ -208,4 +244,48 @@ export function menuSummaryText(menu: MenuCategory[], maxChars = 1200) {
   let text = lines.join("\n");
   if (text.length > maxChars) text = `${text.slice(0, maxChars).replace(/\n[^\n]*$/, "")}\n…`;
   return text;
+}
+
+// The finished summary, as one WhatsApp message.
+export function finishMessage(r: Restaurant, summary: string[], qrPack: string) {
+  return [
+    `🎉 *${r.name} is set up!*`,
+    "",
+    ...summary,
+    "",
+    `🖨️ Your QR codes to print (table cards and a counter sign): ${qrPack}`,
+    "",
+    "From now on, just message me like you would a person. You can change anything any time, e.g. _change Friday hours to 11pm_ or _add lamb chops, £14_. Send *HELP* for the commands.",
+  ].join("\n");
+}
+
+// Sends the summary to the owner's WhatsApp (finishing on the web, or on WhatsApp).
+export async function sendFinishSummary(r: Restaurant, summary: string[], qrPack: string, from: string) {
+  if (!r.owner_whatsapp) return;
+  const { messageOwner } = await import("@/lib/notify");
+  await messageOwner({ restaurantId: r.id, from: r.whatsapp_from ?? from, to: r.owner_whatsapp }, finishMessage(r, summary, qrPack));
+}
+
+// TEST MODE only, demo restaurants only: back to a just-signed-up restaurant so
+// onboarding can be tried again. Keeps the name, owner, email and WhatsApp link.
+export async function resetOnboarding(restaurantId: string) {
+  const r = await getRestaurant(restaurantId);
+  if (!r.is_demo) throw new Error("Only demo restaurants can be reset");
+  await clearMenuPhotos(restaurantId).catch(() => undefined);
+  await updateRestaurantFields(restaurantId, {
+    active: false,
+    menu: [],
+    brand_voice: null,
+    signup_reward: null,
+    discount_cap_percent: DEFAULT_DISCOUNT_CAP,
+    address: null,
+    phone: null,
+    opening_hours: {},
+    website: null,
+    google_place_id: null,
+    google_rating: null,
+    google_rating_count: null,
+    photos: [],
+  });
+  return saveOnboarding(restaurantId, { steps: {}, data: {}, wa_waiting: null, completed_at: null, started_at: new Date().toISOString() });
 }

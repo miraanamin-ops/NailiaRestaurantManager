@@ -77,6 +77,50 @@ export async function suggestAllergens(menu: MenuCategory[]): Promise<MenuCatego
   }));
 }
 
+const CorrectedMenuSchema = z.object({
+  categories: z.array(
+    z.object({
+      category: z.string(),
+      items: z.array(
+        z.object({
+          name: z.string(),
+          price: z.number(),
+          description: z.string().nullable(),
+          allergens: z.array(z.enum(UK_ALLERGENS)),
+        }),
+      ),
+    }),
+  ),
+});
+
+// The owner's correction in their own words ("Lamb Chops is £14", "remove the
+// samosa", "add Mango Lassi £3.50 to Drinks", "the biryani has no nuts") applied
+// to the menu. Allergens stay unconfirmed: confirming is a separate YES.
+export async function applyMenuCorrection(menu: MenuCategory[], instruction: string, opts: { allergens?: boolean } = {}): Promise<MenuCategory[]> {
+  const out = await parse(
+    CorrectedMenuSchema,
+    `You update a restaurant's menu (JSON) with the owner's correction. Change only what they ask${opts.allergens ? " (they are correcting allergens: use only the UK's 14 allergens)" : ""}; keep everything else exactly the same, including every other dish's allergens. Prices are in pounds.`,
+    `Menu:\n${JSON.stringify(menu.map((c) => ({ category: c.category, items: c.items.map((i) => ({ name: i.name, price: i.price, description: i.description, allergens: i.allergens ?? [] })) })))}\n\nThe owner says: ${instruction.slice(0, 1000)}`,
+    "low",
+  );
+  const before = new Map(menu.flatMap((c) => c.items).map((i) => [i.name.trim().toLowerCase(), i]));
+  return out.categories
+    .map((c) => ({
+      category: c.category.trim() || "Menu",
+      items: c.items
+        .filter((i) => i.name.trim())
+        .map((i) => ({
+          name: i.name.trim(),
+          price: Math.max(0, Math.round(i.price * 100) / 100),
+          description: i.description?.trim() || null,
+          allergens: [...i.allergens],
+          // Any change means it needs checking again; otherwise it keeps what it had.
+          allergens_confirmed: opts.allergens ? false : Boolean(before.get(i.name.trim().toLowerCase())?.allergens_confirmed),
+        })),
+    }))
+    .filter((c) => c.items.length);
+}
+
 const VoiceSchema = z.object({
   options: z
     .array(

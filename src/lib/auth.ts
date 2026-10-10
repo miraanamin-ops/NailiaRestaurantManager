@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { check } from "@/lib/drafts";
@@ -86,4 +87,25 @@ export async function restaurantChoices(owner: Owner) {
 // Only ever redirect within this site after logging in.
 export function safeNext(next: string | null | undefined) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
+export function looksLikeEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+// Emails a one-time login link that lands on `next`. "implicit": the link in
+// Supabase's standard email brings the login back after a "#" in the address, so
+// it works in whichever browser opens it (no email template changes needed).
+// /auth/confirm picks it up. Returns "wait" (too many emails just now), "send" or null.
+export async function emailLoginLink(email: string, next: string, base: string) {
+  const sender = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { error } = await sender.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: `${base}/auth/confirm?next=${encodeURIComponent(safeNext(next))}`, shouldCreateUser: true },
+  });
+  if (!error) return null;
+  console.error("Magic link failed", error.message);
+  return error.status === 429 ? ("wait" as const) : ("send" as const);
 }

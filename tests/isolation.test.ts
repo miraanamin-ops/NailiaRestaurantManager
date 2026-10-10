@@ -6,6 +6,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import twilio from "twilio";
+import { fakeAfter, flushAfter } from "./support/after";
 import { memoryDb } from "./support/memory-db";
 
 const A = "aaaaaaaa-0000-0000-0000-000000000001"; // Ember & Spice
@@ -190,7 +191,7 @@ describe("incoming WhatsApp messages", () => {
     process.env.TWILIO_AUTH_TOKEN = TOKEN;
     vi.doMock("@/lib/bot", () => ({ handleMessage }));
     vi.doMock("@/lib/unregistered", () => ({ replyUnregistered }));
-    vi.doMock("next/server", async (orig) => ({ ...(await orig<object>()), after: (fn: () => unknown) => fn() }));
+    vi.doMock("next/server", async (orig) => ({ ...(await orig<object>()), after: fakeAfter }));
     const { NextRequest } = await import("next/server");
     const { POST } = await import("@/app/api/whatsapp/route");
     const params = { From: from, To: SANDBOX, Body: "STATUS", MessageSid: `SM${Math.random()}` };
@@ -199,6 +200,7 @@ describe("incoming WhatsApp messages", () => {
       new NextRequest(URL_, { method: "POST", body: new URLSearchParams(params), headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": sig } }),
     );
     vi.doUnmock("@/lib/bot");
+    await flushAfter();
     vi.doUnmock("@/lib/unregistered");
     vi.doUnmock("next/server");
     return res;

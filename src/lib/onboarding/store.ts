@@ -9,8 +9,9 @@ import { mark, newLinkCode, nextStep, slugFor, type Progress, type StepId, type 
 
 export type OnboardingData = {
   google?: { candidates?: GoogleCandidate[]; chosen?: string };
-  menu?: { photos?: string[]; draft?: import("./profile-data").MenuCategory[] };
+  menu?: { draft?: import("./profile-data").MenuCategory[] }; // the photos themselves are files in storage
   voice?: { samples?: { tone: string; voice: string; sample: string }[]; captions?: string[] };
+  allergens?: { suggested?: boolean };
 };
 export type GoogleCandidate = { id: string; name: string; address: string };
 
@@ -108,6 +109,26 @@ export async function createRestaurantFromSignup(input: { ownerName: string; ema
       .single(),
   );
   return restaurant;
+}
+
+// The same person signing up again before finishing: carry on with that restaurant.
+// (Also stops one email making lots of restaurants: after 5 unfinished in a day,
+// they all go to the newest one.)
+export async function recentUnfinishedSignup(email: string, restaurantName: string) {
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  const rows =
+    check(
+      await getSupabase()
+        .from("restaurants")
+        .select("*")
+        .eq("owner_email", email)
+        .eq("active", false)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .returns<Restaurant[]>(),
+    ) ?? [];
+  const sameName = rows.find((r) => r.name.trim().toLowerCase() === restaurantName.trim().toLowerCase());
+  return sameName ?? (rows.length >= 5 ? rows[0] : null);
 }
 
 // A fresh link code (e.g. if the old one expired).
