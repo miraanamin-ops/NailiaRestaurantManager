@@ -97,7 +97,7 @@ describe("till report photos", () => {
   test("a clean report is saved with a one-line reply, and the photo is kept", async () => {
     const sender = owner();
     expect(await sendPhoto(sender)).toBe(true);
-    expect(replies).toEqual(["Thu 8 Oct: £2,340 net, 118 sales. Saved."]);
+    expect(replies).toEqual(["Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved."]);
     expect(zRows()[0]).toMatchObject({ status: "saved", business_date: "2026-10-08", net_sales: 2340, sent_by: OWNER_A });
     expect(day("2026-10-08")).toMatchObject({ net_sales: 2340, transactions: 118, source: "z_report", is_dummy: false });
     expect([...db.files.keys()][0]).toMatch(new RegExp(`^sales-files/${A}/z-reports/`));
@@ -111,7 +111,7 @@ describe("till report photos", () => {
     expect(replies[0]).toMatch(/doesn't add up/);
     expect(day("2026-10-08")).toBeUndefined();
     expect(await answer(sender, "yes")).toBe(true);
-    expect(replies[1]).toBe("Thu 8 Oct: £2,340 net, 118 sales. Saved.");
+    expect(replies[1]).toBe("Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved.");
     expect(day("2026-10-08")?.net_sales).toBe(2340);
   });
 
@@ -131,7 +131,7 @@ describe("till report photos", () => {
     await sendPhoto(sender);
     expect(replies[0]).toMatch(/couldn't see the date/);
     expect(await answer(sender, "yesterday")).toBe(true);
-    expect(replies[1]).toBe("Fri 9 Oct: £2,340 net, 118 sales. Saved.");
+    expect(replies[1]).toBe("Fri 9 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved.");
   });
 
   test("a second report for the same day asks to replace; REPLACE swaps it, KEEP doesn't", async () => {
@@ -139,9 +139,9 @@ describe("till report photos", () => {
     await sendPhoto(sender);
     readZReport.mockResolvedValue(read({ net_sales: 2400, vat: 480, gross_sales: 2880, card: 2384.4, transactions: 121 }));
     await sendPhoto(sender);
-    expect(replies.at(-1)).toMatch(/You already sent a report for \*Thu 8 Oct\* \(£2,340 net, 118 sales\)\. This one says £2,400 net, 121 sales/);
+    expect(replies.at(-1)).toMatch(/You already sent a report for \*Thu 8 Oct\* \(£2,808\.00 sales, £468\.00 VAT, £2,340\.00 net, 118 transactions\)\. This one says £2,880\.00 sales, £480\.00 VAT, £2,400\.00 net, 121 transactions/);
     expect(await answer(sender, "REPLACE")).toBe(true);
-    expect(replies.at(-1)).toBe("Thu 8 Oct: £2,400 net, 121 sales. Saved.");
+    expect(replies.at(-1)).toBe("Thu 8 Oct: £2,880.00 sales, £480.00 VAT, £2,400.00 net, 121 transactions. Saved.");
     expect(zRows().map((z) => z.status)).toEqual(["replaced", "saved"]);
     expect(day("2026-10-08")?.net_sales).toBe(2400);
 
@@ -188,7 +188,7 @@ describe("staff numbers", () => {
 
   test("can send a till report, and gets the reply themselves", async () => {
     await staffSays("", { url: "https://api.twilio.test/media/1", contentType: "image/jpeg" });
-    expect(sent).toEqual([{ to: STAFF_A, text: "Thu 8 Oct: £2,340 net, 118 sales. Saved." }]);
+    expect(sent).toEqual([{ to: STAFF_A, text: "Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved." }]);
     expect(zRows()[0]).toMatchObject({ sender_role: "staff", sent_by: STAFF_A });
     expect(db.tables.audit_log.at(-1)).toMatchObject({ actor: "staff" });
   });
@@ -206,7 +206,7 @@ describe("staff numbers", () => {
     await staffSays("", { url: "https://api.twilio.test/media/1", contentType: "image/jpeg" });
     expect(await answer(owner(), "yes")).toBe(false);
     await staffSays("yes");
-    expect(sent.at(-1)?.text).toBe("Thu 8 Oct: £2,340 net, 118 sales. Saved.");
+    expect(sent.at(-1)?.text).toBe("Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved.");
   });
 
   test("ADD STAFF, REMOVE STAFF, and UNDO puts them back", async () => {

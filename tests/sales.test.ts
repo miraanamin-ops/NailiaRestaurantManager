@@ -59,7 +59,7 @@ describe("till reports: do the numbers add up?", () => {
     const c = checkZReport(read(), TODAY);
     expect(c.status).toBe("ok");
     if (c.status !== "ok") return;
-    expect(savedLine(c.figures, TODAY)).toBe("Thu 8 Oct: £2,340 net, 118 sales. Saved.");
+    expect(savedLine(c.figures, TODAY)).toBe("Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved.");
   });
 
   test("card plus cash not matching the total asks the sender to confirm", () => {
@@ -87,7 +87,9 @@ describe("till reports: do the numbers add up?", () => {
     expect(derived.status === "ok" && derived.figures.net_sales).toBe(2340);
     const estimated = checkZReport(read({ net_sales: null, vat: null }), TODAY);
     expect(estimated.status === "ok" && estimated.figures.net_estimated).toBe(true);
-    if (estimated.status === "ok") expect(savedLine(estimated.figures, TODAY)).toMatch(/£2,340 net \(worked out at 20% VAT\)/);
+    if (estimated.status === "ok") expect(savedLine(estimated.figures, TODAY)).toBe(
+        "Thu 8 Oct: £2,808.00 sales, £2,340.00 net (no VAT on the report, so worked out at 20%), 118 transactions. Saved.",
+      );
   });
 
   test("no date asks which day; no totals asks for a clearer photo; not a till report is passed on", () => {
@@ -112,8 +114,8 @@ describe("till reports: do the numbers add up?", () => {
     if (c.status !== "ok") throw new Error("expected ok");
     expect(sameFigures(c.figures, { net_sales: 2340, transactions: 118 })).toBe(true);
     expect(sameFigures(c.figures, { net_sales: 2300, transactions: 110 })).toBe(false);
-    expect(replaceQuestion(c.figures, { net_sales: 2300, transactions: 110, net_estimated: false }, TODAY)).toBe(
-      "🧾 You already sent a report for *Thu 8 Oct* (£2,300 net, 110 sales). This one says £2,340 net, 118 sales.\nReplace the earlier one? Reply *REPLACE* or *KEEP*.",
+    expect(replaceQuestion(c.figures, { gross_sales: 2760, vat: 460, net_sales: 2300, transactions: 110, net_estimated: false }, TODAY)).toBe(
+      "🧾 You already sent a report for *Thu 8 Oct* (£2,760.00 sales, £460.00 VAT, £2,300.00 net, 110 transactions). This one says £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions.\nReplace the earlier one? Reply *REPLACE* or *KEEP*.",
     );
   });
 });

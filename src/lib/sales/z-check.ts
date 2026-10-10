@@ -126,22 +126,25 @@ export function sameFigures(a: Pick<ZFigures, "net_sales" | "transactions">, b: 
 
 // ---------- WhatsApp wording ----------
 
-// "£2,340 net, 118 sales"
-export function summary(f: Pick<ZFigures, "net_sales" | "transactions" | "net_estimated">) {
-  const net = `${gbp(f.net_sales ?? 0)} net${f.net_estimated ? " (worked out at 20% VAT)" : ""}`;
-  return f.transactions !== null ? `${net}, ${f.transactions} sale${f.transactions === 1 ? "" : "s"}` : net;
+// The figures in the order the till prints them, to the penny, so the owner can
+// check them against the paper: "£2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions"
+export function summary(f: Pick<ZFigures, "gross_sales" | "vat" | "net_sales" | "transactions" | "net_estimated">) {
+  const parts: string[] = [];
+  if (f.gross_sales !== null) parts.push(`${gbp(f.gross_sales, true)} sales`);
+  if (f.vat !== null && !f.net_estimated) parts.push(`${gbp(f.vat, true)} VAT`);
+  parts.push(`${gbp(f.net_sales ?? 0, true)} net${f.net_estimated ? " (no VAT on the report, so worked out at 20%)" : ""}`);
+  if (f.transactions !== null) parts.push(`${f.transactions} transaction${f.transactions === 1 ? "" : "s"}`);
+  return parts.join(", ");
 }
 
-// The one-line confirmation: "Thu 9 Oct: £2,340 net, 118 sales. Saved."
+// The one-line confirmation: "Thu 8 Oct: £2,808.00 sales, £468.00 VAT, £2,340.00 net, 118 transactions. Saved."
 export function savedLine(f: ZFigures, today: string) {
   return `${dayLabel(f.business_date!, Number(today.slice(0, 4)))}: ${summary(f)}. Saved.`;
 }
 
 function readLine(f: ZFigures, today: string) {
-  const bits = [summary(f)];
-  if (f.gross_sales !== null && !f.net_estimated) bits.push(`${gbp(f.gross_sales, true)} total with VAT`);
   const when = f.business_date ? `*${dayLabel(f.business_date, Number(today.slice(0, 4)))}*: ` : "";
-  return `${when}${bits.join(", ")}`;
+  return `${when}${summary(f)}`;
 }
 
 export function confirmQuestion(f: ZFigures, problems: string[], today: string) {
@@ -153,7 +156,7 @@ export function dateQuestion(f: ZFigures, today: string) {
   return `🧾 I read ${readLine(f, today)}, but couldn't see the date. Which day is it for? Reply e.g. *yesterday* or *${dayLabel(addDays(today, -1)).replace(/^\w+ /, "")}*, or send a clearer photo.`;
 }
 
-export function replaceQuestion(f: ZFigures, earlier: Pick<ZFigures, "net_sales" | "transactions" | "net_estimated">, today: string) {
+export function replaceQuestion(f: ZFigures, earlier: Pick<ZFigures, "gross_sales" | "vat" | "net_sales" | "transactions" | "net_estimated">, today: string) {
   const day = dayLabel(f.business_date!, Number(today.slice(0, 4)));
   return `🧾 You already sent a report for *${day}* (${summary(earlier)}). This one says ${summary(f)}.\nReplace the earlier one? Reply *REPLACE* or *KEEP*.`;
 }
