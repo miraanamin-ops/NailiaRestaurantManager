@@ -30,6 +30,10 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   undone: { icon: "↩️", label: "Undo" },
   data_deleted: { icon: "🗑️", label: "Data deleted" },
   exported: { icon: "📄", label: "Exported" },
+  staff_added: { icon: "👥", label: "Staff added" },
+  staff_removed: { icon: "👥", label: "Staff removed" },
+  sales_saved: { icon: "🧾", label: "Till report saved" },
+  sales_imported: { icon: "📊", label: "Sales file imported" },
 };
 
 const dayOf = (iso: string) =>

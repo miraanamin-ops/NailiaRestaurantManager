@@ -1,7 +1,9 @@
 // Clears ALL dummy data in one go. Shows what it would delete first; add --yes to delete.
 //   - everything belonging to demo restaurants (restaurants.is_demo = true): customers,
-//     reviews, drafts, campaigns, posts, messages, reports, logs and photos. The
-//     restaurant itself (name, menu, settings) is kept, so it can be re-seeded.
+//     reviews, drafts, campaigns, posts, messages, reports, logs, photos, sales
+//     (till reports, POS files and their saved column layouts, daily/hourly/item
+//     sales). The restaurant itself (name, menu, settings, staff numbers) and its
+//     weather (real, not dummy) are kept, so it can be re-seeded.
 //   - anything test commands or scripts made in any restaurant: NEW REVIEW reviews,
 //     seeded sign-ups and reviews, and messages from the fake test number.
 // Usage: node --env-file=.env.local scripts/clear-dummy-data.mjs [--yes]
@@ -21,6 +23,12 @@ console.log(`Demo restaurants: ${demos.map((d) => d.name).join(", ") || "none"}`
 
 // Children first, so nothing is left pointing at a deleted row.
 const TABLES = [
+  "sales_items",
+  "sales_hours",
+  "sales_days",
+  "z_reports",
+  "pos_imports",
+  "pos_layouts",
   "audit_log",
   "campaign_sends",
   "campaigns",
@@ -68,13 +76,21 @@ if (YES) {
   ok(await s.from("messages").delete().or(`from_number.eq."${TEST_NUMBER}",to_number.eq."${TEST_NUMBER}"`), "delete test messages");
 }
 
-// Photos sent for Google posts, stored under each demo restaurant's folder.
+// Photos sent for Google posts, stored under each demo restaurant's folder, and
+// till report photos and POS files (private bucket, in z-reports/ and pos/ folders).
 for (const id of ids) {
   const { data: files } = await s.storage.from("post-photos").list(id, { limit: 1000 });
   const paths = (files ?? []).map((f) => `${id}/${f.name}`);
   total += paths.length;
   console.log(`${YES ? "Deleting" : "Would delete"} ${String(paths.length).padStart(5)} photos`);
   if (YES && paths.length) await s.storage.from("post-photos").remove(paths);
+  for (const folder of ["z-reports", "pos"]) {
+    const { data: saved } = await s.storage.from("sales-files").list(`${id}/${folder}`, { limit: 1000 });
+    const salesPaths = (saved ?? []).map((f) => `${id}/${folder}/${f.name}`);
+    total += salesPaths.length;
+    console.log(`${YES ? "Deleting" : "Would delete"} ${String(salesPaths.length).padStart(5)} ${folder === "pos" ? "sales files" : "till report photos"}`);
+    if (YES && salesPaths.length) await s.storage.from("sales-files").remove(salesPaths);
+  }
 }
 
 if (YES) {
@@ -88,7 +104,7 @@ if (YES) {
       "reset demo restaurants",
     );
   }
-  console.log(`\nDone: ${total} dummy rows and files cleared. Re-seed with scripts/seed-two-weeks.mjs if you want test data again.`);
+  console.log(`\nDone: ${total} dummy rows and files cleared. Re-seed with scripts/seed-two-weeks.mjs and scripts/seed-sales.mjs if you want test data again.`);
 } else {
   console.log(`\n${total} dummy rows and files would be cleared. Nothing has been deleted. Run again with --yes to delete them.`);
 }

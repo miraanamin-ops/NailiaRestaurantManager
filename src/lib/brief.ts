@@ -7,6 +7,7 @@ import { google } from "@/lib/google";
 import { stars } from "@/lib/google-jobs";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
+import { zNudgeFor } from "@/lib/sales/z-reports";
 import { attemptSend, type SendResult } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural, shorten } from "@/lib/text";
@@ -133,6 +134,12 @@ export async function sendBrief(
   // Customers' good private feedback (bad feedback was messaged straight away).
   const feedback = await feedbackForBrief(restaurant.id);
   extra = [...extra, ...(feedback.lines.length ? [feedback.lines.join("\n")] : [])];
+  // "No till report for yesterday yet" (only for restaurants that send them). Never stops the brief.
+  const nudge = await zNudgeFor(restaurant, now).catch((err) => {
+    console.error("Till report nudge failed", err);
+    return null;
+  });
+  if (nudge) extra = [...extra, nudge];
   if (!items.length && !tally.length && !extra.length) return { sent: false, items: 0, tally };
 
   const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(restaurant.id, items)]);

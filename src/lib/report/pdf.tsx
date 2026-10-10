@@ -17,6 +17,9 @@ import {
   type ReportData,
   type ReportSection,
   type ReputationSection,
+  type SalesSection,
+  type ValueFormat,
+  SALES_FOOTNOTE,
 } from "./types";
 
 // The same report as the web page, as a clean A4 PDF in the restaurant's colours.
@@ -68,12 +71,12 @@ const s = StyleSheet.create({
   footer: { position: "absolute", bottom: 18, left: 40, right: 40, fontSize: 8, color: FAINT, flexDirection: "row", justifyContent: "space-between" },
 });
 
-function ChangeText({ value, format = "count" }: { value: Compare; format?: "rating" | "count" }) {
+function ChangeText({ value, format = "count" }: { value: Compare; format?: ValueFormat }) {
   const d = direction(value, format);
   return <Text style={[s.change, { color: d === "same" ? FAINT : d === "up" ? GOOD : BAD }]}>{clean(changeText(value, format))}</Text>;
 }
 
-function Stat({ label, value, format = "count", big = false }: { label: string; value: Compare; format?: "rating" | "count"; big?: boolean }) {
+function Stat({ label, value, format = "count", big = false }: { label: string; value: Compare; format?: ValueFormat; big?: boolean }) {
   return (
     <View style={s.stat}>
       <Text style={big ? s.bigValue : s.value}>{formatValue(value.now, format)}</Text>
@@ -83,7 +86,7 @@ function Stat({ label, value, format = "count", big = false }: { label: string; 
   );
 }
 
-function Chart({ daily, brand, what }: { daily: Daily; brand: string; what: string }) {
+function Chart({ daily, brand, what, format = String }: { daily: Daily; brand: string; what: string; format?: (n: number) => string }) {
   const totals = weekTotals(daily);
   const w = 515; // A4 width minus margins, in points
   const scale = w / CHART.width;
@@ -98,11 +101,11 @@ function Chart({ daily, brand, what }: { daily: Daily; brand: string; what: stri
       <View style={s.legend}>
         <View style={s.legendItem}>
           <View style={[s.swatch, { backgroundColor: MUTED_BAR }]} />
-          <Text>Week before: {totals.before}</Text>
+          <Text>Week before: {clean(format(totals.before))}</Text>
         </View>
         <View style={s.legendItem}>
           <View style={[s.swatch, { backgroundColor: brand }]} />
-          <Text>Last week: {totals.now}</Text>
+          <Text>Last week: {clean(format(totals.now))}</Text>
         </View>
         <Text style={{ fontSize: 8, color: FAINT }}>
           {what} per day, {clean(daily.days[0])} to {clean(daily.days[13])}
@@ -138,6 +141,52 @@ function Headline({ x, data }: { x: HeadlineSection; data: ReportData }) {
           </View>
         ))}
       </View>
+    </View>
+  );
+}
+
+const money = (n: number) => formatValue(n, "money");
+
+function Sales({ x, brand }: { x: SalesSection; brand: string }) {
+  const notes = [
+    x.daysWithData.now < 7 ? `Figures for ${x.daysWithData.now} of last week's 7 days.` : null,
+    x.topItems.length ? "Item totals include VAT." : null,
+    x.netEstimated ? "Some days come from till exports that only give totals with VAT, so their net is worked out at 20% VAT." : null,
+    x.dummy ? "Includes dummy sales data for testing." : null,
+    SALES_FOOTNOTE,
+  ].filter((n): n is string => Boolean(n));
+  return (
+    <View style={s.section} wrap={false}>
+      <Text style={s.h2}>{SECTION_TITLES.sales}</Text>
+      <View style={s.row}>
+        <Stat label="Net sales (excluding VAT)" value={x.net} format="money" big />
+        {x.avgSpend && <Stat label="Average spend per sale" value={x.avgSpend} format="money" />}
+        {x.transactions && <Stat label="Number of sales" value={x.transactions} />}
+      </View>
+      {x.lastMonth !== null && (
+        <Text style={[s.change, { color: SOFT }]}>{clean(changeText({ now: x.net.now, before: x.lastMonth }, "money", "the same week last month"))}</Text>
+      )}
+      <Chart daily={x.daily} brand={brand} what="Net sales" format={money} />
+      {x.best && x.worst && (
+        <Text style={[s.item, { marginTop: 8 }]}>
+          Best day: {clean(x.best.day)} ({clean(money(x.best.amount))}). Quietest: {clean(x.worst.day)} ({clean(money(x.worst.amount))}).
+        </Text>
+      )}
+      {x.topItems.length > 0 && (
+        <View style={{ marginTop: 8 }}>
+          <Text style={s.h3}>Top {x.topItems.length} items last week</Text>
+          {x.topItems.map((t, i) => (
+            <Text key={t.name} style={s.item}>
+              {i + 1}. {clean(t.name)}: {t.quantity} sold, {clean(money(t.amount))}
+            </Text>
+          ))}
+        </View>
+      )}
+      {notes.map((n) => (
+        <Text key={n} style={[s.item, { fontSize: 8, color: FAINT, marginBottom: 1 }]}>
+          {clean(n)}
+        </Text>
+      ))}
     </View>
   );
 }
@@ -245,6 +294,8 @@ function PdfSection({ section, data }: { section: ReportSection; data: ReportDat
   switch (section.id) {
     case "headline":
       return <Headline x={section} data={data} />;
+    case "sales":
+      return <Sales x={section} brand={brand} />;
     case "reputation":
       return <Reputation x={section} brand={brand} />;
     case "customers":

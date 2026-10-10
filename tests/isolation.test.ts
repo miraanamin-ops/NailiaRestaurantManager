@@ -243,6 +243,88 @@ describe("incoming WhatsApp messages", () => {
   });
 });
 
+describe("sales data", () => {
+  const STAFF_B = "whatsapp:+447700900555";
+  const addSales = () => {
+    db.tables.staff_numbers = [{ id: "sb", restaurant_id: B, whatsapp: STAFF_B, added_at: "2026-10-01T00:00:00Z", removed_at: null }];
+    // A week of A's sales; B has none.
+    db.tables.sales_days = Array.from({ length: 7 }, (_, i) => ({
+      id: `sd${i}`, restaurant_id: A, day: `2026-10-0${i + 3}`, net_sales: 2000 + i, transactions: 90, net_estimated: false, is_dummy: false, source: "z_report",
+    }));
+    db.tables.sales_items = [{ id: "si1", restaurant_id: A, day: "2026-10-05", hour: null, item: "Lamb Chops", quantity: 10, amount: 139.5, row_key: "k1", is_dummy: false }];
+    // B's till report waiting for B's owner to say YES, and a file layout A has learned.
+    db.tables.z_reports = [{
+      id: "zb", restaurant_id: B, business_date: "2026-10-08", net_sales: 900, gross_sales: 1080, vat: 180, transactions: 100, card: 1000, cash: 0, other_payments: null,
+      discounts: null, refunds: null, hourly: [], read: null, problems: ["card + cash"], status: "needs_confirm", sent_by: OWNER_B, sender_role: "owner",
+      is_dummy: false, created_at: new Date().toISOString(),
+    }];
+    db.tables.pos_layouts = [{ id: "la", restaurant_id: A, signature: "x", headers: [], mapping: {}, pos_name: null }];
+  };
+
+  test("a staff number's messages only ever reach its own restaurant", async () => {
+    addSales();
+    process.env.TWILIO_ACCOUNT_SID = "ACtest";
+    process.env.TWILIO_AUTH_TOKEN = "test-twilio-auth-token";
+    const handleStaffMessage = vi.fn(async () => {});
+    const handleMessage = vi.fn(async () => {});
+    vi.doMock("@/lib/sales/whatsapp", () => ({ handleStaffMessage }));
+    vi.doMock("@/lib/bot", () => ({ handleMessage }));
+    vi.doMock("next/server", async (orig) => ({ ...(await orig<object>()), after: fakeAfter }));
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("@/app/api/whatsapp/route");
+    const url = "https://naila.test/api/whatsapp";
+    const params = { From: STAFF_B, To: SANDBOX, Body: "PAUSE", MessageSid: "SMstaff1" };
+    const sig = twilio.getExpectedTwilioSignature("test-twilio-auth-token", url, params);
+    await POST(new NextRequest(url, { method: "POST", body: new URLSearchParams(params), headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": sig } }));
+    await flushAfter();
+    vi.doUnmock("@/lib/sales/whatsapp");
+    vi.doUnmock("@/lib/bot");
+    vi.doUnmock("next/server");
+    expect(handleMessage).not.toHaveBeenCalled(); // never the owner's assistant
+    expect(handleStaffMessage).toHaveBeenCalledWith(expect.objectContaining({ restaurantId: B, staffNumber: STAFF_B }));
+    expect(db.tables.messages.at(-1)).toMatchObject({ restaurant_id: B, from_number: STAFF_B });
+  });
+
+  test("one restaurant's sales never appear in another's weekly report", async () => {
+    addSales();
+    vi.doMock("@/lib/assistant", async (orig) => ({
+      ...(await orig<object>()),
+      writeReportInsights: async () => {
+        throw new Error("no AI in tests");
+      },
+    }));
+    const { loadRestaurantContext } = await import("@/lib/assistant");
+    const { createReport, reportPeriod } = await import("@/lib/report/build");
+    const period = reportPeriod(NOON_UK, false);
+    const a = await createReport(await loadRestaurantContext(A, { realTime: true }), period);
+    const b = await createReport(await loadRestaurantContext(B, { realTime: true }), period);
+    vi.doUnmock("@/lib/assistant");
+    const salesOf = (r: typeof a) => r.data.sections.find((s) => s.id === "sales");
+    expect(salesOf(a)).toMatchObject({ net: { now: 14021 }, topItems: [{ name: "Lamb Chops" }] });
+    expect(salesOf(b)).toBeUndefined(); // B has no sales, so no Sales section at all
+  });
+
+  test("a till report question or a new file can only be answered by its own restaurant", async () => {
+    addSales();
+    const { pendingZReport } = await import("@/lib/sales/z-reports");
+    // A's owner using B's owner number inside A finds nothing; only B sees B's question.
+    expect(await pendingZReport({ restaurantId: A, number: OWNER_B }, new Date())).toBeNull();
+    expect((await pendingZReport({ restaurantId: B, number: OWNER_B }, new Date()))?.id).toBe("zb");
+    const { confirmImport } = await import("@/lib/sales/pos-import");
+    db.tables.pos_imports = [{ id: "pb", restaurant_id: B, file_path: "x", file_type: "csv", status: "needs_mapping", channel: "web", created_at: new Date().toISOString() }];
+    const tryA = await confirmImport(A, "pb", { date: "Date", time: null, item: "Item", quantity: null, price: "Total", price_is: "line_total", receipt: null, date_order: "dmy" });
+    expect(tryA.message).toBe("I couldn't find that file.");
+    expect(db.tables.pos_imports[0].status).toBe("needs_mapping");
+  });
+
+  test("a staff number belongs to one restaurant: another can't add it", async () => {
+    addSales();
+    const { addStaff } = await import("@/lib/sales/staff");
+    expect(await addStaff(db.tables.restaurants[0] as never, "+447700900555")).toMatch(/already staff for another restaurant/);
+    expect(db.tables.staff_numbers).toHaveLength(1);
+  });
+});
+
 describe("scheduled jobs", () => {
   test("every active restaurant is processed, and one failing doesn't stop the others", async () => {
     process.env.CRON_SECRET = "secret";
@@ -283,7 +365,7 @@ describe("logged-in pages", () => {
 describe("no query forgets which restaurant it's for", () => {
   // Restaurant-owned tables: every read or write of them must say which restaurant
   // (or a specific row by id/token). A new query that doesn't fails this test.
-  const OWNED = ["customers", "reviews", "drafts", "campaigns", "campaign_sends", "sent_log", "audit_log", "reports", "google_posts", "rewards", "consents", "customer_events", "draft_feedback", "blocked_sends", "messages", "onboarding", "feedback", "feedback_requests"];
+  const OWNED = ["customers", "reviews", "drafts", "campaigns", "campaign_sends", "sent_log", "audit_log", "reports", "google_posts", "rewards", "consents", "customer_events", "draft_feedback", "blocked_sends", "messages", "onboarding", "feedback", "feedback_requests", "z_reports", "sales_days", "sales_hours", "sales_items", "pos_layouts", "pos_imports", "weather_days", "staff_numbers"];
   const SCOPED = /restaurant_id|\.eq\("id"|\.in\("id"|eq\("token"|eq\("draft_id"|in\("draft_id"|eq\("campaign_id"|eq\("customer_id"|eq\("unsubscribe_token"|eq\("confirm_token"|eq\("request_id"|eq\("review_id"|in\("review_id"|eq\("batch_id"|is\("restaurant_id"/;
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {

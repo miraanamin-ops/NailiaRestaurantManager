@@ -14,6 +14,9 @@ import {
   type ReportData,
   type ReportSection,
   type ReputationSection,
+  type SalesSection,
+  type ValueFormat,
+  SALES_FOOTNOTE,
 } from "@/lib/report/types";
 
 // One renderer per section id. A section type with no renderer here is skipped,
@@ -25,6 +28,8 @@ export function Section({ section, ctx }: { section: ReportSection; ctx: Ctx }) 
   switch (section.id) {
     case "headline":
       return <Headline s={section} ctx={ctx} />;
+    case "sales":
+      return <Sales s={section} ctx={ctx} />;
     case "reputation":
       return <Reputation s={section} ctx={ctx} />;
     case "customers":
@@ -48,7 +53,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 // "▲ +3 vs the week before". Up isn't always good (e.g. complaints), so callers can flip it.
-function Change({ value, format = "count", goodWhenUp = true }: { value: Compare; format?: "rating" | "count"; goodWhenUp?: boolean }) {
+function Change({ value, format = "count", goodWhenUp = true }: { value: Compare; format?: ValueFormat; goodWhenUp?: boolean }) {
   const d = direction(value, format);
   const good = d === "same" ? null : (d === "up") === goodWhenUp;
   const cls = good === null ? "text-stone-500" : good ? "text-emerald-700" : "text-red-700";
@@ -61,7 +66,7 @@ function Change({ value, format = "count", goodWhenUp = true }: { value: Compare
   );
 }
 
-function Stat({ label, value, format = "count", big = false }: { label: string; value: Compare; format?: "rating" | "count"; big?: boolean }) {
+function Stat({ label, value, format = "count", big = false }: { label: string; value: Compare; format?: ValueFormat; big?: boolean }) {
   return (
     <div className="min-w-0">
       <div className={`${big ? "text-4xl" : "text-2xl"} font-bold tabular-nums tracking-tight text-stone-900`}>{formatValue(value.now, format)}</div>
@@ -71,7 +76,7 @@ function Stat({ label, value, format = "count", big = false }: { label: string; 
   );
 }
 
-function Bars({ daily, brand, what }: { daily: Daily; brand: string; what: string }) {
+function Bars({ daily, brand, what, format = String }: { daily: Daily; brand: string; what: string; format?: (n: number) => string }) {
   const totals = weekTotals(daily);
   const b = bars(daily);
   return (
@@ -80,11 +85,11 @@ function Bars({ daily, brand, what }: { daily: Daily; brand: string; what: strin
         viewBox={`0 0 ${CHART.width} ${CHART.height}`}
         className="h-auto w-full"
         role="img"
-        aria-label={`${what} per day: ${totals.before} the week before, ${totals.now} last week`}
+        aria-label={`${what} per day: ${format(totals.before)} the week before, ${format(totals.now)} last week`}
       >
         {b.map((bar) => (
           <rect key={bar.day + bar.x} x={bar.x} y={bar.y} width={bar.w} height={bar.h} rx={2} fill={bar.lastWeek ? brand : MUTED_BAR}>
-            <title>{`${bar.day}: ${bar.value} ${what.toLowerCase()}`}</title>
+            <title>{`${bar.day}: ${format(bar.value)} ${what.toLowerCase()}`}</title>
           </rect>
         ))}
         <line x1={0} x2={CHART.width} y1={CHART.height - CHART.labelSpace + 0.5} y2={CHART.height - CHART.labelSpace + 0.5} stroke="#e7e5e4" />
@@ -98,11 +103,11 @@ function Bars({ daily, brand, what }: { daily: Daily; brand: string; what: strin
       <figcaption className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-600">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: MUTED_BAR }} />
-          Week before: {totals.before}
+          Week before: {format(totals.before)}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: brand }} />
-          Last week: {totals.now}
+          Last week: {format(totals.now)}
         </span>
         <span className="text-stone-500">{what} per day</span>
       </figcaption>
@@ -128,6 +133,56 @@ function Headline({ s, ctx }: { s: HeadlineSection; ctx: Ctx }) {
         ))}
       </div>
     </section>
+  );
+}
+
+const money = (n: number) => formatValue(n, "money");
+
+function Sales({ s, ctx }: { s: SalesSection; ctx: Ctx }) {
+  return (
+    <Card title={SECTION_TITLES.sales}>
+      <Stat label="Net sales (excluding VAT)" value={s.net} format="money" big />
+      {s.lastMonth !== null && (
+        <p className="mt-1 text-xs text-stone-600">{changeText({ now: s.net.now, before: s.lastMonth }, "money", "the same week last month")}</p>
+      )}
+      {(s.avgSpend || s.transactions) && (
+        <div className="mt-5 grid grid-cols-2 gap-4">
+          {s.avgSpend && <Stat label="Average spend per sale" value={s.avgSpend} format="money" />}
+          {s.transactions && <Stat label="Number of sales" value={s.transactions} />}
+        </div>
+      )}
+      <Bars daily={s.daily} brand={ctx.brand} what="Net sales" format={money} />
+      {s.best && s.worst && (
+        <p className="mt-3 text-sm text-stone-700">
+          Best day: <strong className="text-stone-900">{s.best.day}</strong> ({money(s.best.amount)}) · Quietest:{" "}
+          <strong className="text-stone-900">{s.worst.day}</strong> ({money(s.worst.amount)})
+        </p>
+      )}
+      {s.topItems.length > 0 && (
+        <div className="mt-5 border-t border-stone-100 pt-4">
+          <h3 className="mb-2 text-sm font-semibold text-stone-800">Top {s.topItems.length} items last week</h3>
+          <ol className="space-y-1.5 text-sm">
+            {s.topItems.map((t, i) => (
+              <li key={t.name} className="flex items-baseline justify-between gap-3 rounded-lg bg-stone-50 px-3 py-2">
+                <span className="min-w-0 truncate text-stone-900">
+                  {i + 1}. {t.name}
+                </span>
+                <span className="shrink-0 tabular-nums text-stone-600">
+                  {t.quantity} sold · {money(t.amount)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <div className="mt-4 space-y-1 text-xs text-stone-500">
+        {s.daysWithData.now < 7 && <p>Figures for {s.daysWithData.now} of last week&apos;s 7 days.</p>}
+        {s.topItems.length > 0 && <p>Item totals include VAT.</p>}
+        {s.netEstimated && <p>Some days come from till exports that only give totals with VAT, so their net is worked out at 20% VAT.</p>}
+        {s.dummy && <p>Includes dummy sales data for testing.</p>}
+        <p>{SALES_FOOTNOTE}</p>
+      </div>
+    </Card>
   );
 }
 

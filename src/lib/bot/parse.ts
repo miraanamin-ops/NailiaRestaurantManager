@@ -46,7 +46,14 @@ export type Command =
   | { name: "reward" | "qr" | "birthday_campaign" | "campaign_results" | "which_report" }
   | { name: "my_email"; email: string }
   | { name: "reset_onboarding" }
-  | { name: "export_customers" | "email_previews" | "run_feedback" };
+  | { name: "export_customers" | "email_previews" | "run_feedback" }
+  | { name: "add_staff" | "remove_staff"; number: string }
+  | { name: "staff" | "sales" | "run_weather" }
+  | { name: "sample_z" | "test_z"; sample: ZSample };
+
+// The sample till reports (public/samples/): 1-3 read cleanly, "bad" is blurred and cut off.
+export const Z_SAMPLES = ["1", "2", "3", "bad"] as const;
+export type ZSample = (typeof Z_SAMPLES)[number];
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -92,6 +99,17 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (/^EXPORT( MY)? (CUSTOMERS|CUSTOMER LIST|LIST)$/.test(t)) return { name: "export_customers" };
   if (t === "EMAIL PREVIEWS" || t === "EMAIL PREVIEW" || t === "PREVIEW EMAILS") return { name: "email_previews" };
   if (t === "RUN FEEDBACK") return { name: "run_feedback" };
+  // Staff numbers: "ADD STAFF +447700900123", "REMOVE STAFF 07700 900123", "STAFF"
+  const staff = t.match(/^(ADD|REMOVE|DELETE) STAFF(?: NUMBER)?:? ([+\d][\d ()-]{6,})$/);
+  if (staff) return { name: staff[1] === "ADD" ? "add_staff" : "remove_staff", number: staff[2].trim() };
+  if (t === "STAFF" || t === "STAFF NUMBERS" || t === "MY STAFF") return { name: "staff" };
+  if (t === "SALES" || t === "UPLOAD SALES" || t === "SALES PAGE") return { name: "sales" };
+  if (t === "RUN WEATHER" || t === "WEATHER") return { name: "run_weather" };
+  // "SAMPLE ZREPORT 2" sends you sample till report 2 to forward back; "TEST ZREPORT BAD" pretends you just sent it.
+  const z = t.match(/^(SAMPLE|TEST) Z(?:[- ]?REPORT)?(?: (\d|BAD))?$/);
+  if (z && (!z[2] || (Z_SAMPLES as readonly string[]).includes(z[2].toLowerCase()))) {
+    return { name: z[1] === "SAMPLE" ? "sample_z" : "test_z", sample: (z[2]?.toLowerCase() ?? "1") as ZSample };
+  }
   if (t === "BIRTHDAY CAMPAIGN") return { name: "birthday_campaign" };
   if (t === "CAMPAIGN RESULTS" || t === "CAMPAIGN RESULT" || t === "CAMPAIGN REPORT") return { name: "campaign_results" };
   // REPORT on its own was easy to confuse with RUN REPORT, so it asks which one.

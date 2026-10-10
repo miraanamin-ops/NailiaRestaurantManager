@@ -3,6 +3,8 @@ import twilio from "twilio";
 import { handleMessage } from "@/lib/bot";
 import { findLinkCode } from "@/lib/onboarding/steps";
 import { handleOnboardingMessage, linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
+import { findStaff } from "@/lib/sales/staff";
+import { handleStaffMessage } from "@/lib/sales/whatsapp";
 import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
 
@@ -55,15 +57,18 @@ export async function POST(req: NextRequest) {
     .select("id")
     .eq("owner_whatsapp", owner)
     .maybeSingle<{ id: string }>();
+  // Not an owner: maybe a staff number the owner registered (ADD STAFF), which
+  // can only send till reports and sales files for that one restaurant.
+  const staff = restaurant || linkCode ? null : await findStaff(owner);
   const { error: inboundError } = await supabase.from("messages").insert({
-    restaurant_id: restaurant?.id ?? null,
+    restaurant_id: restaurant?.id ?? staff?.restaurant_id ?? null,
     direction: "inbound",
     from_number: owner,
     to_number: sandbox,
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
-    error: restaurant || linkCode ? null : "Ignored: not a registered owner number",
+    error: restaurant || linkCode || staff ? null : "Ignored: not a registered owner number",
   });
   // Twilio sometimes delivers the same message twice. Each message id can only be
   // logged once (unique index), so a second copy is a duplicate: do nothing.
@@ -78,6 +83,11 @@ export async function POST(req: NextRequest) {
   // test phone can also move itself between demo restaurants this way.)
   if (linkCode) {
     after(() => linkFromWhatsApp(linkCode, owner, sandbox));
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
+
+  if (staff) {
+    after(() => handleStaffMessage({ restaurantId: staff.restaurant_id, staffNumber: owner, sandbox, body, media }));
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 

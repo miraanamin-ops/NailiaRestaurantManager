@@ -10,6 +10,7 @@ import { checkJobHealth, finishRun, startRun, type Job } from "@/lib/job-runs";
 import { runFeedbackJob } from "@/lib/feedback";
 import { runMorning } from "@/lib/morning";
 import { clearOldRateLimits } from "@/lib/rate-limit";
+import { runWeather } from "@/lib/sales/weather";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -18,7 +19,7 @@ export const maxDuration = 300;
 
 // Scheduled jobs. All need the CRON_SECRET password.
 //   ?job=hourly  (Supabase pg_cron, 5 past every hour): check for new Google reviews,
-//                send "How was your visit?" emails that are due;
+//                send "How was your visit?" emails that are due, store today's weather;
 //                from 9am UK time, also the morning job (once a day)
 //   ?job=daily   (Vercel cron, 09:00 UTC = 9am or 10am UK): a backup for the
 //                morning job, and a check that the hourly job is still running
@@ -91,6 +92,13 @@ async function runJob(job: Job) {
       } catch (err) {
         console.error("Feedback emails failed", err);
         entry.feedback = { error: err instanceof Error ? err.message : String(err) };
+      }
+      // Today's weather (once a day; the first time, the last 12 months too).
+      try {
+        entry.weather = await runWeather(r, now);
+      } catch (err) {
+        console.error("Weather failed", err);
+        entry.weather = { error: err instanceof Error ? err.message : String(err) };
       }
     }
     try {

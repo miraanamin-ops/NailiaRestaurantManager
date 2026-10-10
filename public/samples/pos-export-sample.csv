@@ -1,0 +1,527 @@
+TillPoint - Item Sales Export
+Ember & Spice Grill,Period: 05/10/2026 - 07/10/2026
+
+Date,Time,Receipt No,Category,Item,Qty,Unit Price,Line Total,Discount,Staff,Customer,Payment
+05/10/2026,12:35,50212,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Card
+05/10/2026,12:35,50212,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Card
+05/10/2026,12:43,50213,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+05/10/2026,12:43,50213,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Dan,,Card
+05/10/2026,12:43,50213,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+05/10/2026,12:43,50213,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+05/10/2026,12:30,50214,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Cash
+05/10/2026,12:30,50214,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Cash
+05/10/2026,12:30,50214,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Cash
+05/10/2026,12:30,50214,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Cash
+05/10/2026,12:56,50215,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,,Card
+05/10/2026,12:56,50215,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+05/10/2026,12:14,50216,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,R. Patel,Cash
+05/10/2026,12:14,50216,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,R. Patel,Cash
+05/10/2026,12:14,50216,Grills,Chicken Tikka,1,9.50,9.50,0.00,Priya,R. Patel,Cash
+05/10/2026,12:07,50217,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Cash
+05/10/2026,12:07,50217,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Amira,,Cash
+05/10/2026,12:07,50217,Sides,Rice,1,2.95,2.95,0.00,Amira,,Cash
+05/10/2026,13:50,50218,Sides,Rice,1,2.95,2.95,0.00,Amira,,Cash
+05/10/2026,13:58,50219,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+05/10/2026,13:58,50219,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+05/10/2026,13:58,50219,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,,Card
+05/10/2026,13:58,50219,Sides,Garlic Naan,2,2.95,5.90,0.00,Amira,,Card
+05/10/2026,13:11,50220,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+05/10/2026,13:11,50220,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Dan,,Card
+05/10/2026,13:45,50221,Sides,Garlic Naan,2,2.95,5.90,0.00,Amira,,Card
+05/10/2026,13:45,50221,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Card
+05/10/2026,13:09,50222,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Priya,,Card
+05/10/2026,13:09,50222,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,,Card
+05/10/2026,13:09,50222,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Card
+05/10/2026,13:01,50223,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Priya,,Card
+05/10/2026,13:56,50224,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Yusuf,A. Khan,Card
+05/10/2026,13:56,50224,Grills,Chicken Tikka,2,9.50,19.00,0.00,Yusuf,A. Khan,Card
+05/10/2026,13:56,50224,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Yusuf,A. Khan,Card
+05/10/2026,13:56,50224,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,A. Khan,Card
+05/10/2026,13:55,50225,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+05/10/2026,14:05,50226,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Yusuf,,Card
+05/10/2026,14:05,50226,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Yusuf,,Card
+05/10/2026,14:27,50227,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,J. Smith,Card
+05/10/2026,14:27,50227,Drinks & Desserts,Karak Chai,2,2.50,5.00,0.00,Yusuf,J. Smith,Card
+05/10/2026,14:27,50227,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,J. Smith,Card
+05/10/2026,14:27,50227,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,J. Smith,Card
+05/10/2026,14:37,50228,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Card
+05/10/2026,14:37,50228,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+05/10/2026,15:20,50229,Sides,Rice,2,2.95,5.90,0.00,Yusuf,,Cash
+05/10/2026,15:20,50229,Grills,Chicken Tikka,1,9.50,9.50,0.00,Yusuf,,Cash
+05/10/2026,15:20,50229,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,,Cash
+05/10/2026,15:27,50230,Grills,Chicken Tikka,1,9.50,9.50,0.00,Yusuf,,Card
+05/10/2026,15:27,50230,Burgers & Wraps,Chicken Tikka Wrap,2,7.50,15.00,0.00,Yusuf,,Card
+05/10/2026,15:27,50230,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Yusuf,,Card
+05/10/2026,15:27,50230,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+05/10/2026,16:44,50231,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,A. Khan,Cash
+05/10/2026,16:44,50231,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,A. Khan,Cash
+05/10/2026,16:37,50232,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Priya,S. Ahmed,Card
+05/10/2026,16:37,50232,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Priya,S. Ahmed,Card
+05/10/2026,16:37,50232,Sides,Rice,1,2.95,2.95,0.00,Priya,S. Ahmed,Card
+05/10/2026,17:29,50233,Grills,Chicken Tikka,1,9.50,9.50,0.00,Priya,,Card
+05/10/2026,17:29,50233,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+05/10/2026,17:29,50233,Sides,Masala Chips,2,3.50,7.00,0.00,Priya,,Card
+05/10/2026,17:06,50234,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,A. Khan,Card
+05/10/2026,17:06,50234,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,A. Khan,Card
+05/10/2026,17:06,50234,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,A. Khan,Card
+05/10/2026,17:06,50234,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,A. Khan,Card
+05/10/2026,17:07,50235,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Yusuf,,Cash
+05/10/2026,17:07,50235,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Cash
+05/10/2026,17:07,50235,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Cash
+05/10/2026,17:18,50236,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Amira,A. Khan,Card
+05/10/2026,17:18,50236,Sides,Garlic Naan,2,2.95,5.90,0.00,Amira,A. Khan,Card
+05/10/2026,17:18,50236,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,A. Khan,Card
+05/10/2026,17:18,50236,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,A. Khan,Card
+05/10/2026,18:57,50237,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Amira,S. Ahmed,Cash
+05/10/2026,18:42,50238,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Cash
+05/10/2026,18:42,50238,Grills,Seekh Kebab (2 pcs),2,7.95,15.90,0.00,Amira,,Cash
+05/10/2026,18:15,50239,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Yusuf,,Card
+05/10/2026,18:15,50239,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,,Card
+05/10/2026,18:15,50239,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+05/10/2026,18:07,50240,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+05/10/2026,18:07,50240,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Yusuf,,Card
+05/10/2026,18:35,50241,Sides,Masala Chips,2,3.50,7.00,0.00,Priya,S. Ahmed,Card
+05/10/2026,18:35,50241,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,S. Ahmed,Card
+05/10/2026,18:35,50241,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,S. Ahmed,Card
+05/10/2026,18:35,50241,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,S. Ahmed,Card
+05/10/2026,18:51,50242,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Card
+05/10/2026,18:51,50242,Drinks & Desserts,Karak Chai,2,2.50,5.00,0.00,Dan,,Card
+05/10/2026,18:51,50242,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+05/10/2026,18:32,50243,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,J. Smith,Card
+05/10/2026,18:32,50243,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,J. Smith,Card
+05/10/2026,18:32,50243,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,J. Smith,Card
+05/10/2026,18:32,50243,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Dan,J. Smith,Card
+05/10/2026,18:32,50244,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+05/10/2026,18:28,50245,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Amira,,Cash
+05/10/2026,18:28,50245,Sides,Masala Chips,2,3.50,7.00,0.00,Amira,,Cash
+05/10/2026,18:28,50245,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Cash
+05/10/2026,18:38,50246,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,,Card
+05/10/2026,19:21,50247,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,S. Ahmed,Card
+05/10/2026,19:04,50248,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+05/10/2026,19:21,50249,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+05/10/2026,19:21,50249,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Yusuf,,Card
+05/10/2026,19:21,50249,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+05/10/2026,19:46,50250,Sides,Masala Chips,2,3.50,7.00,0.00,Priya,,Card
+05/10/2026,19:46,50250,Grills,Chicken Tikka,2,9.50,19.00,0.00,Priya,,Card
+05/10/2026,19:46,50250,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+05/10/2026,19:46,50250,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,,Card
+05/10/2026,19:38,50251,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Priya,,Card
+05/10/2026,19:47,50252,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Dan,,Cash
+05/10/2026,19:47,50252,Sides,Masala Chips,2,3.50,7.00,0.00,Dan,,Cash
+05/10/2026,19:09,50253,Sides,Garlic Naan,2,2.95,5.90,0.00,Dan,,Card
+05/10/2026,19:09,50253,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+05/10/2026,19:09,50253,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,,Card
+05/10/2026,19:23,50254,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+05/10/2026,19:23,50254,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Card
+05/10/2026,19:23,50254,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Dan,,Card
+05/10/2026,19:23,50254,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Card
+05/10/2026,19:30,50255,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Cash
+05/10/2026,19:30,50255,Sides,Masala Chips,2,3.50,7.00,0.00,Dan,,Cash
+05/10/2026,19:27,50256,Drinks & Desserts,Kunafa,2,5.95,11.90,0.00,Dan,,Cash
+05/10/2026,19:27,50256,Sides,Masala Chips,2,3.50,7.00,0.00,Dan,,Cash
+05/10/2026,19:56,50257,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,J. Smith,Card
+05/10/2026,19:56,50257,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,J. Smith,Card
+05/10/2026,19:47,50258,Sides,Garlic Naan,2,2.95,5.90,0.00,Dan,,Cash
+05/10/2026,19:47,50258,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Cash
+05/10/2026,19:47,50258,Grills,Chicken Tikka,1,9.50,9.50,0.00,Dan,,Cash
+05/10/2026,19:47,50258,Grills,Seekh Kebab (2 pcs),2,7.95,15.90,0.00,Dan,,Cash
+05/10/2026,20:19,50259,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,J. Smith,Card
+05/10/2026,20:19,50259,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,J. Smith,Card
+05/10/2026,20:19,50259,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,J. Smith,Card
+05/10/2026,20:19,50259,Grills,Seekh Kebab (2 pcs),2,7.95,15.90,0.00,Priya,J. Smith,Card
+05/10/2026,20:18,50260,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+05/10/2026,20:12,50261,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+05/10/2026,20:12,50261,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+05/10/2026,20:12,50261,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,,Card
+05/10/2026,20:12,50261,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+05/10/2026,20:07,50262,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+05/10/2026,20:07,50262,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Dan,,Card
+05/10/2026,20:07,50262,Sides,Garlic Naan,2,2.95,5.90,0.00,Dan,,Card
+05/10/2026,20:07,50262,Sides,Rice,1,2.95,2.95,0.00,Dan,,Card
+05/10/2026,20:44,50263,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Yusuf,S. Ahmed,Card
+05/10/2026,20:44,50263,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,S. Ahmed,Card
+05/10/2026,20:44,50263,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Yusuf,S. Ahmed,Card
+05/10/2026,20:06,50264,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Yusuf,,Card
+05/10/2026,20:06,50264,Sides,Garlic Naan,2,2.95,5.90,0.00,Yusuf,,Card
+05/10/2026,20:00,50265,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,,Card
+05/10/2026,20:00,50265,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Card
+05/10/2026,20:00,50265,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+05/10/2026,20:00,50265,Sides,Rice,1,2.95,2.95,0.00,Priya,,Card
+05/10/2026,20:33,50266,Sides,Rice,1,2.95,2.95,0.00,Dan,,Cash
+05/10/2026,20:33,50266,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Cash
+05/10/2026,20:33,50266,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Cash
+05/10/2026,20:29,50267,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Amira,,Card
+05/10/2026,20:49,50268,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+05/10/2026,20:49,50268,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Card
+05/10/2026,20:49,50268,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Card
+05/10/2026,20:49,50268,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Amira,,Card
+05/10/2026,21:20,50269,Sides,Rice,1,2.95,2.95,0.00,Priya,,Cash
+05/10/2026,21:20,50269,Sides,Garlic Naan,2,2.95,5.90,0.00,Priya,,Cash
+05/10/2026,21:41,50270,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Dan,,Card
+05/10/2026,21:41,50270,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Dan,,Card
+05/10/2026,21:41,50270,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Dan,,Card
+05/10/2026,21:41,50270,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Dan,,Card
+05/10/2026,21:22,50271,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+05/10/2026,21:10,50272,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+05/10/2026,21:10,50272,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Amira,,Card
+05/10/2026,21:10,50272,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Amira,,Card
+05/10/2026,21:10,50272,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,,Card
+05/10/2026,21:53,50273,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Cash
+05/10/2026,21:53,50273,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Priya,,Cash
+05/10/2026,21:53,50273,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Cash
+05/10/2026,21:53,50273,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Priya,,Cash
+05/10/2026,21:10,50274,Sides,Rice,1,2.95,2.95,0.00,Yusuf,S. Ahmed,Card
+05/10/2026,21:10,50274,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,S. Ahmed,Card
+05/10/2026,22:39,50275,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+05/10/2026,22:26,50276,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+05/10/2026,22:02,50277,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Yusuf,,Card
+05/10/2026,22:02,50277,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+06/10/2026,12:24,50278,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Dan,,Card
+06/10/2026,12:24,50278,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Card
+06/10/2026,12:24,50278,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Card
+06/10/2026,12:50,50279,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Priya,,Card
+06/10/2026,12:39,50280,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,R. Patel,Card
+06/10/2026,12:39,50280,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Yusuf,R. Patel,Card
+06/10/2026,12:39,50280,Grills,Chicken Tikka,1,9.50,9.50,0.00,Yusuf,R. Patel,Card
+06/10/2026,12:39,50280,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Yusuf,R. Patel,Card
+06/10/2026,12:14,50281,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,12:14,50281,Burgers & Wraps,Chicken Tikka Wrap,2,7.50,15.00,0.00,Amira,,Card
+06/10/2026,12:14,50281,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+06/10/2026,12:14,50281,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,12:39,50282,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Dan,,Card
+06/10/2026,12:39,50282,Sides,Rice,2,2.95,5.90,0.00,Dan,,Card
+06/10/2026,12:39,50282,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Dan,,Card
+06/10/2026,12:16,50283,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Amira,,Card
+06/10/2026,13:24,50284,Sides,Rice,2,2.95,5.90,0.00,Amira,S. Ahmed,Card
+06/10/2026,13:24,50284,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,S. Ahmed,Card
+06/10/2026,13:03,50285,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,A. Khan,Card
+06/10/2026,13:03,50285,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Dan,A. Khan,Card
+06/10/2026,13:03,50285,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,A. Khan,Card
+06/10/2026,13:03,50285,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Dan,A. Khan,Card
+06/10/2026,13:11,50286,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Yusuf,,Cash
+06/10/2026,13:16,50287,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+06/10/2026,13:16,50287,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+06/10/2026,13:06,50288,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Priya,,Card
+06/10/2026,13:54,50289,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,13:54,50289,Sides,Masala Chips,2,3.50,7.00,0.00,Amira,,Card
+06/10/2026,13:54,50289,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Card
+06/10/2026,13:54,50289,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+06/10/2026,13:53,50290,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Cash
+06/10/2026,13:53,50290,Drinks & Desserts,Karak Chai,2,2.50,5.00,0.00,Amira,,Cash
+06/10/2026,13:53,50290,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Cash
+06/10/2026,13:21,50291,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+06/10/2026,13:21,50291,Sides,Garlic Naan,2,2.95,5.90,0.00,Amira,,Card
+06/10/2026,13:21,50291,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Card
+06/10/2026,13:21,50291,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+06/10/2026,13:29,50292,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,J. Smith,Card
+06/10/2026,14:01,50293,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,,Card
+06/10/2026,14:01,50293,Sides,Rice,1,2.95,2.95,0.00,Yusuf,,Card
+06/10/2026,14:01,50293,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Yusuf,,Card
+06/10/2026,14:57,50294,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Yusuf,,Card
+06/10/2026,14:40,50295,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+06/10/2026,14:40,50295,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Dan,,Card
+06/10/2026,14:40,50295,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+06/10/2026,14:20,50296,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Priya,R. Patel,Card
+06/10/2026,14:20,50296,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,R. Patel,Card
+06/10/2026,14:20,50296,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,R. Patel,Card
+06/10/2026,15:51,50297,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Yusuf,,Cash
+06/10/2026,15:52,50298,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Cash
+06/10/2026,15:52,50298,Sides,Rice,1,2.95,2.95,0.00,Priya,,Cash
+06/10/2026,16:42,50299,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,S. Ahmed,Card
+06/10/2026,16:42,50299,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Yusuf,S. Ahmed,Card
+06/10/2026,16:42,50299,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Yusuf,S. Ahmed,Card
+06/10/2026,16:42,50299,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Yusuf,S. Ahmed,Card
+06/10/2026,16:04,50300,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Card
+06/10/2026,16:04,50300,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+06/10/2026,16:04,50300,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+06/10/2026,16:04,50300,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+06/10/2026,16:41,50301,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Priya,A. Khan,Cash
+06/10/2026,16:41,50301,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,A. Khan,Cash
+06/10/2026,16:41,50301,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Priya,A. Khan,Cash
+06/10/2026,17:46,50302,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Card
+06/10/2026,17:46,50302,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+06/10/2026,17:46,50302,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Card
+06/10/2026,17:46,50302,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,,Card
+06/10/2026,17:38,50303,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Card
+06/10/2026,17:29,50304,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+06/10/2026,17:24,50305,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+06/10/2026,17:24,50305,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Yusuf,,Card
+06/10/2026,17:24,50305,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+06/10/2026,17:11,50306,Sides,Garlic Naan,2,2.95,5.90,0.00,Dan,,Cash
+06/10/2026,17:11,50306,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Cash
+06/10/2026,17:38,50307,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Cash
+06/10/2026,17:38,50307,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Cash
+06/10/2026,17:38,50307,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Cash
+06/10/2026,17:38,50307,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Amira,,Cash
+06/10/2026,17:26,50308,Grills,Seekh Kebab (2 pcs),2,7.95,15.90,0.00,Dan,,Card
+06/10/2026,17:26,50308,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+06/10/2026,17:26,50308,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+06/10/2026,17:26,50308,Grills,Chicken Tikka,1,9.50,9.50,0.00,Dan,,Card
+06/10/2026,18:23,50309,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,,Cash
+06/10/2026,18:23,50309,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,,Cash
+06/10/2026,18:33,50310,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+06/10/2026,18:33,50310,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+06/10/2026,18:22,50311,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+06/10/2026,18:22,50311,Grills,Chicken Tikka,1,9.50,9.50,0.00,Dan,,Card
+06/10/2026,18:22,50311,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+06/10/2026,18:22,50311,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Dan,,Card
+06/10/2026,18:36,50312,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Amira,,Card
+06/10/2026,18:36,50312,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,18:36,50312,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+06/10/2026,18:36,50312,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+06/10/2026,18:40,50313,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Dan,,Card
+06/10/2026,18:40,50313,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+06/10/2026,18:40,50313,Drinks & Desserts,Kunafa,2,5.95,11.90,0.00,Dan,,Card
+06/10/2026,18:35,50314,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Cash
+06/10/2026,18:35,50314,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Cash
+06/10/2026,18:35,50314,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Cash
+06/10/2026,18:35,50314,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Priya,,Cash
+06/10/2026,18:52,50315,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+06/10/2026,18:23,50316,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,A. Khan,Card
+06/10/2026,19:44,50317,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,A. Khan,Card
+06/10/2026,19:44,50317,Grills,Chicken Tikka,1,9.50,9.50,0.00,Yusuf,A. Khan,Card
+06/10/2026,19:15,50318,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,19:15,50318,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Card
+06/10/2026,19:01,50319,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,,Card
+06/10/2026,19:01,50319,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Yusuf,,Card
+06/10/2026,19:01,50319,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+06/10/2026,19:01,50319,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+06/10/2026,19:36,50320,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Yusuf,,Card
+06/10/2026,19:22,50321,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,J. Smith,Card
+06/10/2026,19:22,50321,Grills,Seekh Kebab (2 pcs),2,7.95,15.90,0.00,Priya,J. Smith,Card
+06/10/2026,19:22,50321,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,J. Smith,Card
+06/10/2026,19:22,50321,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Priya,J. Smith,Card
+06/10/2026,19:31,50322,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Yusuf,J. Smith,Card
+06/10/2026,19:11,50323,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Yusuf,,Cash
+06/10/2026,19:13,50324,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Cash
+06/10/2026,19:13,50324,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Cash
+06/10/2026,19:13,50324,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Cash
+06/10/2026,19:59,50325,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+06/10/2026,19:59,50325,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Amira,,Card
+06/10/2026,19:59,50325,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+06/10/2026,19:59,50325,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+06/10/2026,19:29,50326,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Cash
+06/10/2026,19:29,50326,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Cash
+06/10/2026,19:29,50326,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Cash
+06/10/2026,19:35,50327,Grills,Chicken Tikka,1,9.50,9.50,0.00,Priya,,Card
+06/10/2026,20:32,50328,Sides,Rice,1,2.95,2.95,0.00,Yusuf,,Card
+06/10/2026,20:32,50328,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,,Card
+06/10/2026,20:32,50328,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,,Card
+06/10/2026,20:36,50329,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,A. Khan,Card
+06/10/2026,20:36,50329,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Yusuf,A. Khan,Card
+06/10/2026,20:36,50329,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Yusuf,A. Khan,Card
+06/10/2026,20:24,50330,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,R. Patel,Cash
+06/10/2026,20:24,50330,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,R. Patel,Cash
+06/10/2026,20:12,50331,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Cash
+06/10/2026,20:12,50331,Grills,Chicken Tikka,1,9.50,9.50,0.00,Dan,,Cash
+06/10/2026,20:12,50331,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Cash
+06/10/2026,20:13,50332,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,R. Patel,Card
+06/10/2026,20:13,50332,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,R. Patel,Card
+06/10/2026,20:13,50332,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Yusuf,R. Patel,Card
+06/10/2026,20:13,50332,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Yusuf,R. Patel,Card
+06/10/2026,20:23,50333,Sides,Garlic Naan,2,2.95,5.90,0.00,Amira,,Card
+06/10/2026,20:23,50333,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+06/10/2026,20:08,50334,Grills,Chicken Tikka,1,9.50,9.50,0.00,Yusuf,J. Smith,Card
+06/10/2026,20:08,50334,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,J. Smith,Card
+06/10/2026,20:08,50334,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,J. Smith,Card
+06/10/2026,20:48,50335,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,S. Ahmed,Cash
+06/10/2026,20:48,50335,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,S. Ahmed,Cash
+06/10/2026,20:48,50335,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Priya,S. Ahmed,Cash
+06/10/2026,20:48,50335,Sides,Masala Chips,2,3.50,7.00,0.00,Priya,S. Ahmed,Cash
+06/10/2026,20:10,50336,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Cash
+06/10/2026,20:10,50336,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Cash
+06/10/2026,20:10,50336,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Cash
+06/10/2026,20:10,50336,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Cash
+06/10/2026,20:50,50337,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,R. Patel,Card
+06/10/2026,21:32,50338,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+06/10/2026,21:32,50338,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Amira,,Card
+06/10/2026,21:32,50338,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Card
+06/10/2026,21:32,50338,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Card
+06/10/2026,21:38,50339,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Cash
+06/10/2026,21:38,50339,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Priya,,Cash
+06/10/2026,21:38,50339,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,,Cash
+06/10/2026,21:38,50339,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,,Cash
+06/10/2026,21:08,50340,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,,Card
+06/10/2026,21:08,50340,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+06/10/2026,21:11,50341,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Dan,,Card
+06/10/2026,21:11,50341,Drinks & Desserts,Karak Chai,2,2.50,5.00,0.00,Dan,,Card
+06/10/2026,21:11,50341,Burgers & Wraps,Chicken Tikka Wrap,2,7.50,15.00,0.00,Dan,,Card
+06/10/2026,21:11,50341,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Dan,,Card
+06/10/2026,21:49,50342,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+06/10/2026,21:49,50342,Grills,Chicken Tikka,2,9.50,19.00,0.00,Dan,,Card
+06/10/2026,21:01,50343,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,21:01,50343,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+06/10/2026,21:01,50343,Grills,Chicken Tikka,2,9.50,19.00,0.00,Amira,,Card
+06/10/2026,21:01,50343,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,21:07,50344,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+06/10/2026,21:07,50344,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Amira,,Card
+06/10/2026,22:54,50345,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Priya,,Card
+06/10/2026,22:13,50346,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,,Card
+06/10/2026,22:13,50346,Sides,Rice,2,2.95,5.90,0.00,Dan,,Card
+06/10/2026,22:13,50346,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+06/10/2026,22:09,50347,Sides,Rice,2,2.95,5.90,0.00,Amira,,Card
+06/10/2026,22:09,50347,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Card
+06/10/2026,22:09,50347,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Card
+06/10/2026,22:09,50347,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Card
+07/10/2026,12:35,50348,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+07/10/2026,12:56,50349,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,,Card
+07/10/2026,12:26,50350,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,12:26,50350,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,12:34,50351,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,J. Smith,Card
+07/10/2026,12:34,50351,Grills,Chicken Tikka,1,9.50,9.50,0.00,Dan,J. Smith,Card
+07/10/2026,12:34,50351,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,J. Smith,Card
+07/10/2026,12:09,50352,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,12:24,50353,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,A. Khan,Card
+07/10/2026,13:35,50354,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Dan,,Card
+07/10/2026,13:55,50355,Sides,Rice,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,13:55,50355,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+07/10/2026,13:55,50355,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Yusuf,,Card
+07/10/2026,13:55,50355,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,,Card
+07/10/2026,13:24,50356,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Dan,,Card
+07/10/2026,13:56,50357,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Card
+07/10/2026,13:14,50358,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Amira,,Card
+07/10/2026,13:14,50358,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Card
+07/10/2026,13:14,50358,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Amira,,Card
+07/10/2026,13:40,50359,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Cash
+07/10/2026,13:00,50360,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,A. Khan,Card
+07/10/2026,13:34,50361,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Amira,,Card
+07/10/2026,13:34,50361,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+07/10/2026,13:34,50361,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Amira,,Card
+07/10/2026,13:15,50362,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Amira,,Card
+07/10/2026,13:15,50362,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,13:15,50362,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,13:43,50363,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+07/10/2026,13:43,50363,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+07/10/2026,13:43,50363,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Dan,,Card
+07/10/2026,13:43,50363,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+07/10/2026,13:15,50364,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,14:19,50365,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Priya,,Card
+07/10/2026,14:52,50366,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Dan,,Card
+07/10/2026,14:52,50366,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Dan,,Card
+07/10/2026,14:52,50366,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Dan,,Card
+07/10/2026,14:52,50366,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Dan,,Card
+07/10/2026,14:42,50367,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,A. Khan,Card
+07/10/2026,15:48,50368,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+07/10/2026,15:12,50369,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Priya,S. Ahmed,Cash
+07/10/2026,15:12,50369,Sides,Rice,1,2.95,2.95,0.00,Priya,S. Ahmed,Cash
+07/10/2026,15:12,50369,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,S. Ahmed,Cash
+07/10/2026,15:36,50370,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+07/10/2026,15:36,50370,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+07/10/2026,16:02,50371,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,,Card
+07/10/2026,16:02,50371,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,,Card
+07/10/2026,16:10,50372,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Yusuf,,Card
+07/10/2026,16:10,50372,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,,Card
+07/10/2026,16:10,50372,Grills,Chicken Tikka,2,9.50,19.00,0.00,Yusuf,,Card
+07/10/2026,16:10,50372,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+07/10/2026,16:50,50373,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Priya,,Card
+07/10/2026,17:58,50374,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,,Card
+07/10/2026,17:58,50374,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+07/10/2026,17:58,50374,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,17:01,50375,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Dan,,Card
+07/10/2026,17:01,50375,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Card
+07/10/2026,17:06,50376,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Amira,,Card
+07/10/2026,17:06,50376,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Amira,,Card
+07/10/2026,17:06,50376,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Amira,,Card
+07/10/2026,17:06,50376,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Amira,,Card
+07/10/2026,17:29,50377,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+07/10/2026,17:29,50377,Sides,Garlic Naan,2,2.95,5.90,0.00,Priya,,Card
+07/10/2026,17:29,50377,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,,Card
+07/10/2026,17:29,50377,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+07/10/2026,17:48,50378,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,,Card
+07/10/2026,17:48,50378,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Dan,,Card
+07/10/2026,17:48,50378,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+07/10/2026,17:20,50379,Grills,Chicken Tikka,1,9.50,9.50,0.00,Dan,,Card
+07/10/2026,17:20,50379,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Card
+07/10/2026,17:20,50379,Sides,Rice,1,2.95,2.95,0.00,Dan,,Card
+07/10/2026,17:20,50379,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Dan,,Card
+07/10/2026,17:52,50380,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Priya,,Card
+07/10/2026,17:52,50380,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+07/10/2026,18:58,50381,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Dan,,Card
+07/10/2026,18:58,50381,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Dan,,Card
+07/10/2026,18:02,50382,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,A. Khan,Card
+07/10/2026,18:02,50382,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Priya,A. Khan,Card
+07/10/2026,18:25,50383,Burgers & Wraps,Smash Burger,2,8.95,17.90,0.00,Yusuf,J. Smith,Card
+07/10/2026,18:25,50383,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Yusuf,J. Smith,Card
+07/10/2026,18:25,50383,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Yusuf,J. Smith,Card
+07/10/2026,18:43,50384,Sides,Rice,1,2.95,2.95,0.00,Yusuf,S. Ahmed,Card
+07/10/2026,18:21,50385,Grills,Seekh Kebab (2 pcs),2,7.95,15.90,0.00,Priya,S. Ahmed,Card
+07/10/2026,18:21,50385,Grills,Chicken Tikka,1,9.50,9.50,0.00,Priya,S. Ahmed,Card
+07/10/2026,18:46,50386,Sides,Garlic Naan,2,2.95,5.90,0.00,Yusuf,,Card
+07/10/2026,18:46,50386,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,18:46,50386,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Yusuf,,Card
+07/10/2026,18:26,50387,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Priya,A. Khan,Card
+07/10/2026,18:26,50387,Sides,Rice,1,2.95,2.95,0.00,Priya,A. Khan,Card
+07/10/2026,18:26,50387,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,A. Khan,Card
+07/10/2026,18:26,50387,Drinks & Desserts,Kunafa,2,5.95,11.90,0.00,Priya,A. Khan,Card
+07/10/2026,18:49,50388,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+07/10/2026,18:49,50388,Sides,Rice,1,2.95,2.95,0.00,Priya,,Card
+07/10/2026,18:00,50389,Drinks & Desserts,Mango Lassi,2,3.95,7.90,0.00,Dan,,Card
+07/10/2026,18:25,50390,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Yusuf,,Cash
+07/10/2026,19:42,50391,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,R. Patel,Card
+07/10/2026,19:42,50391,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Amira,R. Patel,Card
+07/10/2026,19:42,50391,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,R. Patel,Card
+07/10/2026,19:20,50392,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Amira,,Card
+07/10/2026,19:20,50392,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Amira,,Card
+07/10/2026,19:20,50392,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+07/10/2026,19:01,50393,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Amira,,Cash
+07/10/2026,19:34,50394,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Dan,J. Smith,Card
+07/10/2026,19:26,50395,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,,Cash
+07/10/2026,19:46,50396,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,19:51,50397,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Amira,,Card
+07/10/2026,19:00,50398,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Dan,S. Ahmed,Card
+07/10/2026,19:14,50399,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Dan,,Cash
+07/10/2026,19:14,50399,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,,Cash
+07/10/2026,19:14,50399,Sides,Garlic Naan,1,2.95,2.95,0.00,Dan,,Cash
+07/10/2026,19:39,50400,Drinks & Desserts,Karak Chai,2,2.50,5.00,0.00,Priya,,Card
+07/10/2026,19:32,50401,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Priya,,Card
+07/10/2026,19:32,50401,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,,Card
+07/10/2026,19:32,50401,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+07/10/2026,20:52,50402,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,20:52,50402,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,20:52,50402,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Yusuf,,Card
+07/10/2026,20:40,50403,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Amira,,Card
+07/10/2026,20:40,50403,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+07/10/2026,20:40,50403,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Amira,,Card
+07/10/2026,20:00,50404,Grills,Chicken Tikka,1,9.50,9.50,0.00,Priya,,Card
+07/10/2026,20:00,50404,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,,Card
+07/10/2026,20:00,50404,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Card
+07/10/2026,20:00,50404,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,,Card
+07/10/2026,20:51,50405,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Card
+07/10/2026,20:51,50405,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Card
+07/10/2026,20:18,50406,Sides,Masala Chips,1,3.50,3.50,0.00,Yusuf,,Card
+07/10/2026,20:18,50406,Grills,Mixed Grill Platter,2,18.50,37.00,0.00,Yusuf,,Card
+07/10/2026,20:18,50406,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Yusuf,,Card
+07/10/2026,20:24,50407,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Priya,,Card
+07/10/2026,20:24,50407,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,,Card
+07/10/2026,20:22,50408,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Priya,,Card
+07/10/2026,20:22,50408,Grills,Chicken Tikka,1,9.50,9.50,0.00,Priya,,Card
+07/10/2026,20:22,50408,Sides,Garlic Naan,1,2.95,2.95,0.00,Priya,,Card
+07/10/2026,20:03,50409,Sides,Masala Chips,1,3.50,3.50,0.00,Dan,,Card
+07/10/2026,20:03,50409,Grills,Peri Peri Wings (8),2,7.50,15.00,0.00,Dan,,Card
+07/10/2026,20:48,50410,Sides,Rice,2,2.95,5.90,0.00,Yusuf,,Card
+07/10/2026,20:35,50411,Sides,Rice,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,20:10,50412,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Dan,,Card
+07/10/2026,21:21,50413,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Priya,,Card
+07/10/2026,21:21,50413,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Priya,,Card
+07/10/2026,21:33,50414,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,,Card
+07/10/2026,21:33,50414,Drinks & Desserts,Karak Chai,1,2.50,2.50,0.00,Priya,,Card
+07/10/2026,21:03,50415,Sides,Masala Chips,1,3.50,3.50,0.00,Priya,S. Ahmed,Card
+07/10/2026,21:03,50415,Grills,Mixed Grill Platter,1,18.50,18.50,0.00,Priya,S. Ahmed,Card
+07/10/2026,21:28,50416,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,,Card
+07/10/2026,21:08,50417,Grills,Lamb Chops (4 pcs),1,13.95,13.95,0.00,Amira,,Cash
+07/10/2026,21:28,50418,Burgers & Wraps,Chicken Tikka Wrap,1,7.50,7.50,0.00,Dan,,Card
+07/10/2026,21:28,50418,Drinks & Desserts,Mango Lassi,1,3.95,3.95,0.00,Dan,,Card
+07/10/2026,21:31,50419,Sides,Rice,2,2.95,5.90,0.00,Priya,,Card
+07/10/2026,21:31,50419,Grills,Peri Peri Wings (8),1,7.50,7.50,0.00,Priya,,Card
+07/10/2026,22:50,50420,Sides,Masala Chips,1,3.50,3.50,0.00,Amira,,Card
+07/10/2026,22:11,50421,Grills,Lamb Chops (4 pcs),2,13.95,27.90,0.00,Dan,,Card
+07/10/2026,22:11,50421,Sides,Rice,1,2.95,2.95,0.00,Dan,,Card
+07/10/2026,22:01,50422,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Amira,,Card
+07/10/2026,22:01,50422,Sides,Rice,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,22:01,50422,Grills,Chicken Tikka,1,9.50,9.50,0.00,Amira,,Card
+07/10/2026,22:01,50422,Sides,Garlic Naan,1,2.95,2.95,0.00,Amira,,Card
+07/10/2026,22:11,50423,Burgers & Wraps,Smash Burger,1,8.95,8.95,0.00,Yusuf,,Card
+07/10/2026,22:11,50423,Drinks & Desserts,Kunafa,1,5.95,5.95,0.00,Yusuf,,Card
+07/10/2026,22:11,50423,Sides,Garlic Naan,1,2.95,2.95,0.00,Yusuf,,Card
+07/10/2026,22:11,50423,Grills,Seekh Kebab (2 pcs),1,7.95,7.95,0.00,Yusuf,,Card
+Total,,,,,628,,4571.25,0.00,,,

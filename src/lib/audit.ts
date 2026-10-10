@@ -9,7 +9,7 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer";
+export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff";
 export type AuditAction =
   | "created" // a draft was written (and checked)
   | "edited"
@@ -21,7 +21,11 @@ export type AuditAction =
   | "setting" // PAUSE, RESUME, CAP, TIME, reward, email
   | "undone"
   | "data_deleted" // a customer used "delete my data"
-  | "exported"; // the owner downloaded (or was sent a link to) their customer list
+  | "exported" // the owner downloaded (or was sent a link to) their customer list
+  | "staff_added" // ADD STAFF: a number that can send till reports and sales files
+  | "staff_removed"
+  | "sales_saved" // a till report was saved (by the owner or staff)
+  | "sales_imported"; // a POS file was imported
 
 export type AuditEntry = {
   id: string;
@@ -37,7 +41,7 @@ export type AuditEntry = {
 };
 
 // The owner's own decisions that UNDO can reverse.
-export const UNDOABLE: AuditAction[] = ["approved", "skipped", "edited", "setting"];
+export const UNDOABLE: AuditAction[] = ["approved", "skipped", "edited", "setting", "staff_added", "staff_removed"];
 
 // Never throws: a failed log line mustn't stop the action itself.
 export async function logAction(entry: {

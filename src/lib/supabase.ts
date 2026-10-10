@@ -74,6 +74,11 @@ export type Restaurant = {
   logo_url: string | null;
   reply_to_email: string | null;
   feedback_emails: boolean;
+  // Sales and weather (step 15).
+  latitude: number | null;
+  longitude: number | null;
+  weather_backfilled_at: string | null;
+  last_weather_on: string | null;
 };
 
 // The app's address, used for every link we make (emails, QR codes, rewards,

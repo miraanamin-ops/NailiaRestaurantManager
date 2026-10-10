@@ -8,9 +8,12 @@ export type Compare = { now: number; before: number };
 // 14 daily values: the first 7 are the week before, the last 7 are last week.
 export type Daily = { days: string[]; values: number[] };
 
+// How a number is shown: a count, a star rating, or pounds.
+export type ValueFormat = "rating" | "count" | "money";
+
 export type HeadlineSection = {
   id: "headline";
-  stats: { label: string; value: Compare; format: "rating" | "count" }[];
+  stats: { label: string; value: Compare; format: ValueFormat }[];
   sentence: string;
 };
 
@@ -47,12 +50,28 @@ export type GoogleSection = {
   insights: { views: Compare; calls: Compare; directions: Compare } | null;
 };
 
+// Only when there's sales data (till reports, POS files or dummy data) for the fortnight.
+export type SalesSection = {
+  id: "sales";
+  net: Compare; // net sales (excluding VAT), last week vs the week before
+  lastMonth: number | null; // the same week four weeks earlier, if there's data for it
+  daily: Daily; // net sales per day (pounds)
+  daysWithData: Compare; // how many of the 7 days have figures
+  transactions: Compare | null;
+  avgSpend: Compare | null; // net per sale
+  best: { day: string; amount: number } | null; // last week's best and worst day
+  worst: { day: string; amount: number } | null;
+  topItems: { name: string; quantity: number; amount: number }[]; // last week (amount includes VAT)
+  netEstimated: boolean; // some days only had totals with VAT: net worked out at 20%
+  dummy: boolean; // includes dummy data
+};
+
 export type ActionsSection = {
   id: "actions";
   actions: { title: string; why: string; message: string }[];
 };
 
-export type ReportSection = HeadlineSection | ReputationSection | CustomersSection | GoogleSection | ActionsSection;
+export type ReportSection = HeadlineSection | SalesSection | ReputationSection | CustomersSection | GoogleSection | ActionsSection;
 export type SectionId = ReportSection["id"];
 
 export type ReportData = {
@@ -67,30 +86,46 @@ export type ReportData = {
 
 export const SECTION_TITLES: Record<SectionId, string> = {
   headline: "This week",
+  sales: "Sales",
   reputation: "Reputation",
   customers: "Customers and campaigns",
   google: "Google visibility",
   actions: "Next week's 3 actions",
 };
 
-// "+3", "−0.2", "no change": the small comparison under every number.
-export function changeText(c: Compare, format: "rating" | "count" = "count") {
+// Under this much, a change counts as "the same" (a twentieth of a star, or 50p).
+const SAME_WITHIN: Record<ValueFormat, number> = { rating: 0.05, count: 0.5, money: 0.5 };
+
+// Whole pounds, or pounds and pence under £100 (e.g. an average spend of £19.40).
+const pounds = (n: number) =>
+  Math.abs(n) < 100 ? `£${n.toFixed(2)}` : `£${Math.round(n).toLocaleString("en-GB")}`;
+
+// "+3", "−0.2", "+£340 (+6%)", "no change": the small comparison under every number.
+export function changeText(c: Compare, format: ValueFormat = "count", vs = "the week before") {
   const diff = c.now - c.before;
-  if (format === "rating" ? Math.abs(diff) < 0.05 : diff === 0) return "same as the week before";
+  if (Math.abs(diff) < SAME_WITHIN[format]) return `same as ${vs}`;
   const sign = diff > 0 ? "+" : "−";
+  if (format === "money") {
+    const pct = c.before > 0 ? ` (${sign}${Math.round((Math.abs(diff) / c.before) * 100)}%)` : "";
+    return `${sign}${pounds(Math.abs(diff))}${pct} vs ${vs}`;
+  }
   const abs = format === "rating" ? Math.abs(diff).toFixed(1) : String(Math.abs(diff));
-  return `${sign}${abs} vs the week before`;
+  return `${sign}${abs} vs ${vs}`;
 }
 
-export function direction(c: Compare, format: "rating" | "count" = "count"): "up" | "down" | "same" {
+export function direction(c: Compare, format: ValueFormat = "count"): "up" | "down" | "same" {
   const diff = c.now - c.before;
-  if (format === "rating" ? Math.abs(diff) < 0.05 : diff === 0) return "same";
+  if (Math.abs(diff) < SAME_WITHIN[format]) return "same";
   return diff > 0 ? "up" : "down";
 }
 
-export function formatValue(v: number, format: "rating" | "count") {
+export function formatValue(v: number, format: ValueFormat) {
+  if (format === "money") return pounds(v);
   return format === "rating" ? (v ? v.toFixed(1) : "–") : String(v);
 }
+
+// The small print under the Sales section (web page and PDF).
+export const SALES_FOOTNOTE = "Information about your business, not financial advice.";
 
 // A wa.me link that opens WhatsApp with the action's message ready to send.
 export function whatsappLink(number: string | null, message: string) {

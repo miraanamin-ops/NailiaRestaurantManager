@@ -16,6 +16,8 @@ import { resetOnboardingText } from "@/lib/onboarding/whatsapp-flow";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
 import { isTestCommand, isTestMode, TEST_MODE_OFF_MESSAGE } from "@/lib/test-mode";
 import { emailPreviewsCommand, exportCustomersCommand, runFeedbackCommand } from "./email-commands";
+import { addStaff, removeStaff, staffText } from "@/lib/sales/staff";
+import { runWeatherCommand, salesCommand, sampleZCommand, testZCommand } from "./sales-commands";
 import type { Command } from "./parse";
 import { updateRestaurant, type Turn } from "./turn";
 
@@ -36,7 +38,11 @@ const HELP_TEXT = `🛠️ *Commands*
 - *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
 - *CAMPAIGN RESULTS*: how the latest email campaign did
 - *EMAIL PREVIEWS*: see the automatic emails (confirm, welcome, "how was your visit?")
-- *EXPORT CUSTOMERS*: a download link for your customer list`;
+- *EXPORT CUSTOMERS*: a download link for your customer list
+- Send a *photo of your till report* (Z-report) at the end of the day and I'll save the sales
+- Send a *sales file* from your till (CSV or Excel), or upload it on the sales page
+- *SALES*: last 7 days' sales and the sales page link
+- *ADD STAFF +447700900123*: let a staff phone send till reports and sales files (nothing else) · *REMOVE STAFF* · *STAFF* to list them`;
 
 // Only listed (and only working) when TEST_MODE is on.
 const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
@@ -49,7 +55,9 @@ const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
 - *TEST SEND*: try to send the waiting draft *without* approving it
 - *TEST CHECKER*: run a draft full of mistakes through the four checks
 - *RESET ONBOARDING*: (test restaurants only) clear the set-up and go through onboarding again
-- *RUN FEEDBACK*: send "How was your visit?" emails now, without waiting 3 hours after a redemption`;
+- *RUN FEEDBACK*: send "How was your visit?" emails now, without waiting 3 hours after a redemption
+- *SAMPLE ZREPORT 1* (or 2, 3, BAD): sends you a sample till report photo to forward back · *TEST ZREPORT 2*: pretends you just sent it
+- *RUN WEATHER*: store the weather now (the first time, the last 12 months too)`;
 
 // TEST CHECKER: a draft with deliberate mistakes taken from THIS restaurant's own
 // menu (a wrong price, wrong opening hours, an unagreed freebie).
@@ -169,6 +177,20 @@ export async function runCommand(command: Command, turn: Turn) {
       return emailPreviewsCommand(turn);
     case "run_feedback":
       return runFeedbackCommand(turn);
+    case "add_staff":
+      return send(await addStaff(r, command.number));
+    case "remove_staff":
+      return send(await removeStaff(r, command.number));
+    case "staff":
+      return send(await staffText(r));
+    case "sales":
+      return salesCommand(turn);
+    case "sample_z":
+      return sampleZCommand(turn, command.sample);
+    case "test_z":
+      return testZCommand(turn, command.sample);
+    case "run_weather":
+      return runWeatherCommand(turn);
     case "birthday_campaign":
       return proposeBirthdayCampaign(ctx, send);
     case "campaign_results": {

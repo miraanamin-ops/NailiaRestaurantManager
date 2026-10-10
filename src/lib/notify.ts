@@ -7,14 +7,15 @@ export type OwnerChannel = { restaurantId: string; from: string; to: string };
 // Sends a WhatsApp message to the owner and records it in the messages table.
 // (Messages to the owner aren't customer sends, so the safety rules don't apply.)
 // withButtons: true = Approve / Edit / Skip for the draft on screen; a target = for that one draft.
-// mediaUrl: a picture sent just before the text (e.g. the preview of an email draft).
+// mediaUrl: a picture sent just before the text (e.g. the preview of an email draft), with mediaCaption under it.
 export async function messageOwner(
   channel: OwnerChannel,
   text: string,
   withButtons: boolean | ButtonTarget = false,
-  { mediaUrl = null }: { mediaUrl?: string | null } = {},
+  { mediaUrl = null, mediaCaption = "📧 How the email will look:" }: { mediaUrl?: string | null; mediaCaption?: string } = {},
 ) {
-  if (mediaUrl) await sendAndLog(channel, () => sendImage(channel.from, channel.to, mediaUrl, "📧 How the email will look:"), "[email preview image]");
+  if (mediaUrl) await sendAndLog(channel, () => sendImage(channel.from, channel.to, mediaUrl, mediaCaption), "[image] " + mediaCaption);
+  if (!text) return;
   await sendAndLog(
     channel,
     () => (withButtons ? sendWithApprovalButtons(channel.from, channel.to, text, withButtons === true ? undefined : withButtons) : sendText(channel.from, channel.to, text)),

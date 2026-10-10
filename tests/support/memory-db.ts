@@ -66,10 +66,12 @@ export function memoryDb(seed: Record<string, Row[]>) {
 
   function from(name: string) {
     const preds: Pred[] = [];
-    let op: "select" | "insert" | "update" | "delete" = "select";
+    let op: "select" | "insert" | "update" | "delete" | "upsert" = "select";
+    let conflict: string[] = [];
     let payload: Row | Row[] | null = null;
     let order: { col: string; asc: boolean }[] = [];
     let limit: number | null = null;
+    let offset = 0;
     let countHead = false;
     let returning = false;
 
@@ -84,6 +86,17 @@ export function memoryDb(seed: Record<string, Row[]>) {
         rows.push(...list);
         return { data: returning ? list : null, error: null, count: null };
       }
+      if (op === "upsert") {
+        // Update the row with the same values in the conflict columns, or add a new one.
+        const out = (Array.isArray(payload) ? payload : [payload!]).map((p) => {
+          const existing = rows.find((r) => conflict.every((c) => String(r[c]) === String(p[c])));
+          if (existing) return Object.assign(existing, p);
+          const row = { id: randomUUID(), created_at: new Date().toISOString(), ...p };
+          rows.push(row);
+          return row;
+        });
+        return { data: returning ? out.map((r) => ({ ...r })) : null, error: null, count: null };
+      }
       let matched = rows.filter((r) => preds.every((p) => p(r)));
       if (op === "update") {
         for (const r of matched) Object.assign(r, payload);
@@ -94,7 +107,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
         return { data: null, error: null, count: null };
       }
       for (const o of [...order].reverse()) matched = [...matched].sort((a, b) => cmp(a[o.col], b[o.col]) * (o.asc ? 1 : -1));
-      if (limit !== null) matched = matched.slice(0, limit);
+      if (offset || limit !== null) matched = matched.slice(offset, limit === null ? undefined : offset + limit);
       if (countHead) return { data: null, error: null, count: matched.length };
       return { data: matched.map((r) => ({ ...r })), error: null, count: matched.length };
     };
@@ -119,6 +132,12 @@ export function memoryDb(seed: Record<string, Row[]>) {
         op = "delete";
         return chain;
       },
+      upsert(p: Row | Row[], opts?: { onConflict?: string }) {
+        op = "upsert";
+        payload = p;
+        conflict = (opts?.onConflict ?? "id").split(",").map((c) => c.trim());
+        return chain;
+      },
       eq: (c: string, v: unknown) => (preds.push((r) => r[c] === v || String(r[c]) === String(v)), chain),
       neq: (c: string, v: unknown) => (preds.push((r) => String(r[c]) !== String(v)), chain),
       in: (c: string, list: unknown[]) => (preds.push((r) => list.map(String).includes(String(r[c]))), chain),
@@ -131,6 +150,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
       or: (expr: string) => (preds.push(parseOr(expr)), chain),
       order: (c: string, o?: { ascending?: boolean }) => ((order = [...order, { col: c, asc: o?.ascending ?? true }]), chain),
       limit: (n: number) => ((limit = n), chain),
+      range: (from: number, to: number) => ((offset = from), (limit = to - from + 1), chain),
       returns: () => chain,
       single: async () => {
         const r = run();
@@ -146,5 +166,22 @@ export function memoryDb(seed: Record<string, Row[]>) {
     return chain;
   }
 
-  return { client: { from }, tables };
+  // File storage: buckets of files kept in memory.
+  const files = new Map<string, { bytes: Buffer; contentType: string }>();
+  const storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, bytes: Buffer, opts?: { contentType?: string }) => {
+        files.set(`${bucket}/${path}`, { bytes: Buffer.from(bytes), contentType: opts?.contentType ?? "" });
+        return { data: { path }, error: null };
+      },
+      download: async (path: string) => {
+        const f = files.get(`${bucket}/${path}`);
+        return f ? { data: new Blob([new Uint8Array(f.bytes)]), error: null } : { data: null, error: { message: "Object not found" } };
+      },
+      createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://storage.test/${bucket}/${path}?token=x` }, error: null }),
+      getPublicUrl: (path: string) => ({ data: { publicUrl: `https://storage.test/${bucket}/${path}` } }),
+    }),
+  };
+
+  return { client: { from, storage }, tables, files };
 }
