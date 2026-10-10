@@ -13,7 +13,7 @@ const params = {
   Body: process.argv[3] ?? "Hi! How are our reviews looking?",
   MessageSid: process.env.TEST_SID ?? "SMtest" + Date.now(),
   ...(button ? { ButtonPayload: button, ButtonText: button[0].toUpperCase() + button.slice(1) } : {}),
-  ...(image ? { NumMedia: "1", MediaUrl0: image, MediaContentType0: "image/png" } : {}),
+  ...(image ? { NumMedia: "1", MediaUrl0: image, MediaContentType0: process.env.TEST_MEDIA_TYPE ?? "image/png" } : {}),
 };
 
 const signature = twilio.getExpectedTwilioSignature(process.env.TWILIO_AUTH_TOKEN, url, params);

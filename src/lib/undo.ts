@@ -4,6 +4,8 @@ import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/draft
 import { google, type GooglePost } from "@/lib/google";
 import { processQueue } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { setStaffActive } from "./sales/staff";
+import { showNumber } from "./onboarding/steps";
 import { undoPlan } from "./undo-plan";
 
 // UNDO: reverses the owner's last action (from the last 24 hours) where it can,
@@ -75,6 +77,12 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
       });
       if (typeof d.feedback_id === "string") check(await getSupabase().from("draft_feedback").delete().eq("id", d.feedback_id));
       return { text: `↩️ Put back the previous version of the ${name}.`, done: true };
+    }
+
+    case "staff": {
+      const ok = await setStaffActive(restaurant.id, plan.number, plan.active);
+      if (!ok) return { text: `❌ Can't put ${showNumber(plan.number)} back: it's staff for another restaurant now.`, done: false };
+      return { text: plan.active ? `↩️ ${showNumber(plan.number)} is back on your staff list.` : `↩️ Removed ${showNumber(plan.number)} from your staff list again.`, done: true };
     }
 
     case "restore_setting": {

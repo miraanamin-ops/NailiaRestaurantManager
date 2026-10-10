@@ -42,5 +42,5 @@ export function hostRoute(input: { host: string | null; path: string; search: st
 
 // Owner pages that need a login (checked in src/proxy.ts).
 export function needsLogin(path: string) {
-  return path === "/" || path === "/log" || path === "/settings" || /^\/(report|settings|onboarding)(\/|$)/.test(path);
+  return path === "/" || path === "/log" || path === "/settings" || /^\/(report|settings|onboarding|sales)(\/|$)/.test(path);
 }

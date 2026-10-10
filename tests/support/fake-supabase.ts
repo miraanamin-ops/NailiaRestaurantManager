@@ -14,7 +14,7 @@ export function fakeSupabase(respond: Respond) {
       return { data: r.data ?? null, error: r.error ?? null, count: r.count ?? null };
     };
     const chain: Record<string, unknown> = {};
-    const passThrough = ["select", "eq", "neq", "in", "is", "or", "not", "order", "limit", "gte", "lt", "lte", "gt", "ilike", "returns"];
+    const passThrough = ["select", "eq", "neq", "in", "is", "or", "not", "order", "limit", "gte", "lt", "lte", "gt", "ilike", "returns", "range"];
     for (const m of passThrough) chain[m] = (...args: unknown[]) => (call.filters.push([m, ...args]), chain);
     for (const op of ["insert", "update", "delete", "upsert"] as const) {
       chain[op] = (payload?: unknown) => {

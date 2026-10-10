@@ -9,6 +9,8 @@ import { runCommand } from "./commands";
 import { handleConversation } from "./conversation";
 import { photoPost } from "./flows";
 import { parseCommand } from "./parse";
+import { salesFromMedia, salesReply } from "@/lib/sales/whatsapp";
+import { ownerSender } from "./sales-commands";
 import { updateRestaurant, type Turn } from "./turn";
 
 // One WhatsApp message from the owner, start to finish. The webhook
@@ -53,8 +55,15 @@ export async function handleMessage(input: {
     }
 
     const turn: Turn = { ctx, channel, owner, send };
-    if (input.media) await photoPost(ctx, input.media, body, send);
-    else if (command) await runCommand(command, turn);
+    if (input.media) {
+      // A till report photo or sales file is saved as sales; any other photo becomes a Google post.
+      const outcome = await salesFromMedia(ownerSender(turn), input.media, body, ctx.now);
+      if (outcome !== "handled") await photoPost(ctx, input.media, body, send);
+    } else if (command) await runCommand(command, turn);
+    // YES / REPLACE / a date, answering a till report or sales file question.
+    else if (!input.buttonPayload && (await salesReply(ownerSender(turn), body, ctx.now))) {
+      // answered
+    }
     else await handleConversation(turn, body, input.buttonPayload);
 
     // Any queued drafts that are now due go out whenever the owner is active.

@@ -695,6 +695,7 @@ export async function writeReportInsights(ctx: RestaurantContext, facts: string,
     system: `You write the weekly report for the owner of ${ctx.restaurantName}, a ${ctx.restaurant.cuisine ?? "restaurant"} at ${ctx.restaurant.address ?? "an independent site"}. The owner reads it on their phone: plain English, short, specific, no jargon, no hype.
 
 Only use facts you're given. Don't invent numbers, dishes or events.
+About sales, state plainly what happened (what went up or down, the best and quietest days). Don't guess why, predict future sales or give financial advice.
 
 Actions must be things the owner's WhatsApp assistant can start right now:
 - an email campaign with an offer (segments: everyone, birthdays in the next 7 days, new sign-ups who haven't used their welcome reward), within a ${ctx.discountCapPercent}% discount cap

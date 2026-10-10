@@ -19,6 +19,9 @@ export const TEST_COMMANDS = new Set([
   "run_report",
   "reset_onboarding",
   "run_feedback",
+  "sample_z",
+  "test_z",
+  "run_weather",
 ]);
 
 export function isTestCommand(name: string) {

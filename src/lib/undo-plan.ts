@@ -12,6 +12,7 @@ export type UndoPlan =
   | { type: "restore_skip" }
   | { type: "restore_edit" }
   | { type: "restore_setting"; field: string; value: unknown }
+  | { type: "staff"; number: string; active: boolean } // ADD STAFF / REMOVE STAFF, reversed
   | { type: "cannot"; reason: string };
 
 // Restaurant details (hours, menu, voice, phone, address, website) come from onboarding,
@@ -41,6 +42,11 @@ export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: 
     const field = String(entry.data?.field ?? "");
     if (!SETTINGS.includes(field)) return { type: "cannot", reason: "That setting can't be changed back automatically." };
     return { type: "restore_setting", field, value: entry.data?.before ?? null };
+  }
+  if (entry.action === "staff_added" || entry.action === "staff_removed") {
+    const number = typeof entry.data?.number === "string" ? entry.data.number : null;
+    if (!number) return { type: "cannot", reason: "The number wasn't saved." };
+    return { type: "staff", number, active: entry.action === "staff_removed" };
   }
   if (!draft) return { type: "cannot", reason: "That draft no longer exists." };
 

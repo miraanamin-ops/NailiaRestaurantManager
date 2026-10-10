@@ -238,6 +238,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
         <RestaurantSwitcher choices={choices} current={restaurant.id} path="/" />
         <div className="mb-3 mt-3 flex flex-wrap items-center gap-3 text-sm">
           <a href={`/log?r=${restaurant.id}`} className="font-medium text-orange-700 underline">Activity log</a>
+          <a href={`/sales?r=${restaurant.id}`} className="font-medium text-orange-700 underline">Sales</a>
           <a href={`/settings?r=${restaurant.id}`} className="font-medium text-orange-700 underline">Settings</a>
           <span className="text-neutral-500">Logged in as {owner.email}</span>
           <form action={logOut}>

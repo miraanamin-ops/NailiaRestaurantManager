@@ -1,6 +1,9 @@
 import "server-only";
 import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
-import { startOfLondonDay } from "@/lib/clock";
+import { londonYmd, startOfLondonDay } from "@/lib/clock";
+import { addDays } from "@/lib/sales/format";
+import { buildSalesSection, salesFacts, type SalesDayRow, type SalesItemRow } from "@/lib/sales/report-section";
+import { selectAll } from "@/lib/sales/store";
 import { check, checkRow } from "@/lib/drafts";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
 import { newToken } from "@/lib/signups";
@@ -18,6 +21,7 @@ import {
   type ReportData,
   type ReportSection,
   type ReputationSection,
+  type SalesSection,
 } from "./types";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -80,6 +84,8 @@ type Rows = {
   campaigns: { id: string; name: string; sent_at: string | null }[];
   rewards: { redeemed_at: When }[];
   posts: GooglePost[];
+  salesDays: SalesDayRow[]; // from four weeks before last week, to the end of last week
+  salesItems: SalesItemRow[]; // last week
 };
 
 type BuildInput = { restaurant: Restaurant; period: Period; rows: Rows };
@@ -93,6 +99,14 @@ type DataSection = {
 };
 
 const DATA_SECTIONS: DataSection[] = [
+  {
+    id: "sales",
+    connected: () => true, // left out (build returns null) until there are sales figures for the fortnight
+    async build({ period: p, rows }) {
+      return buildSalesSection(londonYmd(p.start), rows.salesDays, rows.salesItems);
+    },
+    facts: (s) => salesFacts(s as SalesSection),
+  },
   {
     id: "reputation",
     connected: () => true, // dummy or live Google: reviews always come through the connector
@@ -189,7 +203,8 @@ const DATA_SECTIONS: DataSection[] = [
 async function loadRows(restaurant: Restaurant, p: Period): Promise<Rows> {
   const supabase = getSupabase();
   const since = p.prevStart.toISOString();
-  const [reviews, signups, sends, campaigns, rewards, posts] = await Promise.all([
+  const [weekStart, weekEnd] = [londonYmd(p.start), londonYmd(p.end)];
+  const [reviews, signups, sends, campaigns, rewards, posts, salesDays, salesItems] = await Promise.all([
     google().listReviews(restaurant.id),
     supabase.from("customer_events").select("created_at").eq("restaurant_id", restaurant.id).eq("type", "signup").gte("created_at", since).returns<Rows["signups"]>(),
     supabase
@@ -201,6 +216,16 @@ async function loadRows(restaurant: Restaurant, p: Period): Promise<Rows> {
     supabase.from("campaigns").select("id, name, sent_at").eq("restaurant_id", restaurant.id).gte("sent_at", since).returns<Rows["campaigns"]>(),
     supabase.from("rewards").select("redeemed_at").eq("restaurant_id", restaurant.id).gte("redeemed_at", since).returns<Rows["rewards"]>(),
     google().listPublishedPosts(restaurant.id),
+    supabase
+      .from("sales_days")
+      .select("day, net_sales, transactions, net_estimated, is_dummy")
+      .eq("restaurant_id", restaurant.id)
+      .gte("day", addDays(weekStart, -28))
+      .lt("day", weekEnd)
+      .returns<SalesDayRow[]>(),
+    selectAll<SalesItemRow>((from, to) =>
+      supabase.from("sales_items").select("item, quantity, amount").eq("restaurant_id", restaurant.id).gte("day", weekStart).lt("day", weekEnd).range(from, to),
+    ),
   ]);
   return {
     reviews,
@@ -209,13 +234,17 @@ async function loadRows(restaurant: Restaurant, p: Period): Promise<Rows> {
     campaigns: check(campaigns) ?? [],
     rewards: check(rewards) ?? [],
     posts,
+    salesDays: (check(salesDays) ?? []).map((d) => ({ ...d, net_sales: Number(d.net_sales) })),
+    salesItems,
   };
 }
 
 // ---------- Headline, actions and the WhatsApp message ----------
 
-function verdict(r: ReputationSection | undefined, c: CustomersSection | undefined) {
-  const dirs = [r && direction(r.rating, "rating"), c && direction(c.signups), c && direction(c.redemptions)].filter(Boolean);
+function verdict(r: ReputationSection | undefined, c: CustomersSection | undefined, s?: SalesSection) {
+  // Sales count double: a week with fewer sales is never called a good one because sign-ups rose.
+  const sales = s ? [direction(s.net, "money"), direction(s.net, "money")] : [];
+  const dirs = [...sales, r && direction(r.rating, "rating"), c && direction(c.signups), c && direction(c.redemptions)].filter(Boolean);
   const ups = dirs.filter((d) => d === "up").length;
   const downs = dirs.filter((d) => d === "down").length;
   return ups > downs ? "Good week" : downs > ups ? "Quieter week" : "Steady week";
@@ -225,13 +254,19 @@ function verdict(r: ReputationSection | undefined, c: CustomersSection | undefin
 export function whatsappHeadline(data: ReportData, url: string) {
   const r = data.sections.find((s): s is ReputationSection => s.id === "reputation");
   const c = data.sections.find((s): s is CustomersSection => s.id === "customers");
+  const sales = data.sections.find((s): s is SalesSection => s.id === "sales");
   const bits: string[] = [];
+  if (sales) {
+    const d = direction(sales.net, "money");
+    const pct = sales.net.before ? Math.round((Math.abs(sales.net.now - sales.net.before) / sales.net.before) * 100) : 0;
+    bits.push(`sales £${Math.round(sales.net.now).toLocaleString("en-GB")}${d === "same" || !pct ? "" : ` (${d === "up" ? "up" : "down"} ${pct}%)`}`);
+  }
   if (r?.rating.now) {
     const d = direction(r.rating, "rating");
     bits.push(`rating ${d === "up" ? "up to" : d === "down" ? "down to" : "steady at"} ${r.rating.now.toFixed(1)}`);
   }
   if (c) bits.push(plural(c.signups.now, "new sign-up"));
-  return `📊 *${verdict(r, c)}*${bits.length ? `: ${bits.join(", ")}.` : "."}\nYour weekly report is ready: ${url}`;
+  return `📊 *${verdict(r, c, sales)}*${bits.length ? `: ${bits.join(", ")}.` : "."}\nYour weekly report is ready: ${url}`;
 }
 
 function fallbackSentence(r: ReputationSection | undefined, c: CustomersSection | undefined) {
@@ -267,6 +302,7 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
   }
   const reputation = dataSections.find((s): s is ReputationSection => s.id === "reputation");
   const customers = dataSections.find((s): s is CustomersSection => s.id === "customers");
+  const sales = dataSections.find((s): s is SalesSection => s.id === "sales");
 
   // The words come from Claude; if that fails, the report still goes out with plain-code ones.
   const reviewTexts = rows.reviews
@@ -288,6 +324,7 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     id: "headline",
     sentence: insights?.sentence || fallbackSentence(reputation, customers),
     stats: [
+      ...(sales ? [{ label: "Net sales", value: sales.net, format: "money" as const }] : []),
       ...(reputation ? [{ label: "Google rating", value: reputation.rating, format: "rating" as const }] : []),
       ...(customers
         ? [
