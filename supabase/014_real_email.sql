@@ -81,9 +81,9 @@ alter table customer_events add constraint customer_events_type_check
   check (type in ('signup', 'repeat_signup', 'welcome_email_sent', 'email_failed', 'redeemed', 'unsubscribed', 'offer_redeemed',
                   'confirm_email_sent', 'email_confirmed', 'feedback_email_sent', 'feedback_received', 'data_deleted'));
 
--- 6. Real emails from now on: the old per-restaurant "email test mode" is no longer used.
---    (Dummy customers are never emailed; TEST_MODE redirects real ones to the builder.)
-update restaurants set email_test_mode = false where email_test_mode;
+-- 6. The old per-restaurant "email test mode" (restaurants.email_test_mode) is no longer used
+--    by the new code: dummy customers are never emailed, and TEST_MODE redirects real ones to
+--    the builder. It's left as it is, so this file is safe to run before the new code is live.
 
 -- 7. Repair text that an earlier paste saved garbled ("CafÃ©" instead of "Café", "Â·" instead of "·").
 --    Only text containing those tell-tale patterns is touched, and only if it decodes cleanly.
