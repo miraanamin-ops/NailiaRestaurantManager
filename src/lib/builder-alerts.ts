@@ -1,6 +1,7 @@
 import "server-only";
 import { sendBuilderEmail } from "@/lib/email";
 import { getSupabase } from "@/lib/supabase";
+import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
 import { sendText } from "@/lib/whatsapp";
 
 // Alerts about the system itself (a job failed, or didn't run on time) go to the
@@ -9,7 +10,7 @@ import { sendText } from "@/lib/whatsapp";
 //   BUILDER_WHATSAPP  e.g. whatsapp:+447700900123
 // The same problem (key) alerts at most once every DEDUPE_HOURS.
 const DEDUPE_HOURS = 6;
-const SANDBOX_NUMBER = "whatsapp:+14155238886";
+const SANDBOX_NUMBER = ourWhatsAppNumber();
 
 export async function alertBuilder(key: string, message: string): Promise<string> {
   const supabase = getSupabase();

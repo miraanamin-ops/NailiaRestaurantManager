@@ -11,6 +11,7 @@ import { createReport, reportPeriod } from "@/lib/report/build";
 import { attemptSend } from "@/lib/send";
 import { undoLast } from "@/lib/undo";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
+import { resetOnboardingText } from "@/lib/onboarding/whatsapp-flow";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
 import { isTestCommand, isTestMode, TEST_MODE_OFF_MESSAGE } from "@/lib/test-mode";
 import type { Command } from "./parse";
@@ -42,7 +43,18 @@ const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
 - *RUN POSTS*: draft a Google post now and hold it for the brief (normally Mondays and Thursdays)
 - *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work) · *TIME OFF*: back to the real time
 - *TEST SEND*: try to send the waiting draft *without* approving it
-- *TEST CHECKER*: run a draft full of mistakes through the four checks`;
+- *TEST CHECKER*: run a draft full of mistakes through the four checks
+- *RESET ONBOARDING*: (test restaurants only) clear the set-up and go through onboarding again`;
+
+// TEST CHECKER: a draft with deliberate mistakes taken from THIS restaurant's own
+// menu (a wrong price, wrong opening hours, an unagreed freebie).
+function testCheckerDraft(r: Restaurant) {
+  const items = (r.menu ?? []).flatMap((c) => c.items);
+  const dish = items[0] ?? { name: "our special", price: 10 };
+  const treat = items.at(-1)?.name ?? "dessert";
+  const wrongPrice = Math.max(1, dish.price - 4).toFixed(2);
+  return `${dish.name} is just £${wrongPrice} this week, and we're open till 2am every Friday! Every table gets a free ${treat} too 🎉`;
+}
 
 async function statusText(restaurant: Restaurant) {
   const now = restaurantNow(restaurant);
@@ -111,6 +123,8 @@ export async function runCommand(command: Command, turn: Turn) {
       const result = await attemptSend(active.id, r, ctx.now, "test");
       return send(`🧪 Tried to send "${active.audience}" without approving it.\n${sendResultMessage(result)}`);
     }
+    case "reset_onboarding":
+      return send(await resetOnboardingText(r));
     case "test_checker":
       // A deliberately wrong draft (wrong price, wrong hours, an unagreed freebie)
       // so the owner can see the checker fix and flag things.
@@ -119,7 +133,7 @@ export async function runCommand(command: Command, turn: Turn) {
         {
           kind: "promotion",
           content:
-            "Lamb Chops (4 pcs) are just £9.95 this week, and we're open till 2am every Friday! Every table gets a free kunafa too 🎉",
+            testCheckerDraft(r),
           audience: "All opted-in customers",
           request: "TEST CHECKER command",
         },

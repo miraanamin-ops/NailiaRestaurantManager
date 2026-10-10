@@ -50,6 +50,13 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   const supabase = getSupabase();
   const draft = await getDraft(draftId);
 
+  // 0. A restaurant can only ever send its own drafts.
+  if (draft.restaurant_id !== restaurant.id) {
+    const detail = "This draft belongs to a different restaurant, so it can't be sent from here.";
+    console.error("attemptSend: draft and restaurant don't match", { draftId, restaurantId: restaurant.id });
+    return { outcome: "blocked", reason: "not_approved", detail, draft };
+  }
+
   // 1. Money and risk.
   const rules = moneyAndRisk(draft, restaurant, now, source);
   if (rules.outcome === "blocked") {
@@ -100,6 +107,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   // racing each other can't both succeed.
   const claim = await supabase
     .from("drafts")
+    // Only this restaurant's own draft can be claimed for sending.
     .update({
       status: "sent",
       sent_at: new Date().toISOString(),
@@ -108,6 +116,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       updated_at: new Date().toISOString(),
       checks: withSendChecks(draft, { money: checkResult([], []), compliance }),
     })
+    .eq("restaurant_id", restaurant.id)
     .eq("id", draft.id)
     .in("status", [...SENDABLE_STATUSES])
     .is("sent_at", null)

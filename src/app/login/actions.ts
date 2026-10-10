@@ -1,11 +1,8 @@
 "use server";
-import { createClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { accessFor, authClient, safeNext } from "@/lib/auth";
+import { accessFor, authClient, emailLoginLink, looksLikeEmail, safeNext } from "@/lib/auth";
 import { baseUrlFrom } from "@/lib/supabase";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 // Sends a magic link, but only to an allowed email. The page says the same
 // thing either way, so it can't be used to find out who has an account.
@@ -13,25 +10,12 @@ export async function sendLoginLink(form: FormData) {
   const email = String(form.get("email") ?? "").trim().toLowerCase().slice(0, 200);
   const next = safeNext(String(form.get("next") ?? "/"));
   const back = (params: string) => redirect(`/login?${params}&next=${encodeURIComponent(next)}`);
-  if (!EMAIL_RE.test(email)) back("error=email");
+  if (!looksLikeEmail(email)) back("error=email");
 
   const access = await accessFor(email);
   if (access.allowed) {
-    const base = baseUrlFrom(await headers());
-    // "implicit": the link in Supabase's standard email brings the login back after a
-    // "#" in the address, so it works in whichever browser opens it (no email template
-    // changes needed). /auth/confirm picks it up.
-    const sender = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-      auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
-    const { error } = await sender.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${base}/auth/confirm?next=${encodeURIComponent(next)}`, shouldCreateUser: true },
-    });
-    if (error) {
-      console.error("Magic link failed", error.message);
-      back(error.status === 429 ? "error=wait" : "error=send");
-    }
+    const error = await emailLoginLink(email, next, baseUrlFrom(await headers()));
+    if (error) back(`error=${error}`);
   }
   back("sent=1");
 }

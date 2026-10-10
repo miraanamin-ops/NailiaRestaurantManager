@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { check } from "@/lib/drafts";
@@ -66,7 +67,45 @@ export async function requireOwner(nextPath: string): Promise<Owner> {
   return owner;
 }
 
+// Which restaurant an owner page shows: the one asked for (?r=…) if this person
+// may see it, otherwise their first. Never one they can't see.
+export function pickRestaurantId(owner: Owner, requested: string | string[] | undefined) {
+  const want = Array.isArray(requested) ? requested[0] : requested;
+  return want && owner.restaurantIds.includes(want) ? want : (owner.restaurantIds[0] ?? null);
+}
+
+// Names of the restaurants this person can switch between (the builder sees all).
+export async function restaurantChoices(owner: Owner) {
+  if (owner.restaurantIds.length < 2) return [];
+  return (
+    check(
+      await getSupabase().from("restaurants").select("id, name").in("id", owner.restaurantIds).order("created_at").returns<{ id: string; name: string }[]>(),
+    ) ?? []
+  );
+}
+
 // Only ever redirect within this site after logging in.
 export function safeNext(next: string | null | undefined) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
+export function looksLikeEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+// Emails a one-time login link that lands on `next`. "implicit": the link in
+// Supabase's standard email brings the login back after a "#" in the address, so
+// it works in whichever browser opens it (no email template changes needed).
+// /auth/confirm picks it up. Returns "wait" (too many emails just now), "send" or null.
+export async function emailLoginLink(email: string, next: string, base: string) {
+  const sender = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { error } = await sender.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: `${base}/auth/confirm?next=${encodeURIComponent(safeNext(next))}`, shouldCreateUser: true },
+  });
+  if (!error) return null;
+  console.error("Magic link failed", error.message);
+  return error.status === 429 ? ("wait" as const) : ("send" as const);
 }

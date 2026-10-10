@@ -15,6 +15,12 @@ const SETTING_LABELS: Record<string, (v: unknown) => string> = {
   fake_now: (v) => (v ? "The test clock is back on" : "The test clock is off again"),
   signup_reward: (v) => `Sign-up reward is back to "${v ?? "not set"}"`,
   owner_email: (v) => `Your email is back to ${v ?? "not set"}`,
+  opening_hours: () => "Opening hours are back to how they were",
+  menu: () => "The menu is back to how it was",
+  brand_voice: () => "Your brand voice is back to how it was",
+  phone: (v) => `Phone number is back to ${v ?? "not set"}`,
+  address: (v) => `Address is back to ${v ?? "not set"}`,
+  website: (v) => `Website is back to ${v ?? "not set"}`,
 };
 
 async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Promise<{ text: string; done: boolean }> {

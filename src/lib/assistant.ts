@@ -6,6 +6,8 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
 import { customerSummary, lookUpCustomers, lookUpReviews, reviewSummary } from "@/lib/claude-data";
 import { londonLongDate } from "@/lib/clock";
+import type { ProfileChange } from "@/lib/onboarding/profile-changes";
+import { customerSafeMenu } from "@/lib/onboarding/profile-data";
 import { clip } from "@/lib/text";
 import { z } from "zod";
 import {
@@ -50,18 +52,19 @@ function upcomingBirthdays(customers: Customer[], today: Date) {
   return result;
 }
 
-// Loads the restaurant, its customers and reviews from the database and
-// turns them into the background knowledge Claude gets on every message.
+// Loads ONE restaurant (always by its id), its customers and reviews, and turns
+// them into the background knowledge Claude gets. Nothing from any other
+// restaurant is ever loaded into the same context.
 // realTime: scheduled jobs always run on the real clock, never the TIME test clock.
-export async function loadRestaurantContext({ realTime = false }: { realTime?: boolean } = {}) {
+export async function loadRestaurantContext(restaurantId: string, { realTime = false }: { realTime?: boolean } = {}) {
   const supabase = getSupabase();
   const { data: restaurant, error } = await supabase
     .from("restaurants")
     .select("*")
-    .limit(1)
+    .eq("id", restaurantId)
     .maybeSingle<Restaurant>();
   if (error) throw error;
-  if (!restaurant) throw new Error("No restaurant in the database");
+  if (!restaurant) throw new Error(`Restaurant ${restaurantId} not found`);
 
   const [customersRes, reviews] = await Promise.all([
     supabase.from("customers").select("*").eq("restaurant_id", restaurant.id).order("name").returns<Customer[]>(),
@@ -82,7 +85,8 @@ export async function loadRestaurantContext({ realTime = false }: { realTime?: b
       address: restaurant.address,
       phone: restaurant.phone,
       opening_hours: restaurant.opening_hours,
-      menu: restaurant.menu,
+      // Allergens only once the owner has confirmed them (never guesses, in anything customers see).
+      menu: customerSafeMenu(restaurant.menu ?? []),
       brand_voice: restaurant.brand_voice,
       signup_reward: restaurant.signup_reward,
     },
@@ -387,6 +391,38 @@ const lookUpCustomersTool: Anthropic.Beta.BetaTool = {
   },
 };
 
+// "Change Friday hours to 11pm", "add lamb chops, £14": the owner changing the restaurant's own details.
+const changeDetailsTool: Anthropic.Beta.BetaTool = {
+  name: "change_restaurant_details",
+  description:
+    "The owner clearly asks to change the restaurant's own details: opening hours, a dish (add, change price, remove), the sign-up reward, the discount cap, phone, address or website. Not for drafting messages. One entry per change.",
+  input_schema: {
+    type: "object",
+    properties: {
+      changes: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            change: { type: "string", enum: ["hours", "add_dish", "dish_price", "remove_dish", "reward", "discount_cap", "phone", "address", "website"] },
+            day: { type: "string", description: 'For hours: a day ("Friday"), "every day", "weekdays" or "weekend"' },
+            open: { type: "string", description: "For hours: new opening time, 24-hour HH:MM. Leave out if unchanged" },
+            close: { type: "string", description: "For hours: new closing time, 24-hour HH:MM (11pm = 23:00, midnight = 24:00). Leave out if unchanged" },
+            closed: { type: "boolean", description: "For hours: closed all day" },
+            name: { type: "string", description: "For dishes: the dish name (as on the menu, if it's there)" },
+            price: { type: "number", description: "For dishes: price in pounds, e.g. 14 or 7.95" },
+            category: { type: "string", description: "For a new dish: the menu section it goes in, if said" },
+            value: { type: "string", description: "For reward, phone, address or website: the new value" },
+            percent: { type: "number", description: "For discount_cap: the new cap" },
+          },
+          required: ["change"],
+        },
+      },
+    },
+    required: ["changes"],
+  },
+};
+
 const LOOKUP_ROUNDS = 4;
 
 function runLookUp(ctx: RestaurantContext, tool: Anthropic.Beta.BetaToolUseBlock) {
@@ -439,7 +475,8 @@ export type ChatResult =
     }
   | { type: "revise"; instruction: string; content: string }
   | { type: "campaign"; fields: CampaignFields }
-  | { type: "pasted_review"; authorName: string; rating: number | null; text: string };
+  | { type: "pasted_review"; authorName: string; rating: number | null; text: string }
+  | { type: "profile_changes"; changes: ProfileChange[] };
 
 // A normal WhatsApp message from the owner: answer it, or produce a draft.
 export async function chat(
@@ -458,6 +495,7 @@ export async function chat(
     ...(activeDraft?.waiting_for === "decision" ? [reviseDraftTool] : []),
     lookUpReviewsTool,
     lookUpCustomersTool,
+    changeDetailsTool,
   ];
   const system = systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx));
   const isLookUp = (b: Anthropic.Beta.BetaContentBlock): b is Anthropic.Beta.BetaToolUseBlock =>
@@ -502,6 +540,10 @@ export async function chat(
         text: input.text.trim().slice(0, 4000),
       };
     }
+  }
+  if (toolUse?.name === "change_restaurant_details") {
+    const changes = (toolUse.input as { changes?: unknown }).changes;
+    if (Array.isArray(changes) && changes.length) return { type: "profile_changes", changes: changes.slice(0, 20) as ProfileChange[] };
   }
   if (toolUse?.name === "create_email_campaign") {
     const fields = toCampaignFields(toolUse.input as Record<string, unknown>, ctx.now);

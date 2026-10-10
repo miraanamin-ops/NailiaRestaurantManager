@@ -40,12 +40,17 @@ async function reviewsFor(restaurantId: string, drafts: Draft[]) {
   return new Map(reviews.map((r) => [r.id, r]));
 }
 
-async function campaignNames(drafts: Draft[]) {
+async function campaignNames(restaurantId: string, drafts: Draft[]) {
   const ids = drafts.filter((d) => d.kind === "email_campaign").map((d) => d.id);
   if (!ids.length) return new Map<string, string>();
   const rows =
     check(
-      await getSupabase().from("campaigns").select("draft_id, name").in("draft_id", ids).returns<{ draft_id: string; name: string }[]>(),
+      await getSupabase()
+        .from("campaigns")
+        .select("draft_id, name")
+        .eq("restaurant_id", restaurantId)
+        .in("draft_id", ids)
+        .returns<{ draft_id: string; name: string }[]>(),
     ) ?? [];
   return new Map(rows.map((r) => [r.draft_id, r.name]));
 }
@@ -125,7 +130,7 @@ export async function sendBrief(
   const tally = await doneTally(restaurant.id, new Date(now.getTime() - 24 * HOUR), now);
   if (!items.length && !tally.length && !extra.length) return { sent: false, items: 0, tally };
 
-  const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(items)]);
+  const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(restaurant.id, items)]);
   const briefAt = new Date().toISOString();
   const send = (text: string, withButtons: Parameters<typeof messageOwner>[2] = false) => messageOwner(channel, text, withButtons);
   const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, note, restaurant });
@@ -187,6 +192,7 @@ export async function canMessageFreely(restaurant: Restaurant, now: Date) {
   const res = await getSupabase()
     .from("messages")
     .select("created_at")
+    .eq("restaurant_id", restaurant.id)
     .eq("direction", "inbound")
     .eq("from_number", restaurant.owner_whatsapp)
     .order("created_at", { ascending: false })

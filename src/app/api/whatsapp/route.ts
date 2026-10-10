@@ -1,6 +1,9 @@
 import { after, type NextRequest } from "next/server";
 import twilio from "twilio";
 import { handleMessage } from "@/lib/bot";
+import { findLinkCode } from "@/lib/onboarding/steps";
+import { handleOnboardingMessage, linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
+import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
 
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -34,20 +37,23 @@ export async function POST(req: NextRequest) {
   const sandbox = params.To; // the sandbox number
   const body = params.Body ?? "";
   if (!owner || !sandbox) return new Response("Missing From/To", { status: 400 });
-  // A photo (or other file) sent on WhatsApp. We only use the first one.
-  const media =
-    Number(params.NumMedia ?? 0) > 0 && params.MediaUrl0
-      ? { url: params.MediaUrl0, contentType: params.MediaContentType0 ?? "" }
-      : null;
+  // Photos (or other files) sent on WhatsApp. Onboarding reads them all (menu
+  // pages); everywhere else only the first one is used.
+  const allMedia = Array.from({ length: Math.min(10, Number(params.NumMedia ?? 0) || 0) }, (_, i) => ({
+    url: params[`MediaUrl${i}`],
+    contentType: params[`MediaContentType${i}`] ?? "",
+  })).filter((m) => m.url);
+  const media = allMedia[0] ?? null;
+  // "Link my restaurant: K7Q2MZ" (from the onboarding page) links this number to a restaurant.
+  const linkCode = media ? null : findLinkCode(body);
 
-  // Only the restaurant's registered owner number can use the assistant. The
-  // number is a fixed setting (restaurants.owner_whatsapp), never taken from a message.
+  // Every restaurant is identified by its owner's WhatsApp number (a fixed setting,
+  // restaurants.owner_whatsapp, unique per restaurant; never taken from a message).
   const supabase = getSupabase();
   const { data: restaurant } = await supabase
     .from("restaurants")
     .select("id")
     .eq("owner_whatsapp", owner)
-    .limit(1)
     .maybeSingle<{ id: string }>();
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? null,
@@ -57,7 +63,7 @@ export async function POST(req: NextRequest) {
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
-    error: restaurant ? null : "Ignored: not a registered owner number",
+    error: restaurant || linkCode ? null : "Ignored: not a registered owner number",
   });
   // Twilio sometimes delivers the same message twice. Each message id can only be
   // logged once (unique index), so a second copy is a duplicate: do nothing.
@@ -68,15 +74,31 @@ export async function POST(req: NextRequest) {
   }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
 
-  // Anyone else gets no reply and can't trigger anything.
+  // A link code: the only thing an unregistered number can do. (In test mode a
+  // test phone can also move itself between demo restaurants this way.)
+  if (linkCode) {
+    after(() => linkFromWhatsApp(linkCode, owner, sandbox));
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
+
+  // Anyone else can't trigger anything: they get one polite "not registered" reply
+  // (at most once a day) and nothing else.
   if (!restaurant) {
-    console.warn("Ignored WhatsApp message from an unregistered number");
+    console.warn("WhatsApp message from an unregistered number");
+    after(() => replyUnregistered(owner, sandbox));
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
   // Reply to Twilio straight away (it gives up after 15 seconds), then do the
-  // slow work and send answers as separate WhatsApp messages.
-  after(() => handleMessage({ owner, sandbox, body, buttonPayload: params.ButtonPayload, media }));
+  // slow work and send answers as separate WhatsApp messages. Everything from
+  // here on works with this one restaurant only. A restaurant still being set up
+  // gets the onboarding conversation instead.
+  after(async () => {
+    if (await onboardingInProgress(restaurant.id)) {
+      return handleOnboardingMessage({ restaurantId: restaurant.id, owner, sandbox, body, media: allMedia });
+    }
+    return handleMessage({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, media });
+  });
 
   return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
 }

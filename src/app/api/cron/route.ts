@@ -58,7 +58,9 @@ async function recordedRun(job: Job) {
 }
 
 async function runJob(job: Job) {
-  const restaurants = check(await getSupabase().from("restaurants").select("*").returns<Restaurant[]>()) ?? [];
+  // Every active restaurant, one at a time. Each one's steps are wrapped so that
+  // one restaurant failing never stops the others.
+  const restaurants = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
   const now = new Date();
   const summary: Record<string, unknown>[] = [];
 
@@ -68,7 +70,7 @@ async function runJob(job: Job) {
     if (job === "hourly") {
       try {
         if (channel) {
-          const ctx = await loadRestaurantContext({ realTime: true });
+          const ctx = await loadRestaurantContext(r.id, { realTime: true });
           // Only 1-3 star alerts are messaged now; 4-5 star replies wait for the brief.
           entry.reviews = await runReviewCheck(ctx, (text, withButtons) => messageOwner(channel, text, withButtons));
         } else {

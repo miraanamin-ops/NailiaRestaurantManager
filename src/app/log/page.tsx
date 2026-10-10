@@ -3,17 +3,17 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { logOut } from "@/app/login/actions";
 import { recentLog, type AuditEntry } from "@/lib/audit";
-import { requireOwner } from "@/lib/auth";
+import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
 export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
 
 // Every action, newest first: who did what and when. Owner-only (see src/proxy.ts).
-export default function LogPage() {
+export default function LogPage({ searchParams }: PageProps<"/log">) {
   return (
     <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
-      <Log />
+      <Log searchParams={searchParams} />
     </Suspense>
   );
 }
@@ -37,14 +37,15 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { time
 type JobRun = { id: string; job: string; status: string; started_at: string; finished_at: string | null; error: string | null };
 type Alert = { id: string; message: string; channels: string | null; created_at: string };
 
-async function Log() {
+async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   await connection(); // always fresh, never prerendered
   const owner = await requireOwner("/log");
   const supabase = getSupabase();
-  const restaurant = owner.restaurantIds.length
-    ? check(await supabase.from("restaurants").select("*").eq("id", owner.restaurantIds[0]).maybeSingle<Restaurant>())
-    : null;
+  // Only ever a restaurant this person may see.
+  const rid = pickRestaurantId(owner, (await searchParams).r);
+  const restaurant = rid ? check(await supabase.from("restaurants").select("*").eq("id", rid).maybeSingle<Restaurant>()) : null;
   if (!restaurant) return <p className="p-6">No restaurant for {owner.email} yet.</p>;
+  const choices = await restaurantChoices(owner);
   const entries = await recentLog(restaurant.id, 300);
   // Scheduled jobs and builder alerts: for the builder only.
   const [runs, alerts] = owner.isBuilder
@@ -67,6 +68,19 @@ async function Log() {
           <p className="text-sm text-stone-300">{restaurant.name}</p>
           <h1 className="text-2xl font-bold tracking-tight">Activity log</h1>
           <p className="mt-1 text-xs text-stone-400">Every draft, decision, send and setting change, newest first. Text UNDO to reverse your last one.</p>
+          {choices.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {choices.map((c) => (
+                <a
+                  key={c.id}
+                  href={`/log?r=${c.id}`}
+                  className={`rounded-full px-3 py-1 ${c.id === restaurant.id ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}
+                >
+                  {c.name}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </header>
       <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5">

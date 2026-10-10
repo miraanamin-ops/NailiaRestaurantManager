@@ -74,7 +74,7 @@ export async function runMorning(restaurant: Restaurant, now: Date) {
     const released = await processQueue(r, now);
     done.push(`released ${released.length}`);
 
-    const ctx = await loadRestaurantContext({ realTime: true });
+    const ctx = await loadRestaurantContext(r.id, { realTime: true });
     r = ctx.restaurant;
     const weekday = londonWeekday(now);
     const silent = async () => {}; // drafts made here are held for the brief, not messaged

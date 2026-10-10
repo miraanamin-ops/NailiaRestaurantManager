@@ -15,7 +15,8 @@ export function getSupabase() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-export type MenuItem = { name: string; price: number; description: string | null };
+// allergens are only shown to customers (or used in their messages) once confirmed.
+export type MenuItem = { name: string; price: number; description: string | null; allergens?: string[]; allergens_confirmed?: boolean };
 export type MenuCategory = { category: string; items: MenuItem[] };
 
 export type Restaurant = {
@@ -59,6 +60,15 @@ export type Restaurant = {
   morning_failed_on: string | null;
   // A demo restaurant: everything belonging to it is dummy data (step 10).
   is_demo: boolean;
+  // Scheduled jobs only run for active restaurants (step 11).
+  active: boolean;
+  // Found or chosen during onboarding (step 12).
+  owner_name: string | null;
+  website: string | null;
+  google_place_id: string | null;
+  google_rating: number | null;
+  google_rating_count: number | null;
+  photos: string[];
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent
