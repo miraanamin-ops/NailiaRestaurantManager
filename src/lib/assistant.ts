@@ -395,7 +395,7 @@ const lookUpCustomersTool: Anthropic.Beta.BetaTool = {
 const changeDetailsTool: Anthropic.Beta.BetaTool = {
   name: "change_restaurant_details",
   description:
-    "The owner clearly asks to change the restaurant's own details: opening hours, a dish (add, change price, remove), the sign-up reward, the discount cap, phone, address or website. Not for drafting messages. One entry per change.",
+    "The owner clearly asks to change the restaurant's own details: opening hours, a dish (add, change price, remove), the sign-up reward, the discount cap, phone, address or website. Not for drafting messages. One entry per change, and only the changes asked for in the owner's latest message (earlier ones are already done).",
   input_schema: {
     type: "object",
     properties: {

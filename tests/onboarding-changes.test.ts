@@ -75,6 +75,15 @@ describe("changing details by message", () => {
     expect(all.Monday).toBe("11:00 – 22:00");
     expect(all.Saturday).toBe("11:00 – 15:00, 18:00 – 22:00"); // the lunch break stays
   });
+  test("a change that's already in place isn't reported again", () => {
+    const plan = planProfileChanges(current, [
+      { change: "hours", day: "Friday", close: "22:00" },
+      { change: "add_dish", name: "Lamb Chops", price: 14 },
+    ]);
+    expect(plan.lines).toHaveLength(1);
+    expect(plan.lines[0]).toMatch(/Added Lamb Chops/);
+    expect(plan.unchanged).toBe(1);
+  });
   test("a day that wasn't open needs both times; unclear days are asked about, not guessed", () => {
     expect(planProfileChanges(current, [{ change: "hours", day: "Monday", close: "22:00" }]).problems[0]).toMatch(/open and close on Monday/);
     expect(planProfileChanges(current, [{ change: "hours", day: "someday", close: "22:00" }]).problems[0]).toMatch(/which day/);
