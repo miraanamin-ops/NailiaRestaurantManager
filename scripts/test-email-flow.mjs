@@ -101,10 +101,10 @@ check("thank-you page still shows the Google link", (await page(`/feedback/${fr.
 // 7. Export (the same link EXPORT CUSTOMERS sends on WhatsApp).
 const exp = Math.floor(Date.now() / 1000) + 3600;
 const sig = createHmac("sha256", process.env.LINK_SECRET || process.env.CRON_SECRET).update(`customer-export:${restaurantId}:${exp}`).digest("base64url");
-res = await fetch(`${BASE}/export/customers?r=${restaurantId}&t=${exp}.${sig}`);
+res = await fetch(`${BASE}/export/customers`, { method: "POST", body: form({ r: restaurantId, t: `${exp}.${sig}` }) });
 const csv = await res.text();
 check("export downloads a CSV with the customer", res.ok && (res.headers.get("content-type") ?? "").includes("text/csv") && csv.includes(EMAIL));
-res = await fetch(`${BASE}/export/customers?r=${restaurantId}&t=${exp}.bad`);
+res = await fetch(`${BASE}/export/customers`, { method: "POST", body: form({ r: restaurantId, t: `${exp}.bad` }) });
 check("a tampered export link is refused", res.status === 403);
 const exportLog = await one(supabase.from("audit_log").select("id").eq("restaurant_id", restaurantId).eq("action", "exported").gte("created_at", new Date(Date.now() - 120_000).toISOString()));
 check("export written to the audit log", (exportLog ?? []).length > 0);
@@ -121,7 +121,7 @@ const fbAfter = await one(supabase.from("feedback").select("comment, rating").eq
 check("feedback comment removed, rating kept", fbAfter.comment === null && fbAfter.rating === 2);
 const delLog = await one(supabase.from("audit_log").select("id, detail").eq("restaurant_id", restaurantId).eq("action", "data_deleted").contains("data", { customer_id: customer.id }));
 check("deletion written to the audit log", (delLog ?? []).length === 1);
-const csv2 = await (await fetch(`${BASE}/export/customers?r=${restaurantId}&t=${exp}.${sig}`)).text();
+const csv2 = await (await fetch(`${BASE}/export/customers`, { method: "POST", body: form({ r: restaurantId, t: `${exp}.${sig}` }) })).text();
 check("deleted customer no longer in the export", !csv2.includes(EMAIL));
 check("redeemed reward still counted", Boolean(await one(supabase.from("rewards").select("id").eq("id", reward.id).maybeSingle())));
 

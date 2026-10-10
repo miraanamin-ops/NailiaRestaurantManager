@@ -1,5 +1,4 @@
 import "server-only";
-import { logAction } from "@/lib/audit";
 import { SAMPLE_KINDS, samplePreviewUrl, type SampleKind } from "@/lib/email/previews";
 import { runFeedbackJob } from "@/lib/feedback";
 import { signLink } from "@/lib/signed-links";
@@ -18,8 +17,8 @@ export async function exportCustomersCommand({ ctx, send }: Turn) {
     .select("id", { count: "exact", head: true })
     .eq("restaurant_id", r.id)
     .is("deleted_at", null);
-  const link = `${appUrl()}/export/customers?r=${r.id}&t=${signLink("customer-export", r.id, EXPORT_LINK_MS)}`;
-  await logAction({ restaurantId: r.id, actor: "owner", action: "exported", detail: "Asked for the customer list on WhatsApp (download link sent, valid 1 hour)", data: { via: "whatsapp_link" } });
+  const link = `${appUrl()}/export/download?r=${r.id}&t=${signLink("customer-export", r.id, EXPORT_LINK_MS)}`;
+  // Only the download itself is logged (once, when the owner taps Download), so one export is one log line.
   return send(
     `📄 *Your customer list* (${count ?? 0} customer${count === 1 ? "" : "s"}, CSV for Excel or Google Sheets):\n${link}\n\nThe link works for 1 hour. It has your customers' contact details, so please don't forward it. You can also download it any time from your settings page.`,
   );

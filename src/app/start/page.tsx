@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { Turnstile } from "@/components/turnstile";
+import { turnstileSiteKey } from "@/lib/turnstile";
 import { startSignup } from "./actions";
 
 export const metadata: Metadata = { title: "Start with Naila" };
@@ -10,6 +12,8 @@ const ERRORS: Record<string, string> = {
   whatsapp: "Please check your WhatsApp number (e.g. 07700 900123).",
   wait: "Too many login emails just now. Please wait a minute and try again.",
   send: "Couldn't send the login email. Please try again.",
+  captcha: "Please complete the \"I'm human\" check and try again.",
+  slow: "Too many sign-ups from this connection just now. Please try again later.",
 };
 
 // Step zero of onboarding: about a minute. Everything else we try to find ourselves.
@@ -25,6 +29,7 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
   const q = await searchParams;
   const one = (k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]);
   const input = "w-full rounded-xl border border-stone-300 px-4 py-3 text-base";
+  const siteKey = turnstileSiteKey();
 
   return (
     <div className="min-h-dvh bg-stone-100 px-4 py-8 text-stone-900">
@@ -40,7 +45,12 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
           </div>
         ) : (
           <form action={startSignup} className="mt-6 space-y-4 rounded-2xl bg-white p-5 shadow-sm">
-            {one("error") && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{ERRORS[one("error")!] ?? "Something went wrong. Please try again."}</p>}
+            {one("error") && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+                {ERRORS[one("error")!] ?? "Something went wrong. Please try again."}
+                {one("error") === "captcha" && one("why") && <span className="mt-1 block text-xs opacity-75">(Cloudflare said: {one("why")!.slice(0, 60)})</span>}
+              </p>
+            )}
             <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
             <label className="block">
               <span className="text-sm font-medium">Your name</span>
@@ -59,6 +69,8 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
               <input name="whatsapp" type="tel" required autoComplete="tel" inputMode="tel" placeholder="07700 900123" className={`mt-1 ${input}`} />
               <span className="mt-1 block text-xs text-stone-500">Naila runs on WhatsApp: drafts, approvals and your morning brief.</span>
             </label>
+            {/* Cloudflare Turnstile: the "I'm human" check. It adds its answer to the form. */}
+            {siteKey && <Turnstile siteKey={siteKey} />}
             <button type="submit" className="w-full rounded-xl bg-stone-900 px-4 py-4 text-base font-semibold text-white">
               Start setting up
             </button>
