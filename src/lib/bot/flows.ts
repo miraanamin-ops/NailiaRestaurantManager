@@ -18,6 +18,7 @@ import { checkCampaign, checkDraft } from "@/lib/checks";
 import { checkNoteLines, checksLine } from "@/lib/checks/types";
 import { applyEdit, createDraft, getLearningContext, type Draft, type DraftKind } from "@/lib/drafts";
 import { randomDummyReview } from "@/lib/dummy-reviews";
+import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
 import { createPostDraft, postMessage, runReviewCheck, type Send } from "@/lib/google-jobs";
@@ -86,7 +87,7 @@ export async function campaignCreateAndSend(
     isBirthday,
     mode,
   });
-  if (draft.waiting_for === "decision") await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true);
+  if (draft.waiting_for === "decision") await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true, draftPreviewUrl(draft));
 }
 
 // Campaign edits: the AI rewrites the structured campaign, then it's re-checked.
@@ -105,7 +106,7 @@ export async function reviseCampaignAndSend(ctx: RestaurantContext, draft: Draft
     checks: checked.checks,
     now: ctx.now,
   });
-  await send(draftMessage(updated, ctx.restaurant), true);
+  await send(draftMessage(updated, ctx.restaurant), true, draftPreviewUrl(updated));
 }
 
 // The weekly birthday email. Runs from the Monday morning job (held for the brief), or BIRTHDAY CAMPAIGN.

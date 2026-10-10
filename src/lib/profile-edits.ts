@@ -9,7 +9,12 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 // settings page). Each changed field is logged with its old value, all under one
 // batch, so a single UNDO puts the whole change back.
 
-const FIELD_NAMES: Record<keyof ProfileFields, string> = {
+// The restaurant details people can change: from onboarding and messages (ProfileFields),
+// plus the email branding on the settings page.
+export type EditableFields = ProfileFields &
+  Pick<Restaurant, "logo_url" | "brand_color" | "brand_dark" | "tagline" | "reply_to_email" | "feedback_emails">;
+
+const FIELD_NAMES: Record<keyof EditableFields, string> = {
   opening_hours: "opening hours",
   menu: "menu",
   signup_reward: "sign-up reward",
@@ -17,10 +22,16 @@ const FIELD_NAMES: Record<keyof ProfileFields, string> = {
   phone: "phone number",
   address: "address",
   website: "website",
+  logo_url: "logo",
+  brand_color: "button colour",
+  brand_dark: "header colour",
+  tagline: "tagline",
+  reply_to_email: "reply-to email",
+  feedback_emails: "feedback emails",
 };
 
-export async function saveProfileFields(restaurant: Restaurant, fields: Partial<ProfileFields>, detail: string) {
-  const keys = (Object.keys(fields) as (keyof ProfileFields)[]).filter((k) => JSON.stringify(fields[k]) !== JSON.stringify(restaurant[k]));
+export async function saveProfileFields(restaurant: Restaurant, fields: Partial<EditableFields>, detail: string) {
+  const keys = (Object.keys(fields) as (keyof EditableFields)[]).filter((k) => JSON.stringify(fields[k]) !== JSON.stringify(restaurant[k]));
   if (!keys.length) return [];
   const update = Object.fromEntries(keys.map((k) => [k, fields[k]]));
   check(await getSupabase().from("restaurants").update(update).eq("id", restaurant.id));

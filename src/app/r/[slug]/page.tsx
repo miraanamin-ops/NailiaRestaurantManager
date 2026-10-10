@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandShell, NotFoundCard } from "@/components/brand-shell";
 import { consentWording, getRestaurantBySlug } from "@/lib/signups";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = { title: "Join us", robots: { index: false } };
 
@@ -10,6 +11,8 @@ const ERRORS: Record<string, string> = {
   name: "Please tell us your first name.",
   email: "Please check your email address.",
   birthday: "That birthday doesn't look right. You can leave it blank.",
+  captcha: "Please complete the \"I'm human\" check and try again.",
+  slow: "Too many sign-ups from this connection just now. Please try again in a few minutes.",
 };
 
 // The page customers reach by scanning the QR code on the table or till.
@@ -27,6 +30,7 @@ async function SignupForm({ params, searchParams }: Pick<PageProps<"/r/[slug]">,
   const restaurant = await getRestaurantBySlug(slug);
   if (!restaurant) return <NotFoundCard />;
 
+  const siteKey = turnstileSiteKey();
   const errorText = typeof error === "string" ? ERRORS[error] : undefined;
   const inputClass =
     "mt-1 block w-full rounded-xl border border-stone-300 bg-white px-4 py-3 text-base outline-none focus:border-stone-500 focus:ring-2 focus:ring-stone-200";
@@ -35,7 +39,7 @@ async function SignupForm({ params, searchParams }: Pick<PageProps<"/r/[slug]">,
     <BrandShell restaurant={restaurant}>
       <h2 className="text-xl font-semibold">Join us and get {restaurant.signup_reward ?? "a welcome treat"} 🎁</h2>
       <p className="mt-2 text-sm text-stone-600">
-        Sign up below and we&apos;ll email your reward. Show it at the till on your next visit.
+        Sign up below, tap the link we email you to confirm, and your reward is yours. Show it at the till on your next visit.
       </p>
 
       {errorText && (
@@ -65,6 +69,14 @@ async function SignupForm({ params, searchParams }: Pick<PageProps<"/r/[slug]">,
             <input name="website" tabIndex={-1} autoComplete="off" />
           </label>
         </div>
+
+        {siteKey && (
+          <>
+            {/* Cloudflare Turnstile: the "I'm human" check. It adds its answer to the form. */}
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+            <div className="cf-turnstile" data-sitekey={siteKey} data-theme="light" data-size="flexible" />
+          </>
+        )}
 
         <label className="flex items-start gap-3 rounded-xl border border-stone-200 p-4 text-sm">
           <input name="consent" type="checkbox" value="yes" className="mt-0.5 h-5 w-5 shrink-0 accent-stone-800" />

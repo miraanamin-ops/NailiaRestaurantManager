@@ -309,9 +309,8 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
         ) : (
           <>
             <p className="mt-2 text-sm text-neutral-500">
-              {restaurant.email_test_mode
-                ? `Test mode: only ${restaurant.owner_email ?? "the owner's email (text MY EMAIL …)"} gets a real email; customers are logged as simulated.`
-                : "Live mode: every customer with consent gets a real email."}
+              Every customer with confirmed consent gets a real email. Dummy customers are logged as simulated
+              {process.env.TEST_MODE === "true" ? ", and test mode redirects real customers' emails to the builder." : "."}
             </p>
             {campaigns.length === 0 ? (
               <p className="mt-2 text-neutral-500">No campaigns sent yet. Text “Thursday is quiet” to the sandbox.</p>

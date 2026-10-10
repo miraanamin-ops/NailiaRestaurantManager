@@ -22,6 +22,19 @@ export async function downloadTwilioMedia(url: string) {
   return bytes;
 }
 
+// The restaurant's logo, shown at the top of every email. PNG, JPEG, GIF or WebP
+// (email apps don't show SVG), at most 2 MB.
+export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+export async function saveLogo(restaurantId: string, bytes: Buffer, contentType: ImageType) {
+  if (bytes.length > LOGO_MAX_BYTES) throw new Error("That logo is too large (over 2 MB)");
+  const ext = contentType.split("/")[1].replace("jpeg", "jpg");
+  const path = `${restaurantId}/brand/logo-${Date.now()}.${ext}`;
+  const storage = getSupabase().storage.from(BUCKET);
+  const { error } = await storage.upload(path, bytes, { contentType, upsert: false });
+  if (error) throw new Error(`Couldn't save the logo: ${error.message}`);
+  return storage.getPublicUrl(path).data.publicUrl;
+}
+
 // Saves the photo in Supabase Storage and returns its public address.
 export async function savePostPhoto(restaurantId: string, bytes: Buffer, contentType: ImageType) {
   const ext = contentType.split("/")[1].replace("jpeg", "jpg");

@@ -45,7 +45,8 @@ export type Command =
   | { name: "set_reward"; reward: string }
   | { name: "reward" | "qr" | "birthday_campaign" | "campaign_results" | "which_report" }
   | { name: "my_email"; email: string }
-  | { name: "reset_onboarding" };
+  | { name: "reset_onboarding" }
+  | { name: "export_customers" | "email_previews" | "run_feedback" };
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -88,6 +89,9 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   const email = body.trim().match(/^my\s+email(?:\s+is)?\s*:?\s+(\S+@\S+\.\S+)$/i);
   if (email) return { name: "my_email", email: email[1].toLowerCase() };
   if (t === "RESET ONBOARDING" || t === "RESET SETUP") return { name: "reset_onboarding" };
+  if (/^EXPORT( MY)? (CUSTOMERS|CUSTOMER LIST|LIST)$/.test(t)) return { name: "export_customers" };
+  if (t === "EMAIL PREVIEWS" || t === "EMAIL PREVIEW" || t === "PREVIEW EMAILS") return { name: "email_previews" };
+  if (t === "RUN FEEDBACK") return { name: "run_feedback" };
   if (t === "BIRTHDAY CAMPAIGN") return { name: "birthday_campaign" };
   if (t === "CAMPAIGN RESULTS" || t === "CAMPAIGN RESULT" || t === "CAMPAIGN REPORT") return { name: "campaign_results" };
   // REPORT on its own was easy to confuse with RUN REPORT, so it asks which one.

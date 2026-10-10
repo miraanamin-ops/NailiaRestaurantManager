@@ -28,6 +28,8 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   sent: { icon: "✅", label: "Sent" },
   setting: { icon: "⚙️", label: "Setting" },
   undone: { icon: "↩️", label: "Undo" },
+  data_deleted: { icon: "🗑️", label: "Data deleted" },
+  exported: { icon: "📄", label: "Exported" },
 };
 
 const dayOf = (iso: string) =>

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { formatLondon } from "@/lib/clock";
+import { scheduleFeedback } from "@/lib/feedback";
 import { ownerChannel } from "@/lib/followups";
 import { messageOwner } from "@/lib/notify";
 import { logEvent, redeemReward, rewardState } from "@/lib/signups";
@@ -19,6 +20,8 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/reward/[to
       supabase.from("customers").select("name, email").eq("id", reward.customer_id).single<{ name: string; email: string }>(),
     ]);
     await logEvent(reward.restaurant_id, reward.customer_id, "redeemed", reward.reward);
+    // "How was your visit?" about 3 hours from now.
+    await scheduleFeedback({ restaurantId: reward.restaurant_id, customerId: reward.customer_id, source: "reward", sourceId: reward.id, redeemedAt: new Date(reward.redeemed_at!) });
     const channel = restaurant ? ownerChannel(restaurant) : null;
     if (channel && customer) {
       await messageOwner(

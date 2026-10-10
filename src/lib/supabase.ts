@@ -69,6 +69,10 @@ export type Restaurant = {
   google_rating: number | null;
   google_rating_count: number | null;
   photos: string[];
+  // Real customer email (step 13).
+  logo_url: string | null;
+  reply_to_email: string | null;
+  feedback_emails: boolean;
 };
 
 // The live site's address, for links in emails and WhatsApp messages sent

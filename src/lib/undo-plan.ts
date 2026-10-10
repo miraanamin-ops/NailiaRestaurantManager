@@ -28,6 +28,12 @@ const SETTINGS = [
   "phone",
   "address",
   "website",
+  "logo_url",
+  "brand_color",
+  "brand_dark",
+  "tagline",
+  "reply_to_email",
+  "feedback_emails",
 ];
 
 export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "live"): UndoPlan {

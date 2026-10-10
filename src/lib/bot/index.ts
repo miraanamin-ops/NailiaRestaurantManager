@@ -34,7 +34,7 @@ export async function handleMessage(input: {
     return;
   }
   const channel: OwnerChannel = { restaurantId: ctx.restaurantId, from: sandbox, to: owner };
-  const send: Send = (text, withButtons = false) => messageOwner(channel, text, withButtons);
+  const send: Send = (text, withButtons = false, mediaUrl = null) => messageOwner(channel, text, withButtons, { mediaUrl });
 
   try {
     // The owner number itself is a fixed setting; just remember which of our numbers they're talking to.

@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { builderEmails } from "@/lib/builder-emails";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 
@@ -33,11 +34,6 @@ export async function authClient() {
   });
 }
 
-const builderEmails = () =>
-  (process.env.BUILDER_EMAIL ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
 
 // Who can log in, and which restaurants they can see.
 export async function accessFor(email: string) {

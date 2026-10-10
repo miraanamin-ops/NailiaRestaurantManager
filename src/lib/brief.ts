@@ -1,9 +1,11 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { approveDraft, check, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
+import { feedbackForBrief, markFeedbackReported } from "@/lib/feedback";
 import { approveAllMessage, draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
 import { stars } from "@/lib/google-jobs";
+import { draftPreviewUrl } from "@/lib/email/previews";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { attemptSend, type SendResult } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -128,11 +130,15 @@ export async function sendBrief(
   const all = await waitingDrafts(restaurant.id);
   const items = all.slice(0, BRIEF_MAX_ITEMS);
   const tally = await doneTally(restaurant.id, new Date(now.getTime() - 24 * HOUR), now);
+  // Customers' good private feedback (bad feedback was messaged straight away).
+  const feedback = await feedbackForBrief(restaurant.id);
+  extra = [...extra, ...(feedback.lines.length ? [feedback.lines.join("\n")] : [])];
   if (!items.length && !tally.length && !extra.length) return { sent: false, items: 0, tally };
 
   const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(restaurant.id, items)]);
   const briefAt = new Date().toISOString();
-  const send = (text: string, withButtons: Parameters<typeof messageOwner>[2] = false) => messageOwner(channel, text, withButtons);
+  const send = (text: string, withButtons: Parameters<typeof messageOwner>[2] = false, mediaUrl: string | null = null) =>
+    messageOwner(channel, text, withButtons, { mediaUrl });
   const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, note, restaurant });
 
   // Number the items first, so a fast tap on a button finds its brief.
@@ -142,7 +148,8 @@ export async function sendBrief(
   );
 
   await send(brief.summary);
-  for (const [i, d] of items.entries()) await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1 });
+  await markFeedbackReported(restaurant.id, feedback.ids);
+  for (const [i, d] of items.entries()) await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1 }, draftPreviewUrl(d));
   return { sent: true, items: items.length, tally };
 }
 

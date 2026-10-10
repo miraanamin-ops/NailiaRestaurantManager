@@ -91,7 +91,7 @@ export async function createRestaurantFromSignup(input: { ownerName: string; ema
         active: false,
         is_demo: isTestMode(),
         discount_cap_percent: 15,
-        email_test_mode: true,
+        email_test_mode: false,
       })
       .select("*")
       .single<Restaurant>(),

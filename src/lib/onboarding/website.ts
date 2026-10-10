@@ -34,16 +34,44 @@ export function isPublicWebAddress(u: URL) {
 }
 
 export async function readWebsite(url: string | null): Promise<string> {
-  if (!url) return "";
+  return (await readWebsitePage(url)).text;
+}
+
+// The page's words (for the voice) and its markup (for the logo and colour).
+export async function readWebsitePage(url: string | null): Promise<{ text: string; html: string; url: string | null }> {
+  const empty = { text: "", html: "", url: null };
+  if (!url) return empty;
   try {
     const u = new URL(url.startsWith("http") ? url : `https://${url}`);
-    if (!isPublicWebAddress(u)) return "";
+    if (!isPublicWebAddress(u)) return empty;
     const res = await fetch(u, { headers: { "User-Agent": "NailaBot/1.0 (restaurant onboarding)" }, signal: AbortSignal.timeout(8000), redirect: "follow" });
-    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("text/html")) return "";
+    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("text/html")) return empty;
     const buf = await res.arrayBuffer();
-    return textFromHtml(new TextDecoder().decode(buf.slice(0, MAX_BYTES)));
+    const html = new TextDecoder().decode(buf.slice(0, MAX_BYTES));
+    return { text: textFromHtml(html), html, url: res.url || u.toString() };
   } catch (err) {
     console.warn("Couldn't read the website", err instanceof Error ? err.message : err);
-    return "";
+    return empty;
   }
+}
+
+// The site's own colour (<meta name="theme-color">) and logo (an apple-touch-icon
+// or a large icon), for the restaurant's emails. Plain code (unit-tested).
+export function brandFromHtml(html: string, pageUrl: string) {
+  const attr = (tag: string, name: string) => tag.match(new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`, "i"))?.[1] ?? null;
+  const tags = html.match(/<(meta|link)\b[^>]*>/gi) ?? [];
+  const theme = tags.find((t) => /^<meta/i.test(t) && /name\s*=\s*["']theme-color["']/i.test(t));
+  const color = theme ? attr(theme, "content")?.trim().toLowerCase() ?? null : null;
+  const icons = tags
+    .filter((t) => /^<link/i.test(t) && /rel\s*=\s*["'][^"']*(apple-touch-icon|icon)[^"']*["']/i.test(t))
+    .map((t) => ({ href: attr(t, "href"), apple: /apple-touch-icon/i.test(t), size: Number(attr(t, "sizes")?.match(/(\d+)x/)?.[1] ?? 0), svg: /\.svg(\?|$)/i.test(attr(t, "href") ?? "") || /svg/i.test(attr(t, "type") ?? "") }))
+    .filter((i) => i.href && !i.svg && !i.href.startsWith("data:") && (i.apple || i.size >= 96));
+  icons.sort((a, b) => Number(b.apple) - Number(a.apple) || b.size - a.size);
+  let logo: string | null = null;
+  try {
+    logo = icons[0]?.href ? new URL(icons[0].href, pageUrl).toString() : null;
+  } catch {
+    logo = null;
+  }
+  return { color: color && /^#[0-9a-f]{6}$/.test(color) ? color : null, logo };
 }

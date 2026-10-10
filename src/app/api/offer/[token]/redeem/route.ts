@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { formatDay, redeemOffer } from "@/lib/campaigns";
 import { formatLondon } from "@/lib/clock";
+import { scheduleFeedback } from "@/lib/feedback";
 import { ownerChannel } from "@/lib/followups";
 import { messageOwner } from "@/lib/notify";
 import { logEvent, rewardState } from "@/lib/signups";
@@ -33,6 +34,8 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/offer/[tok
       : { data: null };
     const who = customer ? `${customer.name} (${send.email})` : `Your owner copy (${send.email})`;
     await logEvent(restaurant.id, send.customer_id, "offer_redeemed", `${campaign.name}: ${campaign.offer}`);
+    // "How was your visit?" about 3 hours from now (not for the owner's own copy).
+    await scheduleFeedback({ restaurantId: restaurant.id, customerId: send.customer_id, source: "offer", sourceId: send.id, redeemedAt: new Date(send.redeemed_at!) });
     const channel = ownerChannel(restaurant);
     if (channel) {
       await messageOwner(

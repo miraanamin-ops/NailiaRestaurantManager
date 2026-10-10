@@ -20,9 +20,19 @@ async function Thanks({ params, searchParams }: Pick<PageProps<"/r/[slug]/thanks
   if (!restaurant) return <NotFoundCard />;
 
   const reward = restaurant.signup_reward ?? "your welcome treat";
-  let title = "You're in! 🎉";
-  let body = `Check your inbox: we've emailed ${reward}. Open the email at the till on your next visit.`;
-  if (status === "repeat") {
+  // Double opt-in: after signing up, the reward arrives once the email is confirmed.
+  let title = "Check your inbox 📬";
+  let body = `We've sent you an email. Tap "Confirm my email" in it and ${reward} is yours.`;
+  if (status === "reconfirm") {
+    title = "We've sent the link again 📬";
+    body = `You signed up before but haven't confirmed yet. Tap "Confirm my email" in the email we've just sent to get ${reward}.`;
+  } else if (status === "consent") {
+    title = "One more tap 📬";
+    body = "You're already signed up. To start getting offers by email, tap the confirm link in the email we've just sent.";
+  } else if (status === "limit") {
+    title = "We've already emailed you";
+    body = "We've sent a few emails to this address today, so we haven't sent another. Please check your inbox (and spam folder) for the earlier one.";
+  } else if (status === "repeat") {
     title = "You're already signed up 👋";
     body = `We've sent your reward email again. Open it at the till to claim ${reward}.`;
   } else if (status === "used") {
