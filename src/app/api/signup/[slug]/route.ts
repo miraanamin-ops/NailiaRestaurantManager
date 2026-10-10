@@ -49,7 +49,10 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/signup/[slu
 
   const ip = clientIp(req.headers);
   const human = await verifyTurnstile(get("cf-turnstile-response"), ip);
-  if (!human.ok) return back(req, slug, { error: "captcha" });
+  if (!human.ok) {
+    console.warn("Turnstile rejected a sign-up", human.error);
+    return back(req, slug, { error: "captcha", why: human.error ?? "failed" });
+  }
   if (
     await overLimit([
       { key: limitKey("signup-ip-10m", ip), max: 5, windowMs: 10 * MINUTE },
