@@ -6,27 +6,35 @@ import { verifyLink } from "@/lib/signed-links";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
 // The owner's customer list as CSV. Two ways in:
-//   - the settings page (logged in): /export/customers?r=<restaurant id>
-//   - the link sent on WhatsApp after "EXPORT CUSTOMERS": also ?t=<signed token>, valid for 1 hour
-// Every download is written to the audit log.
+//   - GET from the settings page (logged in): /export/customers?r=<restaurant id>
+//   - POST from the Download button on /export/download, the page the WhatsApp
+//     EXPORT CUSTOMERS link opens (signed token, valid for 1 hour). A button, not a
+//     plain link, so WhatsApp's link previews never count as downloads.
+// Every download is written to the audit log, once.
 export async function GET(req: NextRequest) {
   const rid = req.nextUrl.searchParams.get("r") ?? "";
-  const token = req.nextUrl.searchParams.get("t");
-  let via: string;
-  if (token) {
-    if (!verifyLink("customer-export", rid, token)) {
-      return new Response("This download link has expired. Text EXPORT CUSTOMERS on WhatsApp for a new one.", { status: 403 });
-    }
-    via = "from the WhatsApp link";
-  } else {
-    const owner = await currentOwner();
-    if (!owner) return Response.redirect(new URL(`/login?next=${encodeURIComponent(`/settings?r=${rid}`)}`, req.url), 303);
-    if (!owner.restaurantIds.includes(rid)) return new Response("Not found", { status: 404 });
-    via = `from the settings page (${owner.email})`;
+  // Older WhatsApp links (token in the address) go to the Download page instead.
+  if (req.nextUrl.searchParams.get("t")) {
+    return Response.redirect(new URL(`/export/download?${req.nextUrl.searchParams}`, req.url), 303);
   }
+  const owner = await currentOwner();
+  if (!owner) return Response.redirect(new URL(`/login?next=${encodeURIComponent(`/settings?r=${rid}`)}`, req.url), 303);
+  if (!owner.restaurantIds.includes(rid)) return new Response("Not found", { status: 404 });
+  return download(rid, `from the settings page (${owner.email})`);
+}
+
+export async function POST(req: NextRequest) {
+  const form = await req.formData();
+  const rid = String(form.get("r") ?? "");
+  if (!verifyLink("customer-export", rid, String(form.get("t") ?? ""))) {
+    return new Response("This download link has expired. Text EXPORT CUSTOMERS on WhatsApp for a new one.", { status: 403 });
+  }
+  return download(rid, "from the WhatsApp link");
+}
+
+async function download(rid: string, via: string) {
   const restaurant = check(await getSupabase().from("restaurants").select("id, slug").eq("id", rid).maybeSingle<Pick<Restaurant, "id" | "slug">>());
   if (!restaurant) return new Response("Not found", { status: 404 });
-
   const { csv, count } = await exportCustomers(restaurant.id);
   await logExport(restaurant.id, via, count);
   return new Response(csv, {
