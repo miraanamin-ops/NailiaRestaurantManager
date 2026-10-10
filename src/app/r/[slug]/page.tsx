@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandShell, NotFoundCard } from "@/components/brand-shell";
 import { consentWording, getRestaurantBySlug } from "@/lib/signups";
+import { Turnstile } from "@/components/turnstile";
 import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = { title: "Join us", robots: { index: false } };
@@ -26,7 +27,7 @@ export default function SignupPage({ params, searchParams }: PageProps<"/r/[slug
 
 async function SignupForm({ params, searchParams }: Pick<PageProps<"/r/[slug]">, "params" | "searchParams">) {
   const { slug } = await params;
-  const { error } = await searchParams;
+  const { error, why } = await searchParams;
   const restaurant = await getRestaurantBySlug(slug);
   if (!restaurant) return <NotFoundCard />;
 
@@ -45,6 +46,7 @@ async function SignupForm({ params, searchParams }: Pick<PageProps<"/r/[slug]">,
       {errorText && (
         <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
           {errorText}
+          {error === "captcha" && typeof why === "string" && <span className="mt-1 block text-xs opacity-75">(Cloudflare said: {why.slice(0, 60)})</span>}
         </p>
       )}
 
@@ -70,13 +72,8 @@ async function SignupForm({ params, searchParams }: Pick<PageProps<"/r/[slug]">,
           </label>
         </div>
 
-        {siteKey && (
-          <>
-            {/* Cloudflare Turnstile: the "I'm human" check. It adds its answer to the form. */}
-            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
-            <div className="cf-turnstile" data-sitekey={siteKey} data-theme="light" data-size="flexible" />
-          </>
-        )}
+        {/* Cloudflare Turnstile: the "I'm human" check. It adds its answer to the form. */}
+        {siteKey && <Turnstile siteKey={siteKey} />}
 
         <label className="flex items-start gap-3 rounded-xl border border-stone-200 p-4 text-sm">
           <input name="consent" type="checkbox" value="yes" className="mt-0.5 h-5 w-5 shrink-0 accent-stone-800" />
