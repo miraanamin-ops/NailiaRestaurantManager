@@ -3,6 +3,7 @@ import { londonTime, londonYmd } from "@/lib/clock";
 import type { DraftChecks } from "@/lib/checks/types";
 import { check, checkRow, createDraft, applyEdit, type Draft } from "@/lib/drafts";
 import { sendCampaignEmail } from "@/lib/email";
+import { isDummyAddress } from "@/lib/email/route";
 import { newToken } from "@/lib/signups";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -62,6 +63,8 @@ type SegmentCustomer = {
   marketing_opt_in: boolean;
   unsubscribed_at: string | null;
   source: string;
+  email_confirmed_at: string | null;
+  deleted_at: string | null;
 };
 
 // ---------- Dates (London) ----------
@@ -143,8 +146,9 @@ export function segmentRecipients(customers: SegmentCustomer[], segment: Segment
   if (segment === "birthdays_7d") inSegment = inSegment.filter((c) => hasBirthdayInNext7Days(c.birthday, now));
   else if (segment === "unredeemed_signups") inSegment = inSegment.filter((c) => c.source === "signup" && unredeemedIds.has(c.id));
 
-  // Safety rule: only customers with valid consent who haven't unsubscribed.
-  const eligible = inSegment.filter((c) => c.marketing_opt_in && !c.unsubscribed_at);
+  // Safety rule: only customers with valid consent who haven't unsubscribed, and
+  // (double opt-in) whose email address has been confirmed.
+  const eligible = inSegment.filter((c) => c.marketing_opt_in && !c.unsubscribed_at && c.email_confirmed_at && !c.deleted_at);
   return { eligible, excluded: inSegment.length - eligible.length };
 }
 
@@ -154,7 +158,7 @@ export async function recipientsFor(restaurant: Restaurant, segment: Segment, no
     check(
       await supabase
         .from("customers")
-        .select("id, name, email, birthday, marketing_opt_in, unsubscribed_at, source")
+        .select("id, name, email, birthday, marketing_opt_in, unsubscribed_at, source, email_confirmed_at, deleted_at")
         .eq("restaurant_id", restaurant.id)
         .returns<SegmentCustomer[]>(),
     ) ?? [];
@@ -270,8 +274,9 @@ const firstName = (name: string) => name.trim().split(/\s+/)[0] || "there";
 
 export type DeliverySummary = { emailed: number; simulated: number; failed: number; excluded: number; ownerCopy: boolean };
 
-// Called by the send pipeline once every safety rule has passed. In test mode
-// only the owner's address gets a real email; everyone else is "simulated".
+// Called by the send pipeline once every safety rule has passed. Dummy customers
+// (seed data, example.com addresses) are "simulated"; everyone else gets a real
+// email (redirected to the builder when TEST_MODE is on: see lib/email/route.ts).
 export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now: Date): Promise<DeliverySummary> {
   const supabase = getSupabase();
   const campaign = await getCampaignForDraft(draft.id);
@@ -279,19 +284,20 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
   const { eligible, excluded } = await recipientsFor(restaurant, campaign.segment, now);
   const ownerEmail = restaurant.owner_email?.toLowerCase() ?? null;
 
-  type Row = { customer_id: string | null; email: string; token: string; kind: "customer" | "owner_copy"; delivery: "email" | "simulated"; name: string; unsubscribeToken: string | null };
+  type Row = { customer_id: string | null; email: string; token: string; kind: "customer" | "owner_copy"; delivery: "email" | "simulated"; name: string; unsubscribeToken: string | null; seed: boolean };
   const rows: Row[] = eligible.map((c) => ({
     customer_id: c.id,
     email: c.email!,
     token: newToken(),
     kind: "customer",
-    delivery: !restaurant.email_test_mode || c.email === ownerEmail ? "email" : "simulated",
+    delivery: c.source === "seed" || isDummyAddress(c.email!) ? "simulated" : "email",
     name: firstName(c.name),
     unsubscribeToken: null,
+    seed: c.source === "seed",
   }));
   // The owner always gets their own copy to check (and test redeeming).
   if (ownerEmail && !rows.some((r) => r.email === ownerEmail)) {
-    rows.push({ customer_id: null, email: ownerEmail, token: newToken(), kind: "owner_copy", delivery: "email", name: "[First name]", unsubscribeToken: null });
+    rows.push({ customer_id: null, email: ownerEmail, token: newToken(), kind: "owner_copy", delivery: "email", name: "[First name]", unsubscribeToken: null, seed: false });
   }
 
   // Insert every row first: the unique index stops any customer getting this campaign twice.
@@ -327,9 +333,10 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
   let failed = 0;
   for (const r of rows.filter((x) => x.delivery === "email")) {
     try {
-      const resendId = await sendCampaignEmail({
+      const sent = await sendCampaignEmail({
         restaurant,
         campaign,
+        seed: r.seed,
         validity: formatValidity(campaign.valid_from, campaign.valid_until),
         baseUrl: appUrl(),
         token: r.token,
@@ -338,7 +345,12 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
         unsubscribeToken: r.unsubscribeToken,
         ownerCopy: r.kind === "owner_copy",
       });
-      check(await supabase.from("campaign_sends").update({ resend_id: resendId }).eq("token", r.token));
+      if (sent.delivery === "simulated") {
+        r.delivery = "simulated";
+        check(await supabase.from("campaign_sends").update({ delivery: "simulated", error: sent.reason ?? null }).eq("token", r.token));
+        continue;
+      }
+      check(await supabase.from("campaign_sends").update({ resend_id: sent.id }).eq("token", r.token));
       emailed++;
     } catch (err) {
       failed++;
@@ -368,7 +380,7 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
 
 export function deliveryNote(s: DeliverySummary) {
   const parts = [`📧 ${s.emailed} real email${s.emailed === 1 ? "" : "s"}${s.ownerCopy ? " (incl. your copy)" : ""}`];
-  if (s.simulated) parts.push(`🧪 ${s.simulated} simulated (test mode)`);
+  if (s.simulated) parts.push(`🧪 ${s.simulated} simulated (dummy customers)`);
   if (s.failed) parts.push(`⚠️ ${s.failed} failed`);
   if (s.excluded) parts.push(`🚫 ${s.excluded} left out (no consent / unsubscribed)`);
   return parts.join(" · ");
@@ -378,7 +390,8 @@ export function deliveryNote(s: DeliverySummary) {
 
 export async function getSendByToken(token: string) {
   const send = check(await getSupabase().from("campaign_sends").select("*").eq("token", token).maybeSingle<CampaignSend>());
-  if (!send) return null;
+  // "deleted": the customer deleted their data, so their offer link no longer works.
+  if (!send || send.email === "deleted") return null;
   const campaign = checkRow(await getSupabase().from("campaigns").select("*").eq("id", send.campaign_id).single<Campaign>());
   return { send, campaign };
 }

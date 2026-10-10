@@ -9,7 +9,7 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder";
+export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer";
 export type AuditAction =
   | "created" // a draft was written (and checked)
   | "edited"
@@ -19,7 +19,9 @@ export type AuditAction =
   | "queued" // held: outside sending hours or paused
   | "sent"
   | "setting" // PAUSE, RESUME, CAP, TIME, reward, email
-  | "undone";
+  | "undone"
+  | "data_deleted" // a customer used "delete my data"
+  | "exported"; // the owner downloaded (or was sent a link to) their customer list
 
 export type AuditEntry = {
   id: string;

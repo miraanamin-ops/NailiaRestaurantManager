@@ -64,7 +64,8 @@ describe("compliance", () => {
 
 describe("consent filtering for campaigns", () => {
   const c = (id: string, extra: Partial<Parameters<typeof segmentRecipients>[0][number]> = {}) => ({
-    id, name: id, email: `${id}@example.com`, birthday: null, marketing_opt_in: true, unsubscribed_at: null, source: "signup", ...extra,
+    id, name: id, email: `${id}@example.com`, birthday: null, marketing_opt_in: true, unsubscribed_at: null, source: "signup",
+    email_confirmed_at: "2026-10-01T00:00:00Z", deleted_at: null, ...extra,
   });
   const now = new Date("2026-10-09T12:00:00Z");
   const people = [
@@ -74,11 +75,14 @@ describe("consent filtering for campaigns", () => {
     c("no-email", { email: null }),
     c("birthday", { birthday: "1990-10-12" }),
     c("seeded", { source: "seed" }),
+    // Double opt-in: ticked the box but never clicked the confirm link.
+    c("unconfirmed", { email_confirmed_at: null }),
+    c("deleted", { deleted_at: "2026-10-05T00:00:00Z" }),
   ];
   test("everyone: only consented, subscribed customers with an email", () => {
     const r = segmentRecipients(people, "everyone", now, new Set());
     expect(r.eligible.map((x) => x.id)).toEqual(["yes", "birthday", "seeded"]);
-    expect(r.excluded).toBe(2); // no-consent and unsubscribed (no-email isn't in the segment at all)
+    expect(r.excluded).toBe(4); // no-consent, unsubscribed, unconfirmed and deleted (no-email isn't in the segment at all)
   });
   test("birthdays in the next 7 days", () => {
     expect(segmentRecipients(people, "birthdays_7d", now, new Set()).eligible.map((x) => x.id)).toEqual(["birthday"]);

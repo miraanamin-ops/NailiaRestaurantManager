@@ -30,6 +30,8 @@ const TABLES = [
   "sent_log",
   "drafts",
   "reports",
+  "feedback",
+  "feedback_requests",
   "customer_events",
   "consents",
   "rewards",

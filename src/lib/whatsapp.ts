@@ -64,6 +64,12 @@ function templateSid(targeted: boolean) {
   return sid;
 }
 
+// A picture (e.g. the email preview), with an optional caption. Twilio fetches it from mediaUrl, which must be public.
+export async function sendImage(from: string, to: string, mediaUrl: string, caption = "") {
+  const msg = await getTwilio().messages.create({ from, to, mediaUrl: [mediaUrl], ...(caption ? { body: clip(caption, TEXT_MAX) } : {}) });
+  return { sid: msg.sid, body: caption ? `${caption} [image]` : "[image]" };
+}
+
 export async function sendText(from: string, to: string, body: string) {
   const msg = await getTwilio().messages.create({ from, to, body: clip(body, TEXT_MAX) });
   return { sid: msg.sid, body: clip(body, TEXT_MAX) };

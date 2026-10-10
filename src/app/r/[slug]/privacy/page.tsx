@@ -33,23 +33,26 @@ async function Privacy({ params }: Pick<PageProps<"/r/[slug]/privacy">, "params"
           keep a record of whether you agreed to marketing emails, the exact wording you saw, and when.
         </p>
         <p>
-          <strong>Why.</strong> To send you the welcome reward you asked for. If you tick the box, we&apos;ll also
-          email you offers and news, and use your birthday for a birthday treat. Ticking the box is optional.
+          <strong>Why.</strong> To send you the welcome reward you asked for. First we email you a link to confirm
+          the address is yours: nothing else is sent until you tap it. If you tick the box, we&apos;ll also email you
+          offers and news, and use your birthday for a birthday treat. Ticking the box is optional. After you use a
+          reward or offer we may email once to ask how your visit was (at most once a month).
         </p>
         <p>
-          <strong>Who helps us.</strong> Our website and database are run by trusted providers (Vercel, Supabase and
-          Resend for emails), who only process your details on our behalf. We never sell your details.
+          <strong>Who helps us.</strong> Our website, database and emails are run by trusted providers (DinerAI, with
+          Vercel, Supabase and Resend), who only process your details on our behalf. We never sell your details.
         </p>
         <p>
           <strong>How long we keep it.</strong> Until you unsubscribe or ask us to delete it. We keep a record of your
           consent choices for as long as we need to show we followed the rules.
         </p>
         <p>
-          <strong>Your choices.</strong> Every email has an unsubscribe link that stops marketing emails straight away.
-          You can also ask us to see, correct or delete your details by contacting us above. If you&apos;re unhappy,
+          <strong>Your choices.</strong> Every email has an unsubscribe link that stops our emails straight away, and
+          a &quot;Delete my data&quot; link that removes your name, email address and birthday from our list. You can
+          also ask us to see or correct your details by contacting us above. If you&apos;re unhappy,
           you can complain to the Information Commissioner&apos;s Office (ico.org.uk).
         </p>
-        <p className="text-xs text-stone-500">Version {PRIVACY_VERSION} · last updated 9 October 2026</p>
+        <p className="text-xs text-stone-500">Version {PRIVACY_VERSION} · last updated 10 October 2026</p>
       </div>
       <Link href={`/r/${r.slug}`} className="mt-6 inline-block text-sm underline">
         ← Back to sign-up

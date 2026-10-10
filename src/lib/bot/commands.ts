@@ -4,6 +4,7 @@ import { approveAll, sendBrief } from "@/lib/brief";
 import { recentCampaignStats, statsText } from "@/lib/campaigns";
 import { formatLondon, formatWindow, isInSendWindow, londonTimeOn } from "@/lib/clock";
 import { getActiveDraft, getQueue, KIND_LABELS } from "@/lib/drafts";
+import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage, sendResultMessage } from "@/lib/format";
 import { releaseQueue } from "@/lib/followups";
 import { presentNext, runPostJob, runReviewCheck } from "@/lib/google-jobs";
@@ -14,6 +15,7 @@ import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supab
 import { resetOnboardingText } from "@/lib/onboarding/whatsapp-flow";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
 import { isTestCommand, isTestMode, TEST_MODE_OFF_MESSAGE } from "@/lib/test-mode";
+import { emailPreviewsCommand, exportCustomersCommand, runFeedbackCommand } from "./email-commands";
 import type { Command } from "./parse";
 import { updateRestaurant, type Turn } from "./turn";
 
@@ -32,7 +34,9 @@ const HELP_TEXT = `🛠️ *Commands*
 - *QR*: get the sign-up page link and printable QR code
 - *MY EMAIL you@example.com*: where your copy of each campaign email goes
 - *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
-- *CAMPAIGN RESULTS*: how the latest email campaign did`;
+- *CAMPAIGN RESULTS*: how the latest email campaign did
+- *EMAIL PREVIEWS*: see the automatic emails (confirm, welcome, "how was your visit?")
+- *EXPORT CUSTOMERS*: a download link for your customer list`;
 
 // Only listed (and only working) when TEST_MODE is on.
 const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
@@ -44,7 +48,8 @@ const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
 - *TIME 22:00*: pretend it's 10pm today (*TIME TOMORROW 09:05*, *TIME THURSDAY 18:00* also work) · *TIME OFF*: back to the real time
 - *TEST SEND*: try to send the waiting draft *without* approving it
 - *TEST CHECKER*: run a draft full of mistakes through the four checks
-- *RESET ONBOARDING*: (test restaurants only) clear the set-up and go through onboarding again`;
+- *RESET ONBOARDING*: (test restaurants only) clear the set-up and go through onboarding again
+- *RUN FEEDBACK*: send "How was your visit?" emails now, without waiting 3 hours after a redemption`;
 
 // TEST CHECKER: a draft with deliberate mistakes taken from THIS restaurant's own
 // menu (a wrong price, wrong opening hours, an unagreed freebie).
@@ -156,8 +161,14 @@ export async function runCommand(command: Command, turn: Turn) {
       await updateRestaurant(r.id, { owner_email: command.email });
       await logSetting(r.id, "owner_email", r.owner_email, command.email, `Changed your email to ${command.email}`);
       return send(
-        `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${r.email_test_mode ? "\n_Test mode is on: that's the only real email; customers are logged as simulated._" : ""}`,
+        `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${isTestMode() ? "\n_Test mode is on: customers' emails are redirected to the builder._" : ""}`,
       );
+    case "export_customers":
+      return exportCustomersCommand(turn);
+    case "email_previews":
+      return emailPreviewsCommand(turn);
+    case "run_feedback":
+      return runFeedbackCommand(turn);
     case "birthday_campaign":
       return proposeBirthdayCampaign(ctx, send);
     case "campaign_results": {
@@ -207,7 +218,7 @@ export async function runCommand(command: Command, turn: Turn) {
     case "next": {
       const active = await getActiveDraft(r.id);
       if (active?.waiting_for === "decision") {
-        return send(`👀 This one is still waiting for you:\n\n${draftMessage(active, r)}`, true);
+        return send(`👀 This one is still waiting for you:\n\n${draftMessage(active, r)}`, true, draftPreviewUrl(active));
       }
       if (!(await presentNext(ctx, send, true))) await send("Your queue is empty. 🎉");
       return;

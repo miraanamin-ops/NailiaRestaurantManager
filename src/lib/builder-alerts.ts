@@ -6,7 +6,7 @@ import { sendText } from "@/lib/whatsapp";
 
 // Alerts about the system itself (a job failed, or didn't run on time) go to the
 // BUILDER only, never to a restaurant owner:
-//   BUILDER_EMAIL     e.g. you@example.com (with Resend's test sender, only the Resend account email works)
+//   BUILDER_EMAIL     e.g. you@example.com (sent from alerts@ our EMAIL_FROM_DOMAIN)
 //   BUILDER_WHATSAPP  e.g. whatsapp:+447700900123
 // The same problem (key) alerts at most once every DEDUPE_HOURS.
 const DEDUPE_HOURS = 6;

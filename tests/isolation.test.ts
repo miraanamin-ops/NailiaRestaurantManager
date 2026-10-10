@@ -37,6 +37,7 @@ const restaurant = (id: string, extra: Record<string, unknown>) => ({
 const customer = (id: string, rid: string, name: string) => ({
   id, restaurant_id: rid, name, email: `${id}@example.com`, phone: null, birthday: null, visit_count: 1, last_visit: null,
   marketing_opt_in: true, unsubscribed_at: null, unsubscribe_token: `unsub-${id}`, source: "signup", notes: null,
+  email_confirmed_at: "2026-10-01T00:00:00Z", deleted_at: null,
 });
 const review = (id: string, rid: string, author: string, text: string) => ({
   id, restaurant_id: rid, author_name: author, rating: 5, text, review_date: "2026-10-08T10:00:00Z", replied: false,
@@ -282,8 +283,8 @@ describe("logged-in pages", () => {
 describe("no query forgets which restaurant it's for", () => {
   // Restaurant-owned tables: every read or write of them must say which restaurant
   // (or a specific row by id/token). A new query that doesn't fails this test.
-  const OWNED = ["customers", "reviews", "drafts", "campaigns", "campaign_sends", "sent_log", "audit_log", "reports", "google_posts", "rewards", "consents", "customer_events", "draft_feedback", "blocked_sends", "messages", "onboarding"];
-  const SCOPED = /restaurant_id|\.eq\("id"|\.in\("id"|eq\("token"|eq\("draft_id"|in\("draft_id"|eq\("campaign_id"|eq\("customer_id"|eq\("unsubscribe_token"|eq\("review_id"|in\("review_id"|eq\("batch_id"|is\("restaurant_id"/;
+  const OWNED = ["customers", "reviews", "drafts", "campaigns", "campaign_sends", "sent_log", "audit_log", "reports", "google_posts", "rewards", "consents", "customer_events", "draft_feedback", "blocked_sends", "messages", "onboarding", "feedback", "feedback_requests"];
+  const SCOPED = /restaurant_id|\.eq\("id"|\.in\("id"|eq\("token"|eq\("draft_id"|in\("draft_id"|eq\("campaign_id"|eq\("customer_id"|eq\("unsubscribe_token"|eq\("confirm_token"|eq\("request_id"|eq\("review_id"|in\("review_id"|eq\("batch_id"|is\("restaurant_id"/;
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {
       const p = join(dir, f);

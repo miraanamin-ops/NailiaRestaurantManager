@@ -7,7 +7,9 @@ import { ownerChannel } from "@/lib/followups";
 import { runReviewCheck } from "@/lib/google-jobs";
 import { briefIsLate } from "@/lib/job-health";
 import { checkJobHealth, finishRun, startRun, type Job } from "@/lib/job-runs";
+import { runFeedbackJob } from "@/lib/feedback";
 import { runMorning } from "@/lib/morning";
+import { clearOldRateLimits } from "@/lib/rate-limit";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -15,7 +17,8 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 export const maxDuration = 300;
 
 // Scheduled jobs. All need the CRON_SECRET password.
-//   ?job=hourly  (Supabase pg_cron, 5 past every hour): check for new Google reviews;
+//   ?job=hourly  (Supabase pg_cron, 5 past every hour): check for new Google reviews,
+//                send "How was your visit?" emails that are due;
 //                from 9am UK time, also the morning job (once a day)
 //   ?job=daily   (Vercel cron, 09:00 UTC = 9am or 10am UK): a backup for the
 //                morning job, and a check that the hourly job is still running
@@ -80,6 +83,15 @@ async function runJob(job: Job) {
         console.error("Review check failed", err);
         entry.reviews = { error: err instanceof Error ? err.message : String(err) };
       }
+      // "How was your visit?" emails that are due (about 3 hours after a redemption).
+      try {
+        const feedback = await runFeedbackJob(r, now);
+        // Failed sends count as a job failure, so the builder hears about them.
+        entry.feedback = feedback.failed ? { ...feedback, error: `${feedback.failed} feedback email(s) failed to send` } : feedback;
+      } catch (err) {
+        console.error("Feedback emails failed", err);
+        entry.feedback = { error: err instanceof Error ? err.message : String(err) };
+      }
     }
     try {
       entry.morning = await runMorning(r, now);
@@ -104,6 +116,7 @@ async function runJob(job: Job) {
     }
     summary.push(entry);
   }
+  if (job === "hourly") await clearOldRateLimits(now);
   console.log(`Cron ${job}`, JSON.stringify(summary));
   return summary;
 }

@@ -6,7 +6,9 @@ import { placesAvailable, profileFromPlace, searchPlaces } from "./places";
 import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
 import { canFinish, mark, nextStep, STEP_LABELS, STEPS, stepsDone, type StepId } from "./steps";
 import { getOnboarding, getRestaurant, patchData, saveOnboarding, updateRestaurantFields, type Onboarding } from "./store";
-import { readWebsite } from "./website";
+import { contrast } from "@/lib/email/brand";
+import { saveLogo } from "@/lib/photos";
+import { brandFromHtml, isPublicWebAddress, readWebsitePage } from "./website";
 
 // The onboarding engine: every step's actions, used by BOTH the web wizard and
 // WhatsApp. Each action saves progress, so the owner can switch at any point.
@@ -169,7 +171,9 @@ export async function confirmAllergens(restaurantId: string, menu: MenuCategory[
 
 export async function draftVoiceOptions(restaurantId: string, captions: string[] = []) {
   const r = await getRestaurant(restaurantId);
-  const websiteText = await readWebsite(r.website);
+  const page = await readWebsitePage(r.website);
+  const websiteText = page.text;
+  if (page.html && page.url) await pickUpBrand(r, page.html, page.url);
   const samples = await draftVoices({
     name: r.name,
     cuisine: r.cuisine,
@@ -179,6 +183,32 @@ export async function draftVoiceOptions(restaurantId: string, captions: string[]
   });
   await patchData(restaurantId, { voice: { samples, captions } });
   return { samples, readWebsite: Boolean(websiteText) };
+}
+
+// The logo and colour from the restaurant's own website, for their emails, unless
+// they've already set them. Best effort: anything odd is skipped, and the owner can
+// change both on the settings page (and UNDO puts them back).
+const DEFAULT_BRAND_COLOR = "#c2410c";
+async function pickUpBrand(r: Restaurant, html: string, pageUrl: string) {
+  try {
+    const found = brandFromHtml(html, pageUrl);
+    // Only a colour white button text can sit on.
+    if (found.color && r.brand_color === DEFAULT_BRAND_COLOR && contrast(found.color, "#ffffff") >= 3) {
+      await updateRestaurantFields(r.id, { brand_color: found.color });
+      await logSetting(r.id, "brand_color", r.brand_color, found.color, "Took the button colour from your website");
+    }
+    if (found.logo && !r.logo_url && isPublicWebAddress(new URL(found.logo))) {
+      const res = await fetch(found.logo, { signal: AbortSignal.timeout(8000) });
+      const type = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+      if (res.ok && ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(type)) {
+        const url = await saveLogo(r.id, Buffer.from(await res.arrayBuffer()), type as Parameters<typeof saveLogo>[2]);
+        await updateRestaurantFields(r.id, { logo_url: url });
+        await logSetting(r.id, "logo_url", null, url, "Took the logo from your website");
+      }
+    }
+  } catch (err) {
+    console.warn("Couldn't pick up the logo or colour from the website", err instanceof Error ? err.message : err);
+  }
 }
 
 export async function chooseVoice(restaurantId: string, voice: string) {

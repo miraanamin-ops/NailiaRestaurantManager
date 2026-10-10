@@ -2,12 +2,14 @@ import "server-only";
 import { writeGooglePost, writeReviewReply, type RestaurantContext } from "@/lib/assistant";
 import { checkDraft } from "@/lib/checks";
 import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, type Draft } from "@/lib/drafts";
+import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
 import { getSupabase } from "@/lib/supabase";
 import type { ButtonTarget } from "@/lib/whatsapp";
 
-export type Send = (text: string, withButtons?: boolean | ButtonTarget) => Promise<void>;
+// mediaUrl: a picture sent first (the preview image of an email draft).
+export type Send = (text: string, withButtons?: boolean | ButtonTarget, mediaUrl?: string | null) => Promise<void>;
 
 export const stars = (n: number) => "⭐".repeat(n);
 
@@ -137,6 +139,6 @@ export async function presentNext(ctx: RestaurantContext, send: Send, includeBri
     const review = (await google().listReviews(ctx.restaurantId)).find((r: GoogleReview) => r.id === next.review_id);
     if (review) intro += `\n${review.author_name} ${stars(review.rating)}\n_"${review.text ?? ""}"_`;
   }
-  await send(`${intro}\n\n${draftMessage(next, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`, true);
+  await send(`${intro}\n\n${draftMessage(next, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`, true, draftPreviewUrl(next));
   return true;
 }
