@@ -44,7 +44,7 @@ export async function applyProfileChanges(restaurant: Restaurant, changes: Profi
   const saved = plan.lines.length ? await saveProfileFields(restaurant, plan.fields, "Changed by message") : [];
   const parts: string[] = [];
   if (saved.length) parts.push(`✅ Done:\n${plan.lines.map((l) => `- ${l}`).join("\n")}\n\nReply *UNDO* to change it back.`);
-  else if (plan.lines.length) parts.push("That's already how it is, so nothing changed.");
+  else if (plan.unchanged && !plan.problems.length) parts.push("That's already how it is, so nothing changed.");
   if (plan.problems.length) parts.push(plan.problems.join("\n"));
   return parts.join("\n\n") || "Sorry, I didn't catch what to change. Try e.g. _change Friday hours to 11pm_.";
 }

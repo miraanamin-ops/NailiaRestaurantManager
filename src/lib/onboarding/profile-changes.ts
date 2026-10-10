@@ -56,6 +56,9 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
   const fields: Partial<ProfileFields> = {};
   const lines: string[] = [];
   const problems: string[] = [];
+  // Only real changes are listed: something already that way (or repeated from an earlier message) isn't.
+  let unchanged = 0;
+  const note = (line: string, changed: boolean) => (changed ? lines.push(line) : unchanged++);
   let hours: Hours = { ...(current.opening_hours ?? {}) };
   let menu = current.menu ?? [];
 
@@ -70,7 +73,7 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
         for (const day of days) {
           if (c.closed) {
             hours = { ...hours, [day]: "Closed" };
-            lines.push(`${day}: closed`);
+            note(`${day}: closed`, current.opening_hours?.[day] !== "Closed");
             continue;
           }
           const value = newHours(hours[day], time(c.open), time(c.close));
@@ -79,7 +82,7 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
             continue;
           }
           hours = { ...hours, [day]: value };
-          lines.push(`${day}: ${value}`);
+          note(`${day}: ${value}`, current.opening_hours?.[day] !== value);
         }
         fields.opening_hours = hours;
         break;
@@ -92,7 +95,8 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
         }
         const existed = findItem(menu, name);
         menu = addOrUpdateItem(menu, { name, price: Math.round(c.price * 100) / 100, category: c.category?.trim() || null });
-        lines.push(existed ? `${existed.item.name}: now ${formatPrice(c.price)}` : `Added ${name} (${formatPrice(c.price)})${c.category ? ` to ${c.category}` : ""}. Its allergens aren't confirmed yet, so customers won't be told any.`);
+        if (existed) note(`${existed.item.name}: now ${formatPrice(c.price)}`, existed.item.price !== Math.round(c.price * 100) / 100);
+        else note(`Added ${name} (${formatPrice(c.price)})${c.category ? ` to ${c.category}` : ""}. Its allergens aren't confirmed yet, so customers won't be told any.`, true);
         fields.menu = menu;
         break;
       }
@@ -103,7 +107,7 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
           break;
         }
         menu = addOrUpdateItem(menu, { name: found.item.name, price: Math.round(c.price * 100) / 100 });
-        lines.push(`${found.item.name}: now ${formatPrice(c.price)}`);
+        note(`${found.item.name}: now ${formatPrice(c.price)}`, found.item.price !== Math.round(c.price * 100) / 100);
         fields.menu = menu;
         break;
       }
@@ -123,7 +127,7 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
         if (!v) problems.push("What should the sign-up reward be?");
         else {
           fields.signup_reward = v;
-          lines.push(`Sign-up reward: ${v}`);
+          note(`Sign-up reward: ${v}`, v !== current.signup_reward);
         }
         break;
       }
@@ -132,7 +136,7 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
         if (!(p >= 0 && p <= 100)) problems.push("The discount cap needs to be between 0% and 100%.");
         else {
           fields.discount_cap_percent = p;
-          lines.push(`Discount cap: ${p}%`);
+          note(`Discount cap: ${p}%`, p !== current.discount_cap_percent);
         }
         break;
       }
@@ -144,11 +148,11 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
         else if (c.change === "website" && !/^(https?:\/\/)?[^\s/]+\.[^\s]+$/i.test(v)) problems.push(`"${v}" doesn't look like a website address.`);
         else {
           fields[c.change] = c.change === "website" && !/^https?:\/\//i.test(v) ? `https://${v}` : v;
-          lines.push(`${c.change[0].toUpperCase()}${c.change.slice(1)}: ${fields[c.change]}`);
+          note(`${c.change[0].toUpperCase()}${c.change.slice(1)}: ${fields[c.change]}`, fields[c.change] !== current[c.change]);
         }
         break;
       }
     }
   }
-  return { fields, lines, problems };
+  return { fields, lines, problems, unchanged };
 }
