@@ -242,7 +242,9 @@ async function loadRows(restaurant: Restaurant, p: Period): Promise<Rows> {
 // ---------- Headline, actions and the WhatsApp message ----------
 
 function verdict(r: ReputationSection | undefined, c: CustomersSection | undefined, s?: SalesSection) {
-  const dirs = [s && direction(s.net, "money"), r && direction(r.rating, "rating"), c && direction(c.signups), c && direction(c.redemptions)].filter(Boolean);
+  // Sales count double: a week with fewer sales is never called a good one because sign-ups rose.
+  const sales = s ? [direction(s.net, "money"), direction(s.net, "money")] : [];
+  const dirs = [...sales, r && direction(r.rating, "rating"), c && direction(c.signups), c && direction(c.redemptions)].filter(Boolean);
   const ups = dirs.filter((d) => d === "up").length;
   const downs = dirs.filter((d) => d === "down").length;
   return ups > downs ? "Good week" : downs > ups ? "Quieter week" : "Steady week";

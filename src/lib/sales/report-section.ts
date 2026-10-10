@@ -48,7 +48,7 @@ export function buildSalesSection(weekStart: string, days: SalesDayRow[], items:
     lastMonth: rMonth.length >= 6 ? sum(rMonth) : null,
     daily: {
       days: fortnight.map((d) => dayLabel(d, year).replace(/ \w+$/, "")), // "Mon 28"
-      values: fortnight.map((d) => Math.round(Number(byDay.get(d)?.net_sales ?? 0))),
+      values: fortnight.map((d) => round2(Number(byDay.get(d)?.net_sales ?? 0))),
     },
     daysWithData: { now: rNow.length, before: rBefore.length },
     transactions: tNow || tBefore ? { now: tNow?.count ?? 0, before: tBefore?.count ?? 0 } : null,
