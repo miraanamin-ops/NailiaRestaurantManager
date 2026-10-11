@@ -16,12 +16,12 @@ import { isTestMode } from "@/lib/test-mode";
 //   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
 
 export type { SendSource };
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window"; scheduledFor: Date | null; detail: string; draft: Draft }
-  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level"; detail: string; draft: Draft };
+  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit"; detail: string; draft: Draft };
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
@@ -88,22 +88,26 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
 
   // 2. Compliance: email campaigns only go to customers with valid consent right
   //    now (not unsubscribed), and every one of those emails has an unsubscribe link.
+  //    Nobody gets more than one campaign in 7 days (birthday emails excepted).
   const compliance = checkResult([], []);
   if (draft.kind === "email_campaign") {
     const campaign = await getCampaignForDraft(draft.id);
-    const { eligible, excluded } = campaign ? await recipientsFor(restaurant, campaign.segment, now) : { eligible: [], excluded: 0 };
+    const { eligible, excluded, limited } = campaign
+      ? await recipientsFor(restaurant, campaign.segment, now, { isBirthday: campaign.is_birthday })
+      : { eligible: [], excluded: 0, limited: 0 };
     const missingUnsubscribe = await ensureUnsubscribeTokens(eligible.map((c) => c.id));
-    const problems = emailComplianceProblems({ eligible: eligible.length, excluded, missingUnsubscribe });
+    const problems = emailComplianceProblems({ eligible: eligible.length, excluded, missingUnsubscribe, limited });
     if (problems.length) {
       const detail = problems.join(" ");
-      await logBlock(draft, "no_recipients", detail);
+      const reason = !eligible.length && limited ? "weekly_limit" : "no_recipients";
+      await logBlock(draft, reason, detail);
       const updated = await updateDraft(draft.id, {
         status: "blocked",
         block_reason: detail,
         scheduled_for: null,
         checks: withSendChecks(draft, { money: checkResult([], []), compliance: checkResult([], problems, "blocked") }),
       });
-      return { outcome: "blocked", reason: "no_recipients", detail, draft: updated };
+      return { outcome: "blocked", reason, detail, draft: updated };
     }
   }
 

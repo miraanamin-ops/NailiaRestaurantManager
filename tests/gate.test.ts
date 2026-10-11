@@ -156,3 +156,61 @@ describe("TEST_MODE inside attemptSend", () => {
     vi.doUnmock("@/lib/google");
   });
 });
+
+describe("no customer gets more than one campaign in 7 days", () => {
+  const A = "aaaaaaaa-0000-0000-0000-000000000001";
+  const B = "bbbbbbbb-0000-0000-0000-000000000002";
+  const customer = (id: string, rid: string) => ({
+    id, restaurant_id: rid, name: id, email: `${id}@gmail.com`, birthday: null, marketing_opt_in: true, unsubscribed_at: null,
+    source: "signup", email_confirmed_at: "2026-10-01T00:00:00Z", deleted_at: null,
+  });
+  const daysAgo = (n: number) => new Date(noonUk.getTime() - n * 86_400_000).toISOString();
+
+  async function recipients(campaigns: Record<string, unknown>[], sends: Record<string, unknown>[], isBirthday = false) {
+    const { vi } = await import("vitest");
+    const { memoryDb } = await import("./support/memory-db");
+    vi.resetModules();
+    const db = memoryDb({ customers: [customer("c1", A), customer("c2", A), customer("b1", B)], campaigns, campaign_sends: sends, rewards: [] });
+    vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
+    const { recipientsFor } = await import("@/lib/campaigns");
+    const out = await recipientsFor({ id: A } as never, "everyone", noonUk, { isBirthday });
+    vi.doUnmock("@/lib/supabase");
+    return { ids: out.eligible.map((c) => c.id).sort(), limited: out.limited };
+  }
+  const send = (campaignId: string, customerId: string, rid: string, at: string, delivery = "simulated") => ({
+    campaign_id: campaignId, customer_id: customerId, restaurant_id: rid, kind: "customer", delivery, created_at: at,
+  });
+
+  test("someone who had an offer 2 days ago is left out of the next one", async () => {
+    const r = await recipients([{ id: "k1", restaurant_id: A, is_birthday: false, sent_at: daysAgo(2) }], [send("k1", "c1", A, daysAgo(2))]);
+    expect(r).toEqual({ ids: ["c2"], limited: 1 });
+  });
+
+  test("after 7 days they can get one again", async () => {
+    const r = await recipients([{ id: "k1", restaurant_id: A, is_birthday: false, sent_at: daysAgo(8) }], [send("k1", "c1", A, daysAgo(8))]);
+    expect(r).toEqual({ ids: ["c1", "c2"], limited: 0 });
+  });
+
+  test("birthday emails don't count, and aren't held back", async () => {
+    const birthdaySent = await recipients([{ id: "k1", restaurant_id: A, is_birthday: true, sent_at: daysAgo(1) }], [send("k1", "c1", A, daysAgo(1))]);
+    expect(birthdaySent.limited).toBe(0);
+    const birthdayNow = await recipients([{ id: "k1", restaurant_id: A, is_birthday: false, sent_at: daysAgo(1) }], [send("k1", "c1", A, daysAgo(1))], true);
+    expect(birthdayNow).toEqual({ ids: ["c1", "c2"], limited: 0 });
+  });
+
+  test("a failed email doesn't count; another restaurant's campaigns don't count", async () => {
+    const r = await recipients(
+      [
+        { id: "k1", restaurant_id: A, is_birthday: false, sent_at: daysAgo(1) },
+        { id: "kb", restaurant_id: B, is_birthday: false, sent_at: daysAgo(1) },
+      ],
+      [send("k1", "c1", A, daysAgo(1), "failed"), send("kb", "c2", B, daysAgo(1))],
+    );
+    expect(r).toEqual({ ids: ["c1", "c2"], limited: 0 });
+  });
+
+  test("when everyone is held back, the send is blocked with a plain reason", async () => {
+    const { emailComplianceProblems } = await import("@/lib/checks/compliance");
+    expect(emailComplianceProblems({ eligible: 0, excluded: 0, missingUnsubscribe: 0, limited: 3 })[0]).toMatch(/already had an offer email in the last 7 days/);
+  });
+});
