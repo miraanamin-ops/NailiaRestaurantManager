@@ -1,0 +1,140 @@
+{
+  "name": "2 stars naming a waiter as rude",
+  "source": "test review (reputation.md: a staff member named negatively)",
+  "review": {
+    "id": "t-12",
+    "author_name": "Chloe B.",
+    "rating": 2,
+    "text": "Food was fine but our waiter Bilal was really rude, rolled his eyes when we asked for more naan and ignored us after that."
+  },
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "phone": "+44 20 7946 0123",
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [
+        "cheap"
+      ],
+      "emoji_allowed": {
+        "review_replies": 1,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "halal_statement": "All our meat is halal, certified by HMC.",
+      "allergen_statement": "Our kitchen handles nuts, sesame, gluten and dairy. Please tell our team about any allergy before you order.",
+      "complaint_contact": "hello@emberandspice.co.uk",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ]
+    }
+  },
+  "history": {
+    "recent_replies": [
+      "Thank you so much, Ollie! Those seekh kebabs hit the spot, and it means a lot that you felt remembered. Can't wait to welcome you back. 🔥\n\nThe Ember & Spice Grill family",
+      "Thanks so much, Farzana! We love that the kids tucked into the wings. Really appreciate the veggie mains feedback too, it's something we're looking at. Hope to see you all again soon! 🔥",
+      "Hiya Jess, thank you so much! Buzzing you loved the smash burger and masala chips. Fair shout on the seating, we know it gets snug when we're busy. Hope to see you back soon 🔥"
+    ],
+    "owner_edits": []
+  },
+  "owner_choice": null,
+  "today": "Monday 12 October 2026",
+  "expect": {
+    "alert": true,
+    "needs_owner_input": true,
+    "sources_must_include": [
+      "review:t-12"
+    ]
+  },
+  "recorded": null
+}
