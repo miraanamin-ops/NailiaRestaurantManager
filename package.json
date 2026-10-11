@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:agents": "vitest run --config vitest.agents.config.mts",
-    "test:agents:record": "node --env-file-if-exists=.env.local scripts/record-agent-cases.mjs"
+    "test:agents": "node --env-file-if-exists=.env.local scripts/agent-tests.mjs",
+    "test:agents:record": "node --env-file-if-exists=.env.local scripts/agent-tests.mjs --record",
+    "test:agents:stability": "node --env-file-if-exists=.env.local scripts/agent-tests.mjs --stability"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
