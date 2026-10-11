@@ -1,6 +1,7 @@
 import "server-only";
 import { logAction, type Actor } from "@/lib/audit";
 import { allNotes, checksLine, type DraftChecks } from "@/lib/checks/types";
+import { queueDraftCheck } from "@/lib/agents/enqueue";
 import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
@@ -149,6 +150,7 @@ export async function createDraft(input: {
       review_id: input.reviewId ?? null,
       customer_id: input.customerId ?? null,
       status: "pending",
+      version: 1,
       waiting_for: waitingFor,
       checks: input.checks,
       check_notes: allNotes(input.checks),
@@ -165,6 +167,8 @@ export async function createDraft(input: {
     action: "created",
     detail: `Drafted ${draftName(draft)}${mode === "hold" ? ", held for the morning brief" : ""}. Checks: ${checksLine(input.checks)}`,
   });
+  // The checker agent (shadow mode) reviews it in the background; nothing waits for it.
+  await queueDraftCheck(draft);
   return draft;
 }
 
@@ -299,6 +303,7 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
       feedback_id: feedback.id,
     },
   });
+  await queueDraftCheck(updated);
   return updated;
 }
 

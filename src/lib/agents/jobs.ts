@@ -1,7 +1,7 @@
 import "server-only";
 import { logAction, type AgentActor } from "@/lib/audit";
 import { alertBuilder } from "@/lib/builder-alerts";
-import { check } from "@/lib/drafts";
+// (Its own small check helper: lib/drafts.ts queues jobs, so this file mustn't import it.)
 import { getSupabase } from "@/lib/supabase";
 import { AgentOutputError } from "./run";
 
@@ -187,4 +187,9 @@ async function runOne(job: AgentJob, handlers: Record<string, JobHandler>) {
     }
     return final ? "failed" : "retry";
   }
+}
+
+function check<T>(res: { data: T; error: { message: string } | null }): T {
+  if (res.error) throw new Error(res.error.message);
+  return res.data;
 }

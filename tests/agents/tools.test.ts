@@ -44,8 +44,8 @@ afterEach(() => vi.doUnmock("@/lib/supabase"));
 
 describe("resolve_sources", () => {
   test("resolves the review, profile fields and the owner's request", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    const out = await useTool("checker", "resolve_sources", A, { refs: ["review:rA", "profile:halal_statement", "profile:recovery_offers", "request:dA2"] });
+    const { callTool } = await import("@/lib/agents/tools");
+    const out = await callTool("checker", "resolve_sources", A, { refs: ["review:rA", "profile:halal_statement", "profile:recovery_offers", "request:dA2"] });
     expect(out).toEqual([
       { ref: "review:rA", found: true, data: expect.objectContaining({ author_name: "Aisha K", rating: 5 }) },
       { ref: "profile:halal_statement", found: true, data: "All our meat is halal (HMC certified)." },
@@ -55,46 +55,46 @@ describe("resolve_sources", () => {
   });
 
   test("another restaurant's review is never resolved", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    expect(await useTool("checker", "resolve_sources", A, { refs: ["review:rB"] })).toEqual([
+    const { callTool } = await import("@/lib/agents/tools");
+    expect(await callTool("checker", "resolve_sources", A, { refs: ["review:rB"] })).toEqual([
       { ref: "review:rB", found: false, reason: "no such review for this restaurant" },
     ]);
   });
 
   test("unknown fields, unknown kinds and not-yet-built sources are reported as not found", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    const out = await useTool("checker", "resolve_sources", A, { refs: ["profile:favourite_colour", "website:x", "metrics:net_sales_weekly"] });
+    const { callTool } = await import("@/lib/agents/tools");
+    const out = await callTool("checker", "resolve_sources", A, { refs: ["profile:favourite_colour", "website:x", "metrics:net_sales_weekly"] });
     expect(out.map((r) => r.found)).toEqual([false, false, false]);
   });
 });
 
 describe("the other tools", () => {
   test("get_recent_outputs: same kind, same restaurant, newest first, not the draft itself", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    expect(await useTool("checker", "get_recent_outputs", A, { kind: "review_reply", excludeDraftId: "dA2" })).toEqual(["Thanks Omar!"]);
+    const { callTool } = await import("@/lib/agents/tools");
+    expect(await callTool("checker", "get_recent_outputs", A, { kind: "review_reply", excludeDraftId: "dA2" })).toEqual(["Thanks Omar!"]);
   });
 
   test("get_maker_rules: the maker agent's Rules section", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    const rules = await useTool("checker", "get_maker_rules", A, { maker: "reputation" });
+    const { callTool } = await import("@/lib/agents/tools");
+    const rules = await callTool("checker", "get_maker_rules", A, { maker: "reputation" });
     expect(rules).toMatch(/Reply in the language the review is written in/);
   });
 
   test("get_profile: the profile and its version", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    const out = await useTool("checker", "get_profile", A, {});
+    const { callTool } = await import("@/lib/agents/tools");
+    const out = await callTool("checker", "get_profile", A, {});
     expect(out).toMatchObject({ version: 3, fields: { name: "Ember & Spice Grill", complaint_contact: "hello@ember.test" } });
   });
 
   test("get_rendered_preview: emails only (nothing for a review reply)", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    expect(await useTool("checker", "get_rendered_preview", A, { draftId: "dA1" })).toBeNull();
+    const { callTool } = await import("@/lib/agents/tools");
+    expect(await callTool("checker", "get_rendered_preview", A, { draftId: "dA1" })).toBeNull();
   });
 
   test("a tool missing from the agent's front matter is refused", async () => {
-    const { useTool } = await import("@/lib/agents/tools");
-    await expect(useTool("reputation", "resolve_sources", A, { refs: [] })).rejects.toThrow(/isn't allowed/);
-    await expect(useTool("reputation", "get_maker_rules", A, { maker: "growth" })).rejects.toThrow(/isn't allowed/);
+    const { callTool } = await import("@/lib/agents/tools");
+    await expect(callTool("reputation", "resolve_sources", A, { refs: [] })).rejects.toThrow(/isn't allowed/);
+    await expect(callTool("reputation", "get_maker_rules", A, { maker: "growth" })).rejects.toThrow(/isn't allowed/);
   });
 });
 

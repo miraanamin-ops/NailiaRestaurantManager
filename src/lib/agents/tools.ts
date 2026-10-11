@@ -10,7 +10,7 @@ import { loadAgent } from "./loader";
 import { parseSourceRef } from "./sources";
 
 // The agents' tools. Each one only reads this restaurant's data. Every use goes
-// through useTool, which refuses any tool not in the agent's front matter
+// through callTool, which refuses any tool not in the agent's front matter
 // (the allow-list). No tool sends, publishes or spends: only the gate does that.
 
 export type Resolved = { ref: string; found: true; data: unknown } | { ref: string; found: false; reason: string };
@@ -89,9 +89,20 @@ type ToolArgs = {
   get_rendered_preview: { draftId: string };
 };
 export type ToolName = keyof ToolArgs;
+type ToolResults = {
+  get_profile: Awaited<ReturnType<typeof agentProfile>>;
+  resolve_sources: Resolved[];
+  get_recent_outputs: string[];
+  get_maker_rules: string;
+  get_rendered_preview: Awaited<ReturnType<typeof renderedPreview>>;
+};
 
-export async function useTool<N extends ToolName>(agent: AgentName, name: N, restaurantId: string, args: ToolArgs[N]) {
+export async function callTool<N extends ToolName>(agent: AgentName, name: N, restaurantId: string, args: ToolArgs[N]): Promise<ToolResults[N]> {
   assertToolAllowed(loadAgent(agent), name);
+  return (await runTool(name, agent, restaurantId, args)) as ToolResults[N];
+}
+
+async function runTool(name: ToolName, agent: AgentName, restaurantId: string, args: ToolArgs[ToolName]) {
   switch (name) {
     case "get_profile":
       return agentProfile(restaurantId, agent);

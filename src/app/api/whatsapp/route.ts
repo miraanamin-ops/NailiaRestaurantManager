@@ -7,6 +7,11 @@ import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
 import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
+import { runQueuedAgentJobs } from "@/lib/agents/checker";
+
+// The reply goes at once; the work after it (Claude, and then any agent jobs
+// such as the shadow checker) can take a few minutes.
+export const maxDuration = 300;
 
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
 
@@ -107,7 +112,10 @@ export async function POST(req: NextRequest) {
     if (await onboardingInProgress(restaurant.id)) {
       return handleOnboardingMessage({ restaurantId: restaurant.id, owner, sandbox, body, media: allMedia });
     }
-    return handleMessage({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, media });
+    await handleMessage({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, media });
+    // Then, with the owner's reply already sent, any agent work the message
+    // queued (the checker in shadow mode). Never delays or changes the reply.
+    await runQueuedAgentJobs(restaurant.id);
   });
 
   return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
