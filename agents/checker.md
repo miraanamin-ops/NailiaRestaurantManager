@@ -3,7 +3,7 @@ name: checker
 model: sonnet          # test on haiku later
 tools: [get_profile, resolve_sources, get_rendered_preview, get_recent_outputs, get_maker_rules]
 triggers: [draft_created]
-version: 0.2
+version: 0.3
 ---
 
 # Role
@@ -54,7 +54,7 @@ Code decides whether owner-only output is checked: only when it has `figures` or
 - **C4 Reviews:** nothing offered in exchange for a review or for changing one.
 - **C5 Privacy:** no personal details the recipient didn't share publicly, no identifiable customer faces or children in photos.
 - **C6 Scope:** no financial, tax, legal or staffing advice. Information only.
-- **C7 Platform rules:** for example no phone numbers in Google post text.
+- **C7 Platform rules:** platform rules for the channel the draft is going to. For example, no phone numbers in Google post text. Phone numbers are fine in review replies.
 - **C8 Maker's rules:** none of the maker agent's own rules are broken.
 
 ## Brand (rendered preview)
@@ -138,3 +138,4 @@ Why: a style preference the profile doesn't state. Pass with a note instead.
 
 - 0.1 (11 Oct 2026): first draft.
 - 0.2 (11 Oct 2026): `minor_fixes`; when owner-only output is checked.
+- 0.3 (12 Oct 2026): C7 says which channel's rules apply; phone numbers are fine in review replies.
