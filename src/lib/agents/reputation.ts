@@ -13,6 +13,7 @@ import { missingForGoLive } from "@/lib/profile/fields";
 import { agentMode } from "./modes";
 import { reputationLoop, type CheckerDeps, type OwnerChoice, type ReputationInput, type ReputationOutcome } from "./reputation-core";
 import type { ReviewInput } from "./reputation-rules";
+import { runWeeklyThemes, type ThemeCount, type ThemeReview } from "./reputation-themes";
 import type { CheckerVerdictOutput } from "./schema";
 import { callTool } from "./tools";
 
@@ -224,4 +225,42 @@ export async function liveReputation(
     agentInput: { review, source: opts.source },
   });
   return { kind: "reply", text, draft, outcome };
+}
+
+// ---------- Weekly themes (for the Monday report) ----------
+
+// The week's themes, made once and saved (review_themes), so the report and any
+// rebuild of it use the same ones. Null if there's nothing to say or it failed.
+export async function weeklyThemesFor(restaurantId: string, weekStart: string, weekLabel: string, reviews: ThemeReview[]) {
+  const supabase = getSupabase();
+  try {
+    const saved = ok(
+      await supabase
+        .from("review_themes")
+        .select("praise, complaints")
+        .eq("restaurant_id", restaurantId)
+        .eq("week_start", weekStart)
+        .maybeSingle<{ praise: ThemeCount[]; complaints: ThemeCount[] }>(),
+    );
+    if (saved) return saved;
+    if (!reviews.length) return null;
+    const themes = await runWeeklyThemes(reviews, weekLabel, `weekly themes ${weekStart}`);
+    ok(
+      await supabase.from("review_themes").upsert(
+        { restaurant_id: restaurantId, week_start: weekStart, praise: themes.praise, complaints: themes.complaints, review_count: reviews.length, agent_version: themes.agentVersion },
+        { onConflict: "restaurant_id,week_start" },
+      ),
+    );
+    await logAction({
+      restaurantId,
+      actor: "reputation",
+      action: "agent_drafted",
+      detail: `Reputation (v${themes.agentVersion}) found this week's themes from ${reviews.length} review${reviews.length === 1 ? "" : "s"}: ${themes.praise.length} praised, ${themes.complaints.length} complained about`,
+      job: { jobId: null, agent: "reputation", agentVersion: themes.agentVersion, verdict: null },
+    });
+    return { praise: themes.praise, complaints: themes.complaints };
+  } catch (err) {
+    console.error("Weekly themes failed; the report goes out without them", err);
+    return null;
+  }
 }

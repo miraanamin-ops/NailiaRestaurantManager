@@ -29,6 +29,15 @@ export type ReputationSection = {
   daily: Daily; // new reviews per day
 };
 
+// The Reputation agent's weekly themes: what customers praised and complained
+// about last week, with how many reviews mention each (counted by code).
+export type ThemesSection = {
+  id: "themes";
+  praise: { label: string; count: number }[];
+  complaints: { label: string; count: number }[];
+  reviewCount: number; // reviews with text last week
+};
+
 export type CustomersSection = {
   id: "customers";
   signups: Compare;
@@ -71,7 +80,7 @@ export type ActionsSection = {
   actions: { title: string; why: string; message: string }[];
 };
 
-export type ReportSection = HeadlineSection | SalesSection | ReputationSection | CustomersSection | GoogleSection | ActionsSection;
+export type ReportSection = HeadlineSection | SalesSection | ReputationSection | ThemesSection | CustomersSection | GoogleSection | ActionsSection;
 export type SectionId = ReportSection["id"];
 
 export type ReportData = {
@@ -88,6 +97,7 @@ export const SECTION_TITLES: Record<SectionId, string> = {
   headline: "This week",
   sales: "Sales",
   reputation: "Reputation",
+  themes: "What customers said",
   customers: "Customers and campaigns",
   google: "Google visibility",
   actions: "Next week's 3 actions",

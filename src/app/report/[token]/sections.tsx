@@ -15,6 +15,7 @@ import {
   type ReportSection,
   type ReputationSection,
   type SalesSection,
+  type ThemesSection,
   type ValueFormat,
   SALES_FOOTNOTE,
 } from "@/lib/report/types";
@@ -32,6 +33,8 @@ export function Section({ section, ctx }: { section: ReportSection; ctx: Ctx }) 
       return <Sales s={section} ctx={ctx} />;
     case "reputation":
       return <Reputation s={section} ctx={ctx} />;
+    case "themes":
+      return <WhatCustomersSaid s={section} />;
     case "customers":
       return <Customers s={section} ctx={ctx} />;
     case "google":
@@ -207,6 +210,20 @@ function Reputation({ s, ctx }: { s: ReputationSection; ctx: Ctx }) {
           {s.complaints.length > 0 && <Themes title="What to fix" items={s.complaints} icon="👎" />}
         </div>
       )}
+    </Card>
+  );
+}
+
+// The Reputation agent's weekly themes, with how many reviews mention each.
+function WhatCustomersSaid({ s }: { s: ThemesSection }) {
+  const items = (list: ThemesSection["praise"]) => list.map((t) => `${t.label} · ${t.count} review${t.count === 1 ? "" : "s"}`);
+  return (
+    <Card title={SECTION_TITLES.themes}>
+      <p className="mb-4 text-sm text-stone-600">From {s.reviewCount} review{s.reviewCount === 1 ? "" : "s"} last week.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {s.praise.length > 0 && <Themes title="What customers praised" items={items(s.praise)} icon="👍" />}
+        {s.complaints.length > 0 && <Themes title="What they complained about" items={items(s.complaints)} icon="👎" />}
+      </div>
     </Card>
   );
 }

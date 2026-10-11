@@ -19,6 +19,7 @@ import {
   type ReportSection,
   type ReputationSection,
   type SalesSection,
+  type ThemesSection,
   type ValueFormat,
   SALES_FOOTNOTE,
 } from "./types";
@@ -212,6 +213,20 @@ function Reputation({ x, brand }: { x: ReputationSection; brand: string }) {
   );
 }
 
+function WhatCustomersSaid({ x }: { x: ThemesSection }) {
+  const items = (list: ThemesSection["praise"]) => list.map((t) => `${t.label} · ${t.count} review${t.count === 1 ? "" : "s"}`);
+  return (
+    <View style={s.section} wrap={false}>
+      <Text style={s.h2}>{SECTION_TITLES.themes}</Text>
+      <Text style={s.item}>From {x.reviewCount} review{x.reviewCount === 1 ? "" : "s"} last week.</Text>
+      <View style={[s.row, { marginTop: 6 }]}>
+        {x.praise.length > 0 && <List title="What customers praised" items={items(x.praise)} />}
+        {x.complaints.length > 0 && <List title="What they complained about" items={items(x.complaints)} />}
+      </View>
+    </View>
+  );
+}
+
 function Customers({ x, brand }: { x: CustomersSection; brand: string }) {
   return (
     <View style={s.section} wrap={false}>
@@ -299,6 +314,8 @@ function PdfSection({ section, data }: { section: ReportSection; data: ReportDat
       return <Sales x={section} brand={brand} />;
     case "reputation":
       return <Reputation x={section} brand={brand} />;
+    case "themes":
+      return <WhatCustomersSaid x={section} />;
     case "customers":
       return <Customers x={section} brand={brand} />;
     case "google":
