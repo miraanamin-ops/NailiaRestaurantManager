@@ -207,3 +207,23 @@ describe("shadow mode on the hourly review check", () => {
     expect(db.tables.agent_jobs).toEqual([]);
   });
 });
+
+describe("the /log comparison", () => {
+  test("shows the review, today's reply, Reputation's reply and the verdict; only this restaurant's", async () => {
+    const B = "bbbbbbbb-0000-0000-0000-000000000002";
+    const row = (id: string, rid: string, legacy: string, rep: string) => ({
+      id, restaurant_id: rid, agent: "reputation", source: "review_check", review: { author_name: "Aisha R.", rating: 5, text: "Best lamb chops." },
+      legacy_draft_id: null, legacy_text: legacy, outcome: "reply", output: { content: { text: rep }, sources_used: ["review:rv1"] }, question: null,
+      checker: { verdict: "pass", checks: [], minor_fixes: [] }, revisions: 1, steps: [], agent_version: "0.2", checker_version: "0.3", created_at: "2026-10-12T10:00:00Z",
+    });
+    db.tables.shadow_drafts = [row("s1", A, "Today's reply for A", "Reputation's reply for A"), row("s2", B, "Today's reply for B", "Reputation's reply for B")];
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { ReputationCompare } = await import("@/app/log/reputation-compare");
+    const html = renderToStaticMarkup(await ReputationCompare({ restaurantId: A }));
+    expect(html).toContain("Today&#x27;s reply for A");
+    expect(html).toContain("Reputation&#x27;s reply for A");
+    expect(html).toContain("Checker v0.3: pass");
+    expect(html).toContain("1 revision");
+    expect(html).not.toContain("for B");
+  });
+});
