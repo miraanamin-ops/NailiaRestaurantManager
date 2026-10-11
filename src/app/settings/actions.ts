@@ -7,7 +7,7 @@ import { getRestaurant } from "@/lib/onboarding/store";
 import { validHex } from "@/lib/email/brand";
 import { isEmail } from "@/lib/email/route";
 import { isSupportedImage, saveLogo } from "@/lib/photos";
-import { saveProfileFields } from "@/lib/profile-edits";
+import { revertProfileChange, saveProfileFields } from "@/lib/profile-edits";
 
 // The settings page's save buttons. Every change is logged (UNDO on WhatsApp puts it back).
 
@@ -86,6 +86,44 @@ export async function saveBrand(form: FormData) {
     "Changed email branding in settings",
   );
   back(r.id, "saved=brand");
+}
+
+// How replies and messages sound: the profile fields the agents use for wording,
+// food statements, complaints and recovery offers.
+export async function saveVoice(form: FormData) {
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const r = await own(get("r"));
+  const lines = (k: string) =>
+    get(k)
+      .split(/\n|,/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 20);
+  const emojis = (k: string) => Math.min(5, Math.max(0, Math.round(Number(get(k)) || 0)));
+  await saveProfileFields(
+    r,
+    {
+      sign_off_name: get("sign_off_name").slice(0, 60) || null,
+      greeting: get("greeting").slice(0, 40) || null,
+      complaint_contact: get("complaint_contact").slice(0, 120) || null,
+      halal_statement: get("halal_statement").slice(0, 500) || null,
+      allergen_statement: get("allergen_statement").slice(0, 500) || null,
+      recovery_offers: lines("recovery_offers").map((l) => l.slice(0, 120)),
+      words_to_avoid: lines("words_to_avoid").map((l) => l.slice(0, 40)),
+      emoji_allowed: { review_replies: emojis("emoji_review_replies"), posts: emojis("emoji_posts"), campaigns: emojis("emoji_campaigns") },
+    },
+    "Changed in settings",
+  );
+  back(r.id, "saved=voice");
+}
+
+// Revert one profile change (from the profile history list). Not UNDO.
+export async function revertProfile(form: FormData) {
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const r = await own(get("r"));
+  const result = await revertProfileChange(r, get("version"));
+  if (!result.ok) back(r.id, `error=${encodeURIComponent(result.reason)}`);
+  back(r.id, "saved=reverted");
 }
 
 export async function saveSettingsMenu(restaurantId: string, menu: unknown) {

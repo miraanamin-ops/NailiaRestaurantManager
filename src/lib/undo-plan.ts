@@ -35,6 +35,15 @@ const SETTINGS = [
   "tagline",
   "reply_to_email",
   "feedback_emails",
+  // Profile v1 (settings page)
+  "sign_off_name",
+  "greeting",
+  "complaint_contact",
+  "halal_statement",
+  "allergen_statement",
+  "recovery_offers",
+  "words_to_avoid",
+  "emoji_allowed",
 ];
 
 export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "live"): UndoPlan {

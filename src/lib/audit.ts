@@ -1,4 +1,5 @@
 import "server-only";
+import { recordColumnChange } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
 // The audit log: one row for every action, saying who did what and when.
@@ -79,6 +80,20 @@ export async function logAction(entry: {
       : {}),
   });
   if (error) console.error("Failed to write the audit log", error);
+
+  // A profile field changed (from settings, a message, a command, onboarding,
+  // UNDO or Revert): record it as a new profile version too.
+  if ((entry.action === "setting" || entry.action === "profile_reverted") && typeof entry.data?.field === "string") {
+    await recordColumnChange({
+      restaurantId: entry.restaurantId,
+      column: entry.data.field,
+      before: entry.data.before,
+      after: entry.data.after,
+      by: entry.actor,
+      evidence: { detail: entry.detail, ...(entry.batchId ? { batch_id: entry.batchId } : {}) },
+      reverts: typeof entry.data.reverts === "string" ? entry.data.reverts : null,
+    });
+  }
 }
 
 // Setting changes, with the old value so UNDO can put it back.

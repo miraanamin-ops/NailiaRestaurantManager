@@ -1,6 +1,7 @@
 import "server-only";
 import { logAction, type Actor } from "@/lib/audit";
 import { allNotes, checksLine, type DraftChecks } from "@/lib/checks/types";
+import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
 export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post"] as const;
@@ -32,6 +33,24 @@ export type Draft = {
   held_at: string | null;
   brief_number: number | null;
   briefed_at: string | null;
+  // Agent organisation, phase 1: the profile version it was written with, and
+  // the checker agent's verdict (shadow mode: recorded only).
+  profile_version?: number | null;
+  agent_check?: AgentCheck | null;
+};
+
+// What the checker agent found, kept next to the four checks (drafts.agent_check).
+export type AgentCheck = {
+  mode: "shadow" | "live";
+  job_id: string;
+  agent_version: string;
+  draft_version: number;
+  verdict: "pass" | "fail" | "escalate";
+  checks: { id: string; result: "pass" | "fail" | "skipped"; reason: string | null; fix: string | null }[];
+  minor_fixes: { check: string; find: string; replace: string }[];
+  owner_question: string | null;
+  notes: string;
+  at: string;
 };
 
 // Everything the checks changed or want the owner to look at, all together.
@@ -99,6 +118,8 @@ export async function createDraft(input: {
   const supabase = getSupabase();
   const mode = input.mode ?? "present";
   let waitingFor: WaitingFor | null = "decision";
+  // Which profile version this draft was written with (left out if unknown).
+  const profileVersion = await currentProfileVersion(input.restaurantId);
 
   if (mode === "hold") {
     waitingFor = null;
@@ -132,6 +153,7 @@ export async function createDraft(input: {
       checks: input.checks,
       check_notes: allNotes(input.checks),
       held_at: mode === "hold" ? new Date().toISOString() : null,
+      ...(profileVersion !== null ? { profile_version: profileVersion } : {}),
     })
     .select("*")
     .single<Draft>();
@@ -236,6 +258,8 @@ export function startEdit(draft: Draft) {
 }
 
 export async function applyEdit(draft: Draft, instruction: string, newContent: string, checks: DraftChecks) {
+  // The edited version is written with the current profile.
+  const profileVersion = await currentProfileVersion(draft.restaurant_id);
   const feedback = checkRow(
     await getSupabase()
       .from("draft_feedback")
@@ -258,6 +282,7 @@ export async function applyEdit(draft: Draft, instruction: string, newContent: s
     waiting_for: "decision",
     checks,
     check_notes: allNotes(checks),
+    ...(profileVersion !== null ? { profile_version: profileVersion } : {}),
   });
   // The previous version is kept so UNDO can put it back.
   await logAction({

@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
 import { planProfileChanges, type ProfileChange, type ProfileFields } from "@/lib/onboarding/profile-changes";
+import { PROFILE_FIELDS } from "@/lib/profile/fields";
+import { markReverted, planRevert } from "@/lib/profile/versions";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
 // Saves changes to the restaurant's details (from a WhatsApp message or the
@@ -12,7 +14,24 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 // The restaurant details people can change: from onboarding and messages (ProfileFields),
 // plus the email branding on the settings page.
 export type EditableFields = ProfileFields &
-  Pick<Restaurant, "logo_url" | "brand_color" | "brand_dark" | "tagline" | "reply_to_email" | "feedback_emails">;
+  Pick<
+    Restaurant,
+    | "logo_url"
+    | "brand_color"
+    | "brand_dark"
+    | "tagline"
+    | "reply_to_email"
+    | "feedback_emails"
+    // Profile v1: how replies and messages sound (settings page)
+    | "sign_off_name"
+    | "greeting"
+    | "complaint_contact"
+    | "halal_statement"
+    | "allergen_statement"
+    | "recovery_offers"
+    | "words_to_avoid"
+    | "emoji_allowed"
+  >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
   opening_hours: "opening hours",
@@ -28,6 +47,14 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   tagline: "tagline",
   reply_to_email: "reply-to email",
   feedback_emails: "feedback emails",
+  sign_off_name: "sign-off name",
+  greeting: "greeting",
+  complaint_contact: "contact for complaints",
+  halal_statement: "halal statement",
+  allergen_statement: "allergen statement",
+  recovery_offers: "recovery offers",
+  words_to_avoid: "words to avoid",
+  emoji_allowed: "emojis",
 };
 
 export async function saveProfileFields(restaurant: Restaurant, fields: Partial<EditableFields>, detail: string) {
@@ -58,4 +85,25 @@ export async function applyProfileChanges(restaurant: Restaurant, changes: Profi
   else if (plan.unchanged && !plan.problems.length) parts.push("That's already how it is, so nothing changed.");
   if (plan.problems.length) parts.push(plan.problems.join("\n"));
   return parts.join("\n\n") || "Sorry, I didn't catch what to change. Try e.g. _change Friday hours to 11pm_.";
+}
+
+// Revert (settings page): puts one profile field back to its value before a
+// change, as a new profile version. Not UNDO, which is the owner's WhatsApp
+// command for their last action.
+export async function revertProfileChange(restaurant: Restaurant, versionId: string) {
+  const plan = await planRevert(restaurant.id, versionId);
+  if (!plan.ok) return plan;
+  const row = restaurant as unknown as Record<string, unknown>;
+  check(await getSupabase().from("restaurants").update(plan.columns).eq("id", restaurant.id));
+  for (const [column, value] of Object.entries(plan.columns)) {
+    await logAction({
+      restaurantId: restaurant.id,
+      actor: "owner",
+      action: "profile_reverted",
+      detail: `Reverted the ${PROFILE_FIELDS[plan.field].label}`,
+      data: { field: column, before: row[column] ?? null, after: value, reverts: versionId },
+    });
+  }
+  await markReverted(restaurant.id, versionId);
+  return plan;
 }

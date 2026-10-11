@@ -79,7 +79,21 @@ export type Restaurant = {
   longitude: number | null;
   weather_backfilled_at: string | null;
   last_weather_on: string | null;
+  // Agent organisation, phase 1 (017, 018): each agent's mode, and profile v1.
+  agent_modes: Record<string, string> | null;
+  sign_off_name: string | null;
+  greeting: string | null;
+  complaint_contact: string | null;
+  halal_statement: string | null;
+  allergen_statement: string | null;
+  recovery_offers: string[] | null;
+  words_to_avoid: string[] | null;
+  emoji_allowed: EmojiAllowed | null;
+  profile_version: number | null;
 };
+
+// The most emojis allowed per kind of customer message.
+export type EmojiAllowed = { review_replies: number; posts: number; campaigns: number };
 
 // The app's address, used for every link we make (emails, QR codes, rewards,
 // reports, login links): the APP_URL setting (https://app.dinerai.co.uk on the live
