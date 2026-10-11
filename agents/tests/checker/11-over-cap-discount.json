@@ -1,0 +1,477 @@
+{
+  "name": "Offer of 30% off when the cap is 20% (real)",
+  "source": "real draft 6ef2d5ac-1cbe-4730-af50-3ca7a45d27d9 (Ember & Spice Grill, 9 Oct 2026)",
+  "note": "The cap is a gate rule in code; the checker doesn't check it (checker.md), though C8 (Growth's rules) may. Whatever the checker says, the gate must block it.",
+  "draft": {
+    "type": "promotion",
+    "channel": "whatsapp",
+    "audience": "All opted-in customers",
+    "content": {
+      "text": "🔥 Big news! This week only, enjoy 30% off all Grills at Ember & Spice Grill – from our famous Mixed Grill Platter to Lamb Chops and Seekh Kebabs. Come hungry, leave happy 😋 See you soon!"
+    },
+    "needs_owner_input": null,
+    "sources_used": [
+      "profile:name",
+      "profile:cuisine",
+      "profile:tone_notes",
+      "profile:emoji_allowed",
+      "profile:words_to_avoid",
+      "profile:menu",
+      "profile:hours",
+      "profile:discount_cap",
+      "profile:halal_statement",
+      "profile:allergen_statement",
+      "request:6ef2d5ac-1cbe-4730-af50-3ca7a45d27d9"
+    ]
+  },
+  "text": "🔥 Big news! This week only, enjoy 30% off all Grills at Ember & Spice Grill – from our famous Mixed Grill Platter to Lamb Chops and Seekh Kebabs. Come hungry, leave happy 😋 See you soon!",
+  "sources": [
+    {
+      "ref": "profile:name",
+      "found": true,
+      "data": "Ember & Spice Grill"
+    },
+    {
+      "ref": "profile:cuisine",
+      "found": true,
+      "data": "Halal charcoal grill"
+    },
+    {
+      "ref": "profile:tone_notes",
+      "found": true,
+      "data": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right."
+    },
+    {
+      "ref": "profile:emoji_allowed",
+      "found": true,
+      "data": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      }
+    },
+    {
+      "ref": "profile:words_to_avoid",
+      "found": true,
+      "data": []
+    },
+    {
+      "ref": "profile:menu",
+      "found": true,
+      "data": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "profile:hours",
+      "found": true,
+      "data": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      }
+    },
+    {
+      "ref": "profile:discount_cap",
+      "found": true,
+      "data": 20
+    },
+    {
+      "ref": "profile:halal_statement",
+      "found": true,
+      "data": "All our meat is halal."
+    },
+    {
+      "ref": "profile:allergen_statement",
+      "found": true,
+      "data": "Please ask our staff about allergens before you order."
+    },
+    {
+      "ref": "request:6ef2d5ac-1cbe-4730-af50-3ca7a45d27d9",
+      "found": true,
+      "data": {
+        "owner_asked": "Write an offer for 30% off all grills"
+      }
+    }
+  ],
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "google_place_id": null,
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "owner_name": null,
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "complaint_contact": "+44 20 7946 0123",
+      "phone": "+44 20 7946 0123",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ],
+      "signup_offer": "a free Mango Lassi",
+      "logo": null,
+      "colours": {
+        "brand_color": "#c2410c",
+        "brand_dark": "#1c1917"
+      },
+      "discount_cap": 20,
+      "send_window": {
+        "send_window_start": "09:00:00",
+        "send_window_end": "21:00:00"
+      }
+    }
+  },
+  "recent": [
+    "Lamb Chops (4 pcs) are down to £11.15 this week 🔥 And remember, we're open till midnight every Friday for your late-night cravings. See you soon at Ember & Spice Grill!"
+  ],
+  "maker": "growth",
+  "today": "Friday 9 October 2026",
+  "expect": {
+    "verdict": [
+      "pass",
+      "fail",
+      "escalate"
+    ],
+    "gate": {
+      "blocked": "discount_cap"
+    }
+  },
+  "recorded": {
+    "verdict": "fail",
+    "checks": [
+      {
+        "id": "T1",
+        "result": "fail",
+        "reason": "Profile says use the customer's first name and always say thank you. The draft has neither. 'Big news!' and 'Come hungry, leave happy' lean salesy against the 'never pushy or salesy' note.",
+        "fix": "Add a first-name greeting and a thank you, and tone down the hype wording."
+      },
+      {
+        "id": "T2",
+        "result": "pass",
+        "reason": "Names real dishes from the menu and the restaurant.",
+        "fix": null
+      },
+      {
+        "id": "T3",
+        "result": "pass",
+        "reason": "Plain English, same language as the audience.",
+        "fix": null
+      },
+      {
+        "id": "T4",
+        "result": "pass",
+        "reason": "Opening and closing differ from the previous output ('See you soon' appears in both but the draft closes differently overall). Note: consider varying the closing.",
+        "fix": null
+      },
+      {
+        "id": "T5",
+        "result": "fail",
+        "reason": "Contains an en-dash used as a dash ('Grill – from our famous'), which is the same as an em-dash under the style rule. Two emojis (🔥 😋) are within the allowed 2.",
+        "fix": "Replace the dash with a full stop or comma."
+      },
+      {
+        "id": "F1",
+        "result": "fail",
+        "reason": "'our famous Mixed Grill Platter' is not supported by any source. Also 'This week only' is not backed by an owner-supplied date range; the request only says '30% off all grills'.",
+        "fix": "Remove 'famous'. Use specific dates only if the owner confirms them."
+      },
+      {
+        "id": "F2",
+        "result": "fail",
+        "reason": "30% off exceeds the profile discount cap of 20%.",
+        "fix": "Do not draft at 30%. Set needs_owner_input asking whether to use 20% or approve a higher discount."
+      },
+      {
+        "id": "F3",
+        "result": "fail",
+        "reason": "'This week only' gives no actual start or end dates or times. Today is Friday 9 October 2026, and the offer window cannot be verified.",
+        "fix": "State exact dates and times, for example 'until Sunday 18 October', once confirmed."
+      },
+      {
+        "id": "F4",
+        "result": "fail",
+        "reason": "Dish names do not match the menu exactly: 'Lamb Chops' should be 'Lamb Chops (4 pcs)' and 'Seekh Kebabs' should be 'Seekh Kebab (2 pcs)'. 'Mixed Grill Platter' matches.",
+        "fix": "Use exact menu names or refer to the Grills category."
+      },
+      {
+        "id": "F5",
+        "result": "pass",
+        "reason": "No causal claims made.",
+        "fix": null
+      },
+      {
+        "id": "C1",
+        "result": "pass",
+        "reason": "No food, halal or allergen claims made.",
+        "fix": null
+      },
+      {
+        "id": "C2",
+        "result": "fail",
+        "reason": "Offer terms are unclear: no dates, no conditions (dine-in, takeaway, delivery?), and 'This week only' creates urgency without a defined end. The discount also exceeds the cap.",
+        "fix": "Add clear dates, times and conditions, and keep the discount within the cap."
+      },
+      {
+        "id": "C3",
+        "result": "pass",
+        "reason": "Audience is all opted-in customers, with no targeting by personal traits.",
+        "fix": null
+      },
+      {
+        "id": "C4",
+        "result": "pass",
+        "reason": "Nothing offered for reviews.",
+        "fix": null
+      },
+      {
+        "id": "C5",
+        "result": "pass",
+        "reason": "No personal data included.",
+        "fix": null
+      },
+      {
+        "id": "C6",
+        "result": "pass",
+        "reason": "No financial, legal or staffing advice.",
+        "fix": null
+      },
+      {
+        "id": "C7",
+        "result": "pass",
+        "reason": "No platform rule broken in the text itself (no phone numbers or Google post issues).",
+        "fix": null
+      },
+      {
+        "id": "C8",
+        "result": "fail",
+        "reason": "Breaks maker rules: discount of 30% is over the 20% cap, which requires needs_owner_input instead of a draft; offer has no clear dates, times or conditions; whatsapp is blocked until Meta verification (rule says email only for now); and a promotion draft cannot be written when the ask needs a discount over the cap.",
+        "fix": "Set needs_owner_input asking about the 20% cap and do not write customer-facing content. Use the email channel."
+      },
+      {
+        "id": "B1",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B2",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B3",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B4",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      }
+    ],
+    "minor_fixes": [],
+    "owner_question": null,
+    "notes": "The main problem is that the owner asked for 30% off but the profile cap is 20%. Per the maker's rules the draft should have set needs_owner_input with no customer-facing copy. Send it back to the maker to ask the owner: 'Your discount cap is 20%. Do you want to run 20% off all Grills, or approve 30% for this offer? And what dates should it run?' Also use the email channel, since whatsapp is currently blocked.",
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "recorded_at": "2026-10-11T17:58:50.906Z"
+  }
+}

@@ -24,7 +24,7 @@ export type CheckResult = { status: CheckStatus; fixes: string[]; flags: string[
 
 // Draft time: all four. Send time: the two code checks run again, right before sending.
 export type DraftChecks = Partial<Record<CheckName, CheckResult>> & {
-  send?: Partial<Record<"compliance" | "money", CheckResult>>;
+  send?: Partial<Record<"compliance" | "money" | "test_mode", CheckResult>>;
 };
 
 const ICONS: Record<CheckStatus, string> = { pass: "✅", fixed: "🔧", flagged: "⚠️", failed: "❓", held: "🕘", blocked: "⛔" };

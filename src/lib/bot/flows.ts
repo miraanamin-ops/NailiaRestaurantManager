@@ -111,7 +111,7 @@ export async function reviseCampaignAndSend(ctx: RestaurantContext, draft: Draft
 
 // The weekly birthday email. Runs from the Monday morning job (held for the brief), or BIRTHDAY CAMPAIGN.
 export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send, mode: "present" | "hold" = "present") {
-  const { eligible } = await recipientsFor(ctx.restaurant, "birthdays_7d", ctx.now);
+  const { eligible } = await recipientsFor(ctx.restaurant, "birthdays_7d", ctx.now, { isBirthday: true });
   if (!eligible.length) {
     if (mode === "hold") return; // nothing to approve, so nothing to say
     return send("🎂 No customers with email consent have a birthday in the next 7 days, so there's no birthday email this week.");

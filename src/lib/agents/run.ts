@@ -1,0 +1,72 @@
+import "server-only";
+import type Anthropic from "@anthropic-ai/sdk";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import type { z } from "zod";
+import { alertBuilder } from "@/lib/builder-alerts";
+import { claude, fallbackFor, MAX_TOKENS } from "@/lib/claude";
+import type { AgentName } from "./definition";
+import { loadAgent } from "./loader";
+import type { Problems } from "./schema";
+
+// One call to one agent: its system prompt (house rules + its file), the job's
+// data, and a fixed output shape. The output is checked by code; if it's invalid
+// the agent gets one retry with the problems listed, then the call fails and the
+// builder is alerted (the watchdog). Never the owner.
+
+export class AgentOutputError extends Error {
+  constructor(
+    readonly agent: AgentName,
+    readonly problems: Problems,
+  ) {
+    super(`The ${agent} agent returned invalid output twice: ${problems.join("; ")}`);
+  }
+}
+
+export type AgentCall<T> = {
+  agent: AgentName;
+  // The job's data (profile, sources, the draft...). Text and images.
+  content: Anthropic.Beta.BetaContentBlockParam[];
+  schema: z.ZodType<T>;
+  // Plain-code rules on top of the schema. Empty = valid.
+  validate: (out: T) => Problems;
+  effort?: "low" | "medium" | "high";
+  // For the alert: what this call was about (e.g. a draft id).
+  label: string;
+};
+
+export type AgentResult<T> = { output: T; attempts: number; agentVersion: string; houseRulesVersion: string; model: string };
+
+export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> {
+  const agent = loadAgent(call.agent);
+  // The agent's instructions are the same on every call, so they're cached.
+  const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: agent.systemPrompt, cache_control: { type: "ephemeral" } }];
+
+  let problems: Problems = [];
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const retryNote: Anthropic.Beta.BetaContentBlockParam[] = problems.length
+      ? [{ type: "text", text: `Your previous answer was rejected by the system for these reasons:\n${problems.map((p) => `- ${p}`).join("\n")}\nReturn a corrected answer.` }]
+      : [];
+    const response = await claude().beta.messages.parse({
+      ...fallbackFor(agent.model),
+      model: agent.modelId,
+      max_tokens: MAX_TOKENS,
+      output_config: { effort: call.effort ?? "medium", format: betaZodOutputFormat(call.schema) },
+      system,
+      messages: [{ role: "user", content: [...call.content, ...retryNote] }],
+    });
+    const out = response.parsed_output as T | null;
+    if (response.stop_reason === "refusal" || !out) {
+      problems = [`no usable answer (${response.stop_reason})`];
+      continue;
+    }
+    problems = call.validate(out);
+    if (!problems.length) {
+      return { output: out, attempts: attempt, agentVersion: agent.version, houseRulesVersion: agent.houseRulesVersion, model: agent.modelId };
+    }
+  }
+  await alertBuilder(
+    `agent-invalid:${call.agent}`,
+    `The ${call.agent} agent (v${agent.version}) returned invalid output twice for ${call.label}.\n${problems.slice(0, 5).join("\n")}`,
+  );
+  throw new AgentOutputError(call.agent, problems);
+}

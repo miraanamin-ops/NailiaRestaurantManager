@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:agents": "vitest run --config vitest.agents.config.mts",
+    "test:agents:record": "node --env-file-if-exists=.env.local scripts/record-agent-cases.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

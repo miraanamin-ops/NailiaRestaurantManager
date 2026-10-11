@@ -6,7 +6,9 @@ import { checkResult, type CheckResult, type DraftChecks } from "@/lib/checks/ty
 import { google, type GooglePost } from "@/lib/google";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
+import { channelFor, testModeStep } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { isTestMode } from "@/lib/test-mode";
 
 // Sending. Every send goes through attemptSend, which runs the two code checks
 // right before anything goes out and records the result on the draft:
@@ -14,12 +16,12 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 //   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
 
 export type { SendSource };
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window"; scheduledFor: Date | null; detail: string; draft: Draft }
-  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients"; detail: string; draft: Draft };
+  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit"; detail: string; draft: Draft };
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
@@ -42,7 +44,7 @@ async function logBlock(draft: Draft, reason: BlockReason, detail: string) {
 }
 
 // The send-time results of the two code checks, kept alongside the draft-time ones.
-function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money", CheckResult>>): DraftChecks {
+function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money" | "test_mode", CheckResult>>): DraftChecks {
   return { ...(draft.checks ?? {}), send: { ...(draft.checks?.send ?? {}), ...send } };
 }
 
@@ -81,27 +83,39 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     });
     return { ...rules, draft: updated };
   }
+  // Sent without the owner's tap: its task is on Auto and the live checker passed it.
+  const auto = rules.approvedBy === "auto";
 
   // 2. Compliance: email campaigns only go to customers with valid consent right
   //    now (not unsubscribed), and every one of those emails has an unsubscribe link.
+  //    Nobody gets more than one campaign in 7 days (birthday emails excepted).
   const compliance = checkResult([], []);
   if (draft.kind === "email_campaign") {
     const campaign = await getCampaignForDraft(draft.id);
-    const { eligible, excluded } = campaign ? await recipientsFor(restaurant, campaign.segment, now) : { eligible: [], excluded: 0 };
+    const { eligible, excluded, limited } = campaign
+      ? await recipientsFor(restaurant, campaign.segment, now, { isBirthday: campaign.is_birthday })
+      : { eligible: [], excluded: 0, limited: 0 };
     const missingUnsubscribe = await ensureUnsubscribeTokens(eligible.map((c) => c.id));
-    const problems = emailComplianceProblems({ eligible: eligible.length, excluded, missingUnsubscribe });
+    const problems = emailComplianceProblems({ eligible: eligible.length, excluded, missingUnsubscribe, limited });
     if (problems.length) {
       const detail = problems.join(" ");
-      await logBlock(draft, "no_recipients", detail);
+      const reason = !eligible.length && limited ? "weekly_limit" : "no_recipients";
+      await logBlock(draft, reason, detail);
       const updated = await updateDraft(draft.id, {
         status: "blocked",
         block_reason: detail,
         scheduled_for: null,
         checks: withSendChecks(draft, { money: checkResult([], []), compliance: checkResult([], problems, "blocked") }),
       });
-      return { outcome: "blocked", reason: "no_recipients", detail, draft: updated };
+      return { outcome: "blocked", reason, detail, draft: updated };
     }
   }
+
+  // 3. TEST_MODE, as a gate step: in test mode nothing reaches a real customer,
+  //    owner or platform. (WhatsApp to customers stays off until Meta verification.)
+  const testStep = testModeStep({ testMode: isTestMode(), channel: channelFor(draft.kind), googleMode: google().mode });
+  const testCheck = checkResult(testStep.outcome === "simulate" ? [testStep.detail] : [], [], "pass");
+  const reachesPlatform = testStep.outcome === "ok";
 
   // All checks passed. Claim the draft in one atomic update so that two sends
   // racing each other can't both succeed.
@@ -114,11 +128,13 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       scheduled_for: null,
       block_reason: null,
       updated_at: new Date().toISOString(),
-      checks: withSendChecks(draft, { money: checkResult([], []), compliance }),
+      checks: withSendChecks(draft, { money: checkResult([], []), compliance, test_mode: testCheck }),
+      // Auto: approved by the trust level and the checker, at the moment it goes out.
+      ...(auto ? { approved_at: new Date().toISOString(), waiting_for: null } : {}),
     })
     .eq("restaurant_id", restaurant.id)
     .eq("id", draft.id)
-    .in("status", [...SENDABLE_STATUSES])
+    .in("status", auto ? [...SENDABLE_STATUSES, "pending"] : [...SENDABLE_STATUSES])
     .is("sent_at", null)
     .select("*")
     .maybeSingle<Draft>();
@@ -127,6 +143,15 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     const detail = "Another send of this draft got there first. Duplicates are blocked.";
     await logBlock(draft, "duplicate", detail);
     return { outcome: "blocked", reason: "duplicate", detail, draft };
+  }
+  if (auto) {
+    await logAction({
+      restaurantId: claimed.restaurant_id,
+      draftId: claimed.id,
+      actor: "safety rules",
+      action: "approved",
+      detail: `Approved ${draftName(claimed)} on Auto (its task is set to Auto and the checker passed it)`,
+    });
   }
 
   // Email campaigns really go out (to the owner only, in test mode).
@@ -137,6 +162,9 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     const summary = await deliverCampaign(claimed, restaurant, now);
     note = deliveryNote(summary);
     simulated = summary.emailed === 0;
+  } else if (!reachesPlatform) {
+    // Test mode (or customer WhatsApp): nothing goes out; it is logged as simulated.
+    note = `🧪 ${testStep.detail}`;
   } else if (claimed.kind === "review_reply" && claimed.review_id) {
     // Posted under the review (in dummy mode: saved against it).
     await google().replyToReview(restaurant.id, claimed.review_id, claimed.content);

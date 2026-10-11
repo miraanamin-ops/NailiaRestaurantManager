@@ -1,4 +1,5 @@
 import "server-only";
+import { recordColumnChange } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
 // The audit log: one row for every action, saying who did what and when.
@@ -9,7 +10,9 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff";
+export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | AgentActor;
+// An agent acting on its own (e.g. the checker recording a verdict).
+export type AgentActor = "checker" | "reputation" | "growth" | "visibility" | "insights" | "gm" | "profile keeper";
 export type AuditAction =
   | "created" // a draft was written (and checked)
   | "edited"
@@ -25,7 +28,11 @@ export type AuditAction =
   | "staff_added" // ADD STAFF: a number that can send till reports and sales files
   | "staff_removed"
   | "sales_saved" // a till report was saved (by the owner or staff)
-  | "sales_imported"; // a POS file was imported
+  | "sales_imported" // a POS file was imported
+  | "checked" // an agent checked a draft (shadow mode: recorded only)
+  | "agent_failed" // an agent job failed (the builder was alerted)
+  | "profile_changed" // a profile field changed (a new profile version)
+  | "profile_reverted"; // Revert on one profile change
 
 export type AuditEntry = {
   id: string;
@@ -38,6 +45,11 @@ export type AuditEntry = {
   data: Record<string, unknown> | null;
   undone_at: string | null;
   created_at: string;
+  // Agent work: which job, agent and version did it, and its verdict.
+  job_id?: string | null;
+  agent?: string | null;
+  agent_version?: string | null;
+  verdict?: string | null;
 };
 
 // The owner's own decisions that UNDO can reverse.
@@ -52,6 +64,7 @@ export async function logAction(entry: {
   action: AuditAction;
   detail: string;
   data?: Record<string, unknown>;
+  job?: { jobId: string | null; agent: string; agentVersion: string | null; verdict?: string | null };
 }) {
   const { error } = await getSupabase().from("audit_log").insert({
     restaurant_id: entry.restaurantId,
@@ -61,8 +74,26 @@ export async function logAction(entry: {
     action: entry.action,
     detail: entry.detail,
     data: entry.data ?? null,
+    // Only written for agent work, so other log lines are unchanged.
+    ...(entry.job
+      ? { job_id: entry.job.jobId, agent: entry.job.agent, agent_version: entry.job.agentVersion, verdict: entry.job.verdict ?? null }
+      : {}),
   });
   if (error) console.error("Failed to write the audit log", error);
+
+  // A profile field changed (from settings, a message, a command, onboarding,
+  // UNDO or Revert): record it as a new profile version too.
+  if ((entry.action === "setting" || entry.action === "profile_reverted") && typeof entry.data?.field === "string") {
+    await recordColumnChange({
+      restaurantId: entry.restaurantId,
+      column: entry.data.field,
+      before: entry.data.before,
+      after: entry.data.after,
+      by: entry.actor,
+      evidence: { detail: entry.detail, ...(entry.batchId ? { batch_id: entry.batchId } : {}) },
+      reverts: typeof entry.data.reverts === "string" ? entry.data.reverts : null,
+    });
+  }
 }
 
 // Setting changes, with the old value so UNDO can put it back.

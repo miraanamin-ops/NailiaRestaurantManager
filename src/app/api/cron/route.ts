@@ -13,6 +13,7 @@ import { clearOldRateLimits } from "@/lib/rate-limit";
 import { runWeather } from "@/lib/sales/weather";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { runQueuedAgentJobs } from "@/lib/agents/checker";
 
 // The morning job writes drafts and the weekly report with Claude, which takes a while.
 export const maxDuration = 300;
@@ -107,6 +108,9 @@ async function runJob(job: Job) {
       console.error("Morning job failed", err);
       entry.morning = { error: err instanceof Error ? err.message : String(err) };
     }
+    // Agent work the job queued (the shadow checker), plus anything left over from
+    // earlier runs. Never throws; a failing job alerts the builder on its own.
+    entry.agents = await runQueuedAgentJobs(r.id, 4);
 
     // The brief should be out by 11am. If it isn't (and the job hasn't already
     // reported giving up), tell the builder.

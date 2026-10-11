@@ -1,0 +1,507 @@
+{
+  "name": "1-star apology with an em-dash (real)",
+  "source": "real draft d0c094dd-4e17-4e39-a316-c58d3bd19bdc (Ember & Spice Grill, 9 Oct 2026)",
+  "note": null,
+  "draft": {
+    "type": "review_reply",
+    "channel": "google",
+    "audience": "Google review by Salma B.",
+    "content": {
+      "text": "Hi Salma, we're really sorry to hear this — being charged for something you never received isn't on, and we're sorry it took so long to sort out on the night. That's not the evening we want for you. Please reach out to us on +44 20 7946 0123 so we can make it right. We'd love the chance to welcome you back and show you the Ember & Spice we're proud of. 🙏"
+    },
+    "needs_owner_input": null,
+    "sources_used": [
+      "review:a99ef6f0-69c3-4a2c-87c9-b85e5c93641d",
+      "profile:name",
+      "profile:cuisine",
+      "profile:tone_notes",
+      "profile:emoji_allowed",
+      "profile:words_to_avoid",
+      "profile:menu",
+      "profile:sign_off_name",
+      "profile:greeting",
+      "profile:complaint_contact",
+      "profile:recovery_offers",
+      "profile:phone",
+      "profile:halal_statement",
+      "profile:allergen_statement",
+      "request:d0c094dd-4e17-4e39-a316-c58d3bd19bdc"
+    ]
+  },
+  "text": "Hi Salma, we're really sorry to hear this — being charged for something you never received isn't on, and we're sorry it took so long to sort out on the night. That's not the evening we want for you. Please reach out to us on +44 20 7946 0123 so we can make it right. We'd love the chance to welcome you back and show you the Ember & Spice we're proud of. 🙏",
+  "sources": [
+    {
+      "ref": "review:a99ef6f0-69c3-4a2c-87c9-b85e5c93641d",
+      "found": true,
+      "data": {
+        "id": "a99ef6f0-69c3-4a2c-87c9-b85e5c93641d",
+        "author_name": "Salma B.",
+        "rating": 1,
+        "text": "Charged for a lassi we never got and it took ages to sort out. Really put a downer on the evening.",
+        "review_date": "2026-10-09T11:32:06Z"
+      }
+    },
+    {
+      "ref": "profile:name",
+      "found": true,
+      "data": "Ember & Spice Grill"
+    },
+    {
+      "ref": "profile:cuisine",
+      "found": true,
+      "data": "Halal charcoal grill"
+    },
+    {
+      "ref": "profile:tone_notes",
+      "found": true,
+      "data": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right."
+    },
+    {
+      "ref": "profile:emoji_allowed",
+      "found": true,
+      "data": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      }
+    },
+    {
+      "ref": "profile:words_to_avoid",
+      "found": true,
+      "data": []
+    },
+    {
+      "ref": "profile:menu",
+      "found": true,
+      "data": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "profile:sign_off_name",
+      "found": true,
+      "data": "The Ember & Spice Grill family"
+    },
+    {
+      "ref": "profile:greeting",
+      "found": true,
+      "data": null
+    },
+    {
+      "ref": "profile:complaint_contact",
+      "found": true,
+      "data": "+44 20 7946 0123"
+    },
+    {
+      "ref": "profile:recovery_offers",
+      "found": true,
+      "data": [
+        "A free dessert on your next visit"
+      ]
+    },
+    {
+      "ref": "profile:phone",
+      "found": true,
+      "data": "+44 20 7946 0123"
+    },
+    {
+      "ref": "profile:halal_statement",
+      "found": true,
+      "data": "All our meat is halal."
+    },
+    {
+      "ref": "profile:allergen_statement",
+      "found": true,
+      "data": "Please ask our staff about allergens before you order."
+    },
+    {
+      "ref": "request:d0c094dd-4e17-4e39-a316-c58d3bd19bdc",
+      "found": true,
+      "data": {
+        "owner_asked": "NEW REVIEW test command"
+      }
+    }
+  ],
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "google_place_id": null,
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "owner_name": null,
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "complaint_contact": "+44 20 7946 0123",
+      "phone": "+44 20 7946 0123",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ],
+      "signup_offer": "a free Mango Lassi",
+      "logo": null,
+      "colours": {
+        "brand_color": "#c2410c",
+        "brand_dark": "#1c1917"
+      },
+      "discount_cap": 20,
+      "send_window": {
+        "send_window_start": "09:00:00",
+        "send_window_end": "21:00:00"
+      }
+    }
+  },
+  "recent": [
+    "Thank you so much, Ollie! 🙏 Those seekh kebabs are made with fresh herbs and green chilli, and we're so glad they hit the spot. It means a lot that you felt remembered. We treat everyone like a regular, and it's lovely to see you back. Can't wait to welcome you and your group again soon. 🔥\n\nThe Ember & Spice Grill family",
+    "Thanks so much, Farzana! 🙏 We love that the kids tucked into the wings. Really appreciate the veggie mains feedback too, it's something we're looking at. Hope to see you all again soon at Ember & Spice! 🔥",
+    "Hiya Jess, thank you so much! 😋 Buzzing you loved the smash burger and masala chips. Fair shout on the seating, we know it gets snug when we're busy, we're always looking at ways to make it comfier. Hope to see you back at Ember & Spice Grill soon 🔥"
+  ],
+  "maker": "reputation",
+  "today": "Friday 9 October 2026",
+  "expect": {
+    "verdict": [
+      "pass",
+      "fail"
+    ],
+    "flagged": [
+      {
+        "checks": [
+          "T5"
+        ],
+        "find_contains": "—"
+      }
+    ]
+  },
+  "recorded": {
+    "verdict": "fail",
+    "checks": [
+      {
+        "id": "T1",
+        "result": "fail",
+        "reason": "Profile voice is short, upbeat sentences with a little East London charm, and always say thank you. The draft has no thank you and uses long, heavy sentences.",
+        "fix": "Add a thank you for the feedback and use shorter sentences in the warm family-run voice."
+      },
+      {
+        "id": "T2",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "T3",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "T4",
+        "result": "fail",
+        "reason": "The draft has no sign-off, and the opening and closing need checking against the recent replies. Other replies close on the family sign-off and a 🔥 or 🙏 emoji. This draft ends with 🙏 but has no sign-off, so it breaks the pattern the profile sets.",
+        "fix": "Add the profile sign-off and avoid reusing recent openings or closings such as 'Hope to see you back soon'."
+      },
+      {
+        "id": "T5",
+        "result": "fail",
+        "reason": "The draft contains an em-dash ('hear this — being charged'). The emoji count is within the limit of 2.",
+        "fix": "Replace the em-dash with a full stop or comma."
+      },
+      {
+        "id": "F1",
+        "result": "fail",
+        "reason": "'it took so long to sort out on the night' is supported by the review. However, 'the Ember & Spice we're proud of' is generic and fine. The claim 'being charged for something you never received' is supported. The unsupported part is the implicit confirmation that the charge was an error, and stating it as fact; the restaurant cannot confirm this from the sources.",
+        "fix": "Acknowledge what Salma said without confirming the charge was wrong, for example 'we're sorry to hear you felt charged for a lassi you didn't get'."
+      },
+      {
+        "id": "F2",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "F3",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "F4",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "F5",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C1",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C2",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C3",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C4",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C5",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C6",
+        "result": "pass",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "C7",
+        "result": "fail",
+        "reason": "The Google reply includes a phone number '+44 20 7946 0123'. Platform rules do not allow phone numbers in Google post text.",
+        "fix": "Remove the phone number and invite Salma to contact the restaurant, or ask the owner whether to point her to a private channel."
+      },
+      {
+        "id": "C8",
+        "result": "fail",
+        "reason": "Breaks the maker's rules: no sign-off with 'The Ember & Spice Grill family'; and it does not use a recovery gesture from the approved list. Also it mentions order details beyond what the reviewer wrote only mildly, which is acceptable. The missing sign-off is a clear break.",
+        "fix": "End with the sign-off 'The Ember & Spice Grill family'. If offering a gesture, use only 'A free dessert on your next visit'."
+      },
+      {
+        "id": "B1",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B2",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B3",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B4",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      }
+    ],
+    "minor_fixes": [],
+    "owner_question": null,
+    "notes": "Send back to the maker. Main issues: no thank you, no sign-off, em-dash, phone number in a Google reply, and the reply confirms the charge was an error. Keep the apology sincere and the invitation to return, add the sign-off, and optionally offer the approved free dessert on the next visit.",
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "recorded_at": "2026-10-11T17:58:10.691Z"
+  }
+}

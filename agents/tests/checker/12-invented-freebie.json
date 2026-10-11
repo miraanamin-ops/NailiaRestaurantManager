@@ -1,0 +1,482 @@
+{
+  "name": "Offer that promises a free kunafa nobody asked for (real)",
+  "source": "real draft 3ee8be27-2b86-41f5-81b0-b94ddcd2d666 (Ember & Spice Grill, 9 Oct 2026)",
+  "note": "The owner's request (changed from the test command it came from) doesn't mention a free kunafa.",
+  "draft": {
+    "type": "promotion",
+    "channel": "whatsapp",
+    "audience": "All opted-in customers",
+    "content": {
+      "text": "Hi {first_name}, lamb chops (4 pcs) are just £13.95 this week, and we're open till midnight every Friday! Every table gets a free kunafa too 🔥 Thank you for being part of the Ember & Spice family 🙏"
+    },
+    "needs_owner_input": null,
+    "sources_used": [
+      "profile:name",
+      "profile:cuisine",
+      "profile:tone_notes",
+      "profile:emoji_allowed",
+      "profile:words_to_avoid",
+      "profile:menu",
+      "profile:hours",
+      "profile:discount_cap",
+      "profile:halal_statement",
+      "profile:allergen_statement",
+      "request:3ee8be27-2b86-41f5-81b0-b94ddcd2d666"
+    ]
+  },
+  "text": "Hi {first_name}, lamb chops (4 pcs) are just £13.95 this week, and we're open till midnight every Friday! Every table gets a free kunafa too 🔥 Thank you for being part of the Ember & Spice family 🙏",
+  "sources": [
+    {
+      "ref": "profile:name",
+      "found": true,
+      "data": "Ember & Spice Grill"
+    },
+    {
+      "ref": "profile:cuisine",
+      "found": true,
+      "data": "Halal charcoal grill"
+    },
+    {
+      "ref": "profile:tone_notes",
+      "found": true,
+      "data": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right."
+    },
+    {
+      "ref": "profile:emoji_allowed",
+      "found": true,
+      "data": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      }
+    },
+    {
+      "ref": "profile:words_to_avoid",
+      "found": true,
+      "data": []
+    },
+    {
+      "ref": "profile:menu",
+      "found": true,
+      "data": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "profile:hours",
+      "found": true,
+      "data": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      }
+    },
+    {
+      "ref": "profile:discount_cap",
+      "found": true,
+      "data": 20
+    },
+    {
+      "ref": "profile:halal_statement",
+      "found": true,
+      "data": "All our meat is halal."
+    },
+    {
+      "ref": "profile:allergen_statement",
+      "found": true,
+      "data": "Please ask our staff about allergens before you order."
+    },
+    {
+      "ref": "request:3ee8be27-2b86-41f5-81b0-b94ddcd2d666",
+      "found": true,
+      "data": {
+        "owner_asked": "Lamb chops this week, and we're open late on Fridays"
+      }
+    }
+  ],
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "google_place_id": null,
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "owner_name": null,
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "complaint_contact": "+44 20 7946 0123",
+      "phone": "+44 20 7946 0123",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ],
+      "signup_offer": "a free Mango Lassi",
+      "logo": null,
+      "colours": {
+        "brand_color": "#c2410c",
+        "brand_dark": "#1c1917"
+      },
+      "discount_cap": 20,
+      "send_window": {
+        "send_window_start": "09:00:00",
+        "send_window_end": "21:00:00"
+      }
+    }
+  },
+  "recent": [
+    "Lamb Chops (4 pcs) are down to £11.15 this week 🔥 And remember, we're open till midnight every Friday for your late-night cravings. See you soon at Ember & Spice Grill!"
+  ],
+  "maker": "growth",
+  "today": "Friday 9 October 2026",
+  "expect": {
+    "verdict": [
+      "fail",
+      "escalate"
+    ],
+    "flagged": [
+      {
+        "checks": [
+          "F1",
+          "C2",
+          "C8"
+        ]
+      }
+    ]
+  },
+  "recorded": {
+    "verdict": "fail",
+    "checks": [
+      {
+        "id": "T1",
+        "result": "pass",
+        "reason": "Warm, short, upbeat, uses first name and thanks customers. Two emojis within the limit.",
+        "fix": null
+      },
+      {
+        "id": "T2",
+        "result": "pass",
+        "reason": "Mentions lamb chops, kunafa and Ember & Spice family, which are specific to this restaurant.",
+        "fix": null
+      },
+      {
+        "id": "T3",
+        "result": "pass",
+        "reason": "Plain English, matches audience.",
+        "fix": null
+      },
+      {
+        "id": "T4",
+        "result": "pass",
+        "reason": "Opening and closing differ from the previous output. Lamb chops and late Friday theme repeats, but the wording is different.",
+        "fix": null
+      },
+      {
+        "id": "T5",
+        "result": "pass",
+        "reason": "No em-dashes, two emojis (🔥 🙏) are allowed by the profile (limit 2 for campaigns), no banned words.",
+        "fix": null
+      },
+      {
+        "id": "F1",
+        "result": "fail",
+        "reason": "\"Every table gets a free kunafa too\" is not supported. The owner's request and the profile say nothing about a free kunafa. The profile's approved offers are a free dessert on the next visit (recovery) and a free Mango Lassi (signup).",
+        "fix": "Remove the free kunafa claim, or ask the owner to confirm it as an offer."
+      },
+      {
+        "id": "F2",
+        "result": "fail",
+        "reason": "£13.95 is the normal menu price of Lamb Chops (4 pcs), so \"just £13.95 this week\" presents no real change. The previous output said £11.15, and no source gives a this-week price.",
+        "fix": "Remove the price framing as a weekly deal, or get the owner to confirm the actual offer price."
+      },
+      {
+        "id": "F3",
+        "result": "fail",
+        "reason": "\"open till midnight every Friday\" matches Friday 14:00 to 00:00, but no dates or times are given for the offer. \"This week\" is vague, and the late opening omits that Friday opens at 2pm.",
+        "fix": "State clear dates, for example \"until Sunday 18 October\", once the owner confirms them."
+      },
+      {
+        "id": "F4",
+        "result": "pass",
+        "reason": "Dish name Lamb Chops (4 pcs), kunafa and restaurant name match the profile.",
+        "fix": null
+      },
+      {
+        "id": "F5",
+        "result": "pass",
+        "reason": "No causal claims made.",
+        "fix": null
+      },
+      {
+        "id": "C1",
+        "result": "pass",
+        "reason": "No food, halal or allergen claims made.",
+        "fix": null
+      },
+      {
+        "id": "C2",
+        "result": "fail",
+        "reason": "Offer terms are unclear: no dates, no conditions on the free kunafa (per table? minimum spend? dine-in only?), and the lamb chops price is not actually a discount. Free kunafa is also unapproved spend.",
+        "fix": "Give clear dates and conditions for any offer, and only include offers the owner has approved."
+      },
+      {
+        "id": "C3",
+        "result": "pass",
+        "reason": "No targeting by personal traits. Audience is all opted-in customers.",
+        "fix": null
+      },
+      {
+        "id": "C4",
+        "result": "pass",
+        "reason": "No review incentive.",
+        "fix": null
+      },
+      {
+        "id": "C5",
+        "result": "pass",
+        "reason": "Only the first name placeholder is used.",
+        "fix": null
+      },
+      {
+        "id": "C6",
+        "result": "pass",
+        "reason": "No financial, legal or staffing advice.",
+        "fix": null
+      },
+      {
+        "id": "C7",
+        "result": "pass",
+        "reason": "WhatsApp message with no platform rule breaches in the text.",
+        "fix": null
+      },
+      {
+        "id": "C8",
+        "result": "fail",
+        "reason": "Breaks maker rules: the free kunafa is a new offer type and spend that required needs_owner_input, and offers need clear dates and conditions. Also, WhatsApp is blocked until Meta verification (the maker is email only for now).",
+        "fix": "Switch the channel to email, or hold until WhatsApp is verified. Set needs_owner_input for the free kunafa and the offer price and dates instead of drafting."
+      },
+      {
+        "id": "B1",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B2",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B3",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B4",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      }
+    ],
+    "minor_fixes": [],
+    "owner_question": null,
+    "notes": "Send back to the maker. The free kunafa is not approved by the owner and the price is not a discount. Maker should ask the owner for the lamb chops offer price, offer dates, and whether a free kunafa is approved. The owner's request only said lamb chops this week and open late on Fridays. The previous draft used £11.15, which also has no source in the profile.",
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "recorded_at": "2026-10-11T22:23:36.863Z"
+  }
+}

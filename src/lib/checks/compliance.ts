@@ -36,12 +36,17 @@ export type EmailComplianceInput = {
   eligible: number; // customers in the segment with valid consent right now
   excluded: number; // in the segment but no consent / unsubscribed
   missingUnsubscribe: number; // real emails that would go out without an unsubscribe link
+  limited?: number; // had a campaign in the last 7 days, so left out this time
 };
 
 // Send time, email campaigns: blocking problems, if any.
 export function emailComplianceProblems(input: EmailComplianceInput) {
   const problems: string[] = [];
-  if (input.eligible === 0) {
+  if (input.eligible === 0 && input.limited) {
+    problems.push(
+      `Everyone in this segment with email consent already had an offer email in the last 7 days (${input.limited} customer${input.limited === 1 ? "" : "s"}), and nobody gets more than one a week. Birthday emails don't count.`,
+    );
+  } else if (input.eligible === 0) {
     problems.push(
       `No customers in this segment have valid email consent${input.excluded ? ` (${input.excluded} left out: no consent or unsubscribed)` : ""}.`,
     );

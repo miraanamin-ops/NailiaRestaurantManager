@@ -4,6 +4,7 @@ import type { DraftChecks } from "@/lib/checks/types";
 import { check, checkRow, createDraft, applyEdit, type Draft } from "@/lib/drafts";
 import { sendCampaignEmail } from "@/lib/email";
 import { isDummyAddress } from "@/lib/email/route";
+import { CAMPAIGN_GAP_DAYS, weeklyLimit } from "@/lib/gate-rules";
 import { newToken } from "@/lib/signups";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -152,7 +153,7 @@ export function segmentRecipients(customers: SegmentCustomer[], segment: Segment
   return { eligible, excluded: inSegment.length - eligible.length };
 }
 
-export async function recipientsFor(restaurant: Restaurant, segment: Segment, now: Date) {
+export async function recipientsFor(restaurant: Restaurant, segment: Segment, now: Date, { isBirthday = false }: { isBirthday?: boolean } = {}) {
   const supabase = getSupabase();
   const customers =
     check(
@@ -174,7 +175,43 @@ export async function recipientsFor(restaurant: Restaurant, segment: Segment, no
           .returns<{ customer_id: string }[]>(),
       ) ?? [];
   }
-  return segmentRecipients(customers, segment, now, new Set(unredeemed.map((r) => r.customer_id)));
+  const { eligible, excluded } = segmentRecipients(customers, segment, now, new Set(unredeemed.map((r) => r.customer_id)));
+  // Gate rule: no customer gets more than one campaign in any 7 days (birthday emails excepted).
+  const { allowed, limited } = weeklyLimit(eligible, isBirthday ? new Set() : await recentCampaignCustomers(restaurant.id, now), isBirthday);
+  return { eligible: allowed, excluded, limited };
+}
+
+// Customers who were sent a (non-birthday) campaign in the last 7 days.
+async function recentCampaignCustomers(restaurantId: string, now: Date) {
+  const supabase = getSupabase();
+  const since = new Date(now.getTime() - CAMPAIGN_GAP_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const recent =
+    check(
+      await supabase
+        .from("campaigns")
+        .select("id")
+        .eq("restaurant_id", restaurantId)
+        .eq("is_birthday", false)
+        .gte("sent_at", since)
+        .returns<{ id: string }[]>(),
+    ) ?? [];
+  if (!recent.length) return new Set<string>();
+  const sends =
+    check(
+      await supabase
+        .from("campaign_sends")
+        .select("customer_id")
+        .eq("restaurant_id", restaurantId)
+        .in(
+          "campaign_id",
+          recent.map((c) => c.id),
+        )
+        .eq("kind", "customer")
+        .neq("delivery", "failed")
+        .gte("created_at", since)
+        .returns<{ customer_id: string | null }[]>(),
+    ) ?? [];
+  return new Set(sends.map((s) => s.customer_id).filter((id): id is string => Boolean(id)));
 }
 
 // Every customer email needs an unsubscribe link. Customers who don't have an
@@ -215,7 +252,7 @@ export async function createCampaignDraft(input: {
   isBirthday?: boolean;
   mode?: "present" | "hold";
 }) {
-  const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now);
+  const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now, { isBirthday: input.isBirthday });
   const draft = await createDraft({
     restaurantId: input.restaurant.id,
     kind: "email_campaign",
@@ -249,7 +286,7 @@ export async function updateCampaignDraft(input: {
   checks: DraftChecks;
   now: Date;
 }) {
-  const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now);
+  const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now, { isBirthday: input.campaign.is_birthday });
   check(
     await getSupabase()
       .from("campaigns")
@@ -272,7 +309,7 @@ export async function updateCampaignDraft(input: {
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || "there";
 
-export type DeliverySummary = { emailed: number; simulated: number; failed: number; excluded: number; ownerCopy: boolean };
+export type DeliverySummary = { emailed: number; simulated: number; failed: number; excluded: number; ownerCopy: boolean; limited?: number };
 
 // Called by the send pipeline once every safety rule has passed. Dummy customers
 // (seed data, example.com addresses) are "simulated"; everyone else gets a real
@@ -281,7 +318,7 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
   const supabase = getSupabase();
   const campaign = await getCampaignForDraft(draft.id);
   if (!campaign) throw new Error("Campaign not found for draft");
-  const { eligible, excluded } = await recipientsFor(restaurant, campaign.segment, now);
+  const { eligible, excluded, limited } = await recipientsFor(restaurant, campaign.segment, now, { isBirthday: campaign.is_birthday });
   const ownerEmail = restaurant.owner_email?.toLowerCase() ?? null;
 
   type Row = { customer_id: string | null; email: string; token: string; kind: "customer" | "owner_copy"; delivery: "email" | "simulated"; name: string; unsubscribeToken: string | null; seed: boolean };
@@ -374,6 +411,7 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
     simulated: rows.filter((r) => r.delivery === "simulated").length,
     failed,
     excluded,
+    limited,
     ownerCopy: rows.some((r) => r.kind === "owner_copy"),
   };
 }
@@ -383,6 +421,7 @@ export function deliveryNote(s: DeliverySummary) {
   if (s.simulated) parts.push(`🧪 ${s.simulated} simulated (dummy customers)`);
   if (s.failed) parts.push(`⚠️ ${s.failed} failed`);
   if (s.excluded) parts.push(`🚫 ${s.excluded} left out (no consent / unsubscribed)`);
+  if (s.limited) parts.push(`⏳ ${s.limited} left out (already had an offer email this week)`);
   return parts.join(" · ");
 }
 

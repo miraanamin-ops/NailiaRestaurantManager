@@ -2,6 +2,7 @@ import "server-only";
 import { lastUndoable, logAction, markUndone, type AuditEntry } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { google, type GooglePost } from "@/lib/google";
+import { recordColumnChange } from "@/lib/profile/versions";
 import { processQueue } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { setStaffActive } from "./sales/staff";
@@ -24,6 +25,9 @@ const SETTING_LABELS: Record<string, (v: unknown) => string> = {
   address: (v) => `Address is back to ${v ?? "not set"}`,
   website: (v) => `Website is back to ${v ?? "not set"}`,
 };
+// Any other setting (logo, colours, sign-off name...): a plain line.
+const settingLabel = (field: string, v: unknown) => SETTING_LABELS[field]?.(v) ?? `Your ${FIELD_WORDS[field] ?? field.replace(/_/g, " ")} is back to how it was`;
+const FIELD_WORDS: Record<string, string> = { logo_url: "logo", brand_color: "button colour", brand_dark: "header colour", reply_to_email: "reply-to email" };
 
 async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Promise<{ text: string; done: boolean }> {
   const draft = entry.draft_id ? await getDraft(entry.draft_id).catch(() => null as Draft | null) : null;
@@ -89,13 +93,22 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
       const fields: Partial<Restaurant> = { [plan.field]: plan.value };
       if (plan.field === "paused") fields.paused_at = plan.value ? new Date().toISOString() : null;
       check(await getSupabase().from("restaurants").update(fields).eq("id", restaurant.id));
+      // A profile field put back is a new profile version too (ignored for other settings).
+      await recordColumnChange({
+        restaurantId: restaurant.id,
+        column: plan.field,
+        before: (restaurant as unknown as Record<string, unknown>)[plan.field],
+        after: plan.value,
+        by: "owner",
+        evidence: { detail: `UNDO: ${entry.detail ?? ""}`.trim() },
+      });
       let extra = "";
       // Undoing a PAUSE means sending is back on: anything held goes out now.
       if (plan.field === "paused" && !plan.value) {
         const released = await processQueue({ ...restaurant, paused: false }, now);
         if (released.length) extra = ` ${released.length} held draft${released.length === 1 ? "" : "s"} went out.`;
       }
-      return { text: `↩️ ${SETTING_LABELS[plan.field](plan.value)}.${extra}`, done: true };
+      return { text: `↩️ ${settingLabel(plan.field, plan.value)}.${extra}`, done: true };
     }
   }
 }
