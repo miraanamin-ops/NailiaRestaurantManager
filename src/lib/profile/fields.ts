@@ -3,8 +3,7 @@
 // restaurants column(s) it lives in. No imports, so it's unit-tested.
 //
 // Fields from the schema that aren't stored yet are added with the agent that
-// needs them. `phone` isn't in the schema: it's the restaurant's existing phone
-// number, kept so agents (and the checker) can see it.
+// needs them.
 import type { AgentName } from "@/lib/agents/definition";
 import type { ChangeRule, ProfileSection } from "@/lib/agents/schema";
 
@@ -39,6 +38,7 @@ export const PROFILE_FIELDS = {
   google_place_id: f("identity", "settings", ["reputation", "visibility", "insights"], ["google_place_id"], true, "Google listing"),
   cuisine: f("identity", "confirm", ["growth", "visibility"], ["cuisine"], true, "cuisine"),
   links: f("identity", "confirm", ["growth", "visibility"], ["website"], false, "website"),
+  phone: f("identity", "confirm", ["reputation", "visibility"], ["phone"], false, "phone number"),
   // Owner
   owner_name: f("owner", "confirm", ["gm"], ["owner_name"], true, "your name"),
   sign_off_name: f("owner", "confirm", ["reputation"], ["sign_off_name"], true, "sign-off name"),
@@ -53,7 +53,6 @@ export const PROFILE_FIELDS = {
   halal_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["halal_statement"], true, "halal statement"),
   allergen_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["allergen_statement"], true, "allergen statement"),
   complaint_contact: f("facts", "confirm", ["reputation"], ["complaint_contact"], true, "contact for complaints"),
-  phone: f("facts", "confirm", ["reputation", "growth", "visibility"], ["phone"], false, "phone number"),
   // Commercial
   recovery_offers: f("commercial", "confirm", ["reputation"], ["recovery_offers"], true, "recovery offers"),
   signup_offer: f("commercial", "confirm", ["growth"], ["signup_reward"], true, "sign-up reward"),

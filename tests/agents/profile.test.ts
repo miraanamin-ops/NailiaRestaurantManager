@@ -43,10 +43,10 @@ const restaurantRow = (id: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe("profile fields", () => {
-  test("every field (except phone, kept from before) is in docs/profile-schema.md with the same rule", () => {
+  test("every field is in docs/profile-schema.md with the same rule", () => {
     const doc = readFileSync("docs/profile-schema.md", "utf8");
     const RULE = { auto: "Auto", confirm: "Confirm", settings: "Settings" };
-    for (const name of PROFILE_FIELD_NAMES.filter((n) => n !== "phone")) {
+    for (const name of PROFILE_FIELD_NAMES) {
       const row = doc.split("\n").find((l) => l.startsWith(`| \`${name}\``));
       expect(row, name).toBeTruthy();
       expect(row, name).toContain(`| ${RULE[PROFILE_FIELDS[name].rule]}`);

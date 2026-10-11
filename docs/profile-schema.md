@@ -22,6 +22,7 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 | `venue_type` | dine-in, takeaway, delivery | Confirm | Gro, Vis | Yes |
 | `cuisine` | Middle Eastern grill, desserts | Confirm | Gro, Vis | Yes |
 | `links` | website, booking, ordering | Confirm | Gro, Vis | No |
+| `phone` | 020 7946 0000 | Confirm | Rep, Vis | No |
 
 ## 2. Owner
 
