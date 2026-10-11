@@ -14,12 +14,12 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 //   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
 
 export type { SendSource };
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window"; scheduledFor: Date | null; detail: string; draft: Draft }
-  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients"; detail: string; draft: Draft };
+  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level"; detail: string; draft: Draft };
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
@@ -81,6 +81,8 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     });
     return { ...rules, draft: updated };
   }
+  // Sent without the owner's tap: its task is on Auto and the live checker passed it.
+  const auto = rules.approvedBy === "auto";
 
   // 2. Compliance: email campaigns only go to customers with valid consent right
   //    now (not unsubscribed), and every one of those emails has an unsubscribe link.
@@ -115,10 +117,12 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       block_reason: null,
       updated_at: new Date().toISOString(),
       checks: withSendChecks(draft, { money: checkResult([], []), compliance }),
+      // Auto: approved by the trust level and the checker, at the moment it goes out.
+      ...(auto ? { approved_at: new Date().toISOString(), waiting_for: null } : {}),
     })
     .eq("restaurant_id", restaurant.id)
     .eq("id", draft.id)
-    .in("status", [...SENDABLE_STATUSES])
+    .in("status", auto ? [...SENDABLE_STATUSES, "pending"] : [...SENDABLE_STATUSES])
     .is("sent_at", null)
     .select("*")
     .maybeSingle<Draft>();
@@ -127,6 +131,15 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     const detail = "Another send of this draft got there first. Duplicates are blocked.";
     await logBlock(draft, "duplicate", detail);
     return { outcome: "blocked", reason: "duplicate", detail, draft };
+  }
+  if (auto) {
+    await logAction({
+      restaurantId: claimed.restaurant_id,
+      draftId: claimed.id,
+      actor: "safety rules",
+      action: "approved",
+      detail: `Approved ${draftName(claimed)} on Auto (its task is set to Auto and the checker passed it)`,
+    });
   }
 
   // Email campaigns really go out (to the owner only, in test mode).

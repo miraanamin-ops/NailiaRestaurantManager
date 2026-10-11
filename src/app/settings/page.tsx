@@ -8,11 +8,11 @@ import { AllergenEditor, MenuEditor } from "../onboarding/setup/editors";
 import { button, Card, Frame, input } from "../onboarding/ui";
 import { getSupabase } from "@/lib/supabase";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
-import { HistoryCard, VoiceCard } from "./profile-cards";
+import { BuilderCard, HistoryCard, VoiceCard } from "./profile-cards";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
-const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", reverted: "✅ Reverted." };
+const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved." };
 
 // Change anything set up during onboarding. (Or just message Naila on WhatsApp:
 // "change Friday hours to 11pm", "add lamb chops, £14".)
@@ -193,6 +193,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         )}
 
         <HistoryCard restaurantId={restaurantId} />
+
+        {owner.isBuilder && <BuilderCard r={r} />}
       </div>
     </Frame>
   );

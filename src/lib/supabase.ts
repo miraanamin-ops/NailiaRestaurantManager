@@ -90,6 +90,8 @@ export type Restaurant = {
   words_to_avoid: string[] | null;
   emoji_allowed: EmojiAllowed | null;
   profile_version: number | null;
+  // Per-task trust levels (019): draft_only / approve / auto. Only the builder sets them.
+  trust_levels: Record<string, string> | null;
 };
 
 // The most emojis allowed per kind of customer message.

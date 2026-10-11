@@ -8,6 +8,11 @@ import { validHex } from "@/lib/email/brand";
 import { isEmail } from "@/lib/email/route";
 import { isSupportedImage, saveLogo } from "@/lib/photos";
 import { revertProfileChange, saveProfileFields } from "@/lib/profile-edits";
+import { MODES_AVAILABLE } from "@/lib/agents/modes";
+import { logAction } from "@/lib/audit";
+import { check } from "@/lib/drafts";
+import { getSupabase } from "@/lib/supabase";
+import { NEVER_AUTO, TASKS, TRUST_LEVELS } from "@/lib/trust";
 
 // The settings page's save buttons. Every change is logged (UNDO on WhatsApp puts it back).
 
@@ -115,6 +120,37 @@ export async function saveVoice(form: FormData) {
     "Changed in settings",
   );
   back(r.id, "saved=voice");
+}
+
+// Builder controls: trust level per task and each agent's mode. Only the builder
+// (BUILDER_EMAIL) can change these; owners never see them. Logged as the builder,
+// so the owner's UNDO never reverses them.
+export async function saveBuilderControls(form: FormData) {
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const owner = await currentOwner();
+  if (!owner?.isBuilder) throw new Error("Only the builder can change these");
+  const r = await own(get("r"));
+  const trust: Record<string, string> = {};
+  for (const task of TASKS) {
+    const level = get(`trust_${task}`);
+    if (!(TRUST_LEVELS as readonly string[]).includes(level)) continue;
+    // Never-Auto tasks can't be stored as Auto (the gate ignores it anyway).
+    trust[task] = level === "auto" && NEVER_AUTO.has(task) ? "approve" : level;
+  }
+  const modes: Record<string, string> = { ...(r.agent_modes ?? {}) };
+  for (const [agent, available] of Object.entries(MODES_AVAILABLE)) {
+    const mode = get(`mode_${agent}`);
+    if ((available.allowed as string[]).includes(mode)) modes[agent] = mode;
+  }
+  check(await getSupabase().from("restaurants").update({ trust_levels: trust, agent_modes: modes }).eq("id", r.id));
+  await logAction({
+    restaurantId: r.id,
+    actor: "builder",
+    action: "setting",
+    detail: "Changed trust levels and agent modes (builder controls)",
+    data: { field: "builder_controls", before: { trust_levels: r.trust_levels, agent_modes: r.agent_modes }, after: { trust_levels: trust, agent_modes: modes } },
+  });
+  back(r.id, "saved=builder");
 }
 
 // Revert one profile change (from the profile history list). Not UNDO.

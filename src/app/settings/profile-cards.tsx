@@ -2,7 +2,10 @@ import { PROFILE_FIELDS, DEFAULT_EMOJI_ALLOWED } from "@/lib/profile/fields";
 import { profileHistory, revertable, type ProfileVersion } from "@/lib/profile/versions";
 import type { Restaurant } from "@/lib/supabase";
 import { button, Card, input } from "../onboarding/ui";
-import { revertProfile, saveVoice } from "./actions";
+import type { AgentName } from "@/lib/agents/definition";
+import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
+import { NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
+import { revertProfile, saveBuilderControls, saveVoice } from "./actions";
 
 // Settings cards for the restaurant profile: how replies and messages sound
 // (fields the agents use), and the profile's change history with Revert.
@@ -115,6 +118,53 @@ export async function HistoryCard({ restaurantId }: { restaurantId: string }) {
           </li>
         ))}
       </ul>
+    </Card>
+  );
+}
+
+// Builder only: trust level per task, and each agent's mode. Owners never see this.
+export function BuilderCard({ r }: { r: Restaurant }) {
+  const levelNames: Record<TrustLevel, string> = { draft_only: "Draft only", approve: "Approve", auto: "Auto" };
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">Builder controls</h2>
+      <p className="text-sm text-stone-600">
+        Only you can see this. Every task starts on Approve. Auto sends without a tap, but only once the checker agent is live and has passed that exact draft. Campaigns, offers, hours, menu and profile changes can never be Auto.
+      </p>
+      <form action={saveBuilderControls} className="space-y-4">
+        <input type="hidden" name="r" value={r.id} />
+        <fieldset className="space-y-2">
+          <legend className={label}>Trust level per task</legend>
+          {TASKS.map((task) => (
+            <label key={task} className="flex items-center gap-3">
+              <span className="w-40 shrink-0 text-sm">{TASK_LABELS[task]}</span>
+              <select name={`trust_${task}`} defaultValue={trustLevel(r.trust_levels, task)} className={input}>
+                {TRUST_LEVELS.filter((l) => l !== "auto" || !NEVER_AUTO.has(task)).map((l) => (
+                  <option key={l} value={l}>
+                    {levelNames[l]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="space-y-2">
+          <legend className={label}>Agents</legend>
+          {Object.entries(MODES_AVAILABLE).map(([agent, available]) => (
+            <label key={agent} className="flex items-center gap-3">
+              <span className="w-40 shrink-0 text-sm capitalize">{agent}</span>
+              <select name={`mode_${agent}`} defaultValue={agentMode(r, agent as AgentName)} className={input}>
+                {available.allowed.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </fieldset>
+        <button className={button}>Save builder controls</button>
+      </form>
     </Card>
   );
 }
