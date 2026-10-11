@@ -5,6 +5,7 @@ import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, ty
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
+import { queueReputationShadow } from "@/lib/agents/reputation";
 import { getSupabase } from "@/lib/supabase";
 import type { ButtonTarget } from "@/lib/whatsapp";
 
@@ -50,6 +51,14 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
       });
       // Only now, with its reply draft saved, does the review count as handled.
       await google().markReviewHandled(review.id);
+      // Shadow mode: the Reputation agent writes its own reply in the background,
+      // for the /log comparison. The owner only ever sees the draft above.
+      await queueReputationShadow(ctx.restaurant, {
+        source: "review_check",
+        review: { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
+        legacy_draft_id: draft.id,
+        legacy_text: draft.content,
+      });
     } catch (err) {
       // Put it back so the next check tries again, then carry on with the rest.
       // (If even this fails, the claim simply expires and the review is retried.)

@@ -13,7 +13,7 @@ import { clearOldRateLimits } from "@/lib/rate-limit";
 import { runWeather } from "@/lib/sales/weather";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { runQueuedAgentJobs } from "@/lib/agents/checker";
+import { runQueuedAgentJobs } from "@/lib/agents/handlers";
 
 // The morning job writes drafts and the weekly report with Claude, which takes a while.
 export const maxDuration = 300;

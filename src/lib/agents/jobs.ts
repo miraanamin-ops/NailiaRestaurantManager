@@ -1,5 +1,5 @@
 import "server-only";
-import { logAction, type AgentActor } from "@/lib/audit";
+import { logAction, type AgentActor, type AuditAction } from "@/lib/audit";
 import { alertBuilder } from "@/lib/builder-alerts";
 // (Its own small check helper: lib/drafts.ts queues jobs, so this file mustn't import it.)
 import { getSupabase } from "@/lib/supabase";
@@ -39,6 +39,8 @@ export type JobOutcome = {
   // One line for the audit log.
   detail: string;
   actor: AgentActor;
+  // The audit log action (default: checked).
+  action?: AuditAction;
 };
 export type JobHandler = (job: AgentJob) => Promise<JobOutcome>;
 
@@ -158,7 +160,7 @@ async function runOne(job: AgentJob, handlers: Record<string, JobHandler>) {
       restaurantId: job.restaurant_id,
       draftId: job.draft_id,
       actor: out.actor,
-      action: "checked",
+      action: out.action ?? "checked",
       detail: out.detail,
       data: { job_key: job.job_key, kind: job.kind },
       job: { jobId: job.id, agent: job.agent, agentVersion: out.agentVersion, verdict: out.verdict ?? null },

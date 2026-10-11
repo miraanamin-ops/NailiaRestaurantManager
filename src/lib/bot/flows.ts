@@ -18,6 +18,7 @@ import { checkCampaign, checkDraft } from "@/lib/checks";
 import { checkNoteLines, checksLine } from "@/lib/checks/types";
 import { applyEdit, createDraft, getLearningContext, type Draft, type DraftKind } from "@/lib/drafts";
 import { randomDummyReview } from "@/lib/dummy-reviews";
+import { pastedReviewId, queueReputationShadow } from "@/lib/agents/reputation";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -165,6 +166,13 @@ export async function pastedReviewReply(
   );
   // On its own, so it's easy to copy in one go.
   await send(checked.content);
+  // Shadow mode: Reputation writes its own reply in the background, for the /log comparison.
+  await queueReputationShadow(ctx.restaurant, {
+    source: "pasted",
+    review: { id: pastedReviewId(review), author_name: review.authorName, rating: review.rating, text: review.text },
+    legacy_draft_id: null,
+    legacy_text: checked.content,
+  });
 }
 
 // A photo sent on WhatsApp becomes a captioned Google post, waiting for approval.

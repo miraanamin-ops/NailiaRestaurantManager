@@ -90,6 +90,7 @@ describe("agent modes", () => {
     expect(agentMode({ agent_modes: {} }, "checker")).toBe("shadow");
     expect(agentMode({ agent_modes: { checker: "off" } }, "checker")).toBe("off");
     expect(agentMode({ agent_modes: { checker: "live" } }, "checker")).toBe("shadow");
-    expect(agentMode({ agent_modes: { reputation: "live" } }, "reputation")).toBe("off");
+    expect(agentMode({ agent_modes: { reputation: "live" } }, "reputation")).toBe("shadow");
+    expect(agentMode({ agent_modes: { gm: "live" } }, "gm")).toBe("off");
   });
 });

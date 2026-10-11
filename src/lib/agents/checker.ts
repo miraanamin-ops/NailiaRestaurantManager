@@ -5,7 +5,7 @@ import { channelFor } from "@/lib/gate-rules";
 import { getSupabase } from "@/lib/supabase";
 import { londonToday, runChecker } from "./checker-core";
 import { makerFor, verdictLine } from "./checker-rules";
-import { runAgentJobs, type AgentJob, type JobHandler, type JobOutcome } from "./jobs";
+import type { AgentJob, JobOutcome } from "./jobs";
 import { legacySources } from "./sources";
 import { callTool } from "./tools";
 
@@ -83,12 +83,4 @@ export async function runCheckerShadow(job: AgentJob): Promise<JobOutcome> {
     actor: "checker",
     detail: `Checker (shadow, v${result.agentVersion}) on the ${draftName(draft)}, version ${version}: ${verdictLine(result.output)}`,
   };
-}
-
-export const AGENT_HANDLERS: Record<string, JobHandler> = { checker_shadow: runCheckerShadow };
-
-// Runs this restaurant's queued agent jobs. Called once the owner's reply has
-// gone (webhook) and by the scheduled jobs, which also pick up anything left over.
-export function runQueuedAgentJobs(restaurantId: string, limit = 3) {
-  return runAgentJobs(restaurantId, AGENT_HANDLERS, { limit });
 }

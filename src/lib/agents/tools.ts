@@ -81,8 +81,44 @@ async function renderedPreview(restaurantId: string, draftId: string): Promise<{
   return { media_type: "image/png", data: Buffer.from(png).toString("base64") };
 }
 
+// get_new_reviews: one review of this restaurant (the one being replied to).
+async function reviewById(restaurantId: string, reviewId: string) {
+  return check(
+    await getSupabase()
+      .from("reviews")
+      .select("id, author_name, rating, text, review_date")
+      .eq("restaurant_id", restaurantId)
+      .eq("id", reviewId)
+      .maybeSingle<{ id: string; author_name: string; rating: number | null; text: string | null; review_date: string }>(),
+  );
+}
+
+// get_review_history: recent replies (to avoid repeating openings and closings),
+// and the owner's edits to past replies (the tone they prefer).
+async function reviewHistory(restaurantId: string) {
+  const supabase = getSupabase();
+  const [replies, edits] = await Promise.all([
+    recentOutputs(restaurantId, "review_reply", null),
+    supabase
+      .from("draft_feedback")
+      .select("note, before_content, after_content")
+      .eq("restaurant_id", restaurantId)
+      .eq("draft_kind", "review_reply")
+      .eq("kind", "edit")
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .returns<{ note: string; before_content: string | null; after_content: string | null }[]>(),
+  ]);
+  return {
+    recent_replies: replies,
+    owner_edits: (check(edits) ?? []).map((e) => ({ note: e.note, before: e.before_content ?? "", after: e.after_content ?? "" })),
+  };
+}
+
 type ToolArgs = {
   get_profile: Record<string, never>;
+  get_new_reviews: { reviewId: string };
+  get_review_history: Record<string, never>;
   resolve_sources: { refs: string[] };
   get_recent_outputs: { kind: string; excludeDraftId: string | null };
   get_maker_rules: { maker: AgentName };
@@ -91,6 +127,8 @@ type ToolArgs = {
 export type ToolName = keyof ToolArgs;
 type ToolResults = {
   get_profile: Awaited<ReturnType<typeof agentProfile>>;
+  get_new_reviews: Awaited<ReturnType<typeof reviewById>>;
+  get_review_history: Awaited<ReturnType<typeof reviewHistory>>;
   resolve_sources: Resolved[];
   get_recent_outputs: string[];
   get_maker_rules: string;
@@ -106,6 +144,10 @@ async function runTool(name: ToolName, agent: AgentName, restaurantId: string, a
   switch (name) {
     case "get_profile":
       return agentProfile(restaurantId, agent);
+    case "get_new_reviews":
+      return reviewById(restaurantId, (args as ToolArgs["get_new_reviews"]).reviewId);
+    case "get_review_history":
+      return reviewHistory(restaurantId);
     case "resolve_sources":
       return resolveSources(restaurantId, (args as ToolArgs["resolve_sources"]).refs);
     case "get_recent_outputs": {

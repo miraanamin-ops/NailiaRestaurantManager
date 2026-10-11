@@ -10,6 +10,7 @@ export type AgentMode = (typeof AGENT_MODES)[number];
 // go live once it's built to (and, from phase 2, its go-live checklist passes).
 export const MODES_AVAILABLE: Partial<Record<AgentName, { allowed: AgentMode[]; default: AgentMode }>> = {
   checker: { allowed: ["off", "shadow"], default: "shadow" },
+  reputation: { allowed: ["off", "shadow"], default: "shadow" },
 };
 
 export function agentMode(restaurant: { agent_modes?: Record<string, string> | null }, agent: AgentName): AgentMode {
