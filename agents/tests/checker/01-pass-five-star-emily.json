@@ -358,109 +358,109 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": null,
+        "reason": "Warm, family-run, first name used, short upbeat sentences, thanks given, matches tone_notes.",
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": null,
+        "reason": "Names the Peri Peri Wings and Mango Lassi and picks up the first halal grill moment, specific to this restaurant.",
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": null,
+        "reason": "English review, English reply, plain words.",
         "fix": null
       },
       {
         "id": "T4",
         "result": "pass",
-        "reason": null,
+        "reason": "Opening 'Welcome to the family, Emily!' and the closing 'Thanks so much for stopping by' differ from the last 3 outputs. Only 3 of the last 10 were provided.",
         "fix": null
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": null,
+        "reason": "Two emojis (🔥 😋), both on the profile's list and within the limit of 2. No em-dashes, no banned words, no hashtags.",
         "fix": null
       },
       {
         "id": "F1",
         "result": "pass",
-        "reason": null,
+        "reason": "Wings, lassi, first halal grill and 'hooked' all trace to the review. Dishes are on the menu. Sign-off matches the profile.",
         "fix": null
       },
       {
         "id": "F2",
         "result": "pass",
-        "reason": null,
+        "reason": "No numbers in the reply.",
         "fix": null
       },
       {
         "id": "F3",
         "result": "pass",
-        "reason": null,
+        "reason": "No dates or times mentioned.",
         "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": null,
+        "reason": "Emily matches 'Emily R.'. 'Peri Peri Wings' and 'Mango Lassi' match the menu (the review says 'lassi', and the menu name is Mango Lassi). Sign-off matches the profile exactly.",
         "fix": null
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": null,
+        "reason": "No causal claims.",
         "fix": null
       },
       {
         "id": "C1",
         "result": "pass",
-        "reason": null,
+        "reason": "'First halal grill' repeats the reviewer's own words. No halal, allergen or ingredient claim is made by the restaurant beyond the profile.",
         "fix": null
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": null,
+        "reason": "No offer made.",
         "fix": null
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": null,
+        "reason": "Reply echoes the reviewer's own words about halal. It does not target or word anything by religion or ethnicity.",
         "fix": null
       },
       {
         "id": "C4",
         "result": "pass",
-        "reason": null,
+        "reason": "Nothing offered in exchange for a review.",
         "fix": null
       },
       {
         "id": "C5",
         "result": "pass",
-        "reason": null,
+        "reason": "Only the reviewer's public name and review content are used.",
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": null,
+        "reason": "No financial, legal or staffing advice.",
         "fix": null
       },
       {
         "id": "C7",
         "result": "pass",
-        "reason": null,
+        "reason": "No phone number, links or anything against Google review reply rules.",
         "fix": null
       },
       {
         "id": "C8",
         "result": "pass",
-        "reason": null,
+        "reason": "English reply, no invented facts, no order details, no staff named, no refund or offer, no em-dashes, emojis within profile allowance, signed off with the profile sign-off name, opening and closing not reused from the last replies seen.",
         "fix": null
       },
       {
@@ -490,9 +490,9 @@
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Emily's dishes match the review and menu. The review says 'lassi' and Mango Lassi is the only lassi on the menu. Two emojis is within the profile limit of 2. The opening and closing differ from the 3 recent replies supplied; only 3 of the last 10 were provided to compare against.",
+    "notes": "Optional tone note: 'Hooked is exactly how we like it' is a little clipped, but it fits the brand voice. Only 3 of the last 10 outputs were supplied for T4.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T22:23:12.020Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:07:18.559Z"
   }
 }

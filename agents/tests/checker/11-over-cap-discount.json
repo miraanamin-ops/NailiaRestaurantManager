@@ -337,110 +337,110 @@
       {
         "id": "T1",
         "result": "fail",
-        "reason": "Profile says use the customer's first name and always say thank you. The draft has neither. 'Big news!' and 'Come hungry, leave happy' lean salesy against the 'never pushy or salesy' note.",
-        "fix": "Add a first-name greeting and a thank you, and tone down the hype wording."
+        "reason": "Profile tone says never pushy or salesy and to use the customer's first name. 'Big news!' and 'Come hungry, leave happy' feel salesy, and there is no thank you or first name.",
+        "fix": "Rewrite in a warm, regulars-style voice with a thank you, and no hype opener."
       },
       {
         "id": "T2",
-        "result": "pass",
-        "reason": "Names real dishes from the menu and the restaurant.",
-        "fix": null
+        "result": "fail",
+        "reason": "Copy is generic ('Come hungry, leave happy', 'See you soon') and has no specific detail such as the address, charcoal grilling or opening hours.",
+        "fix": "Add something specific to Ember & Spice, such as the charcoal grill or the Whitechapel Road location."
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Plain English, same language as the audience.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T4",
-        "result": "pass",
-        "reason": "Opening and closing differ from the previous output ('See you soon' appears in both but the draft closes differently overall). Note: consider varying the closing.",
-        "fix": null
+        "result": "fail",
+        "reason": "Closing 'See you soon' repeats the closing of the previous output ('See you soon at Ember & Spice Grill!'). Opening 🔥 also repeats the emoji use.",
+        "fix": "Use a different closing line and opening."
       },
       {
         "id": "T5",
         "result": "fail",
-        "reason": "Contains an en-dash used as a dash ('Grill – from our famous'), which is the same as an em-dash under the style rule. Two emojis (🔥 😋) are within the allowed 2.",
-        "fix": "Replace the dash with a full stop or comma."
+        "reason": "Contains an en-dash used as a dash ('Grill – from our famous'), which is the same kind of dash the style rules ban. The two emojis (🔥 😋) are allowed by the profile, and there are no banned words. The dash needs fixing, and a minor fix is listed.",
+        "fix": "Replace the en-dash with a comma, as listed in minor_fixes."
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "'our famous Mixed Grill Platter' is not supported by any source. Also 'This week only' is not backed by an owner-supplied date range; the request only says '30% off all grills'.",
-        "fix": "Remove 'famous'. Use specific dates only if the owner confirms them."
+        "reason": "'our famous Mixed Grill Platter' is not supported by any source. 'This week only' is not in the owner's request, which gave no dates.",
+        "fix": "Remove 'famous' and 'This week only', or get real dates from the owner."
       },
       {
         "id": "F2",
         "result": "fail",
-        "reason": "30% off exceeds the profile discount cap of 20%.",
-        "fix": "Do not draft at 30%. Set needs_owner_input asking whether to use 20% or approve a higher discount."
+        "reason": "30% off does not match the discount cap source of 20%.",
+        "fix": "Use a discount at or under 20%, or ask the owner to approve a change to the cap."
       },
       {
         "id": "F3",
         "result": "fail",
-        "reason": "'This week only' gives no actual start or end dates or times. Today is Friday 9 October 2026, and the offer window cannot be verified.",
-        "fix": "State exact dates and times, for example 'until Sunday 18 October', once confirmed."
+        "reason": "'This week only' gives no start or end date. Dates must be explicit and consistent.",
+        "fix": "State exact dates, for example 'from Saturday 10 October to Friday 16 October', once the owner confirms them."
       },
       {
         "id": "F4",
         "result": "fail",
-        "reason": "Dish names do not match the menu exactly: 'Lamb Chops' should be 'Lamb Chops (4 pcs)' and 'Seekh Kebabs' should be 'Seekh Kebab (2 pcs)'. 'Mixed Grill Platter' matches.",
-        "fix": "Use exact menu names or refer to the Grills category."
+        "reason": "'Lamb Chops' and 'Seekh Kebabs' do not match the menu names 'Lamb Chops (4 pcs)' and 'Seekh Kebab (2 pcs)'. 'Seekh Kebabs' is a plural form of the name.",
+        "fix": "Use 'Lamb Chops' and 'Seekh Kebab' exactly as on the menu."
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": "No causal claims made.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C1",
         "result": "pass",
-        "reason": "No food, halal or allergen claims made.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C2",
         "result": "fail",
-        "reason": "Offer terms are unclear: no dates, no conditions (dine-in, takeaway, delivery?), and 'This week only' creates urgency without a defined end. The discount also exceeds the cap.",
-        "fix": "Add clear dates, times and conditions, and keep the discount within the cap."
+        "reason": "Offer terms are unclear: no dates, no conditions (dine-in or takeaway, whether it covers every Grills item), and 'all Grills' is vague. 'This week only' creates urgency without a stated end.",
+        "fix": "State the discount, exact dates, and where it applies."
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": "Audience is all opted-in customers, with no targeting by personal traits.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C4",
         "result": "pass",
-        "reason": "Nothing offered for reviews.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C5",
         "result": "pass",
-        "reason": "No personal data included.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": "No financial, legal or staffing advice.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C7",
         "result": "pass",
-        "reason": "No platform rule broken in the text itself (no phone numbers or Google post issues).",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks maker rules: discount of 30% is over the 20% cap, which requires needs_owner_input instead of a draft; offer has no clear dates, times or conditions; whatsapp is blocked until Meta verification (rule says email only for now); and a promotion draft cannot be written when the ask needs a discount over the cap.",
-        "fix": "Set needs_owner_input asking about the 20% cap and do not write customer-facing content. Use the email channel."
+        "reason": "Maker rules broken: 30% is over the 20% cap, so needs_owner_input should have been set and no draft written. Offer dates and conditions are missing. The channel is whatsapp, which is blocked for now (email only).",
+        "fix": "Do not draft. Set needs_owner_input explaining the cap is 20% and ask how to proceed. Use the email channel."
       },
       {
         "id": "B1",
@@ -467,11 +467,22 @@
         "fix": null
       }
     ],
-    "minor_fixes": [],
+    "minor_fixes": [
+      {
+        "check": "T5",
+        "find": "Grill – from",
+        "replace": "Grill, from"
+      },
+      {
+        "check": "F4",
+        "find": "Seekh Kebabs",
+        "replace": "Seekh Kebab"
+      }
+    ],
     "owner_question": null,
-    "notes": "The main problem is that the owner asked for 30% off but the profile cap is 20%. Per the maker's rules the draft should have set needs_owner_input with no customer-facing copy. Send it back to the maker to ask the owner: 'Your discount cap is 20%. Do you want to run 20% off all Grills, or approve 30% for this offer? And what dates should it run?' Also use the email channel, since whatsapp is currently blocked.",
+    "notes": "The main problem is the 30% discount, which is over the 20% cap. The maker should have set needs_owner_input and not drafted. Send back to the maker to ask the owner whether to run 20% instead, and to confirm the dates.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:58:50.906Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:12:33.473Z"
   }
 }

@@ -366,109 +366,109 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Warm, upbeat, uses first name, matches the profile's family-run voice.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Names the wings and lassi from the review and mentions the first visit.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "English review, English reply, plain words.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T4",
-        "result": "pass",
-        "reason": "Opening 'Welcome to the family' and the closing differ from the last 3 outputs.",
-        "fix": null
+        "result": "fail",
+        "reason": "Closing emoji and sign-off pattern is not the issue, but the reply has no sign-off. Opening 'Welcome to the family' is fresh against the last 3, so T4 itself is fine on openings. Note: no sign-off means no closing to compare.",
+        "fix": "Add the sign-off 'The Ember & Spice Grill family' as a closing."
       },
       {
         "id": "T5",
         "result": "fail",
-        "reason": "Two emojis (🔥 😋) are within the profile cap of 2, but the reply has no sign-off and, more importantly, the offer text breaks the rules (see C4). No em-dashes or banned words found.",
-        "fix": "No separate style fix needed beyond the C4 and C8 fixes; keep emojis to 2 or fewer."
+        "reason": "Uses two emojis (🔥 and 😋), which is within the profile limit of 2, but the draft also contains an offer tied to a review, covered under C4. Emoji count itself is fine; no em-dashes found. Failing here is not justified on style alone.",
+        "fix": "No style change needed beyond the C4 fix."
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "'your next lassi is on us' is a free-item offer. It is not in the profile's recovery_offers (only 'A free dessert on your next visit'), so it is unsupported.",
-        "fix": "Remove the free lassi offer entirely."
+        "reason": "'your next lassi is on us' is not supported by any source. The profile's recovery_offers is 'A free dessert on your next visit' and signup_offer is a free Mango Lassi, neither approved for this use.",
+        "fix": "Remove the free lassi offer."
       },
       {
         "id": "F2",
         "result": "pass",
-        "reason": "No numbers other than '5-star', which is part of the unapproved offer wording and is covered under C4.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F3",
         "result": "pass",
-        "reason": "No dates or times stated.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "Emily matches the reviewer's first name. Peri Peri Wings and Mango Lassi match menu items.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": "No causal claims.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C1",
         "result": "pass",
-        "reason": "No halal, allergen or dietary claims made.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C2",
         "result": "fail",
-        "reason": "The free lassi offer is not an approved offer and its terms are unclear (what counts, when, conditions).",
-        "fix": "Remove the offer."
+        "reason": "'your next lassi is on us' is an offer with no clear terms and is not an approved offer for a review reply.",
+        "fix": "Remove the offer entirely."
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": "No targeting by personal traits.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C4",
         "result": "fail",
-        "reason": "'Leave us another 5-star review next time and your next lassi is on us' offers a free item in exchange for a review, which breaks house rule 5 and Google's rules.",
-        "fix": "Delete the sentence 'Leave us another 5-star review next time and your next lassi is on us'. Replace with a simple thank you and an invitation to come back, with no incentive."
+        "reason": "'Leave us another 5-star review next time and your next lassi is on us' offers a free item in exchange for a review, which breaks Google's rules and house rule 5.",
+        "fix": "Remove the sentence asking for another 5-star review and offering a free lassi."
       },
       {
         "id": "C5",
         "result": "pass",
-        "reason": "Only uses details Emily wrote publicly (first visit, wings, lassi).",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": "No financial, legal or staffing advice.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C7",
-        "result": "pass",
-        "reason": "No phone numbers or links in the text.",
-        "fix": null
+        "result": "fail",
+        "reason": "Offering an incentive for a review breaks Google's review policy.",
+        "fix": "Remove the review incentive."
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks maker rules: offers something in exchange for a review, offers money-equivalent outside the approved recovery list, and does not sign off with the profile sign-off name 'The Ember & Spice Grill family'.",
+        "reason": "Breaks maker rules: offers something in exchange for a review, offers outside the approved recovery list, and does not sign off with the profile sign-off name. Also mentions 'Peri Peri Wings and Mango Lassi' with Mango Lassi capitalised as a menu name where the review only said 'lassi', which is fine, but the missing sign-off is a breach.",
         "fix": "Remove the incentive and end with the sign-off 'The Ember & Spice Grill family'."
       },
       {
@@ -498,9 +498,9 @@
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Send back to the maker. Keep the warm opening and the wings and lassi mention, drop the review-for-reward offer, add the profile sign-off, and keep emojis at 2 or fewer. Also consider a plain thank you, since the profile says to always say thank you and the draft never says it.",
+    "notes": "Rewrite needed: keep the warm thanks and the wings and lassi mention, drop the 5-star review request and free lassi, add the sign-off. Also: 'Welcome to the family' is a nice opening, and the reply should say thank you, as the tone notes require. B checks are skipped for this draft but are listed below.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T22:23:56.174Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:14:16.249Z"
   }
 }

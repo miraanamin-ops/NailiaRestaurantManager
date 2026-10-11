@@ -385,8 +385,8 @@
       {
         "id": "T4",
         "result": "fail",
-        "reason": "Opening \"Welcome to the family, Emily! 🔥\" is identical to the opening of the most recent reply. Closing \"see you again soon!\" is also reused from that reply. Most of the body repeats it too.",
-        "fix": "Write a new opening and closing that don't appear in the recent replies. Don't repeat the 'Hooked is exactly how we like it' line either."
+        "reason": "The opening \"Welcome to the family, Emily! 🔥 So glad the Peri Peri Wings and Mango Lassi\" is almost word for word the same as the most recent reply. The closing \"see you again soon!\" also repeats the closings used in the recent replies.",
+        "fix": "Write a new opening that doesn't start with \"Welcome to the family, Emily!\" or \"So glad the Peri Peri Wings and Mango Lassi\". Use a different closing line too."
       },
       {
         "id": "T5",
@@ -396,9 +396,9 @@
       },
       {
         "id": "F1",
-        "result": "pass",
-        "reason": null,
-        "fix": null
+        "result": "fail",
+        "reason": "\"on your first visit\" is not supported. The review says \"First time trying a halal grill\", which does not mean it was her first visit to Ember & Spice Grill.",
+        "fix": "Remove \"on your first visit\". Refer instead to her trying a halal grill for the first time, which she did say."
       },
       {
         "id": "F2",
@@ -469,39 +469,39 @@
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks two maker rules: it reuses the opening and closing of a recent reply, and it has no sign-off. The profile sign-off is \"The Ember & Spice Grill family\".",
-        "fix": "Add the sign-off \"The Ember & Spice Grill family\" at the end, and use a fresh opening and closing."
+        "reason": "Two maker rules are broken. The reply has no sign-off, but the rules require \"The Ember & Spice Grill family\". The opening is also reused from a recent reply.",
+        "fix": "End the reply with the sign-off \"The Ember & Spice Grill family\" and use a fresh opening and closing."
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       }
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Facts, dish names, emoji count (2 of 2) and style are fine. The last output already replied to Emily with almost the same text, so check this review has not already been answered.",
+    "notes": "Emojis are within the profile limit (two, both from the approved list). No em-dashes. Dish names match the menu, and \"Mango Lassi\" is a fair reading of the reviewer's \"lassi\".",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T22:24:05.906Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:14:44.702Z"
   }
 }

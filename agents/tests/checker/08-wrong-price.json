@@ -354,73 +354,73 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Warm, upbeat, short sentences, fits the family-run voice. One emoji is within the limit.",
+        "reason": "Warm, upbeat, short sentences, one emoji within the limit of 2. Matches the profile voice.",
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Names specific dishes and the charcoal grill, which are particular to this restaurant.",
+        "reason": "Mentions charcoal grilling, Peri Peri Wings and Masala Chips, which are specific to this restaurant.",
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Plain English, clear.",
+        "reason": "Plain English, clear and simple.",
         "fix": null
       },
       {
         "id": "T4",
         "result": "pass",
-        "reason": "Opening and closing differ from the last outputs.",
+        "reason": "Opening 'Craving something smoky?' and closing 'See you this weekend!' differ from the last outputs. The earlier 'See you Saturday!' is a different wording.",
         "fix": null
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": "No em-dashes. One emoji (🔥) is allowed (posts limit 2, 🔥 is on the list). No banned words.",
+        "reason": "No em-dashes. One emoji (🔥) is within the profile's limit of 2 for posts. No banned words.",
         "fix": null
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "\"grilled over real charcoal\" is supported only by cuisine 'Halal charcoal grill'. \"Pair them with Masala Chips\" is fine. \"8 pieces for just £6.50\" is not supported by the menu. \"See you this weekend!\" is acceptable given the hours.",
-        "fix": "Remove the unsupported price claim and use the menu price (see F2)."
+        "reason": "'grilled over real charcoal' is not traceable to a menu description (all descriptions are null). The cuisine 'Halal charcoal grill' loosely supports charcoal grilling in general but not this specific dish claim. 'proper feast' pairing is opinion, fine. Price is also wrong (see F2).",
+        "fix": "Remove the 'real charcoal' claim for the wings, or ask the owner to confirm the wings are charcoal-grilled."
       },
       {
         "id": "F2",
         "result": "fail",
-        "reason": "Says \"8 pieces for just £6.50\" but the menu lists Peri Peri Wings (8) at £7.50. This is a price mismatch, correctable by minor fix.",
-        "fix": "Change £6.50 to £7.50."
+        "reason": "Says '8 pieces for just £6.50'. Menu price for Peri Peri Wings (8) is £7.50.",
+        "fix": "Change the price to £7.50."
       },
       {
         "id": "F3",
         "result": "pass",
-        "reason": "\"This weekend\" is in the future relative to Friday 9 October 2026, and the restaurant is open Friday evening, Saturday and Sunday.",
+        "reason": "'This weekend' is consistent with today being Friday 9 October 2026. The restaurant is open Friday from 2pm to midnight, Saturday from 12pm to midnight and Sunday from 12pm to 10:30pm. No specific times claimed.",
         "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "Dish names Peri Peri Wings and Masala Chips match the menu (the \"(8)\" is expressed as 8 pieces).",
+        "reason": "'Peri Peri Wings' and 'Masala Chips' match menu item names (the '(8)' size is expressed as '8 pieces').",
         "fix": null
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": "No causal claims.",
+        "reason": "No causal claims made.",
         "fix": null
       },
       {
         "id": "C1",
-        "result": "pass",
-        "reason": "No halal, allergen or dietary claims made. Charcoal grilling is supported by the cuisine description.",
-        "fix": null
+        "result": "fail",
+        "reason": "'grilled over real charcoal' is an ingredient/preparation claim not stated in the profile beyond the general cuisine label 'Halal charcoal grill'. Maker rule requires food claims to come only from the profile. Unverifiable at dish level.",
+        "fix": "Remove the charcoal claim for this dish or have the owner confirm it."
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": "No offer made, only the regular menu price. \"just\" is mild, not false urgency.",
+        "reason": "No offer is made. 'for just £6.50' is a price statement, not a promotion, but the price itself is wrong (see F2).",
         "fix": null
       },
       {
@@ -450,14 +450,14 @@
       {
         "id": "C7",
         "result": "pass",
-        "reason": "No phone number or link in the post text.",
+        "reason": "No phone number in the Google post text.",
         "fix": null
       },
       {
         "id": "C8",
-        "result": "pass",
-        "reason": "No maker rules broken: no phone number, no em-dashes, emoji allowed, topic (Peri Peri Wings) not repeated in the last outputs.",
-        "fix": null
+        "result": "fail",
+        "reason": "Maker rule says every claim about food comes only from the profile; the 'real charcoal' wings claim is not in the profile at dish level. Emoji use and no em-dashes are fine.",
+        "fix": "Remove or get owner confirmation for the charcoal claim for the wings."
       },
       {
         "id": "B1",
@@ -492,9 +492,9 @@
       }
     ],
     "owner_question": null,
-    "notes": "The wrong price is a minor fix, but F1 is marked as fail because the draft claims a price with no source. Since the price correction is a minor fix that code applies, re-check F1 and F2 once applied. Note that 'real charcoal' is fine as the cuisine is Halal charcoal grill. Consider whether 'Craving something smoky?' feels slightly salesy; tone is acceptable.",
+    "notes": "The price is a minor fix (£6.50 to £7.50), but the charcoal claim for the wings is not supported at dish level, so the draft goes back to the maker. Maker should either drop 'grilled over real charcoal' or ask the owner to confirm. The 'Halal charcoal grill' cuisine label alone is a safer basis, for example 'Our Peri Peri Wings come straight from our charcoal grill' is still a dish-level claim, so keep wording close to the profile.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:58:19.925Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:10:58.666Z"
   }
 }

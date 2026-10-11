@@ -349,12 +349,12 @@
     ]
   },
   "recorded": {
-    "verdict": "escalate",
+    "verdict": "fail",
     "checks": [
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Short, upbeat and friendly, not pushy. Profile voice is met.",
+        "reason": "Short, upbeat and not pushy. Emojis are optional under the profile.",
         "fix": null
       },
       {
@@ -366,25 +366,25 @@
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Plain English, matches the audience.",
+        "reason": "Plain English, same language as the audience.",
         "fix": null
       },
       {
         "id": "T4",
         "result": "fail",
-        "reason": "Closing \"Pop in tonight!\" repeats the previous post's closing \"Pop in tonight and dig in!\". Topic also repeats the Mixed Grill Platter post from the last outputs.",
-        "fix": "Use a different closing line. Also check the Mixed Grill topic was not posted within 3 weeks."
+        "reason": "Reuses the closing \"Pop in tonight\" from the most recent post (\"Pop in tonight and dig in!\"). It also repeats the Mixed Grill Platter topic of the last two posts.",
+        "fix": "Change the closing to a different line. Check the Mixed Grill Platter topic is not repeated within 3 weeks, or pick a different topic."
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": "No em-dashes, no emojis, words_to_avoid is empty.",
+        "reason": "No em-dashes, no emojis, and words_to_avoid is empty.",
         "fix": null
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "\"hand-slaughtered\" and \"HMC certified\" are not in any source. Profile only says \"All our meat is halal.\"",
+        "reason": "\"hand-slaughtered\" and \"HMC certified\" are not in any resolved source. The profile only says \"All our meat is halal.\"",
         "fix": "Remove \"hand-slaughtered\" and \"HMC certified\". Use \"All our meat is halal.\""
       },
       {
@@ -395,14 +395,14 @@
       },
       {
         "id": "F3",
-        "result": "fail",
-        "reason": "Today is Friday 9 October 2026 and Friday hours are 14:00 to 00:00, so \"tonight\" is fine for opening. But the post is not date-anchored and a Google post could be seen outside Friday. \"Pop in tonight\" is time-sensitive wording that may be stale when read.",
-        "fix": "Replace \"tonight\" with timeless wording such as \"Pop in and see us\", or give the opening hours from the profile."
+        "result": "pass",
+        "reason": "Today is Friday 9 October 2026 and the restaurant opens 2pm to midnight, so \"tonight\" is valid. Note that opening hours are not stated and the post could be viewed later.",
+        "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "\"Mixed Grill Platter\" matches the menu. Item names lamb chops, chicken tikka, seekh kebab and wings are close to menu items (Peri Peri Wings is the menu name, \"wings\" is acceptable shorthand). The contents list is not in the profile description, which is null, so see F1 note.",
+        "reason": "\"Mixed Grill Platter\" matches the menu. The item names lamb chops, chicken tikka, seekh kebab and wings are close paraphrases of the menu items. The contents of the platter are not stated in any source (the description is null).",
         "fix": null
       },
       {
@@ -414,13 +414,13 @@
       {
         "id": "C1",
         "result": "fail",
-        "reason": "\"hand-slaughtered\" and \"HMC certified halal\" go beyond the profile halal statement \"All our meat is halal.\" Slaughter method and certification body are unverified.",
-        "fix": "Remove both claims, or get the owner to confirm and add them to the profile."
+        "reason": "\"hand-slaughtered\" and \"HMC certified halal\" go beyond the profile's halal statement. Certification body and slaughter method are not in the profile. Also, the list of what the platter contains is not in the profile, as descriptions are null.",
+        "fix": "Use only \"All our meat is halal.\" and remove the platter contents list, or ask the owner to confirm the contents and the certification."
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": "No offer made. Price is plain.",
+        "reason": "No offer is made.",
         "fix": null
       },
       {
@@ -450,14 +450,14 @@
       {
         "id": "C7",
         "result": "pass",
-        "reason": "No phone number or link in the post text.",
+        "reason": "No phone number in the Google post text.",
         "fix": null
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks the maker rule that halal claims come only from the profile. May also break the rule not to repeat a Google post topic within 3 weeks, since the previous output is also a Mixed Grill Platter post.",
-        "fix": "Use only the profile halal statement. Choose a different topic or confirm the last Mixed Grill post is older than 3 weeks."
+        "reason": "Breaks the maker's rule that every claim about food and halal status comes only from the profile (hand-slaughtered, HMC certified). Also breaks the rule not to repeat a Google post topic within 3 weeks, as the Mixed Grill Platter was the topic of the last two posts.",
+        "fix": "Remove unsupported halal claims. Choose a different topic from the last 3 weeks."
       },
       {
         "id": "B1",
@@ -485,10 +485,10 @@
       }
     ],
     "minor_fixes": [],
-    "owner_question": "Is your meat hand-slaughtered and certified by HMC? Neither is in your profile yet, so we can only say \"All our meat is halal.\" until you confirm.",
-    "notes": "The halal claims need the owner's confirmation, so this escalates. If the owner says no, the maker should use only \"All our meat is halal.\" and also fix the repeated closing, the \"tonight\" wording and the topic repeat. The contents list (lamb chops, chicken tikka, seekh kebab, wings) is not in the menu descriptions, so it should be confirmed alongside the halal claim.",
+    "owner_question": null,
+    "notes": "The owner asked for \"our mixed grill\", so the topic may be deliberate, but the repetition rule still applies and the maker should flag this to the owner via needs_owner_input rather than repeat it silently. If the owner wants HMC certification or hand-slaughter mentioned, they need to add it to the profile first.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:58:39.669Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:11:52.800Z"
   }
 }

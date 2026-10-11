@@ -354,55 +354,55 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Warm, short, upbeat sentences, not pushy. Matches the profile voice.",
+        "reason": "Warm, short, upbeat, no pushiness. Matches the profile voice.",
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Names the Seekh Kebab, charcoal grilling and the family-run feel, so it is specific to this restaurant.",
+        "reason": "Specific to this restaurant: charcoal-grilled seekh kebabs with its own price.",
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Plain English, no jargon.",
+        "reason": "Plain UK English, clear.",
         "fix": null
       },
       {
         "id": "T4",
-        "result": "fail",
-        "reason": "The previous post ended with an invitation to 'Pop in tonight'. This one closes with 'Come say hello this week.', which is the same kind of come-in close. Also the 'Our [dish] is...' opening repeats the Mixed Grill post.",
-        "fix": "Change the opening and the closing so they do not follow the 'Our [dish] is...' and 'come in' pattern of the last post."
+        "result": "pass",
+        "reason": "Opening and closing differ from the last two posts (Mixed Grill 'proper feast' and Mango Lassi offer).",
+        "fix": null
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": "No em-dashes, no banned words (list is empty). One emoji (🙏) is within the profile limit of 2 for posts and is on the approved list.",
+        "reason": "One emoji (🙏) is on the profile's allowed list and within the limit of 2 for posts. No em-dashes, no banned words.",
         "fix": null
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "'minced lamb with fresh herbs and a little green chilli' is not supported by any source. The menu has no description for Seekh Kebab (description is null). 'flame-grilled over charcoal' is supported only generally by the cuisine 'Halal charcoal grill'. 'Lamb' for the Seekh Kebab is also not in the profile.",
-        "fix": "Remove the ingredient description (minced lamb, fresh herbs, green chilli) or ask the owner to add a Seekh Kebab description to the profile."
+        "reason": "Ingredient claims 'minced lamb with fresh herbs and a little green chilli' are not supported by the profile. Menu description for Seekh Kebab is null. 'Flame-grilled over charcoal' is supported only loosely by the cuisine 'Halal charcoal grill', but the ingredient list is not traceable.",
+        "fix": "Remove the ingredient description (minced lamb, fresh herbs, green chilli). Keep only what the profile supports, such as the name, price and 'charcoal grill'."
       },
       {
         "id": "F2",
         "result": "pass",
-        "reason": "£7.95 for 2 pieces matches the menu: Seekh Kebab (2 pcs) £7.95.",
+        "reason": "£7.95 for two pieces matches Seekh Kebab (2 pcs) at 7.95.",
         "fix": null
       },
       {
         "id": "F3",
         "result": "pass",
-        "reason": "'this week' is vague but consistent with the post date. No specific day or time is claimed.",
+        "reason": "'This week' is vague but consistent. No specific dates or times that could be wrong.",
         "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "'Seekh Kebabs' matches the menu item Seekh Kebab (2 pcs). No reviewer or staff names used.",
+        "reason": "'Seekh Kebabs' is a plural of the menu item 'Seekh Kebab (2 pcs)'. Acceptable.",
         "fix": null
       },
       {
@@ -414,13 +414,13 @@
       {
         "id": "C1",
         "result": "fail",
-        "reason": "The ingredient claims (minced lamb, fresh herbs, green chilli) are food and ingredient claims that must come only from the profile, and the profile has no description for this dish.",
-        "fix": "Remove the ingredient claims or have the owner add the dish description to the profile first."
+        "reason": "Ingredient claims (minced lamb, fresh herbs, green chilli) are not in the profile. Food and ingredient claims must come only from the profile.",
+        "fix": "Remove the ingredient list, or ask the owner to add the Seekh Kebab description to the menu in the profile."
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": "No offer made. The price is stated clearly and no urgency or scarcity is implied.",
+        "reason": "No offer made. Price is stated clearly.",
         "fix": null
       },
       {
@@ -438,7 +438,7 @@
       {
         "id": "C5",
         "result": "pass",
-        "reason": "No personal data or photos.",
+        "reason": "No personal data.",
         "fix": null
       },
       {
@@ -456,39 +456,39 @@
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks the maker rule that every claim about food or ingredients comes only from the profile. The Seekh Kebab ingredients are not in the profile. Emoji and em-dash rules are met.",
-        "fix": "Remove the ingredient claims, or escalate to the owner for a dish description."
+        "reason": "Breaks the maker rule that every claim about food and ingredients comes only from the profile (menu description is null).",
+        "fix": "Remove the unsourced ingredient claims."
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       }
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Main problem is the unsupported ingredient description. Keep the price and the charcoal-grill angle, which are traceable. Rework the opening and closing so they differ from the last post. Once the description is removed, the draft would be short, so consider adding something traceable such as the address or opening hours instead (no phone number in Google post text).",
+    "notes": "Rest of the post is fine. If the owner wants the ingredient detail used, they can add a Seekh Kebab description to the profile menu first.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:57:51.030Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:09:25.763Z"
   }
 }

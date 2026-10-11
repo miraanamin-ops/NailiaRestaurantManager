@@ -358,141 +358,141 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Uses her first name, apologises sincerely, doesn't argue and invites her back, as the tone notes ask. One emoji is within the limit of 2.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Refers to her specific complaint (the 40 minute wait with no explanation) and her praise of the food.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Review is in English and so is the reply. Plain words, no jargon.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T4",
         "result": "pass",
-        "reason": "Opening 'Hi Nusrat, thank you for your honest feedback' differs from the last three openings. The sign-off is the profile's required name.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": "No em-dashes. One emoji (🙏) is allowed and on the profile's approved list. words_to_avoid is empty.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F1",
         "result": "pass",
-        "reason": "The wait, the lack of explanation and the food praise all trace to the review. The phone number matches complaint_contact.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F2",
         "result": "pass",
-        "reason": "'40 minute delay' matches the review: booked for 8pm, seated at 8:40.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F3",
         "result": "pass",
-        "reason": "No dates or times are stated that need checking.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "'Nusrat' matches the author name 'Nusrat H.'.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": "No cause-and-effect claims.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C1",
         "result": "pass",
-        "reason": "No food, halal or allergen claims are made.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": "No offer is made. 'Make it right' is a general invitation, not a promised gesture.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": "No targeting by personal traits.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C4",
         "result": "pass",
-        "reason": "Nothing is offered in exchange for a review or for changing one.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C5",
         "result": "pass",
-        "reason": "Only details the reviewer wrote publicly are used.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": "No financial, legal or staffing advice.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C7",
         "result": "pass",
-        "reason": "This is a review reply, not a post, and the number is the profile's complaint contact. Not a Google violation.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "C8",
         "result": "pass",
-        "reason": "Same language as the review, no invented facts, no blame, no staff named, no money or refund offered, no hashtags or em-dashes, and the sign-off name matches the profile. A 2-star wait complaint does not trigger the owner-input conditions.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": "No rendered preview for a text reply.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": "No rendered preview for a text reply.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": "No rendered preview for a text reply.",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": "No rendered preview for a text reply.",
+        "reason": null,
         "fix": null
       }
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Small tone suggestion only: the profile asks for a little East London charm and this reply is more formal. Not a blocker. Saying 'next time' implies an offer, but the call is only an invitation, and the approved free dessert recovery offer could be mentioned if the owner wants.",
+    "notes": "The 40 minute figure matches the review (booked 8pm, seated 8:40). The phone number matches the profile and is fine in a review reply. One emoji, within the limit of 2. No offer or money is promised. Small tone suggestion: \"at least\" sounds a bit lukewarm, so the owner may prefer a warmer line about the food.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:57:24.032Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:08:13.237Z"
   }
 }
