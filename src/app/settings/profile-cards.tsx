@@ -5,7 +5,9 @@ import { button, Card, input } from "../onboarding/ui";
 import type { AgentName } from "@/lib/agents/definition";
 import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
 import { NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
-import { revertProfile, saveBuilderControls, saveVoice } from "./actions";
+import { goLiveChecklist } from "@/lib/agents/go-live";
+import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
+import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveVoice } from "./actions";
 
 // Settings cards for the restaurant profile: how replies and messages sound
 // (fields the agents use), and the profile's change history with Revert.
@@ -150,21 +152,45 @@ export function BuilderCard({ r }: { r: Restaurant }) {
         </fieldset>
         <fieldset className="space-y-2">
           <legend className={label}>Agents</legend>
-          {Object.entries(MODES_AVAILABLE).map(([agent, available]) => (
-            <label key={agent} className="flex items-center gap-3">
-              <span className="w-40 shrink-0 text-sm capitalize">{agent}</span>
-              <select name={`mode_${agent}`} defaultValue={agentMode(r, agent as AgentName)} className={input}>
-                {available.allowed.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+          {Object.entries(MODES_AVAILABLE).map(([agent, available]) => {
+            const fields = GO_LIVE_FIELDS[agent as AgentName];
+            const missing = new Set(fields ? goLiveChecklist(r, agent as AgentName).missing : []);
+            return (
+              <div key={agent} className="space-y-1">
+                <label className="flex items-center gap-3">
+                  <span className="w-40 shrink-0 text-sm capitalize">{agent}</span>
+                  <select name={`mode_${agent}`} defaultValue={agentMode(r, agent as AgentName)} className={input}>
+                    {available.allowed.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {fields && (
+                  <p className="text-xs text-stone-600">
+                    Go-live checklist:{" "}
+                    {fields.map((f, i) => (
+                      <span key={f}>
+                        {i > 0 && " · "}
+                        {missing.has(f) ? "❌" : "✅"} {PROFILE_FIELDS[f].label}
+                      </span>
+                    ))}
+                    {missing.size > 0 && " (stays in shadow until all are filled)"}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </fieldset>
         <button className={button}>Save builder controls</button>
       </form>
+      {Object.keys(GO_LIVE_FIELDS).some((a) => !goLiveChecklist(r, a as AgentName).ready) && (
+        <form action={askOwnerForGoLive}>
+          <input type="hidden" name="r" value={r.id} />
+          <button className="text-sm text-emerald-700 underline">Ask the owner on WhatsApp for the missing details</button>
+        </form>
+      )}
     </Card>
   );
 }

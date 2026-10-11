@@ -8,6 +8,8 @@ import { validHex } from "@/lib/email/brand";
 import { isEmail } from "@/lib/email/route";
 import { isSupportedImage, saveLogo } from "@/lib/photos";
 import { revertProfileChange, saveProfileFields } from "@/lib/profile-edits";
+import type { AgentName } from "@/lib/agents/definition";
+import { goLiveChecklist, promptOwnerForGoLive } from "@/lib/agents/go-live";
 import { MODES_AVAILABLE } from "@/lib/agents/modes";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
@@ -138,9 +140,19 @@ export async function saveBuilderControls(form: FormData) {
     trust[task] = level === "auto" && NEVER_AUTO.has(task) ? "approve" : level;
   }
   const modes: Record<string, string> = { ...(r.agent_modes ?? {}) };
+  const blocked: string[] = [];
   for (const [agent, available] of Object.entries(MODES_AVAILABLE)) {
     const mode = get(`mode_${agent}`);
-    if ((available.allowed as string[]).includes(mode)) modes[agent] = mode;
+    if (!(available.allowed as string[]).includes(mode)) continue;
+    // Go-live checklist: an agent can't go live until the fields it needs are filled.
+    const checklist = goLiveChecklist(r, agent as AgentName);
+    if (mode === "live" && !checklist.ready) {
+      blocked.push(`${agent} can't go live yet: missing ${checklist.labels.join(", ")}`);
+      const prompted = await promptOwnerForGoLive(r, agent as AgentName);
+      if (prompted) blocked.push("the owner has been sent a WhatsApp asking for them");
+      continue;
+    }
+    modes[agent] = mode;
   }
   check(await getSupabase().from("restaurants").update({ trust_levels: trust, agent_modes: modes }).eq("id", r.id));
   await logAction({
@@ -150,7 +162,17 @@ export async function saveBuilderControls(form: FormData) {
     detail: "Changed trust levels and agent modes (builder controls)",
     data: { field: "builder_controls", before: { trust_levels: r.trust_levels, agent_modes: r.agent_modes }, after: { trust_levels: trust, agent_modes: modes } },
   });
+  if (blocked.length) back(r.id, `error=${encodeURIComponent(`Saved, but ${blocked.join("; ")}.`)}`);
   back(r.id, "saved=builder");
+}
+
+// Builder only: send the owner the go-live prompt now (still at most once a day).
+export async function askOwnerForGoLive(form: FormData) {
+  const owner = await currentOwner();
+  if (!owner?.isBuilder) throw new Error("Only the builder can do this");
+  const r = await own(String(form.get("r") ?? ""));
+  const sent = await promptOwnerForGoLive(r, "reputation");
+  back(r.id, sent ? "saved=asked" : `error=${encodeURIComponent("Not sent: the owner was already asked in the last day, nothing is missing, or their WhatsApp isn't linked yet.")}`);
 }
 
 // Revert one profile change (from the profile history list). Not UNDO.

@@ -12,7 +12,7 @@ import { BuilderCard, HistoryCard, VoiceCard } from "./profile-cards";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
-const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved." };
+const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", asked: "✅ The owner has been asked on WhatsApp." };
 
 // Change anything set up during onboarding. (Or just message Naila on WhatsApp:
 // "change Friday hours to 11pm", "add lamb chops, £14".)
