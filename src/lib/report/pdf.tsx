@@ -1,4 +1,5 @@
 import "server-only";
+import { noEmDash } from "@/lib/text";
 import { Document, Link, Page, Rect, renderToBuffer, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { shorten } from "@/lib/text";
 import { bars, CHART, MUTED_BAR, weekTotals } from "./chart";
@@ -34,11 +35,11 @@ const BAD = "#b91c1c";
 
 // Keeps only characters Helvetica can draw (Latin-1 plus common punctuation).
 function clean(text: string) {
-  return text
+  return noEmDash(text)
     .replace(/[−]/g, "-")
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/[^ -~ -ÿ–—…€\n]/g, "")
+    .replace(/[^ -~ -ÿ–…€\n]/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }

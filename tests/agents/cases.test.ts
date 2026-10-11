@@ -54,12 +54,19 @@ describe.each(cases)("checker case $file", ({ case: c }) => {
 // House rule: no em-dashes, anywhere. This scans the code that builds what agents
 // and customers read. The /agents files themselves are skipped: checker.md shows
 // an em-dash on purpose (what a minor fix removes), and so do the saved cases.
-test("no em-dashes in agent and customer-facing code", () => {
+test("no em-dashes in agent, email, report and QR pack code", () => {
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {
       const p = join(dir, f);
       return statSync(p).isDirectory() ? files(p) : /\.tsx?$/.test(p) ? [p] : [];
     });
-  const offenders = [...files(join("src", "lib", "agents")), ...files(join("src", "lib", "email"))].filter((f) => readFileSync(f, "utf8").includes("—"));
+  const offenders = [...files(join("src", "lib", "agents")), ...files(join("src", "lib", "email")), ...files(join("src", "lib", "report")), join("src", "lib", "onboarding", "qr-pack.tsx")].filter((f) => readFileSync(f, "utf8").includes("—"));
   expect(offenders).toEqual([]);
+});
+
+test("em-dashes are taken out of text owners and customers see", async () => {
+  const { noEmDash } = await import("@/lib/text");
+  const dash = String.fromCharCode(0x2014);
+  expect(noEmDash(`Sorry about the wait ${dash} we'll fix it`)).toBe("Sorry about the wait, we'll fix it");
+  expect(noEmDash(`12${dash}2pm`)).toBe("12-2pm");
 });

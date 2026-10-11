@@ -1,4 +1,5 @@
 import "server-only";
+import { noEmDash } from "@/lib/text";
 import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
 import { londonYmd, startOfLondonDay } from "@/lib/clock";
 import { addDays } from "@/lib/sales/format";
@@ -311,7 +312,9 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     .map((r) => `${r.rating}★ ${r.text}`);
   let insights: Awaited<ReturnType<typeof writeReportInsights>> | null = null;
   try {
-    insights = await writeReportInsights(ctx, facts.join("\n"), reviewTexts);
+    const words = await writeReportInsights(ctx, facts.join("\n"), reviewTexts);
+    // No em-dashes anywhere the owner can see (the report page and the PDF).
+    insights = JSON.parse(noEmDash(JSON.stringify(words))) as typeof words;
   } catch (err) {
     console.error("Report insights failed; using plain summaries", err);
   }

@@ -19,3 +19,9 @@ export function shorten(text: string, max: number) {
   const lastSpace = cut.lastIndexOf(" ");
   return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
+
+// House rule: no em-dashes anywhere an owner or customer can see. " word — word "
+// becomes "word, word"; a bare one becomes a hyphen.
+export function noEmDash(text: string) {
+  return text.replace(/\s+—\s+/g, ", ").replace(/—/g, "-");
+}
