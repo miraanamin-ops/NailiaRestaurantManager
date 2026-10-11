@@ -1,4 +1,5 @@
 @AGENTS.md
+@docs/agent-system.md
 
 # Naila (working name)
 
