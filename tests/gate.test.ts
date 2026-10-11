@@ -96,3 +96,63 @@ describe("who can set trust levels", () => {
     vi.doUnmock("@/lib/auth");
   });
 });
+
+describe("TEST_MODE as a gate step", () => {
+  test("in test mode nothing is posted to live Google", async () => {
+    const { testModeStep } = await import("@/lib/gate-rules");
+    expect(testModeStep({ testMode: true, channel: "google", googleMode: "live" })).toMatchObject({ outcome: "simulate" });
+    expect(testModeStep({ testMode: true, channel: "google", googleMode: "dummy" })).toMatchObject({ outcome: "ok" });
+    expect(testModeStep({ testMode: false, channel: "google", googleMode: "live" })).toMatchObject({ outcome: "ok" });
+  });
+
+  test("emails go through the existing test routing (builder and owner only)", async () => {
+    const { testModeStep } = await import("@/lib/gate-rules");
+    const { routeEmail } = await import("@/lib/email/route");
+    expect(testModeStep({ testMode: true, channel: "email", googleMode: "dummy" })).toMatchObject({ outcome: "ok" });
+    expect(routeEmail("real.customer@gmail.com", { testMode: true, allowed: ["owner@x.co.uk"], builder: "builder@x.co.uk" })).toEqual({
+      kind: "send",
+      to: "builder@x.co.uk",
+      redirectedFrom: "real.customer@gmail.com",
+    });
+  });
+
+  test("WhatsApp to customers is off until Meta verification, test mode or not", async () => {
+    const { channelFor, testModeStep } = await import("@/lib/gate-rules");
+    expect(channelFor("promotion")).toBe("whatsapp");
+    expect(testModeStep({ testMode: false, channel: "whatsapp", googleMode: "dummy" })).toMatchObject({ outcome: "simulate" });
+  });
+});
+
+describe("TEST_MODE inside attemptSend", () => {
+  test("with live Google in test mode, an approved reply is logged as simulated and never posted", async () => {
+    const { vi } = await import("vitest");
+    const { memoryDb } = await import("./support/memory-db");
+    vi.resetModules();
+    const A = "aaaaaaaa-0000-0000-0000-000000000001";
+    const db = memoryDb({
+      restaurants: [{ id: A, ...restaurant, trust_levels: {} }],
+      drafts: [
+        {
+          id: "d1", restaurant_id: A, kind: "review_reply", review_id: "rv1", content: "Thank you, Aisha!", audience: "Google review by Aisha",
+          status: "approved", approved_at: "2026-10-09T10:00:00Z", sent_at: null, scheduled_for: null, version: 1, checks: {}, customer_id: null,
+        },
+      ],
+      sent_log: [],
+      audit_log: [],
+      blocked_sends: [],
+    });
+    const replyToReview = vi.fn();
+    vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
+    vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
+    vi.stubEnv("TEST_MODE", "true");
+    const { attemptSend } = await import("@/lib/send");
+    const result = await attemptSend("d1", db.tables.restaurants[0] as never, noonUk, "approve");
+    expect(result.outcome).toBe("sent");
+    expect(replyToReview).not.toHaveBeenCalled();
+    expect(db.tables.sent_log[0]).toMatchObject({ simulated: true });
+    expect(JSON.stringify(db.tables.drafts[0].checks)).toContain("not posted to the live Google listing");
+    vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/supabase");
+    vi.doUnmock("@/lib/google");
+  });
+});

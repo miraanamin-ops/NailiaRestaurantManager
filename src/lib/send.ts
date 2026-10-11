@@ -6,7 +6,9 @@ import { checkResult, type CheckResult, type DraftChecks } from "@/lib/checks/ty
 import { google, type GooglePost } from "@/lib/google";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
+import { channelFor, testModeStep } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { isTestMode } from "@/lib/test-mode";
 
 // Sending. Every send goes through attemptSend, which runs the two code checks
 // right before anything goes out and records the result on the draft:
@@ -42,7 +44,7 @@ async function logBlock(draft: Draft, reason: BlockReason, detail: string) {
 }
 
 // The send-time results of the two code checks, kept alongside the draft-time ones.
-function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money", CheckResult>>): DraftChecks {
+function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money" | "test_mode", CheckResult>>): DraftChecks {
   return { ...(draft.checks ?? {}), send: { ...(draft.checks?.send ?? {}), ...send } };
 }
 
@@ -105,6 +107,12 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     }
   }
 
+  // 3. TEST_MODE, as a gate step: in test mode nothing reaches a real customer,
+  //    owner or platform. (WhatsApp to customers stays off until Meta verification.)
+  const testStep = testModeStep({ testMode: isTestMode(), channel: channelFor(draft.kind), googleMode: google().mode });
+  const testCheck = checkResult(testStep.outcome === "simulate" ? [testStep.detail] : [], [], "pass");
+  const reachesPlatform = testStep.outcome === "ok";
+
   // All checks passed. Claim the draft in one atomic update so that two sends
   // racing each other can't both succeed.
   const claim = await supabase
@@ -116,7 +124,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       scheduled_for: null,
       block_reason: null,
       updated_at: new Date().toISOString(),
-      checks: withSendChecks(draft, { money: checkResult([], []), compliance }),
+      checks: withSendChecks(draft, { money: checkResult([], []), compliance, test_mode: testCheck }),
       // Auto: approved by the trust level and the checker, at the moment it goes out.
       ...(auto ? { approved_at: new Date().toISOString(), waiting_for: null } : {}),
     })
@@ -150,6 +158,9 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     const summary = await deliverCampaign(claimed, restaurant, now);
     note = deliveryNote(summary);
     simulated = summary.emailed === 0;
+  } else if (!reachesPlatform) {
+    // Test mode (or customer WhatsApp): nothing goes out; it is logged as simulated.
+    note = `🧪 ${testStep.detail}`;
   } else if (claimed.kind === "review_reply" && claimed.review_id) {
     // Posted under the review (in dummy mode: saved against it).
     await google().replyToReview(restaurant.id, claimed.review_id, claimed.content);
