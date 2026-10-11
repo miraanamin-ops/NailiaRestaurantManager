@@ -37,6 +37,12 @@ alter table shadow_drafts enable row level security;
 alter table drafts drop constraint if exists drafts_kind_check;
 alter table drafts add constraint drafts_kind_check
   check (kind in ('review_reply', 'promotion', 'other', 'email_campaign', 'google_post', 'review_question'));
+-- A question is "answered" once the owner taps one of its buttons.
+alter table drafts drop constraint if exists drafts_status_check;
+alter table drafts add constraint drafts_status_check
+  check (status in ('pending', 'approved', 'queued', 'sent', 'blocked', 'skipped', 'superseded', 'rejected', 'withdrawn', 'answered'));
+-- What an agent needs to pick a draft up again later (e.g. the review a question is about).
+alter table drafts add column if not exists agent_input jsonb;
 
 -- 3. Reputation's weekly themes (what customers praised and complained about),
 --    one row per restaurant per week, used by the Monday report.

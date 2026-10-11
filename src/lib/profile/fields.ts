@@ -116,3 +116,13 @@ export function columnsFor(field: ProfileFieldName, value: unknown): Record<stri
   const v = (value ?? {}) as Record<string, unknown>;
   return Object.fromEntries(columns.filter((c) => c in v).map((c) => [c, v[c]]));
 }
+
+// Decision 14: an agent can't leave shadow mode until the fields it needs are filled.
+export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
+  reputation: ["sign_off_name", "complaint_contact", "recovery_offers", "halal_statement", "allergen_statement"],
+};
+
+export function missingForGoLive(row: Record<string, unknown>, agent: AgentName): ProfileFieldName[] {
+  const empty = (v: unknown) => v == null || (typeof v === "string" && !v.trim()) || (Array.isArray(v) && !v.filter((x) => String(x).trim()).length);
+  return (GO_LIVE_FIELDS[agent] ?? []).filter((f) => empty(fieldValue(row, f)));
+}

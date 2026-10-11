@@ -195,3 +195,40 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
   return res.data;
 }
+
+// A live agent run that happened straight away (not from the queue), recorded as
+// a finished job so the log can name its job id. A repeat of the same key is ignored.
+export async function recordAgentRun(input: {
+  restaurantId: string;
+  key: string;
+  agent: string;
+  kind: string;
+  trigger: string;
+  draftId?: string | null;
+  output: Record<string, unknown>;
+  agentVersion: string;
+  verdict: string | null;
+}) {
+  const now = new Date().toISOString();
+  const { data, error } = await getSupabase()
+    .from("agent_jobs")
+    .insert({
+      restaurant_id: input.restaurantId,
+      job_key: input.key,
+      agent: input.agent,
+      kind: input.kind,
+      trigger: input.trigger,
+      draft_id: input.draftId ?? null,
+      status: "done",
+      attempts: 1,
+      output: input.output,
+      agent_version: input.agentVersion,
+      verdict: input.verdict,
+      started_at: now,
+      finished_at: now,
+    })
+    .select("id")
+    .maybeSingle<{ id: string }>();
+  if (error && error.code !== "23505") console.error("Couldn't record the agent run", error);
+  return data?.id ?? null;
+}

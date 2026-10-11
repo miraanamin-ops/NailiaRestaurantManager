@@ -11,6 +11,10 @@ import type { Turn } from "./turn";
 // Approve, Edit and Skip. Approving only records the decision; attemptSend
 // (lib/send.ts) then checks every safety rule before anything goes out.
 
+// A question about a review isn't approved, edited or skipped: it's answered.
+const QUESTION_HINT = (n: number | null) =>
+  `That one's a question, not a draft: tap *Reply publicly*, *Handle privately* or *Both*${n ? ` (or reply PUBLIC ${n}, PRIVATE ${n} or BOTH ${n})` : ""}.`;
+
 // A second tap on Approve within this long counts as a duplicate attempt.
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -25,6 +29,7 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
     return send(t.briefNumber ? `I can't find item ${t.briefNumber} in your latest brief. Text RUN BRIEF to see it again.` : "Sorry, I couldn't find that draft.");
   }
   const label = draft.brief_number ? `item ${draft.brief_number}` : "that draft";
+  if (draft.kind === "review_question") return send(QUESTION_HINT(draft.brief_number));
 
   if (draft.status !== "pending") {
     // A second Approve on something already approved: the rules decide (and log) it.
@@ -57,6 +62,10 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
   const r = ctx.restaurant;
   // The draft that Approve / Edit / Skip would apply to, if any.
   const decisionDraft = active && (active.waiting_for === "decision" || active.waiting_for === "edit_instructions") ? active : null;
+  if (decisionDraft?.kind === "review_question") {
+    await send(QUESTION_HINT(null));
+    return true;
+  }
 
   if (action === "approve") {
     if (decisionDraft) {

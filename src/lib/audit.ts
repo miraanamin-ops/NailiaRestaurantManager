@@ -31,6 +31,7 @@ export type AuditAction =
   | "sales_imported" // a POS file was imported
   | "checked" // an agent checked a draft (shadow mode: recorded only)
   | "agent_drafted" // an agent wrote a draft in shadow mode (recorded only, the owner never sees it)
+  | "answered" // the owner answered a question about a review (Reply publicly / Handle privately / Both)
   | "agent_failed" // an agent job failed (the builder was alerted)
   | "profile_changed" // a profile field changed (a new profile version)
   | "profile_reverted"; // Revert on one profile change

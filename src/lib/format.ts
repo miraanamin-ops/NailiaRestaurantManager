@@ -12,6 +12,10 @@ const BUTTON_MESSAGE_BUDGET = 900;
 // A draft as the owner sees it on WhatsApp: the text, then one line saying how
 // it did on the four checks, then what each check fixed or flagged.
 export function draftMessage(draft: Draft, restaurant: Pick<Restaurant, "discount_cap_percent">) {
+  // A question about a review: no draft to approve, just the owner's decision.
+  if (draft.kind === "review_question") {
+    return `❓ *Your call on the ${draft.audience ?? "review"}*\n\n${draft.content}\n\nNothing is posted until you choose.`;
+  }
   const icon = draft.kind === "email_campaign" ? "📧" : draft.kind === "google_post" ? "📍" : "📝";
   const header = `${icon} *${KIND_LABELS[draft.kind]}*${draft.audience ? ` for ${draft.audience}` : ""}${draft.version > 1 ? ` (version ${draft.version})` : ""}`;
   const lines = [header, "", draft.content];

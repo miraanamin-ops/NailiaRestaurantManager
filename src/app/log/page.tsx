@@ -37,6 +37,7 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   sales_imported: { icon: "📊", label: "Sales file imported" },
   checked: { icon: "🔎", label: "Checked by an agent" },
   agent_drafted: { icon: "🤖", label: "Agent draft (shadow)" },
+  answered: { icon: "💬", label: "Answered a question" },
   agent_failed: { icon: "⚠️", label: "Agent job failed" },
   profile_changed: { icon: "🗂️", label: "Profile changed" },
   profile_reverted: { icon: "↩️", label: "Profile change reverted" },

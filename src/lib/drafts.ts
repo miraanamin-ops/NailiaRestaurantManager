@@ -5,7 +5,7 @@ import { queueDraftCheck } from "@/lib/agents/enqueue";
 import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post"] as const;
+export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question"] as const;
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
 
@@ -16,7 +16,7 @@ export type Draft = {
   customer_id: string | null;
   review_id: string | null;
   content: string;
-  status: "pending" | "approved" | "queued" | "sent" | "blocked" | "skipped" | "superseded" | "rejected" | "withdrawn";
+  status: "pending" | "approved" | "queued" | "sent" | "blocked" | "skipped" | "superseded" | "rejected" | "withdrawn" | "answered";
   waiting_for: WaitingFor | null;
   audience: string | null;
   request: string | null;
@@ -38,6 +38,8 @@ export type Draft = {
   // the checker agent's verdict (shadow mode: recorded only).
   profile_version?: number | null;
   agent_check?: AgentCheck | null;
+  // What an agent needs to pick it up again (e.g. the review a question is about).
+  agent_input?: Record<string, unknown> | null;
 };
 
 // What the checker agent found, kept next to the four checks (drafts.agent_check).
@@ -72,6 +74,7 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   other: "Message",
   email_campaign: "Email campaign",
   google_post: "Google post",
+  review_question: "Question about a review",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {
@@ -108,6 +111,9 @@ export async function createDraft(input: {
   reviewId?: string | null;
   customerId?: string | null;
   checks: DraftChecks;
+  // A live agent's draft: the checker's verdict (already checked, so no shadow check is queued), and what the agent needs later.
+  agentCheck?: AgentCheck;
+  agentInput?: Record<string, unknown>;
   // present: the owner asked for it, so it replaces the draft on screen (default).
   // hold:    made by a scheduled job; waits quietly for the morning brief.
   // urgent:  jumps the queue (e.g. a bad review); the draft on screen goes back into the queue.
@@ -153,6 +159,8 @@ export async function createDraft(input: {
       version: 1,
       waiting_for: waitingFor,
       checks: input.checks,
+      ...(input.agentCheck ? { agent_check: input.agentCheck } : {}),
+      ...(input.agentInput ? { agent_input: input.agentInput } : {}),
       check_notes: allNotes(input.checks),
       held_at: mode === "hold" ? new Date().toISOString() : null,
       ...(profileVersion !== null ? { profile_version: profileVersion } : {}),
@@ -168,7 +176,7 @@ export async function createDraft(input: {
     detail: `Drafted ${draftName(draft)}${mode === "hold" ? ", held for the morning brief" : ""}. Checks: ${checksLine(input.checks)}`,
   });
   // The checker agent (shadow mode) reviews it in the background; nothing waits for it.
-  await queueDraftCheck(draft);
+  if (!input.agentCheck && draft.kind !== "review_question") await queueDraftCheck(draft);
   return draft;
 }
 
