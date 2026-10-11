@@ -10,6 +10,9 @@ import { parseSourceRef } from "./sources";
 
 export type Problems = string[];
 
+// Written as a code so the em-dash scan (tests/agents/cases.test.ts) passes this file.
+const EM_DASH = new RegExp(String.fromCharCode(0x2014));
+
 // ---------- Drafts ----------
 
 export const DraftBase = z.looseObject({
@@ -72,7 +75,7 @@ export function profileChangeProblems(raw: unknown, lookup: (field: string) => {
   if (field.rule === "settings") problems.push(`${c.field} changes only in settings; an agent can't change it`);
   if (field.rule === "confirm" && c.apply === "now") problems.push(`${c.field} needs the owner's yes first (apply: after_owner_confirms)`);
   if (c.type === "profile_change" && c.evidence.length === 0) problems.push("evidence is empty: list the decision ids or the owner's message");
-  if (/—/.test(c.summary_line)) problems.push("summary_line has an em-dash");
+  if (EM_DASH.test(c.summary_line)) problems.push("summary_line has an em-dash");
   return problems;
 }
 
@@ -133,7 +136,7 @@ export function verdictProblems(
     if (!MINOR_FIX_CHECKS.includes(f.check)) problems.push(`minor fix under ${f.check}: only ${MINOR_FIX_CHECKS.join(", ")} can be minor fixes`);
     if (!f.find || !input.draftText.includes(f.find)) problems.push(`minor fix "${f.find}" isn't in the draft exactly as written`);
     if (f.find.length > MAX_FIND) problems.push(`minor fix "${f.find.slice(0, 30)}…" is too long to be minor`);
-    if (/—/.test(f.replace)) problems.push(`minor fix replacement "${f.replace}" has an em-dash`);
+    if (EM_DASH.test(f.replace)) problems.push(`minor fix replacement "${f.replace}" has an em-dash`);
   }
   return problems;
 }

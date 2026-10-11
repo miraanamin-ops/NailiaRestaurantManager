@@ -1,13 +1,11 @@
 import "server-only";
-import type Anthropic from "@anthropic-ai/sdk";
 import { getCampaignForDraft } from "@/lib/campaigns";
 import { draftName, type AgentCheck, type Draft } from "@/lib/drafts";
 import { channelFor } from "@/lib/gate-rules";
 import { getSupabase } from "@/lib/supabase";
-import { applicableChecks, audienceOf, makerFor, verdictLine } from "./checker-rules";
+import { londonToday, runChecker } from "./checker-core";
+import { makerFor, verdictLine } from "./checker-rules";
 import { runAgentJobs, type AgentJob, type JobHandler, type JobOutcome } from "./jobs";
-import { callAgent } from "./run";
-import { CheckerVerdict, verdictProblems, type CheckerVerdictOutput } from "./schema";
 import { legacySources } from "./sources";
 import { callTool } from "./tools";
 
@@ -58,43 +56,11 @@ export async function runCheckerShadow(job: AgentJob): Promise<JobOutcome> {
     callTool("checker", "get_maker_rules", rid, { maker }),
     draft.kind === "email_campaign" ? callTool("checker", "get_rendered_preview", rid, { draftId: draft.id }).catch(() => null) : Promise.resolve(null),
   ]);
-  const { applicable, skipped } = applicableChecks(audienceOf(draft.kind), Boolean(preview));
-
-  const content: Anthropic.Beta.BetaContentBlockParam[] = [
-    {
-      type: "text",
-      text: [
-        `Check this draft. Today is ${new Date().toLocaleDateString("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
-        `Applicable checks (list every one in "checks", passed or not): ${applicable.join(", ")}.`,
-        skipped.length ? `Skipped (no rendered preview for this kind of draft): ${skipped.join(", ")}. List them with result "skipped".` : "",
-        `The draft (JSON):\n${JSON.stringify(json, null, 2)}`,
-        `Resolved sources (the real data behind sources_used):\n${JSON.stringify(sources, null, 2)}`,
-        `Restaurant profile (version ${profile.version}):\n${JSON.stringify(profile.fields, null, 2)}`,
-        `The last ${recent.length} outputs of the same type (newest first):\n${recent.length ? recent.map((r, i) => `${i + 1}. """${r}"""`).join("\n") : "(none yet)"}`,
-        `The maker's rules (the ${maker} agent), for C8:\n${makerRules}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    },
-    ...(preview
-      ? [
-          { type: "text" as const, text: "The rendered preview of the email, as a customer sees it on a phone:" },
-          { type: "image" as const, source: { type: "base64" as const, media_type: preview.media_type, data: preview.data } },
-        ]
-      : []),
-  ];
-
-  const result = await callAgent<CheckerVerdictOutput>({
-    agent: "checker",
-    content,
-    schema: CheckerVerdict,
-    validate: (out) => verdictProblems(out, { applicable, skipped, draftText: text }),
-    label: `draft ${draft.id} (v${version})`,
-  });
-
-  // The B checks that couldn't run are always listed as skipped, so the log shows them.
-  const listed = new Set(result.output.checks.map((c) => c.id));
-  const checks = [...result.output.checks, ...skipped.filter((id) => !listed.has(id)).map((id) => ({ id, result: "skipped" as const, reason: "no rendered preview for this kind of draft", fix: null }))];
+  const result = await runChecker(
+    { draft: json, text, sources, profile, recent, maker, makerRules, preview, today: londonToday() },
+    `draft ${draft.id} (v${version})`,
+  );
+  const { checks } = result.output;
   const agentCheck: AgentCheck = {
     mode: "shadow",
     job_id: job.id,
@@ -115,7 +81,7 @@ export async function runCheckerShadow(job: AgentJob): Promise<JobOutcome> {
     agentVersion: result.agentVersion,
     verdict: result.output.verdict,
     actor: "checker",
-    detail: `Checker (shadow, v${result.agentVersion}) on the ${draftName(draft)}, version ${version}: ${verdictLine({ ...result.output, checks })}`,
+    detail: `Checker (shadow, v${result.agentVersion}) on the ${draftName(draft)}, version ${version}: ${verdictLine(result.output)}`,
   };
 }
 

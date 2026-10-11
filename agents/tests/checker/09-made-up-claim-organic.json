@@ -1,0 +1,494 @@
+{
+  "name": "Google post claiming organic, locally sourced meat",
+  "source": "variant of real draft bd3d985a-a134-4280-a02f-4361bbb0c03c: 'organic, locally sourced' added",
+  "note": null,
+  "draft": {
+    "type": "google_post",
+    "channel": "google",
+    "audience": "your Google listing",
+    "content": {
+      "text": "Our lamb chops are 100% organic, locally sourced and flame-grilled over real charcoal. Four pieces for £13.95. Pop in tonight! 🔥"
+    },
+    "needs_owner_input": null,
+    "sources_used": [
+      "profile:name",
+      "profile:cuisine",
+      "profile:tone_notes",
+      "profile:emoji_allowed",
+      "profile:words_to_avoid",
+      "profile:menu",
+      "profile:hours",
+      "profile:address",
+      "profile:phone",
+      "profile:links",
+      "profile:halal_statement",
+      "profile:allergen_statement",
+      "request:bd3d985a-a134-4280-a02f-4361bbb0c03c"
+    ]
+  },
+  "text": "Our lamb chops are 100% organic, locally sourced and flame-grilled over real charcoal. Four pieces for £13.95. Pop in tonight! 🔥",
+  "sources": [
+    {
+      "ref": "profile:name",
+      "found": true,
+      "data": "Ember & Spice Grill"
+    },
+    {
+      "ref": "profile:cuisine",
+      "found": true,
+      "data": "Halal charcoal grill"
+    },
+    {
+      "ref": "profile:tone_notes",
+      "found": true,
+      "data": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right."
+    },
+    {
+      "ref": "profile:emoji_allowed",
+      "found": true,
+      "data": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      }
+    },
+    {
+      "ref": "profile:words_to_avoid",
+      "found": true,
+      "data": []
+    },
+    {
+      "ref": "profile:menu",
+      "found": true,
+      "data": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "profile:hours",
+      "found": true,
+      "data": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      }
+    },
+    {
+      "ref": "profile:address",
+      "found": true,
+      "data": "214 Whitechapel Road, London E1 1BJ"
+    },
+    {
+      "ref": "profile:phone",
+      "found": true,
+      "data": "+44 20 7946 0123"
+    },
+    {
+      "ref": "profile:links",
+      "found": true,
+      "data": null
+    },
+    {
+      "ref": "profile:halal_statement",
+      "found": true,
+      "data": "All our meat is halal."
+    },
+    {
+      "ref": "profile:allergen_statement",
+      "found": true,
+      "data": "Please ask our staff about allergens before you order."
+    },
+    {
+      "ref": "request:bd3d985a-a134-4280-a02f-4361bbb0c03c",
+      "found": true,
+      "data": {
+        "owner_asked": "Twice-weekly Google post"
+      }
+    }
+  ],
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "google_place_id": null,
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "owner_name": null,
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "complaint_contact": "+44 20 7946 0123",
+      "phone": "+44 20 7946 0123",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ],
+      "signup_offer": "a free Mango Lassi",
+      "logo": null,
+      "colours": {
+        "brand_color": "#c2410c",
+        "brand_dark": "#1c1917"
+      },
+      "discount_cap": 20,
+      "send_window": {
+        "send_window_start": "09:00:00",
+        "send_window_end": "21:00:00"
+      }
+    }
+  },
+  "recent": [
+    "Our Mixed Grill Platter is a proper feast 🔥 Lamb chops, chicken tikka, seekh kebab and wings, all flame-grilled over charcoal and served with naan and salad, just £18.50. Perfect for sharing (or not, we won't judge). Pop in tonight and dig in!",
+    "This weekend: a free Mango Lassi with every Mixed Grill Platter. See you Saturday!"
+  ],
+  "maker": "visibility",
+  "today": "Friday 9 October 2026",
+  "expect": {
+    "verdict": [
+      "fail",
+      "escalate"
+    ],
+    "flagged": [
+      {
+        "checks": [
+          "F1",
+          "C1"
+        ]
+      }
+    ]
+  },
+  "recorded": {
+    "verdict": "fail",
+    "checks": [
+      {
+        "id": "T1",
+        "result": "pass",
+        "reason": "Short, upbeat and not pushy. Fits the warm brand voice.",
+        "fix": null
+      },
+      {
+        "id": "T2",
+        "result": "pass",
+        "reason": "Names lamb chops, charcoal grilling and the price, which are specific to this restaurant.",
+        "fix": null
+      },
+      {
+        "id": "T3",
+        "result": "pass",
+        "reason": "Plain English, clear and simple.",
+        "fix": null
+      },
+      {
+        "id": "T4",
+        "result": "fail",
+        "reason": "Closing \"Pop in tonight!\" repeats the previous post's \"Pop in tonight and dig in!\".",
+        "fix": "Use a different closing line that does not start with \"Pop in tonight\"."
+      },
+      {
+        "id": "T5",
+        "result": "pass",
+        "reason": "No em-dashes. One emoji (🔥) is within the profile's limit of 2 for posts. No banned words.",
+        "fix": null
+      },
+      {
+        "id": "F1",
+        "result": "fail",
+        "reason": "\"100% organic, locally sourced\" is not supported by any resolved source. Nothing in the profile says the lamb is organic or locally sourced. \"Flame-grilled over real charcoal\" is supported by the cuisine (Halal charcoal grill).",
+        "fix": "Remove \"100% organic, locally sourced\". Only describe the lamb chops using facts from the profile."
+      },
+      {
+        "id": "F2",
+        "result": "pass",
+        "reason": "£13.95 for Lamb Chops (4 pcs) matches the menu. \"Four pieces\" matches 4 pcs.",
+        "fix": null
+      },
+      {
+        "id": "F3",
+        "result": "fail",
+        "reason": "\"Pop in tonight!\" is a problem on a Friday: the restaurant opens at 2pm on Friday and is open until midnight, so the timing works only if the post goes live before closing. The draft has no scheduled time to confirm it. Posting time is not given, so tonight cannot be verified as inside opening hours.",
+        "fix": "Replace \"tonight\" with a wording that does not depend on posting time, or state the opening hours from the profile (Friday 2pm to midnight)."
+      },
+      {
+        "id": "F4",
+        "result": "pass",
+        "reason": "Lamb chops matches the menu item \"Lamb Chops (4 pcs)\".",
+        "fix": null
+      },
+      {
+        "id": "F5",
+        "result": "pass",
+        "reason": "No causal claims.",
+        "fix": null
+      },
+      {
+        "id": "C1",
+        "result": "fail",
+        "reason": "\"100% organic, locally sourced\" is a food and ingredient claim that is not in the profile. The profile only says \"All our meat is halal.\"",
+        "fix": "Remove the organic and locally sourced claims. Halal can be mentioned only as \"All our meat is halal.\""
+      },
+      {
+        "id": "C2",
+        "result": "pass",
+        "reason": "No offer is made.",
+        "fix": null
+      },
+      {
+        "id": "C3",
+        "result": "pass",
+        "reason": "No targeting by personal traits.",
+        "fix": null
+      },
+      {
+        "id": "C4",
+        "result": "pass",
+        "reason": "No review incentive.",
+        "fix": null
+      },
+      {
+        "id": "C5",
+        "result": "pass",
+        "reason": "No personal data.",
+        "fix": null
+      },
+      {
+        "id": "C6",
+        "result": "pass",
+        "reason": "No financial, legal or staffing advice.",
+        "fix": null
+      },
+      {
+        "id": "C7",
+        "result": "pass",
+        "reason": "No phone number in the post text.",
+        "fix": null
+      },
+      {
+        "id": "C8",
+        "result": "fail",
+        "reason": "Breaks the maker rule that every claim about food or ingredients comes only from the profile (organic, locally sourced).",
+        "fix": "Remove the unsupported ingredient claims."
+      },
+      {
+        "id": "B1",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B2",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B3",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B4",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      }
+    ],
+    "minor_fixes": [],
+    "owner_question": null,
+    "notes": "Main problem: the organic and locally sourced claims have no source. Keep the price, the charcoal grilling and the single emoji. Also vary the closing line from the last post. The lamb chops topic is also close to the previous Mixed Grill post, which mentions lamb chops, but it is a different dish focus so it is not blocked.",
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "recorded_at": "2026-10-11T17:58:29.327Z"
+  }
+}

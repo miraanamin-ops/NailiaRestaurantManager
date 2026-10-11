@@ -1,0 +1,498 @@
+{
+  "name": "2-star apology that takes it offline with the profile's contact",
+  "source": "variant of real draft 87b1a172-86a8-4b41-97fe-83a80c39646a: sign-off added",
+  "note": "The 40 minutes comes from the review (booked 8pm, seated 8:40).",
+  "draft": {
+    "type": "review_reply",
+    "channel": "google",
+    "audience": "Google review by Nusrat H.",
+    "content": {
+      "text": "Hi Nusrat, thank you for your honest feedback and we're really sorry about the wait. A 40 minute delay with no explanation isn't how we want to treat our guests, and that's on us. We're glad the food hit the mark at least. Please give us a call on +44 20 7946 0123 so we can make it right for you next time. 🙏\n\nThe Ember & Spice Grill family"
+    },
+    "needs_owner_input": null,
+    "sources_used": [
+      "review:346d179e-5e02-4739-b8cd-1bfdf2d6c056",
+      "profile:name",
+      "profile:cuisine",
+      "profile:tone_notes",
+      "profile:emoji_allowed",
+      "profile:words_to_avoid",
+      "profile:menu",
+      "profile:sign_off_name",
+      "profile:greeting",
+      "profile:complaint_contact",
+      "profile:recovery_offers",
+      "profile:phone",
+      "profile:halal_statement",
+      "profile:allergen_statement",
+      "request:87b1a172-86a8-4b41-97fe-83a80c39646a"
+    ]
+  },
+  "text": "Hi Nusrat, thank you for your honest feedback and we're really sorry about the wait. A 40 minute delay with no explanation isn't how we want to treat our guests, and that's on us. We're glad the food hit the mark at least. Please give us a call on +44 20 7946 0123 so we can make it right for you next time. 🙏\n\nThe Ember & Spice Grill family",
+  "sources": [
+    {
+      "ref": "review:346d179e-5e02-4739-b8cd-1bfdf2d6c056",
+      "found": true,
+      "data": {
+        "id": "346d179e-5e02-4739-b8cd-1bfdf2d6c056",
+        "author_name": "Nusrat H.",
+        "rating": 2,
+        "text": "Booked for 8pm and didn't get seated until 8:40. Nobody explained the delay. Food was nice once it came.",
+        "review_date": "2026-10-09T15:31:01Z"
+      }
+    },
+    {
+      "ref": "profile:name",
+      "found": true,
+      "data": "Ember & Spice Grill"
+    },
+    {
+      "ref": "profile:cuisine",
+      "found": true,
+      "data": "Halal charcoal grill"
+    },
+    {
+      "ref": "profile:tone_notes",
+      "found": true,
+      "data": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right."
+    },
+    {
+      "ref": "profile:emoji_allowed",
+      "found": true,
+      "data": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      }
+    },
+    {
+      "ref": "profile:words_to_avoid",
+      "found": true,
+      "data": []
+    },
+    {
+      "ref": "profile:menu",
+      "found": true,
+      "data": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "profile:sign_off_name",
+      "found": true,
+      "data": "The Ember & Spice Grill family"
+    },
+    {
+      "ref": "profile:greeting",
+      "found": true,
+      "data": null
+    },
+    {
+      "ref": "profile:complaint_contact",
+      "found": true,
+      "data": "+44 20 7946 0123"
+    },
+    {
+      "ref": "profile:recovery_offers",
+      "found": true,
+      "data": [
+        "A free dessert on your next visit"
+      ]
+    },
+    {
+      "ref": "profile:phone",
+      "found": true,
+      "data": "+44 20 7946 0123"
+    },
+    {
+      "ref": "profile:halal_statement",
+      "found": true,
+      "data": "All our meat is halal."
+    },
+    {
+      "ref": "profile:allergen_statement",
+      "found": true,
+      "data": "Please ask our staff about allergens before you order."
+    },
+    {
+      "ref": "request:87b1a172-86a8-4b41-97fe-83a80c39646a",
+      "found": true,
+      "data": {
+        "owner_asked": "Review check: low rating alert"
+      }
+    }
+  ],
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "google_place_id": null,
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "owner_name": null,
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "complaint_contact": "+44 20 7946 0123",
+      "phone": "+44 20 7946 0123",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ],
+      "signup_offer": "a free Mango Lassi",
+      "logo": null,
+      "colours": {
+        "brand_color": "#c2410c",
+        "brand_dark": "#1c1917"
+      },
+      "discount_cap": 20,
+      "send_window": {
+        "send_window_start": "09:00:00",
+        "send_window_end": "21:00:00"
+      }
+    }
+  },
+  "recent": [
+    "Thank you so much, Ollie! 🙏 Those seekh kebabs are made with fresh herbs and green chilli, and we're so glad they hit the spot. It means a lot that you felt remembered. We treat everyone like a regular, and it's lovely to see you back. Can't wait to welcome you and your group again soon. 🔥\n\nThe Ember & Spice Grill family",
+    "Thanks so much, Farzana! 🙏 We love that the kids tucked into the wings. Really appreciate the veggie mains feedback too, it's something we're looking at. Hope to see you all again soon at Ember & Spice! 🔥",
+    "Hiya Jess, thank you so much! 😋 Buzzing you loved the smash burger and masala chips. Fair shout on the seating, we know it gets snug when we're busy, we're always looking at ways to make it comfier. Hope to see you back at Ember & Spice Grill soon 🔥"
+  ],
+  "maker": "reputation",
+  "today": "Friday 9 October 2026",
+  "expect": {
+    "verdict": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "verdict": "pass",
+    "checks": [
+      {
+        "id": "T1",
+        "result": "pass",
+        "reason": "Uses her first name, apologises sincerely, doesn't argue and invites her back, as the tone notes ask. One emoji is within the limit of 2.",
+        "fix": null
+      },
+      {
+        "id": "T2",
+        "result": "pass",
+        "reason": "Refers to her specific complaint (the 40 minute wait with no explanation) and her praise of the food.",
+        "fix": null
+      },
+      {
+        "id": "T3",
+        "result": "pass",
+        "reason": "Review is in English and so is the reply. Plain words, no jargon.",
+        "fix": null
+      },
+      {
+        "id": "T4",
+        "result": "pass",
+        "reason": "Opening 'Hi Nusrat, thank you for your honest feedback' differs from the last three openings. The sign-off is the profile's required name.",
+        "fix": null
+      },
+      {
+        "id": "T5",
+        "result": "pass",
+        "reason": "No em-dashes. One emoji (🙏) is allowed and on the profile's approved list. words_to_avoid is empty.",
+        "fix": null
+      },
+      {
+        "id": "F1",
+        "result": "pass",
+        "reason": "The wait, the lack of explanation and the food praise all trace to the review. The phone number matches complaint_contact.",
+        "fix": null
+      },
+      {
+        "id": "F2",
+        "result": "pass",
+        "reason": "'40 minute delay' matches the review: booked for 8pm, seated at 8:40.",
+        "fix": null
+      },
+      {
+        "id": "F3",
+        "result": "pass",
+        "reason": "No dates or times are stated that need checking.",
+        "fix": null
+      },
+      {
+        "id": "F4",
+        "result": "pass",
+        "reason": "'Nusrat' matches the author name 'Nusrat H.'.",
+        "fix": null
+      },
+      {
+        "id": "F5",
+        "result": "pass",
+        "reason": "No cause-and-effect claims.",
+        "fix": null
+      },
+      {
+        "id": "C1",
+        "result": "pass",
+        "reason": "No food, halal or allergen claims are made.",
+        "fix": null
+      },
+      {
+        "id": "C2",
+        "result": "pass",
+        "reason": "No offer is made. 'Make it right' is a general invitation, not a promised gesture.",
+        "fix": null
+      },
+      {
+        "id": "C3",
+        "result": "pass",
+        "reason": "No targeting by personal traits.",
+        "fix": null
+      },
+      {
+        "id": "C4",
+        "result": "pass",
+        "reason": "Nothing is offered in exchange for a review or for changing one.",
+        "fix": null
+      },
+      {
+        "id": "C5",
+        "result": "pass",
+        "reason": "Only details the reviewer wrote publicly are used.",
+        "fix": null
+      },
+      {
+        "id": "C6",
+        "result": "pass",
+        "reason": "No financial, legal or staffing advice.",
+        "fix": null
+      },
+      {
+        "id": "C7",
+        "result": "pass",
+        "reason": "This is a review reply, not a post, and the number is the profile's complaint contact. Not a Google violation.",
+        "fix": null
+      },
+      {
+        "id": "C8",
+        "result": "pass",
+        "reason": "Same language as the review, no invented facts, no blame, no staff named, no money or refund offered, no hashtags or em-dashes, and the sign-off name matches the profile. A 2-star wait complaint does not trigger the owner-input conditions.",
+        "fix": null
+      },
+      {
+        "id": "B1",
+        "result": "skipped",
+        "reason": "No rendered preview for a text reply.",
+        "fix": null
+      },
+      {
+        "id": "B2",
+        "result": "skipped",
+        "reason": "No rendered preview for a text reply.",
+        "fix": null
+      },
+      {
+        "id": "B3",
+        "result": "skipped",
+        "reason": "No rendered preview for a text reply.",
+        "fix": null
+      },
+      {
+        "id": "B4",
+        "result": "skipped",
+        "reason": "No rendered preview for a text reply.",
+        "fix": null
+      }
+    ],
+    "minor_fixes": [],
+    "owner_question": null,
+    "notes": "Small tone suggestion only: the profile asks for a little East London charm and this reply is more formal. Not a blocker. Saying 'next time' implies an offer, but the call is only an invitation, and the approved free dessert recovery offer could be mentioned if the owner wants.",
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "recorded_at": "2026-10-11T17:57:24.032Z"
+  }
+}

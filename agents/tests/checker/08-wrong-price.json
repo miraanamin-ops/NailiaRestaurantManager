@@ -1,0 +1,500 @@
+{
+  "name": "Google post with a price that doesn't match the menu",
+  "source": "variant of real draft 57fed30a-0786-49fd-ae4e-8c3ee41f1561: wings price changed from £7.50 to £6.50",
+  "note": null,
+  "draft": {
+    "type": "google_post",
+    "channel": "google",
+    "audience": "your Google listing",
+    "content": {
+      "text": "Craving something smoky? Our Peri Peri Wings are grilled over real charcoal, 8 pieces for just £6.50. Pair them with Masala Chips and you've got yourself a proper feast 🔥 See you this weekend!"
+    },
+    "needs_owner_input": null,
+    "sources_used": [
+      "profile:name",
+      "profile:cuisine",
+      "profile:tone_notes",
+      "profile:emoji_allowed",
+      "profile:words_to_avoid",
+      "profile:menu",
+      "profile:hours",
+      "profile:address",
+      "profile:phone",
+      "profile:links",
+      "profile:halal_statement",
+      "profile:allergen_statement",
+      "request:57fed30a-0786-49fd-ae4e-8c3ee41f1561"
+    ]
+  },
+  "text": "Craving something smoky? Our Peri Peri Wings are grilled over real charcoal, 8 pieces for just £6.50. Pair them with Masala Chips and you've got yourself a proper feast 🔥 See you this weekend!",
+  "sources": [
+    {
+      "ref": "profile:name",
+      "found": true,
+      "data": "Ember & Spice Grill"
+    },
+    {
+      "ref": "profile:cuisine",
+      "found": true,
+      "data": "Halal charcoal grill"
+    },
+    {
+      "ref": "profile:tone_notes",
+      "found": true,
+      "data": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right."
+    },
+    {
+      "ref": "profile:emoji_allowed",
+      "found": true,
+      "data": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      }
+    },
+    {
+      "ref": "profile:words_to_avoid",
+      "found": true,
+      "data": []
+    },
+    {
+      "ref": "profile:menu",
+      "found": true,
+      "data": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "profile:hours",
+      "found": true,
+      "data": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      }
+    },
+    {
+      "ref": "profile:address",
+      "found": true,
+      "data": "214 Whitechapel Road, London E1 1BJ"
+    },
+    {
+      "ref": "profile:phone",
+      "found": true,
+      "data": "+44 20 7946 0123"
+    },
+    {
+      "ref": "profile:links",
+      "found": true,
+      "data": null
+    },
+    {
+      "ref": "profile:halal_statement",
+      "found": true,
+      "data": "All our meat is halal."
+    },
+    {
+      "ref": "profile:allergen_statement",
+      "found": true,
+      "data": "Please ask our staff about allergens before you order."
+    },
+    {
+      "ref": "request:57fed30a-0786-49fd-ae4e-8c3ee41f1561",
+      "found": true,
+      "data": {
+        "owner_asked": "Twice-weekly Google post"
+      }
+    }
+  ],
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "google_place_id": null,
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "owner_name": null,
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (🔥 😋 🙏), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 2,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "complaint_contact": "+44 20 7946 0123",
+      "phone": "+44 20 7946 0123",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ],
+      "signup_offer": "a free Mango Lassi",
+      "logo": null,
+      "colours": {
+        "brand_color": "#c2410c",
+        "brand_dark": "#1c1917"
+      },
+      "discount_cap": 20,
+      "send_window": {
+        "send_window_start": "09:00:00",
+        "send_window_end": "21:00:00"
+      }
+    }
+  },
+  "recent": [
+    "Our Mixed Grill Platter is a proper feast 🔥 Lamb chops, chicken tikka, seekh kebab and wings, all flame-grilled over charcoal and served with naan and salad, just £18.50. Perfect for sharing (or not, we won't judge). Pop in tonight and dig in!",
+    "This weekend: a free Mango Lassi with every Mixed Grill Platter. See you Saturday!"
+  ],
+  "maker": "visibility",
+  "today": "Friday 9 October 2026",
+  "expect": {
+    "verdict": [
+      "pass",
+      "fail"
+    ],
+    "flagged": [
+      {
+        "checks": [
+          "F2"
+        ],
+        "find_contains": "6.50"
+      }
+    ]
+  },
+  "recorded": {
+    "verdict": "fail",
+    "checks": [
+      {
+        "id": "T1",
+        "result": "pass",
+        "reason": "Warm, upbeat, short sentences, fits the family-run voice. One emoji is within the limit.",
+        "fix": null
+      },
+      {
+        "id": "T2",
+        "result": "pass",
+        "reason": "Names specific dishes and the charcoal grill, which are particular to this restaurant.",
+        "fix": null
+      },
+      {
+        "id": "T3",
+        "result": "pass",
+        "reason": "Plain English, clear.",
+        "fix": null
+      },
+      {
+        "id": "T4",
+        "result": "pass",
+        "reason": "Opening and closing differ from the last outputs.",
+        "fix": null
+      },
+      {
+        "id": "T5",
+        "result": "pass",
+        "reason": "No em-dashes. One emoji (🔥) is allowed (posts limit 2, 🔥 is on the list). No banned words.",
+        "fix": null
+      },
+      {
+        "id": "F1",
+        "result": "fail",
+        "reason": "\"grilled over real charcoal\" is supported only by cuisine 'Halal charcoal grill'. \"Pair them with Masala Chips\" is fine. \"8 pieces for just £6.50\" is not supported by the menu. \"See you this weekend!\" is acceptable given the hours.",
+        "fix": "Remove the unsupported price claim and use the menu price (see F2)."
+      },
+      {
+        "id": "F2",
+        "result": "fail",
+        "reason": "Says \"8 pieces for just £6.50\" but the menu lists Peri Peri Wings (8) at £7.50. This is a price mismatch, correctable by minor fix.",
+        "fix": "Change £6.50 to £7.50."
+      },
+      {
+        "id": "F3",
+        "result": "pass",
+        "reason": "\"This weekend\" is in the future relative to Friday 9 October 2026, and the restaurant is open Friday evening, Saturday and Sunday.",
+        "fix": null
+      },
+      {
+        "id": "F4",
+        "result": "pass",
+        "reason": "Dish names Peri Peri Wings and Masala Chips match the menu (the \"(8)\" is expressed as 8 pieces).",
+        "fix": null
+      },
+      {
+        "id": "F5",
+        "result": "pass",
+        "reason": "No causal claims.",
+        "fix": null
+      },
+      {
+        "id": "C1",
+        "result": "pass",
+        "reason": "No halal, allergen or dietary claims made. Charcoal grilling is supported by the cuisine description.",
+        "fix": null
+      },
+      {
+        "id": "C2",
+        "result": "pass",
+        "reason": "No offer made, only the regular menu price. \"just\" is mild, not false urgency.",
+        "fix": null
+      },
+      {
+        "id": "C3",
+        "result": "pass",
+        "reason": "No targeting by personal traits.",
+        "fix": null
+      },
+      {
+        "id": "C4",
+        "result": "pass",
+        "reason": "No review incentive.",
+        "fix": null
+      },
+      {
+        "id": "C5",
+        "result": "pass",
+        "reason": "No personal data.",
+        "fix": null
+      },
+      {
+        "id": "C6",
+        "result": "pass",
+        "reason": "No financial, legal or staffing advice.",
+        "fix": null
+      },
+      {
+        "id": "C7",
+        "result": "pass",
+        "reason": "No phone number or link in the post text.",
+        "fix": null
+      },
+      {
+        "id": "C8",
+        "result": "pass",
+        "reason": "No maker rules broken: no phone number, no em-dashes, emoji allowed, topic (Peri Peri Wings) not repeated in the last outputs.",
+        "fix": null
+      },
+      {
+        "id": "B1",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B2",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B3",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      },
+      {
+        "id": "B4",
+        "result": "skipped",
+        "reason": null,
+        "fix": null
+      }
+    ],
+    "minor_fixes": [
+      {
+        "check": "F2",
+        "find": "£6.50",
+        "replace": "£7.50"
+      }
+    ],
+    "owner_question": null,
+    "notes": "The wrong price is a minor fix, but F1 is marked as fail because the draft claims a price with no source. Since the price correction is a minor fix that code applies, re-check F1 and F2 once applied. Note that 'real charcoal' is fine as the cuisine is Halal charcoal grill. Consider whether 'Craving something smoky?' feels slightly salesy; tone is acceptable.",
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "recorded_at": "2026-10-11T17:58:19.925Z"
+  }
+}
