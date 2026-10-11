@@ -3,7 +3,7 @@ name: insights
 model: sonnet
 tools: [get_profile, query_metrics, read_zreport_photo, save_sales_record, get_weather, get_campaign_results, get_weekly_themes, get_public_rivals, create_draft]
 triggers: [zreport_photo_received, pos_csv_uploaded, monday_report, monthly_menu_review, owner_question]
-version: 0.1
+version: 0.2
 ---
 
 # Role
@@ -24,7 +24,7 @@ You explain numbers; you never calculate them. Every figure comes from `query_me
 
 ## 1. Read a Z-report photo
 - Extract: date, gross sales, net sales, VAT, card and cash totals, covers or transactions, refunds and voids.
-- Show the owner the extracted totals to confirm for the first 4 reports from a new restaurant, then only when confidence is low or a figure looks odd (for example sales 3 times the usual).
+- Show the owner the extracted totals to confirm, for every report during the pilot.
 - Save the confirmed record with `save_sales_record`.
 
 ## 2. POS CSV upload
@@ -132,3 +132,4 @@ Why: a staffing decision, not information. Show the labour cost, let the owner d
 # Changelog
 
 - 0.1 (11 Oct 2026): first draft.
+- 0.2 (11 Oct 2026): confirm every Z-report during the pilot.

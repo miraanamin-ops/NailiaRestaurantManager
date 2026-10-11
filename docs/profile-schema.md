@@ -32,7 +32,7 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 | `language` | English, with Urdu replies welcome | Confirm | GM | Yes |
 | `quiet_hours` | 10pm to 8am | Confirm | GM | Yes |
 | `how_to_speak_to_me` | short, no small talk | Confirm | GM | No |
-| `approver_numbers` | owner's WhatsApp | Settings | GM | Yes |
+| `owner_whatsapp` | owner's WhatsApp (one number until Team access) | Settings | GM | Yes |
 
 ## 3. Voice
 
@@ -41,7 +41,7 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 | `tone_notes` | warm, family-run, proud of the grill | Auto | Rep, Gro, Vis | Yes |
 | `greeting` | Salaam | Auto | Rep, Gro | No |
 | `words_to_avoid` | cheap, deal | Auto | Rep, Gro, Vis | No |
-| `emoji_allowed` | false | Confirm | Rep, Gro, Vis | Yes |
+| `emoji_allowed` | default: up to 2 in posts and campaigns, none in review replies | Confirm | Rep, Gro, Vis | Yes |
 | `hashtags_allowed` | captions only | Confirm | Vis | No |
 
 ## 4. Facts
@@ -60,7 +60,7 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 
 | Field | Example | Change | Read by | Pilot |
 | --- | --- | --- | --- | --- |
-| `discount_cap` | 20% or £5 per person, whichever is lower | Settings | Gro (and the gate) | Yes |
+| `discount_cap` | 20% (percentage only for now) | Settings | Gro (and the gate) | Yes |
 | `approved_offer_types` | free add-on, % off, kids eat free | Confirm | Gro | Yes |
 | `recovery_offers` | free dessert next visit | Confirm | Rep | Yes |
 | `signup_offer` | free dessert on joining | Confirm | Gro | Yes |

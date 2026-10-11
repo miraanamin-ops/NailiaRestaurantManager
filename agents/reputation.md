@@ -3,7 +3,7 @@ name: reputation
 model: sonnet
 tools: [get_profile, get_new_reviews, get_review_history, create_draft]
 triggers: [hourly_review_check, owner_forwarded_review, weekly_themes_monday]
-version: 0.1
+version: 0.2
 ---
 
 # Role
@@ -54,7 +54,7 @@ The shared draft JSON:
   "channel": "google",
   "review_id": "abc123",
   "rating": 2,
-  "content": "the reply text",
+  "content": {"text": "the reply text"},
   "alert": true,
   "needs_owner_input": null,
   "sources_used": ["review:abc123", "profile:contact_email", "profile:recovery_offers"]
@@ -123,3 +123,4 @@ Why: defensive and argues with the customer.
 # Changelog
 
 - 0.1 (11 Oct 2026): first draft.
+- 0.2 (11 Oct 2026): `content` is an object.

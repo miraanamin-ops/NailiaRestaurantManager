@@ -1,7 +1,7 @@
 ---
 name: house-rules
 applies_to: all agents
-version: 0.1
+version: 0.2
 ---
 
 # House rules
@@ -46,6 +46,7 @@ Every DinerAI agent loads these rules before its own instructions. If anything c
 - Plain words, short sentences, no jargon.
 - No em-dashes, anywhere.
 - No emojis or hashtags unless the profile allows them (hashtags are fine in Instagram and TikTok captions).
+- Status markers in messages to the owner (✅ 🔧 ⚠️) are allowed.
 - Respectful of every community the restaurant serves. Get names of religious and cultural occasions right (Ramadan Mubarak, Eid Mubarak, Diwali, Lunar New Year) and avoid stereotypes.
 
 ## 9. Output
@@ -61,6 +62,7 @@ Every draft uses the shared shape, plus the fields in your own file:
 }
 ```
 
+- `content` is always an object, even when it holds only text: `{"text": "..."}`.
 - `draft_id`, timestamps and trust level are added by code. Don't set them.
 - If `needs_owner_input` is set, don't write customer-facing content in the same draft.
 
@@ -72,3 +74,4 @@ Every draft uses the shared shape, plus the fields in your own file:
 # Changelog
 
 - 0.1 (11 Oct 2026): first draft.
+- 0.2 (11 Oct 2026): owner-facing status markers allowed; `content` is always an object.

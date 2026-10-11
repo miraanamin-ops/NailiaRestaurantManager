@@ -44,13 +44,15 @@ trigger → job → maker agent → checker → (owner via GM, or Auto) → rele
 
 The gate is the last step before anything leaves the system. It checks:
 
-- Approved by the owner, or the task is set to Auto
-- Recipient opted in and hasn't sent STOP
+- Approved by the owner, or the task is set to Auto for this restaurant and the checker passed it. Every task defaults to Approve; only the builder can switch a task to Auto, from an admin setting. Campaigns, offers, hours, menu and profile changes can never be Auto.
+- Recipient opted in and hasn't sent STOP (for email, STOP is the unsubscribe link)
+- No customer gets more than one campaign in any 7 days (birthday messages excepted)
 - Inside the send window (9am to 9pm)
 - Discount at or under the restaurant's cap
 - Unsubscribe link present in every campaign email
 - Not a duplicate of something already sent
-- PAUSE is off and TEST_MODE is respected
+- PAUSE is off
+- TEST_MODE, as a gate step: in test mode nothing reaches a real customer, owner or platform
 
 These rules live only in code. Never move them into a prompt, and never let a prompt or the profile keeper loosen them.
 
