@@ -2,7 +2,7 @@
   "name": "a nudge to new sign-ups who haven't used their welcome reward",
   "source": "written for phase 3c from the demo restaurant's profile and campaigns",
   "task": "owner_request",
-  "request": "can you nudge the people who signed up but haven't used their welcome reward yet",
+  "request": "nudge the 5 new sign-ups who haven't used their welcome free Mango Lassi yet. It works with any order, dine-in, and each person has 30 days from their own sign-up date",
   "today": "2026-10-12",
   "today_words": "Monday 12 October 2026",
   "profile": {

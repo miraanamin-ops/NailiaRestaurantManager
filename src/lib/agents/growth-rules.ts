@@ -7,6 +7,7 @@
 // wording rules), so it's unit-tested (tests/agents/growth.test.ts).
 import { z } from "zod";
 import { findDish, OFFER_TYPES, offerCap } from "@/lib/offers";
+import { quotedNumbers } from "./insights-rules";
 import { draftProblems, type Problems } from "./schema";
 import { textRules, type VisibilityProfile } from "./visibility-rules";
 
@@ -63,6 +64,7 @@ export type GrowthContext = {
     discount_cap?: number | null;
     approved_offer_types?: string[] | null;
     birthday_offer?: string | null;
+    signup_offer?: string | null;
     emoji_allowed?: { posts?: number; campaigns?: number } | null;
   };
   // How many customers each segment can email right now (code's count).
@@ -167,7 +169,8 @@ export function growthProblems(d: GrowthDraftOutput, ctx: GrowthContext): Proble
     if (!approved.length) problems.push("the owner hasn't said which kinds of offer they're happy to run: set needs_owner_input");
     else if (!approved.includes(o.type)) problems.push(`${o.type} isn't one of the owner's approved kinds of offer (${approved.join(", ")}): pick one of those, or set needs_owner_input`);
     for (const item of o.items) if (!findDish(p.menu, item)) problems.push(`"${item}" isn't on the menu: offers must be things the kitchen can make from the current menu`);
-    const cap = offerCap(o, p.menu, Number(p.discount_cap ?? 0));
+    // The owner's own birthday offer or sign-up reward isn't capped (their decision in settings).
+    const cap = offerCap(o, p.menu, Number(p.discount_cap ?? 0), { birthday_offer: p.birthday_offer, signup_reward: p.signup_offer });
     if (!cap.ok) problems.push(cap.reason === "over_cap" ? `${cap.detail}: set needs_owner_input instead of drafting it` : cap.detail);
     if (!isDate(o.valid_from) || !isDate(o.valid_to)) problems.push("offer dates as YYYY-MM-DD (or YYYY-MM-DDTHH:MM)");
     else {
@@ -192,7 +195,8 @@ export function growthProblems(d: GrowthDraftOutput, ctx: GrowthContext): Proble
 
   // Expected outcome: only past results, quoted exactly; with none comparable, say so.
   const cited = d.sources_used.filter((s) => s.startsWith("history:")).map((s) => s.slice("history:".length));
-  const numbers = (d.expected_outcome.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+  // Figures only: dates, times and small period words ("Tue 29 Sep", "over 4 days") aren't results.
+  const numbers = quotedNumbers(d.expected_outcome.replace(/[a-z]+_w*dw*/gi, " ")).map((q) => q.value);
   if (d.expected_outcome.trim() === NO_BASELINE) {
     // Fine: no comparable campaign.
   } else if (!cited.length) problems.push(`expected_outcome quotes past results only: cite the campaign (history:<id>) or write "${NO_BASELINE}"`);
@@ -212,7 +216,8 @@ export function campaignFieldsFrom(d: GrowthDraftOutput) {
     name: d.name,
     subject: d.content.subject,
     body: [d.content.headline, d.content.body, d.content.cta].filter((s) => s.trim()).join("\n\n"),
-    offer: o.conditions.trim() ? `${o.description}. ${o.conditions}` : o.description,
+    // The conditions once: not again if the description already says them.
+    offer: o.conditions.trim() && !o.description.toLowerCase().includes(o.conditions.trim().toLowerCase().replace(/\.$/, "")) ? `${o.description.replace(/\.$/, "")}. ${o.conditions}` : o.description,
     valid_from: datePart(o.valid_from),
     valid_until: datePart(o.valid_to),
     segment: d.segment!,

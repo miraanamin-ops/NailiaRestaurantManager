@@ -179,5 +179,44 @@
       "11"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "question",
+        "question_by": "growth",
+        "question": "Eid al-Fitr is marked as uncertain for 2027-03-10 and may fall a day either side. Which date should I plan for: Wednesday 10 March or Thursday 11 March? Also, do you want an offer (for example a free Mango Lassi with any Mixed Grill Platter, within your 20% cap), or a simple greeting with no offer? I also can't see stock or staffing for Eid, so please confirm you can cover a busy day.",
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Eid al-Fitr campaign (date to confirm)",
+          "segment": null,
+          "audience_size": null,
+          "send_at": null,
+          "template": null,
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "",
+            "body": "",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": null,
+          "expected_outcome": "First campaign of this kind, no baseline yet.",
+          "needs_owner_input": "Eid al-Fitr is marked as uncertain for 2027-03-10 and may fall a day either side. Which date should I plan for: Wednesday 10 March or Thursday 11 March? Also, do you want an offer (for example a free Mango Lassi with any Mixed Grill Platter, within your 20% cap), or a simple greeting with no offer? I also can't see stock or staffing for Eid, so please confirm you can cover a busy day.",
+          "sources_used": [
+            "calendar:2027-03-10",
+            "profile:approved_offer_types",
+            "profile:discount_cap",
+            "segment:everyone"
+          ]
+        },
+        "checker": null,
+        "revisions": 0
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T21:11:19.056Z"
+  }
 }

@@ -171,5 +171,44 @@
       "kitchen"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "question",
+        "question_by": "growth",
+        "question": "Which date is the Eid buffet for? The calendar has no Eid date in the next 3 weeks, and a buffet isn't an approved offer type or on the menu. Can the kitchen and staff cope with a buffet, and what would it include and cost? If you want a buffet, please give the date, dishes, price and number of covers. Or I can draft a discount-based offer from the approved types instead.",
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Eid buffet question",
+          "segment": null,
+          "audience_size": null,
+          "send_at": null,
+          "template": null,
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "",
+            "body": "",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": null,
+          "expected_outcome": "First campaign of this kind, no baseline yet.",
+          "needs_owner_input": "Which date is the Eid buffet for? The calendar has no Eid date in the next 3 weeks, and a buffet isn't an approved offer type or on the menu. Can the kitchen and staff cope with a buffet, and what would it include and cost? If you want a buffet, please give the date, dishes, price and number of covers. Or I can draft a discount-based offer from the approved types instead.",
+          "sources_used": [
+            "profile:approved_offer_types",
+            "profile:menu",
+            "profile:discount_cap",
+            "segment:everyone"
+          ]
+        },
+        "checker": null,
+        "revisions": 0
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T21:11:12.474Z"
+  }
 }

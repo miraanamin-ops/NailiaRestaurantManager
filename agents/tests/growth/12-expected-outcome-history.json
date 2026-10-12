@@ -172,5 +172,203 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Quiet Tuesday grill deal",
+          "segment": "everyone",
+          "audience_size": 18,
+          "send_at": "2026-10-13T10:00",
+          "template": "offer",
+          "photo_id": null,
+          "content": {
+            "subject": "Quiet Tuesday grill deal: 15% off",
+            "headline": "15% off all grills, Tuesday",
+            "body": "Hey! Join us this Tuesday 13 October, from 12pm to 11pm, for 15% off all our grills. Think Mixed Grill Platter, Lamb Chops and Chicken Tikka, all halal. Thank you for supporting our family-run grill. Please ask our staff about allergens before you order.",
+            "cta": "Show this at the till"
+          },
+          "offer": {
+            "type": "percent_off",
+            "description": "15% off all grills on Tuesday 13 October",
+            "items": [
+              "Mixed Grill Platter",
+              "Lamb Chops (4 pcs)",
+              "Chicken Tikka",
+              "Seekh Kebab (2 pcs)",
+              "Peri Peri Wings (8)"
+            ],
+            "applies_to": null,
+            "discount_percent": 15,
+            "discount_value_gbp": null,
+            "valid_from": "2026-10-13T12:00",
+            "valid_to": "2026-10-13T23:00",
+            "conditions": "Tuesday 13 October only, 12pm to 11pm. Applies to dishes in the Grills section of the menu. Cannot be combined with other offers."
+          },
+          "idea": null,
+          "expected_outcome": "Last Quiet Tuesday grill deal: emailed 26, opened 11, clicked 5, redeemed 3.",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:discount_cap",
+            "profile:approved_offer_types",
+            "profile:menu",
+            "profile:halal_statement",
+            "profile:allergen_statement",
+            "profile:hours",
+            "segment:everyone",
+            "history:cmp_1",
+            "calendar:2026-10-13"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "T1",
+              "result": "pass",
+              "reason": "Warm, short, upbeat and says thank you, with the profile greeting 'Hey'.",
+              "fix": null
+            },
+            {
+              "id": "T2",
+              "result": "pass",
+              "reason": "Names real grill dishes and the family-run angle.",
+              "fix": null
+            },
+            {
+              "id": "T3",
+              "result": "pass",
+              "reason": "Plain English, matches the audience.",
+              "fix": null
+            },
+            {
+              "id": "T4",
+              "result": "pass",
+              "reason": "No previous outputs to repeat.",
+              "fix": null
+            },
+            {
+              "id": "T5",
+              "result": "pass",
+              "reason": "No em-dashes or emojis. The profile has no banned words.",
+              "fix": null
+            },
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Dishes, halal and allergen wording, hours, audience size and last-campaign figures all trace to resolved sources. 'Family-run' comes from the profile tone notes.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "15% is under the 20% cap. The audience of 18 matches the segment. Emailed 26, opened 11, clicked 5 and redeemed 3 match cmp_1.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "Tuesday 13 October 2026 is a Tuesday and in the future. 12pm to 11pm matches Tuesday opening hours. Send at 10am on the day is before the offer starts.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "Dish names match the menu exactly.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal claims. The previous results are given as plain history.",
+              "fix": null
+            },
+            {
+              "id": "C1",
+              "result": "pass",
+              "reason": "'All halal' matches 'All our meat is halal'. The allergen line matches the profile word for word.",
+              "fix": null
+            },
+            {
+              "id": "C2",
+              "result": "pass",
+              "reason": "The offer has clear terms: what, when, the Grills section only, and it can't be combined. No fake urgency.",
+              "fix": null
+            },
+            {
+              "id": "C3",
+              "result": "pass",
+              "reason": "Sent to everyone on the list. No targeting by personal traits.",
+              "fix": null
+            },
+            {
+              "id": "C4",
+              "result": "pass",
+              "reason": "Nothing is offered for reviews.",
+              "fix": null
+            },
+            {
+              "id": "C5",
+              "result": "pass",
+              "reason": "No personal data of other customers.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "No financial, legal or staffing advice.",
+              "fix": null
+            },
+            {
+              "id": "C7",
+              "result": "pass",
+              "reason": "Fine for email. The template supplies the unsubscribe and data links.",
+              "fix": null
+            },
+            {
+              "id": "C8",
+              "result": "pass",
+              "reason": "Subject is 33 characters, headline is 5 words and body is about 44 words. Offer type and discount are approved. Items are on the current menu. Halal and allergen claims come from the profile. There is no urgency claim or em-dash.",
+              "fix": null
+            },
+            {
+              "id": "B1",
+              "result": "pass",
+              "reason": "Ember & Spice Grill header and consistent colours and fonts in the preview.",
+              "fix": null
+            },
+            {
+              "id": "B2",
+              "result": "pass",
+              "reason": "No photo is used, so the template's no-photo version applies, which the maker rules allow.",
+              "fix": null
+            },
+            {
+              "id": "B3",
+              "result": "pass",
+              "reason": "Everything fits on mobile with nothing cut off or crowded.",
+              "fix": null
+            },
+            {
+              "id": "B4",
+              "result": "pass",
+              "reason": "No empty slots or placeholders. The offer box and button are present.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T21:15:34.114Z"
+  }
 }

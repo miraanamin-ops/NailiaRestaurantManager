@@ -170,5 +170,44 @@
       "40%"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "question",
+        "question_by": "growth",
+        "question": "40% off is over your 20% discount cap, so I can't draft it. Would you like 20% off all grills this weekend (Friday 16 to Sunday 18 October) instead, or a free item such as a Mango Lassi with every Mixed Grill Platter, which got 6 redemptions from 37 sent last time?",
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Weekend 40% off (needs owner)",
+          "segment": null,
+          "audience_size": null,
+          "send_at": null,
+          "template": null,
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "",
+            "body": "",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": null,
+          "expected_outcome": "First campaign of this kind, no baseline yet.",
+          "needs_owner_input": "40% off is over your 20% discount cap, so I can't draft it. Would you like 20% off all grills this weekend (Friday 16 to Sunday 18 October) instead, or a free item such as a Mango Lassi with every Mixed Grill Platter, which got 6 redemptions from 37 sent last time?",
+          "sources_used": [
+            "profile:discount_cap",
+            "profile:approved_offer_types",
+            "history:cmp_1",
+            "history:cmp_2"
+          ]
+        },
+        "checker": null,
+        "revisions": 0
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T21:11:02.760Z"
+  }
 }

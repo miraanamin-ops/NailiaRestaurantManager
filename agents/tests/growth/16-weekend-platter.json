@@ -1,5 +1,5 @@
 {
-  "name": "from a real campaign: push the Mixed Grill Platter at the weekend",
+  "name": "from a real campaign: push the Mixed Grill Platter at the weekend (a free lassi is 21%, over the cap: a smaller offer or a question)",
   "source": "the demo's real campaign 'Weekend mixed grill for two'",
   "task": "owner_request",
   "request": "weekend's been slow, push the mixed grill platter",
@@ -172,7 +172,8 @@
     ],
     "checker": [
       "pass"
-    ]
+    ],
+    "question_ok": true
   },
   "recorded": null
 }

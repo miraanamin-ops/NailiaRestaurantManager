@@ -165,5 +165,10 @@
   "expect": {
     "outcome": "none"
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [],
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T21:16:12.473Z"
+  }
 }

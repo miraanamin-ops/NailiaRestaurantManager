@@ -99,6 +99,8 @@ export function judgeGrowth(c: GrowthCase, results: GrowthResult[]) {
     }
   }
   if (e.mention_any?.length && !e.mention_any.some((w) => all.includes(w.toLowerCase()))) problems.push(`should mention one of: ${e.mention_any.join(", ")}`);
-  for (const w of e.must_not_contain ?? []) if (all.includes(w.toLowerCase())) problems.push(`must not contain "${w}"`);
+  // Words that must never reach a customer: checked in the drafted emails, not in questions to the owner (which may quote the ask).
+  const emails = drafts.map((r) => [r.output.name, ...Object.values(r.output.content), r.output.offer ? `${r.output.offer.description} ${r.output.offer.conditions}` : "", r.output.idea ? JSON.stringify(r.output.idea) : ""].join("\n")).join("\n").toLowerCase();
+  for (const w of e.must_not_contain ?? []) if (emails.includes(w.toLowerCase())) problems.push(`must not contain "${w}"`);
   return problems;
 }

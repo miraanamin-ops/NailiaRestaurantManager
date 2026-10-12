@@ -174,5 +174,196 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "special_idea",
+          "channel": "owner",
+          "name": "Seekh kebab naan roll",
+          "segment": null,
+          "audience_size": null,
+          "send_at": null,
+          "template": null,
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "Seekh Kebab Naan Roll",
+            "body": "A handheld idea using items already on your menu.",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": {
+            "name": "Seekh Kebab Naan Roll",
+            "uses_dishes": [
+              "Seekh Kebab (2 pcs)",
+              "Garlic Naan",
+              "Chicken Tikka Wrap"
+            ],
+            "ingredients": [
+              "seekh kebab (minced lamb with fresh herbs and green chilli)",
+              "garlic naan",
+              "mint yoghurt (as served with the Chicken Tikka Wrap)",
+              "pickled onions (as served with the Chicken Tikka Wrap)"
+            ],
+            "steps": [
+              "Cook the seekh kebabs.",
+              "Warm the garlic naan.",
+              "Spread mint yoghurt over the naan and lay the kebabs on top.",
+              "Add pickled onions, roll up tightly and cut in half to serve."
+            ],
+            "why_now": "A handheld idea using items already on the menu."
+          },
+          "expected_outcome": "",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:menu"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Every dish, description and the mint yoghurt and pickled onions trace to profile:menu. The ingredient descriptions are quoted from menu entries.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "The draft contains no prices or figures. 'Seekh Kebab (2 pcs)' matches the menu.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "No dates or times in the draft. send_at is null, which is correct for an owner-only idea.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "Dish names 'Seekh Kebab (2 pcs)', 'Garlic Naan' and 'Chicken Tikka Wrap' match the menu exactly.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal or outcome claims are made. expected_outcome is empty.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "Information only. No financial, tax, legal or staffing advice.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      },
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "special_idea",
+          "channel": "owner",
+          "name": "Tikka masala chips bowl",
+          "segment": null,
+          "audience_size": null,
+          "send_at": null,
+          "template": null,
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "Tikka Masala Chips Bowl",
+            "body": "A warming, loaded bowl made only from ingredients already on our menu.",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": {
+            "name": "Tikka Masala Chips Bowl",
+            "uses_dishes": [
+              "Masala Chips",
+              "Chicken Tikka",
+              "Chicken Tikka Wrap"
+            ],
+            "ingredients": [
+              "masala chips",
+              "chicken tikka (boneless chicken thigh in house yoghurt marinade)",
+              "mint yoghurt",
+              "pickled onions"
+            ],
+            "steps": [
+              "Fry and season the masala chips as usual.",
+              "Grill the chicken tikka, then cut into bite-sized pieces.",
+              "Pile the chips into a bowl and top with the chicken tikka.",
+              "Drizzle with mint yoghurt and finish with pickled onions."
+            ],
+            "why_now": "It is a comforting, easy-to-make bowl that uses ingredients the kitchen already has on the menu."
+          },
+          "expected_outcome": "",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:menu",
+            "profile:cuisine"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Dishes (Masala Chips, Chicken Tikka, Chicken Tikka Wrap) and ingredients (mint yoghurt, pickled onions, boneless chicken thigh in house yoghurt marinade) all trace to profile:menu. The claim that the bowl uses only ingredients already on the menu holds.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "No prices, counts or other figures in the draft.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "No dates or times in the draft. send_at is null, which is fine for an owner-only idea.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "Dish names match the menu exactly: Masala Chips, Chicken Tikka, Chicken Tikka Wrap.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal claims. why_now says the bowl is comforting and easy to make, which is a description, not a claim about results.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "Information only. No financial, tax, legal or staffing advice.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T21:14:20.923Z"
+  }
 }

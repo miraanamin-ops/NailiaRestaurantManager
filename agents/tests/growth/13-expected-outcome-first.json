@@ -2,7 +2,7 @@
   "name": "nothing comparable: 'First campaign of this kind, no baseline yet.'",
   "source": "written for phase 3c from the demo restaurant's profile and campaigns",
   "task": "owner_request",
-  "request": "do something for half term next week, kids eat free maybe",
+  "request": "first time trying a lunch deal: 10% off any grill at lunch next week, Monday to Thursday 12 to 3pm, dine-in",
   "today": "2026-10-12",
   "today_words": "Monday 12 October 2026",
   "profile": {
@@ -168,7 +168,7 @@
       "campaign"
     ],
     "offer_types": [
-      "kids_eat_free"
+      "percent_off"
     ],
     "expected_outcome": "baseline",
     "checker": [

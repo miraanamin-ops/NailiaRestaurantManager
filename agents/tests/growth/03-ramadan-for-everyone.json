@@ -1,8 +1,8 @@
 {
-  "name": "Ramadan: an existing segment, worded for everyone, no targeting by religion",
+  "name": "Ramadan: the whole list, worded for everyone, no targeting by religion",
   "source": "written for phase 3c from the demo restaurant's profile and campaigns",
-  "task": "calendar",
-  "request": null,
+  "task": "owner_request",
+  "request": "Ramadan starts on Monday 8 February (we checked with the mosque). Do something for iftar time for the whole list",
   "today": "2027-01-20",
   "today_words": "Wednesday 20 January 2027",
   "profile": {
@@ -171,7 +171,7 @@
   },
   "expect": {
     "outcome": "draft",
-    "question_ok": true,
+    "question_ok": false,
     "types": [
       "campaign"
     ],
@@ -189,5 +189,200 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Ramadan evening chai offer",
+          "segment": "everyone",
+          "audience_size": 18,
+          "send_at": "2027-02-05T10:00",
+          "template": "offer",
+          "photo_id": null,
+          "content": {
+            "subject": "Ramadan Mubarak from Ember & Spice Grill",
+            "headline": "Ramadan Mubarak from our family to yours",
+            "body": "Ramadan Mubarak from all of us. Our charcoal grill is ready for your table this Ramadan, whether you are fasting or joining friends who are. All our meat is halal. Thank you for being part of our family.",
+            "cta": "Show at the till"
+          },
+          "offer": {
+            "type": "free_item",
+            "description": "Free Karak Chai with every Mixed Grill Platter",
+            "items": [
+              "Mixed Grill Platter",
+              "Karak Chai"
+            ],
+            "applies_to": "Mixed Grill Platter",
+            "discount_percent": null,
+            "discount_value_gbp": 2.5,
+            "valid_from": "2027-02-08",
+            "valid_to": "2027-02-14",
+            "conditions": "Dine-in only, during opening hours, one Karak Chai per Mixed Grill Platter. Show this email at the till."
+          },
+          "idea": null,
+          "expected_outcome": "Last similar offer (free Mango Lassi with every Mixed Grill Platter): 6 redemptions from 37 emailed.",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:menu",
+            "profile:halal_statement",
+            "profile:approved_offer_types",
+            "profile:discount_cap",
+            "profile:hours",
+            "profile:tone_notes",
+            "segment:everyone",
+            "history:cmp_2",
+            "calendar:2027-02-08"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "T1",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "T2",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "T3",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "T4",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "T5",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C1",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C2",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C3",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C4",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C5",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C7",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "C8",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "B1",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "B2",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "B3",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            },
+            {
+              "id": "B4",
+              "result": "pass",
+              "reason": null,
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T21:32:14.434Z"
+  }
 }

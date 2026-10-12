@@ -11,7 +11,7 @@ const F: CheckId[] = ["F1", "F2", "F3", "F4", "F5"];
 const C: CheckId[] = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"];
 const B: CheckId[] = ["B1", "B2", "B3", "B4"];
 
-const CUSTOMER_KINDS = ["review_reply", "email_campaign", "google_post", "google_photo", "promotion", "other"];
+const CUSTOMER_KINDS = ["review_reply", "email_campaign", "birthday_batch", "google_post", "google_photo", "promotion", "other"];
 const PROFILE_KINDS = ["hours_update", "menu_update", "profile_change"];
 
 export function audienceOf(kind: string): Audience {

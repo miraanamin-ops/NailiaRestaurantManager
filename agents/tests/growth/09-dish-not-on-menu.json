@@ -170,5 +170,44 @@
       "free lobster"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "question",
+        "question_by": "growth",
+        "question": "Lobster tail is not on our menu, so I can't draft this yet. Do you want to add it just for this Friday? If so, please confirm you can stock it, and tell me the cost to you so you can approve it. Or would you like a free item from the current menu with every Mixed Grill Platter, such as a Kunafa or Garlic Naan, valid Friday 16 October?",
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Friday free lobster tail",
+          "segment": null,
+          "audience_size": null,
+          "send_at": null,
+          "template": null,
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "",
+            "body": "",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": null,
+          "expected_outcome": "First campaign of this kind, no baseline yet.",
+          "needs_owner_input": "Lobster tail is not on our menu, so I can't draft this yet. Do you want to add it just for this Friday? If so, please confirm you can stock it, and tell me the cost to you so you can approve it. Or would you like a free item from the current menu with every Mixed Grill Platter, such as a Kunafa or Garlic Naan, valid Friday 16 October?",
+          "sources_used": [
+            "profile:menu",
+            "profile:approved_offer_types",
+            "profile:discount_cap",
+            "history:cmp_2"
+          ]
+        },
+        "checker": null,
+        "revisions": 0
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T21:12:04.022Z"
+  }
 }

@@ -168,5 +168,43 @@
       "birthday"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "question",
+        "question_by": "growth",
+        "question": "The profile has no birthday offer set, so I can't draft this batch. What should the 3 customers with birthdays this week get? For example, a free Mango Lassi or a free Kunafa with a main, valid for 7 days from their birthday email.",
+        "output": {
+          "type": "birthday_batch",
+          "channel": "email",
+          "name": "Birthday batch, week of 12 October",
+          "segment": "birthdays_7d",
+          "audience_size": 3,
+          "send_at": null,
+          "template": "birthday",
+          "photo_id": null,
+          "content": {
+            "subject": "",
+            "headline": "",
+            "body": "",
+            "cta": ""
+          },
+          "offer": null,
+          "idea": null,
+          "expected_outcome": "First campaign of this kind, no baseline yet.",
+          "needs_owner_input": "The profile has no birthday offer set, so I can't draft this batch. What should the 3 customers with birthdays this week get? For example, a free Mango Lassi or a free Kunafa with a main, valid for 7 days from their birthday email.",
+          "sources_used": [
+            "profile:birthday_offer",
+            "profile:approved_offer_types",
+            "segment:birthdays_7d"
+          ]
+        },
+        "checker": null,
+        "revisions": 0
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T21:11:49.760Z"
+  }
 }
