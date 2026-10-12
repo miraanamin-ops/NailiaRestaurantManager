@@ -4,7 +4,7 @@
 // (npm run test:agents / test:agents:stability / test:agents:record).
 import { describe, expect, test, vi } from "vitest";
 import type { Resolved } from "@/lib/agents/tools";
-import { judgeReputation, loadReputationCases, saveReputationRecorded, type ReputationCase } from "../agents/support/reputation-cases";
+import { judgeOutcome, loadReputationCases, saveReputationRecorded, type ReputationCase } from "../agents/support/reputation-cases";
 import { hasKey, RECORD, reportRuns, RUNS } from "./support";
 
 vi.mock("@/lib/builder-alerts", () => ({ alertBuilder: async () => "test run: not sent" }));
@@ -33,16 +33,19 @@ describe.skipIf(!hasKey)("reputation (live)", () => {
       );
       // What happened, in one word: reply (with the checker's verdict), or who asked the owner.
       verdicts.push(outcome.kind === "reply" ? `reply/${outcome.checker.verdict}` : `question by ${outcome.by}`);
-      let problems: string[];
-      if (outcome.kind === "question" && outcome.by === "checker") {
-        // The checker escalated: right only when the owner should be asked anyway.
-        problems = c.expect.needs_owner_input ? [] : [`the checker escalated after ${outcome.revisions} revisions: ${outcome.question}`];
-      } else {
-        problems = judgeReputation(c, outcome.output, outcome.kind === "reply" ? outcome.checker : null);
-      }
+      const problems = judgeOutcome(c, {
+        kind: outcome.kind,
+        by: outcome.kind === "question" ? outcome.by : null,
+        question: outcome.kind === "question" ? `${outcome.question} (after ${outcome.revisions} revisions)` : null,
+        output: outcome.output,
+        checker: outcome.checker,
+      });
       if (problems.length) wrong.push(`run ${run}: ${problems.join("; ")}`);
       if (RECORD && run === 1) {
         saveReputationRecorded(file, {
+          outcome: outcome.kind,
+          question_by: outcome.kind === "question" ? outcome.by : null,
+          question: outcome.kind === "question" ? outcome.question : null,
           output: outcome.output,
           checker: outcome.checker ? { verdict: outcome.checker.verdict, checks: outcome.checker.checks, minor_fixes: outcome.checker.minor_fixes, owner_question: outcome.checker.owner_question } : null,
           revisions: outcome.revisions,

@@ -66,6 +66,13 @@ export function reputationProblems(out: ReputationReplyOutput, input: { review: 
   if (MONEY_BACK.test(text)) problems.push("never offer refunds, money or compensation");
   for (const w of profile.words_to_avoid ?? []) if (w && new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text)) problems.push(`"${w}" is in the profile's words to avoid`);
 
+  // reputation.md: stars only, no text = one short line (of thanks, or inviting them to get in touch).
+  if (!review.text?.trim()) {
+    const body = profile.sign_off_name ? text.replace(profile.sign_off_name, "") : text;
+    const sentences = body.split(/(?<=[.!?])\s+/).filter((s) => /[a-z]/i.test(s)).length;
+    if (sentences > 2) problems.push(`the review has no text, so the reply should be one short line (it has ${sentences} sentences)`);
+  }
+
   // Every claim traces to a source.
   if (profile.sign_off_name) {
     if (!text.includes(profile.sign_off_name)) problems.push(`sign off with the profile's sign-off name ("${profile.sign_off_name}")`);

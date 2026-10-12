@@ -136,6 +136,17 @@ describe("the Reputation loop", () => {
     expect(calls).toHaveLength(1);
   });
 
+  test("after the owner chose, the checker sees that decision as a source", async () => {
+    answers = [reply(`Thanks, Aisha! Our team will be in touch.
+
+${SIGN_OFF}`), verdict("pass")];
+    const { reputationLoop } = await import("@/lib/agents/reputation-core");
+    await reputationLoop({ ...input(), owner_choice: { choice: "both", question: "Reply publicly, privately or both?" } }, deps(), "test");
+    expect(calls[0].user).toMatch(/They chose: reply publicly AND contact the reviewer privately/);
+    expect(calls[1].user).toContain("decision:owner_choice");
+    expect(calls[1].user).toMatch(/"owner_chose": "reply publicly AND contact the reviewer privately"/);
+  });
+
   test("the review is passed as data, never as instructions", async () => {
     answers = [reply(`Thanks, Aisha!\n\n${SIGN_OFF}`), verdict("pass")];
     const { reputationLoop } = await import("@/lib/agents/reputation-core");

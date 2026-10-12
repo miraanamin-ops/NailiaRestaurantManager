@@ -3,7 +3,7 @@
 // recorded answer passes its case. The live run is tests/agents-live/reputation.eval.ts.
 import { describe, expect, test } from "vitest";
 import { reputationProblems, type ReputationReplyOutput } from "@/lib/agents/reputation-rules";
-import { judgeReputation, loadReputationCases, sentenceCount } from "./support/reputation-cases";
+import { judgeOutcome, judgeReputation, loadReputationCases, sentenceCount } from "./support/reputation-cases";
 
 const cases = loadReputationCases();
 
@@ -71,6 +71,15 @@ describe("the reply rules", () => {
 
 describe.each(cases.filter((c) => c.case.recorded))("recorded answer: $file", ({ case: c }) => {
   test("passes its case", () => {
-    expect(judgeReputation(c, c.recorded!.output, c.recorded!.checker)).toEqual([]);
+    const r = c.recorded!;
+    expect(judgeOutcome(c, { kind: r.outcome ?? "reply", by: r.question_by ?? null, question: r.question ?? null, output: r.output, checker: r.checker })).toEqual([]);
   });
+});
+
+test("a stars-only review gets one short line", () => {
+  const c = cases.find((x) => x.file.startsWith("13-"))!.case;
+  const out = (text: string) => ({ type: "review_reply" as const, channel: "google" as const, review_id: c.review.id, rating: 5, content: { text }, alert: false, needs_owner_input: null, sources_used: [`review:${c.review.id}`, "profile:sign_off_name"] });
+  const signOff = "\n\nThe Ember & Spice Grill family";
+  expect(reputationProblems(out(`Thank you for the five stars, Zara!${signOff}`), { review: c.review, profile: c.profile.fields })).toEqual([]);
+  expect(reputationProblems(out(`Thank you, Zara! It made our day. Come back soon.${signOff}`), { review: c.review, profile: c.profile.fields }).join()).toMatch(/one short line/);
 });

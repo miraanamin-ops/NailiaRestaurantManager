@@ -17,6 +17,8 @@ export type ReputationCase = {
   expect: {
     alert: boolean;
     needs_owner_input: boolean;
+    // A careful reply or a question for the owner are both right (e.g. a claim Reputation can't check).
+    question_ok?: boolean;
     sources_must_include: string[];
     language?: "es";
     max_sentences?: number;
@@ -24,6 +26,10 @@ export type ReputationCase = {
     checker?: CheckerVerdictOutput["verdict"][];
   };
   recorded: {
+    // What happened: a reply, or a question (asked by Reputation, or the checker escalated).
+    outcome?: "reply" | "question";
+    question_by?: "reputation" | "checker" | null;
+    question?: string | null;
     output: ReputationReplyOutput;
     checker: Pick<CheckerVerdictOutput, "verdict" | "checks" | "minor_fixes" | "owner_question"> | null;
     revisions: number;
@@ -57,6 +63,16 @@ export function sentenceCount(text: string, signOff: string | null | undefined) 
 
 const SPANISH = /\b(?:gracias|muchas|nos|alegra|volver|pronto|equipo|vuestra|vuestro|tu|su|el|la|los|las|que|para|con|muy)\b/gi;
 const ENGLISH = /\b(?:the|thank|thanks|you|your|we|our|and|soon|glad)\b/gi;
+
+// The whole outcome: a reply, or a question (by Reputation or by the checker).
+export function judgeOutcome(
+  c: ReputationCase,
+  o: { kind: "reply" | "question"; by?: "reputation" | "checker" | null; question?: string | null; output: ReputationReplyOutput; checker: { verdict: string } | null },
+) {
+  if (o.kind === "question" && (c.expect.question_ok || (c.expect.needs_owner_input && o.by === "checker"))) return [];
+  if (o.kind === "question" && o.by === "checker") return [`the checker escalated: ${o.question ?? ""}`];
+  return judgeReputation(c, o.output, o.kind === "reply" ? o.checker : null);
+}
 
 // What's wrong with an answer for this case. Empty = it's right.
 export function judgeReputation(c: ReputationCase, out: ReputationReplyOutput, checker: { verdict: string } | null) {
