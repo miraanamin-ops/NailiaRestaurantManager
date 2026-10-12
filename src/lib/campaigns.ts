@@ -6,6 +6,7 @@ import { sendCampaignEmail } from "@/lib/email";
 import { isDummyAddress } from "@/lib/email/route";
 import { CAMPAIGN_GAP_DAYS, weeklyLimit } from "@/lib/gate-rules";
 import { newToken } from "@/lib/signups";
+import type { StructuredOffer } from "@/lib/offers";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
 // Email campaigns. Everything here is plain code: who is in a segment, who
@@ -39,6 +40,8 @@ export type Campaign = CampaignFields & {
   eligible_count: number | null;
   excluded_count: number | null;
   created_at: string;
+  // The offer as structured fields (Growth's campaigns, 023); the gate checks the cap from these.
+  offer_details?: StructuredOffer | null;
 };
 
 export type CampaignSend = {

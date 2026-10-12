@@ -59,8 +59,9 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     return { outcome: "blocked", reason: "not_approved", detail, draft };
   }
 
-  // 1. Money and risk.
-  const rules = moneyAndRisk(draft, restaurant, now, source);
+  // 1. Money and risk (a campaign's structured offer, if it has one, is checked against the cap).
+  const offerDetails = draft.kind === "email_campaign" ? ((await getCampaignForDraft(draft.id))?.offer_details ?? null) : null;
+  const rules = moneyAndRisk({ ...draft, offer_details: offerDetails }, restaurant, now, source);
   if (rules.outcome === "blocked") {
     await logBlock(draft, rules.reason, rules.detail);
     // A duplicate attempt leaves the draft as it was; anything else is marked blocked.
