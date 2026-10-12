@@ -1,0 +1,176 @@
+{
+  "name": "a nudge to new sign-ups who haven't used their welcome reward",
+  "source": "written for phase 3c from the demo restaurant's profile and campaigns",
+  "task": "owner_request",
+  "request": "can you nudge the people who signed up but haven't used their welcome reward yet",
+  "today": "2026-10-12",
+  "today_words": "Monday 12 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (ðŸ”¥ ðŸ˜‹ ðŸ™), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": "Hey",
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "posts": 2,
+        "campaigns": 2,
+        "review_replies": 1
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {},
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "signup_offer": "a free Mango Lassi",
+      "approved_offer_types": [
+        "percent_off",
+        "money_off",
+        "free_item",
+        "kids_eat_free"
+      ],
+      "birthday_offer": "Free Kunafa with any main in your birthday week",
+      "photo_library": [],
+      "discount_cap": 20
+    }
+  },
+  "segments": {
+    "everyone": 18,
+    "birthdays_7d": 3,
+    "unredeemed_signups": 5
+  },
+  "history": [
+    {
+      "id": "cmp_1",
+      "name": "Quiet Tuesday grill deal (15% off all grills, sent 2026-09-29, valid 2026-09-29 to 2026-10-02, to everyone)",
+      "emailed": 26,
+      "simulated": 0,
+      "opened": 11,
+      "clicked": 5,
+      "redeemed": 3
+    },
+    {
+      "id": "cmp_2",
+      "name": "Weekend mixed grill for two (Free Mango Lassi with every Mixed Grill Platter, sent 2026-10-06, valid 2026-10-06 to 2026-10-09, to everyone)",
+      "emailed": 37,
+      "simulated": 0,
+      "opened": 17,
+      "clicked": 9,
+      "redeemed": 6
+    }
+  ],
+  "calendar": [],
+  "quiet_times": "Quietest days over the last 8 weeks (average net sales): Monday £1,422, Tuesday £1,466, Wednesday £1,671. Busiest: Saturday £2,957. Quietest hours: 15:00 to 17:00.",
+  "send_window": {
+    "start": "09:00:00",
+    "end": "21:00:00"
+  },
+  "expect": {
+    "outcome": "draft",
+    "types": [
+      "campaign"
+    ],
+    "segment": "unredeemed_signups",
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": null
+}

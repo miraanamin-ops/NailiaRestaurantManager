@@ -1,0 +1,159 @@
+{
+  "name": "the cafe: quiet mornings before 9",
+  "source": "written for phase 3c from the demo restaurant's profile and campaigns",
+  "task": "owner_request",
+  "request": "mornings before 9 are dead, do something",
+  "today": "2026-10-12",
+  "today_words": "Monday 12 October 2026",
+  "profile": {
+    "version": 0,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "address": "87 Cranbrook Road, Ilford IG1 4PG",
+      "cuisine": "Neighbourhood cafÃ© and bakery",
+      "links": null,
+      "tone_notes": "Gentle, cosy and neighbourly, like a favourite local cafÃ©. Calm, unhurried sentences; warm but never gushing. Use the customer's first name. At most one emoji (â˜• ðŸ° ðŸŒ¿), often none. Mention the bakes and the cardamom latte when it fits. Never pushy. On bad reviews: thank them for the honesty, apologise simply, and invite them back to try again.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "posts": 2,
+        "campaigns": 2,
+        "review_replies": 0
+      },
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": "Three eggs, onion, chilli and coriander, with toast"
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": "Sourdough, smashed avocado, chilli flakes, poached egg"
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": "House granola, Greek yoghurt, honey and berries"
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": "Grilled halloumi, salad and mint yoghurt"
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": "With warm bread"
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": "Our signature"
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            },
+            {
+              "name": "Fresh Orange Juice",
+              "price": 3.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": "Slice"
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            },
+            {
+              "name": "Date & Walnut Loaf",
+              "price": 3.75,
+              "description": "Slice"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "07:30 â€“ 19:00",
+        "Monday": "07:30 â€“ 17:00",
+        "Sunday": "Closed",
+        "Tuesday": "07:30 â€“ 17:00",
+        "Saturday": "08:30 â€“ 18:00",
+        "Thursday": "07:30 â€“ 19:00",
+        "Wednesday": "07:30 â€“ 17:00"
+      },
+      "special_hours": {},
+      "halal_statement": "All our food is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "signup_offer": "a free slice of Pistachio Rose Cake",
+      "approved_offer_types": [
+        "percent_off",
+        "money_off",
+        "free_item",
+        "kids_eat_free"
+      ],
+      "birthday_offer": "Free Pistachio Rose Cake slice in your birthday week",
+      "photo_library": [],
+      "discount_cap": 15
+    }
+  },
+  "segments": {
+    "everyone": 18,
+    "birthdays_7d": 3,
+    "unredeemed_signups": 5
+  },
+  "history": [],
+  "calendar": [],
+  "quiet_times": "Quietest: Monday and Tuesday. Quietest hours: 7:00 to 8:00 and after 16:00. Closed Sundays.",
+  "send_window": {
+    "start": "09:00:00",
+    "end": "21:00:00"
+  },
+  "expect": {
+    "outcome": "draft",
+    "types": [
+      "campaign"
+    ],
+    "must_not_contain": [
+      "Ember"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": null
+}
