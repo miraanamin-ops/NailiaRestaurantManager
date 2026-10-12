@@ -20,6 +20,8 @@ import { applyEdit, createDraft, getLearningContext, type Draft, type DraftKind 
 import { randomDummyReview } from "@/lib/dummy-reviews";
 import { liveReputation, pastedReviewId, queueReputationShadow, reputationMode } from "@/lib/agents/reputation";
 import { addToPhotoLibrary, queueVisibilityLive, queueVisibilityShadow, visibilityMode } from "@/lib/agents/visibility";
+import { birthdayGrowth } from "@/lib/agents/growth";
+import { londonYmd } from "@/lib/clock";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -90,6 +92,7 @@ export async function campaignCreateAndSend(
     mode,
   });
   if (draft.waiting_for === "decision") await send(`${intro}${draftMessage(draft, ctx.restaurant)}`, true, draftPreviewUrl(draft));
+  return draft;
 }
 
 // Campaign edits: the AI rewrites the structured campaign, then it's re-checked.
@@ -120,7 +123,7 @@ export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send
   }
   const learning = await getLearningContext(ctx.restaurantId);
   const fields = await writeBirthdayCampaign(ctx, learning);
-  await campaignCreateAndSend(
+  const draft = await campaignCreateAndSend(
     ctx,
     // Dates and segment are fixed in plain code, not left to the AI.
     { ...fields, segment: "birthdays_7d", ...birthdayWeek(ctx.now) },
@@ -130,6 +133,8 @@ export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send
     true,
     mode,
   );
+  // Shadow mode: Growth writes its own birthday batch in the background, for the /log comparison.
+  await birthdayGrowth(ctx.restaurant, londonYmd(ctx.now), { draftId: draft.id, text: draft.content });
 }
 
 // Test command: a new review "appears on Google" (dummy mode), then the

@@ -1,4 +1,5 @@
 import "server-only";
+import { growthMode, liveGrowthRequest, queueGrowthShadow } from "@/lib/agents/growth";
 import { answerWithInsights, insightsMode, queueInsightsShadow } from "@/lib/agents/insights";
 import { chat, rewriteDraft, type ChatResult, type StoredMessage } from "@/lib/assistant";
 import { londonYmd } from "@/lib/clock";
@@ -106,7 +107,15 @@ async function respond(turn: Turn, body: string, result: ChatResult, active: Awa
       send,
     );
   }
-  if (result.type === "campaign") return campaignCreateAndSend(ctx, result.fields, body, send);
+  if (result.type === "campaign") {
+    // Growth live (test mode): it drafts the campaign instead (today's flow if it can't).
+    const growth = await growthMode(ctx.restaurant);
+    if (growth === "live" && (await liveGrowthRequest(ctx.restaurant, body, ctx.now, send))) return;
+    const draft = await campaignCreateAndSend(ctx, result.fields, body, send);
+    // Shadow: Growth drafts its own campaign for the same ask, next to today's on /log.
+    if (growth === "shadow") await queueGrowthShadow(ctx.restaurant, { task: "owner_request", request: body, today: londonYmd(ctx.now), legacy_draft_id: draft.id, legacy_text: draft.content });
+    return;
+  }
   if (result.type === "pasted_review") return pastedReviewReply(ctx, result, send);
   if (result.type === "profile_changes") return send(await applyProfileChanges(await getRestaurant(ctx.restaurantId), result.changes));
   if (result.type === "revise" && active?.waiting_for === "decision") {
