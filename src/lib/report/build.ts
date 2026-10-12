@@ -1,4 +1,6 @@
 import "server-only";
+import { reputationMode, weeklyThemesFor } from "@/lib/agents/reputation";
+import { noEmDash } from "@/lib/text";
 import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
 import { londonYmd, startOfLondonDay } from "@/lib/clock";
 import { addDays } from "@/lib/sales/format";
@@ -22,6 +24,7 @@ import {
   type ReportSection,
   type ReputationSection,
   type SalesSection,
+  type ThemesSection,
 } from "./types";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -130,6 +133,34 @@ const DATA_SECTIONS: DataSection[] = [
     facts(s) {
       const r = s as ReputationSection;
       return `Google rating ${r.rating.now} (week before ${r.rating.before}), ${r.totalReviews} reviews in total. New reviews ${r.newReviews.now} (before ${r.newReviews.before}). Reviews answered ${r.answered.now} (before ${r.answered.before}).${r.newAverage ? ` New reviews averaged ${r.newAverage.now} stars (before ${r.newAverage.before}).` : ""}`;
+    },
+  },
+  {
+    // The Reputation agent's weekly themes (unless Reputation is off for this restaurant).
+    id: "themes",
+    connected: (r) => reputationMode(r) !== "off",
+    async build({ restaurant, period: p, rows }) {
+      const week = rows.reviews.filter((r) => r.text && inRange(r.review_date, p.start, p.end));
+      if (!week.length) return null;
+      const themes = await weeklyThemesFor(
+        restaurant.id,
+        londonYmd(p.start),
+        `the week starting ${londonYmd(p.start)}`,
+        week.map((r) => ({ id: r.id, rating: r.rating, text: r.text })),
+      );
+      if (!themes || (!themes.praise.length && !themes.complaints.length)) return null;
+      const section: ThemesSection = {
+        id: "themes",
+        praise: themes.praise.map(({ label, count }) => ({ label, count })),
+        complaints: themes.complaints.map(({ label, count }) => ({ label, count })),
+        reviewCount: week.length,
+      };
+      return JSON.parse(noEmDash(JSON.stringify(section))) as ThemesSection;
+    },
+    facts(s) {
+      const t = s as ThemesSection;
+      const list = (xs: { label: string; count: number }[]) => xs.map((x) => `${x.label} (${plural(x.count, "review")})`).join(", ") || "nothing";
+      return `From ${plural(t.reviewCount, "review")} last week, customers praised: ${list(t.praise)}. They complained about: ${list(t.complaints)}.`;
     },
   },
   {
@@ -311,11 +342,15 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     .map((r) => `${r.rating}★ ${r.text}`);
   let insights: Awaited<ReturnType<typeof writeReportInsights>> | null = null;
   try {
-    insights = await writeReportInsights(ctx, facts.join("\n"), reviewTexts);
+    const words = await writeReportInsights(ctx, facts.join("\n"), reviewTexts);
+    // No em-dashes anywhere the owner can see (the report page and the PDF).
+    insights = JSON.parse(noEmDash(JSON.stringify(words))) as typeof words;
   } catch (err) {
     console.error("Report insights failed; using plain summaries", err);
   }
-  if (reputation && insights) {
+  // With Reputation's themes in their own section, the reputation section doesn't repeat them.
+  const themes = dataSections.some((s) => s.id === "themes");
+  if (reputation && insights && !themes) {
     reputation.praise = insights.praise;
     reputation.complaints = insights.complaints;
   }

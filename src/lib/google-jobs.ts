@@ -5,6 +5,7 @@ import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, ty
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
+import { liveReputation, queueReputationShadow, reputationMode } from "@/lib/agents/reputation";
 import { getSupabase } from "@/lib/supabase";
 import type { ButtonTarget } from "@/lib/whatsapp";
 
@@ -12,6 +13,12 @@ import type { ButtonTarget } from "@/lib/whatsapp";
 export type Send = (text: string, withButtons?: boolean | ButtonTarget, mediaUrl?: string | null) => Promise<void>;
 
 export const stars = (n: number) => "⭐".repeat(n);
+
+// The buttons a draft gets on WhatsApp: a question about a review gets Reply
+// publicly / Handle privately / Both (carrying its id); everything else Approve / Edit / Skip.
+export function buttonsFor(draft: Pick<Draft, "id" | "kind">): true | ButtonTarget {
+  return draft.kind === "review_question" ? { draftId: draft.id, buttons: "question" } : true;
+}
 
 async function queueNote(restaurantId: string) {
   const n = (await getQueue(restaurantId)).length;
@@ -23,6 +30,8 @@ async function queueNote(restaurantId: string) {
 export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
   const reviews = await google().claimNewReviews(ctx.restaurantId);
   const learning = await getLearningContext(ctx.restaurantId);
+  // Reputation live for this restaurant: it writes the replies (or asks the owner).
+  const live = reputationMode(ctx.restaurant) === "live";
   let alerts = 0;
   let held = 0;
   let failed = 0;
@@ -31,25 +40,44 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
     const urgent = review.rating <= 3;
     let draft: Draft;
     try {
-      const content = await writeReviewReply(ctx, learning, review);
-      const checked = await checkDraft(ctx, {
-        kind: "review_reply",
-        audience: `Google review by ${review.author_name}`,
-        content,
-        context: `Replying to this ${review.rating}-star review: "${review.text}"`,
-      });
-      draft = await createDraft({
-        restaurantId: ctx.restaurantId,
-        kind: "review_reply",
-        content: checked.content,
-        audience: `Google review by ${review.author_name}`,
-        request: urgent ? "Review check: low rating alert" : "Review check",
-        reviewId: review.id,
-        checks: checked.checks,
-        mode: urgent ? "urgent" : "hold",
-      });
-      // Only now, with its reply draft saved, does the review count as handled.
-      await google().markReviewHandled(review.id);
+      if (live) {
+        const result = await liveReputation(
+          ctx.restaurant,
+          { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
+          { source: "review_check", draftMode: urgent ? "urgent" : "hold" },
+        );
+        draft = result.draft!;
+        // Its reply (or question) draft is saved, so the review counts as handled.
+        await google().markReviewHandled(review.id);
+      } else {
+        const content = await writeReviewReply(ctx, learning, review);
+        const checked = await checkDraft(ctx, {
+          kind: "review_reply",
+          audience: `Google review by ${review.author_name}`,
+          content,
+          context: `Replying to this ${review.rating}-star review: "${review.text}"`,
+        });
+        draft = await createDraft({
+          restaurantId: ctx.restaurantId,
+          kind: "review_reply",
+          content: checked.content,
+          audience: `Google review by ${review.author_name}`,
+          request: urgent ? "Review check: low rating alert" : "Review check",
+          reviewId: review.id,
+          checks: checked.checks,
+          mode: urgent ? "urgent" : "hold",
+        });
+        // Only now, with its reply draft saved, does the review count as handled.
+        await google().markReviewHandled(review.id);
+        // Shadow mode: the Reputation agent writes its own reply in the background,
+        // for the /log comparison. The owner only ever sees the draft above.
+        await queueReputationShadow(ctx.restaurant, {
+          source: "review_check",
+          review: { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
+          legacy_draft_id: draft.id,
+          legacy_text: draft.content,
+        });
+      }
     } catch (err) {
       // Put it back so the next check tries again, then carry on with the rest.
       // (If even this fails, the claim simply expires and the review is retried.)
@@ -62,9 +90,10 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
     if (urgent) {
       alerts++;
       const quote = `${review.author_name} ${stars(review.rating)}\n_"${review.text ?? "(rating only)"}"_`;
+      const question = draft.kind === "review_question";
       await send(
-        `🚨 *${review.rating}-star review just came in.* I've drafted a careful reply below. Nothing is posted until you approve it.\n\n${quote}\n\n${draftMessage(draft, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`,
-        true,
+        `🚨 *${review.rating}-star review just came in.* ${question ? "It needs your decision before anything is drafted." : "I've drafted a careful reply below. Nothing is posted until you approve it."}\n\n${quote}\n\n${draftMessage(draft, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`,
+        buttonsFor(draft),
       );
     } else {
       held++; // no message: it's in tomorrow's brief
@@ -139,6 +168,6 @@ export async function presentNext(ctx: RestaurantContext, send: Send, includeBri
     const review = (await google().listReviews(ctx.restaurantId)).find((r: GoogleReview) => r.id === next.review_id);
     if (review) intro += `\n${review.author_name} ${stars(review.rating)}\n_"${review.text ?? ""}"_`;
   }
-  await send(`${intro}\n\n${draftMessage(next, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`, true, draftPreviewUrl(next));
+  await send(`${intro}\n\n${draftMessage(next, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`, buttonsFor(next), draftPreviewUrl(next));
   return true;
 }

@@ -1,0 +1,315 @@
+{
+  "name": "3 stars, with the owner's real 'make it shorter' edit in the history",
+  "source": "real review 72263e68-8896-4b8f-a0e4-052422dfb2bb (Ember & Spice Grill); owner edit from 11 Oct 2026",
+  "review": {
+    "id": "72263e68-8896-4b8f-a0e4-052422dfb2bb",
+    "author_name": "Kofi A.",
+    "rating": 3,
+    "text": "Chicken tikka was tasty but the portion felt smaller than last time. Service was friendly enough."
+  },
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "phone": "+44 20 7946 0123",
+      "sign_off_name": "The Ember & Spice Grill family",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": null,
+      "words_to_avoid": [
+        "cheap"
+      ],
+      "emoji_allowed": {
+        "review_replies": 1,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "halal_statement": "All our meat is halal, certified by HMC.",
+      "allergen_statement": "Our kitchen handles nuts, sesame, gluten and dairy. Please tell our team about any allergy before you order.",
+      "complaint_contact": "hello@emberandspice.co.uk",
+      "recovery_offers": [
+        "A free dessert on your next visit"
+      ]
+    }
+  },
+  "history": {
+    "recent_replies": [
+      "Thank you so much, Ollie! Those seekh kebabs hit the spot, and it means a lot that you felt remembered. Can't wait to welcome you back. 🔥\n\nThe Ember & Spice Grill family",
+      "Thanks so much, Farzana! We love that the kids tucked into the wings. Really appreciate the veggie mains feedback too, it's something we're looking at. Hope to see you all again soon! 🔥",
+      "Hiya Jess, thank you so much! Buzzing you loved the smash burger and masala chips. Fair shout on the seating, we know it gets snug when we're busy. Hope to see you back soon 🔥"
+    ],
+    "owner_edits": [
+      {
+        "note": "make it shorter",
+        "before": "Hi Kofi, thank you so much for taking the time to review us, and for the kind words about our Chicken Tikka and the team. 🙏\n\nWe're sorry the portion felt smaller than last time. That's not the experience we want you to have, and we'd really like to look into it properly.\n\nCould you give us a call on +44 20 7946 0123? We'd love to put it right and welcome you back for a better visit. 🔥\n\nThank you again, Kofi.\n\nThe Ember & Spice Grill family",
+        "after": "Hi Kofi, thank you for your review and the kind words about our Chicken Tikka and the team. 🙏\n\nWe're sorry the portion felt smaller than last time. That's not what we want for you. Please call us on +44 20 7946 0123 and we'll look into it and make it right.\n\nThank you, Kofi. We'd love to welcome you back. 🔥\n\nThe Ember & Spice Grill family"
+      }
+    ]
+  },
+  "owner_choice": null,
+  "today": "Monday 12 October 2026",
+  "expect": {
+    "alert": true,
+    "needs_owner_input": false,
+    "sources_must_include": [
+      "review:72263e68-8896-4b8f-a0e4-052422dfb2bb",
+      "profile:complaint_contact"
+    ],
+    "max_sentences": 5,
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "72263e68-8896-4b8f-a0e4-052422dfb2bb",
+      "rating": 3,
+      "content": {
+        "text": "Hi Kofi, thanks for the honest review and the kind words about our Chicken Tikka and the team. We're sorry the portion felt smaller than last time. That's not what we want for you. Please email hello@emberandspice.co.uk or call +44 20 7946 0123 so we can look into it properly. We'd love to see you again and get it right. 🔥\n\nThe Ember & Spice Grill family"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:72263e68-8896-4b8f-a0e4-052422dfb2bb",
+        "profile:sign_off_name",
+        "profile:complaint_contact",
+        "profile:phone",
+        "profile:tone_notes",
+        "profile:emoji_allowed"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, short sentences, first name used, thanks given, sincere apology, invites them back. Matches the profile tone notes.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Names the Chicken Tikka and the portion concern from the review, and signs off as the family.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English reply to an English review. Plain words.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening 'Hi Kofi, thanks for the honest review' and closing 'get it right' differ from the supplied previous replies.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes. One emoji, within the profile limit of 1 for review replies. No banned words.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Chicken Tikka, the smaller portion and the friendly team all trace to the review. Email, phone and sign-off match the profile.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "The only numbers are the phone number, which matches the profile exactly.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times used.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "'Kofi' matches 'Kofi A.'. 'Chicken Tikka' matches the menu.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause claimed.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal or allergen claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer made.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting or wording based on personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review or for changing one.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only details the reviewer wrote publicly. No order or booking details.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal, medical or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "Phone number and email are fine in a Google review reply.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "Maker rules followed: same language, no argument, no invented facts, no staff named, no refund or money, no hashtags, emoji allowed, correct sign-off. Review does not trigger any escalation condition.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": "No rendered preview for this draft type.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": "No rendered preview for this draft type.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": "No rendered preview for this draft type.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": "No rendered preview for this draft type.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-11T23:42:59.643Z"
+  }
+}

@@ -7,7 +7,8 @@ import { applyProfileChanges } from "@/lib/profile-edits";
 import { getSupabase } from "@/lib/supabase";
 import { decideOnScreen, decideTargeted } from "./decisions";
 import { campaignCreateAndSend, checkCreateAndSend, pastedReviewReply, reviseAndSend, reviseCampaignAndSend } from "./flows";
-import { parseAction, parseTargetedAction } from "./parse";
+import { parseAction, parseQuestionAnswer, parseTargetedAction } from "./parse";
+import { answerQuestion } from "./questions";
 import type { Turn } from "./turn";
 
 // How many earlier messages Claude sees, so it can follow the conversation.
@@ -16,10 +17,16 @@ const HISTORY_LIMIT = 20;
 // Anything that isn't a command: a decision, an edit, a skip reason, or a chat with Claude.
 export async function handleConversation(turn: Turn, body: string, buttonPayload: string | undefined) {
   const { ctx, owner, send } = turn;
+  const [active, learning] = await Promise.all([getActiveDraft(ctx.restaurantId), getLearningContext(ctx.restaurantId)]);
+  // A question about a review: Reply publicly / Handle privately / Both (a button,
+  // "PUBLIC 2", or a plain answer while the question is on screen).
+  const questionOnScreen = active?.kind === "review_question" && active.waiting_for === "decision";
+  const answer = parseQuestionAnswer(buttonPayload, body, questionOnScreen);
+  if (answer) return answerQuestion(turn, answer, questionOnScreen ? active : null);
+
   const targeted = parseTargetedAction(buttonPayload, body);
   if (targeted) return decideTargeted(turn, targeted);
 
-  const [active, learning] = await Promise.all([getActiveDraft(ctx.restaurantId), getLearningContext(ctx.restaurantId)]);
   const action = parseAction(buttonPayload, body);
   if (action && (await decideOnScreen(turn, action, active, Boolean(buttonPayload)))) return;
 

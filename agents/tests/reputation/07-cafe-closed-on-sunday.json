@@ -1,0 +1,296 @@
+{
+  "name": "2 stars at the café: came on a Sunday, closed, website said otherwise",
+  "source": "real review d86bd6dc-a53b-454f-a2ba-88d3103871f5 (Cardamom Corner Café)",
+  "review": {
+    "id": "d86bd6dc-a53b-454f-a2ba-88d3103871f5",
+    "author_name": "Priya S.",
+    "rating": 2,
+    "text": "Wanted to come on Sunday but they were closed. Website said otherwise."
+  },
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "google_place_id": null,
+      "phone": "+44 20 8946 0456",
+      "sign_off_name": "Maya and the Cardamom Corner team",
+      "tone_notes": "Gentle, cosy and neighbourly, like a favourite local café. Calm, unhurried sentences; warm but never gushing. Use the customer's first name. Mention the bakes and the cardamom latte when it fits. Never pushy. On bad reviews: thank them for the honesty, apologise simply, and invite them back to try again.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 0,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": null
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": null
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": null
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "halal_statement": "Our chicken is halal. We don't serve pork or alcohol.",
+      "allergen_statement": "Our bakes contain nuts, gluten, eggs and dairy. Please ask before you order.",
+      "complaint_contact": "hello@cardamomcorner.co.uk",
+      "recovery_offers": [
+        "A free cake with your next coffee"
+      ]
+    }
+  },
+  "history": {
+    "recent_replies": [],
+    "owner_edits": []
+  },
+  "owner_choice": null,
+  "today": "Monday 12 October 2026",
+  "expect": {
+    "alert": true,
+    "needs_owner_input": false,
+    "question_ok": true,
+    "sources_must_include": [
+      "review:d86bd6dc-a53b-454f-a2ba-88d3103871f5",
+      "profile:complaint_contact"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "d86bd6dc-a53b-454f-a2ba-88d3103871f5",
+      "rating": 2,
+      "content": {
+        "text": "Thank you for being honest, Priya. We're sorry you found us closed on Sunday when you hoped to visit. If you'd like to tell us more, please email hello@cardamomcorner.co.uk. We'd love to welcome you another time for a cardamom latte and a bake. Maya and the Cardamom Corner team"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:d86bd6dc-a53b-454f-a2ba-88d3103871f5",
+        "profile:tone_notes",
+        "profile:complaint_contact",
+        "profile:sign_off_name",
+        "profile:menu",
+        "profile:emoji_allowed"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Gentle, calm and neighbourly. Thanks for the honesty, apologises simply and invites her back, as the tone notes ask.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Mentions the cardamom latte and a bake, and the Sunday closure she raised.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English reply to an English review. Plain words.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "No previous outputs to repeat.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis (review replies allow 0), no hashtags. words_to_avoid is empty.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Closure on Sunday comes from the review. Email matches complaint_contact. Cardamom latte is on the menu. Sign-off matches the profile. The reply makes no claim about opening hours.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times stated beyond the reviewer's own 'Sunday'.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "'Priya' matches 'Priya S.'. 'Cardamom latte' matches 'Cardamom Latte'.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal, allergen or dietary claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer made.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review or for changing one. The email invitation is only for further feedback.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only the reviewer's public first name is used. No private details.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "An email address is fine in a Google review reply.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "English reply. No invented facts. Doesn't argue or blame. No personal details added. Sign-off matches the profile. No money or recovery offer. No em-dashes or emojis.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 1,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-11T23:53:45.754Z"
+  }
+}

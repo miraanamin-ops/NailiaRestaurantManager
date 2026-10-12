@@ -7,7 +7,7 @@ import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
 import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
-import { runQueuedAgentJobs } from "@/lib/agents/checker";
+import { runQueuedAgentJobs } from "@/lib/agents/handlers";
 
 // The reply goes at once; the work after it (Claude, and then any agent jobs
 // such as the shadow checker) can take a few minutes.

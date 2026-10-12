@@ -18,10 +18,11 @@ import { checkCampaign, checkDraft } from "@/lib/checks";
 import { checkNoteLines, checksLine } from "@/lib/checks/types";
 import { applyEdit, createDraft, getLearningContext, type Draft, type DraftKind } from "@/lib/drafts";
 import { randomDummyReview } from "@/lib/dummy-reviews";
+import { liveReputation, pastedReviewId, queueReputationShadow, reputationMode } from "@/lib/agents/reputation";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
-import { createPostDraft, postMessage, runReviewCheck, type Send } from "@/lib/google-jobs";
+import { buttonsFor, createPostDraft, postMessage, runReviewCheck, type Send } from "@/lib/google-jobs";
 import { downloadTwilioMedia, isSupportedImage, savePostPhoto } from "@/lib/photos";
 
 // The work behind each kind of draft: write it, run the checker, save it, and
@@ -151,6 +152,18 @@ export async function pastedReviewReply(
   review: { authorName: string; rating: number | null; text: string },
   send: Send,
 ) {
+  // Reputation live for this restaurant: it writes the reply (checked by the checker), or asks the owner.
+  if (reputationMode(ctx.restaurant) === "live") {
+    await send(`✍️ Writing a reply to ${review.authorName}'s review…`);
+    const result = await liveReputation(
+      ctx.restaurant,
+      { id: pastedReviewId(review), author_name: review.authorName, rating: review.rating, text: review.text },
+      { source: "pasted", draftMode: "present", createReply: false },
+    );
+    if (result.kind === "question") return send(draftMessage(result.draft, ctx.restaurant), buttonsFor(result.draft));
+    await send(`✍️ Here's a reply to ${review.authorName}'s review. *Copy the next message* and paste it as your reply on Google.`);
+    return send(result.text);
+  }
   const learning = await getLearningContext(ctx.restaurantId);
   const content = await writeReviewReply(ctx, learning, { author_name: review.authorName, rating: review.rating, text: review.text });
   const checked = await checkDraft(ctx, {
@@ -165,6 +178,13 @@ export async function pastedReviewReply(
   );
   // On its own, so it's easy to copy in one go.
   await send(checked.content);
+  // Shadow mode: Reputation writes its own reply in the background, for the /log comparison.
+  await queueReputationShadow(ctx.restaurant, {
+    source: "pasted",
+    review: { id: pastedReviewId(review), author_name: review.authorName, rating: review.rating, text: review.text },
+    legacy_draft_id: null,
+    legacy_text: checked.content,
+  });
 }
 
 // A photo sent on WhatsApp becomes a captioned Google post, waiting for approval.

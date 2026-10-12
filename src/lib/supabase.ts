@@ -92,6 +92,8 @@ export type Restaurant = {
   profile_version: number | null;
   // Per-task trust levels (019): draft_only / approve / auto. Only the builder sets them.
   trust_levels: Record<string, string> | null;
+  // When the owner was last asked for the go-live fields (020), at most once a day.
+  pilot_prompted_at: string | null;
 };
 
 // The most emojis allowed per kind of customer message.

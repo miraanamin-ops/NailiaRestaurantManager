@@ -367,8 +367,8 @@
       {
         "id": "T1",
         "result": "fail",
-        "reason": "Profile voice is short, upbeat sentences with a little East London charm, and always say thank you. The draft has no thank you and uses long, heavy sentences.",
-        "fix": "Add a thank you for the feedback and use shorter sentences in the warm family-run voice."
+        "reason": "Profile tone notes say 'Always say thank you'. The reply never thanks Salma for the feedback.",
+        "fix": "Add a short thank-you, e.g. 'Thank you for telling us, Salma.', near the start."
       },
       {
         "id": "T2",
@@ -384,21 +384,21 @@
       },
       {
         "id": "T4",
-        "result": "fail",
-        "reason": "The draft has no sign-off, and the opening and closing need checking against the recent replies. Other replies close on the family sign-off and a 🔥 or 🙏 emoji. This draft ends with 🙏 but has no sign-off, so it breaks the pattern the profile sets.",
-        "fix": "Add the profile sign-off and avoid reusing recent openings or closings such as 'Hope to see you back soon'."
+        "result": "pass",
+        "reason": null,
+        "fix": null
       },
       {
         "id": "T5",
-        "result": "fail",
-        "reason": "The draft contains an em-dash ('hear this — being charged'). The emoji count is within the limit of 2.",
-        "fix": "Replace the em-dash with a full stop or comma."
+        "result": "pass",
+        "reason": "Contains one em-dash ('this — being'), fixed by the minor fix below. Emoji count (1) is within the profile limit of 2. No banned words.",
+        "fix": null
       },
       {
         "id": "F1",
-        "result": "fail",
-        "reason": "'it took so long to sort out on the night' is supported by the review. However, 'the Ember & Spice we're proud of' is generic and fine. The claim 'being charged for something you never received' is supported. The unsupported part is the implicit confirmation that the charge was an error, and stating it as fact; the restaurant cannot confirm this from the sources.",
-        "fix": "Acknowledge what Salma said without confirming the charge was wrong, for example 'we're sorry to hear you felt charged for a lassi you didn't get'."
+        "result": "pass",
+        "reason": null,
+        "fix": null
       },
       {
         "id": "F2",
@@ -462,15 +462,15 @@
       },
       {
         "id": "C7",
-        "result": "fail",
-        "reason": "The Google reply includes a phone number '+44 20 7946 0123'. Platform rules do not allow phone numbers in Google post text.",
-        "fix": "Remove the phone number and invite Salma to contact the restaurant, or ask the owner whether to point her to a private channel."
+        "result": "pass",
+        "reason": "Phone number is fine in a Google review reply and matches the profile complaint contact.",
+        "fix": null
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks the maker's rules: no sign-off with 'The Ember & Spice Grill family'; and it does not use a recovery gesture from the approved list. Also it mentions order details beyond what the reviewer wrote only mildly, which is acceptable. The missing sign-off is a clear break.",
-        "fix": "End with the sign-off 'The Ember & Spice Grill family'. If offering a gesture, use only 'A free dessert on your next visit'."
+        "reason": "Maker rule: 'Sign off with the owner's sign-off name from the profile.' The draft has no sign-off.",
+        "fix": "End the reply with the sign-off 'The Ember & Spice Grill family'."
       },
       {
         "id": "B1",
@@ -497,11 +497,17 @@
         "fix": null
       }
     ],
-    "minor_fixes": [],
+    "minor_fixes": [
+      {
+        "check": "T5",
+        "find": "hear this — being",
+        "replace": "hear this. Being"
+      }
+    ],
     "owner_question": null,
-    "notes": "Send back to the maker. Main issues: no thank you, no sign-off, em-dash, phone number in a Google reply, and the reply confirms the charge was an error. Keep the apology sincere and the invitation to return, add the sign-off, and optionally offer the approved free dessert on the next visit.",
+    "notes": "Tone and facts are otherwise good: a sincere apology, no arguing, no offer in exchange for a review, no money offered, and the phone number matches the profile. The maker needs to add a thank-you and the sign-off. If the maker wants to offer the approved recovery gesture ('A free dessert on your next visit'), that is allowed but not required.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:58:10.691Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:10:20.378Z"
   }
 }

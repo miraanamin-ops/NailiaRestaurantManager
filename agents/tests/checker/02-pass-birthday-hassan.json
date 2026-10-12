@@ -358,141 +358,141 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": null,
+        "reason": "Warm, short, upbeat, uses first name, thanks the customer and stays within two emojis, as the profile tone notes ask.",
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": null,
+        "reason": "Refers to the brother's birthday, the kunafa with a candle and the Mixed Grill Platter from the review.",
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": null,
+        "reason": "Review is in English and the reply is in plain English.",
         "fix": null
       },
       {
         "id": "T4",
         "result": "pass",
-        "reason": null,
+        "reason": "Opening 'Hassan, this means so much to us' and closing 'Thanks for trusting us with the celebration' differ from the last 3 replies' openings and closings.",
         "fix": null
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": null,
+        "reason": "No em-dashes or hashtags. Two emojis (🙏 🔥) match the review_replies allowance of 2 and are on the profile's list. words_to_avoid is empty.",
         "fix": null
       },
       {
         "id": "F1",
         "result": "pass",
-        "reason": null,
+        "reason": "Birthday, brother, kunafa, candle and mixed grill all come from the review. Mixed Grill Platter is on the menu. The sign-off matches the profile.",
         "fix": null
       },
       {
         "id": "F2",
         "result": "pass",
-        "reason": null,
+        "reason": "No numbers in the reply.",
         "fix": null
       },
       {
         "id": "F3",
         "result": "pass",
-        "reason": null,
+        "reason": "No dates or times in the reply.",
         "fix": null
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": null,
+        "reason": "'Hassan' matches 'Hassan D.'. 'Mixed Grill Platter' matches the menu item name for the reviewer's 'Mixed grill'. Kunafa matches the menu.",
         "fix": null
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": null,
+        "reason": "No causal claims.",
         "fix": null
       },
       {
         "id": "C1",
         "result": "pass",
-        "reason": null,
+        "reason": "No halal, allergen or dietary claims.",
         "fix": null
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": null,
+        "reason": "No offers made.",
         "fix": null
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": null,
+        "reason": "No targeting or wording by personal traits.",
         "fix": null
       },
       {
         "id": "C4",
         "result": "pass",
-        "reason": null,
+        "reason": "Nothing offered in exchange for a review.",
         "fix": null
       },
       {
         "id": "C5",
         "result": "pass",
-        "reason": null,
+        "reason": "The brother's birthday and the kunafa were shared by the reviewer in the public review. No other personal details.",
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": null,
+        "reason": "No financial, tax, legal or staffing advice.",
         "fix": null
       },
       {
         "id": "C7",
         "result": "pass",
-        "reason": null,
+        "reason": "Fine as a Google review reply. No links or other platform issues.",
         "fix": null
       },
       {
         "id": "C8",
         "result": "pass",
-        "reason": null,
+        "reason": "Reply is in English like the review. No invented facts, no staff named, no offers, no em-dashes. Emojis are allowed by the profile. Signed off with the profile sign-off name. Opening and closing not reused.",
         "fix": null
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": null,
+        "reason": "No rendered preview for this draft type.",
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": null,
+        "reason": "No rendered preview for this draft type.",
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": null,
+        "reason": "No rendered preview for this draft type.",
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": null,
+        "reason": "No rendered preview for this draft type.",
         "fix": null
       }
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Only 3 prior outputs were supplied, not 10. The opening and closing are distinct from those 3. The reply uses 2 emojis, which is the profile's limit for review replies. The birthday, kunafa and candle details all come from the reviewer's own text. The reply is a little light on invitation to return, which is fine for a 5-star review.",
+    "notes": "Small tone suggestion only: 'make little moments like that special' reads slightly clumsy. Not blocking.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:57:08.435Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:07:45.547Z"
   }
 }

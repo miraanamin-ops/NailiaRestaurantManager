@@ -354,26 +354,26 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Short, upbeat and not pushy. Fits the warm brand voice.",
+        "reason": "Short, upbeat and warm enough for the brand voice. The 'Pop in tonight!' line is not pushy.",
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Names lamb chops, charcoal grilling and the price, which are specific to this restaurant.",
+        "reason": "Names the lamb chops and the charcoal grill, which are specific to this restaurant.",
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Plain English, clear and simple.",
+        "reason": "Plain English, no jargon.",
         "fix": null
       },
       {
         "id": "T4",
         "result": "fail",
-        "reason": "Closing \"Pop in tonight!\" repeats the previous post's \"Pop in tonight and dig in!\".",
-        "fix": "Use a different closing line that does not start with \"Pop in tonight\"."
+        "reason": "Closes with 'Pop in tonight!', which is nearly the same as the previous post's 'Pop in tonight and dig in!'.",
+        "fix": "Use a different closing line from 'Pop in tonight'."
       },
       {
         "id": "T5",
@@ -384,25 +384,25 @@
       {
         "id": "F1",
         "result": "fail",
-        "reason": "\"100% organic, locally sourced\" is not supported by any resolved source. Nothing in the profile says the lamb is organic or locally sourced. \"Flame-grilled over real charcoal\" is supported by the cuisine (Halal charcoal grill).",
-        "fix": "Remove \"100% organic, locally sourced\". Only describe the lamb chops using facts from the profile."
+        "reason": "'100% organic' and 'locally sourced' are not supported by any resolved source. 'Real charcoal' is only partly supported by the cuisine 'Halal charcoal grill'.",
+        "fix": "Remove '100% organic' and 'locally sourced'. Keep only claims in the profile, such as flame-grilled over charcoal."
       },
       {
         "id": "F2",
         "result": "pass",
-        "reason": "£13.95 for Lamb Chops (4 pcs) matches the menu. \"Four pieces\" matches 4 pcs.",
+        "reason": "£13.95 for Lamb Chops (4 pcs) matches the menu.",
         "fix": null
       },
       {
         "id": "F3",
         "result": "fail",
-        "reason": "\"Pop in tonight!\" is a problem on a Friday: the restaurant opens at 2pm on Friday and is open until midnight, so the timing works only if the post goes live before closing. The draft has no scheduled time to confirm it. Posting time is not given, so tonight cannot be verified as inside opening hours.",
-        "fix": "Replace \"tonight\" with a wording that does not depend on posting time, or state the opening hours from the profile (Friday 2pm to midnight)."
+        "reason": "'Pop in tonight!' is posted on Friday 9 October 2026, when opening hours are 2pm to midnight. The post could be read in the morning, before opening, and the draft gives no time. The post is also not tied to a date, so it is unclear when 'tonight' is.",
+        "fix": "Remove 'tonight' or state the opening time (Friday from 2pm)."
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "Lamb chops matches the menu item \"Lamb Chops (4 pcs)\".",
+        "reason": "Dish matches the menu name 'Lamb Chops (4 pcs)'. Four pieces is correct.",
         "fix": null
       },
       {
@@ -414,13 +414,13 @@
       {
         "id": "C1",
         "result": "fail",
-        "reason": "\"100% organic, locally sourced\" is a food and ingredient claim that is not in the profile. The profile only says \"All our meat is halal.\"",
-        "fix": "Remove the organic and locally sourced claims. Halal can be mentioned only as \"All our meat is halal.\""
+        "reason": "'100% organic' and 'locally sourced' are ingredient and sourcing claims not in the profile. The profile only supports halal, which the post does not mention.",
+        "fix": "Delete the organic and locally sourced claims. Food claims must come only from the profile."
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": "No offer is made.",
+        "reason": "No offer is made. The price is stated clearly.",
         "fix": null
       },
       {
@@ -456,39 +456,39 @@
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks the maker rule that every claim about food or ingredients comes only from the profile (organic, locally sourced).",
-        "fix": "Remove the unsupported ingredient claims."
+        "reason": "Breaks the maker's rule that every claim about food or ingredients comes only from the profile ('100% organic', 'locally sourced'). Also repeats the lamb chop and flame-grill topic of the recent mixed grill post, which risks the 3-week topic repeat rule.",
+        "fix": "Remove unsupported food claims and use a topic not posted in the last 3 weeks."
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       }
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Main problem: the organic and locally sourced claims have no source. Keep the price, the charcoal grilling and the single emoji. Also vary the closing line from the last post. The lamb chops topic is also close to the previous Mixed Grill post, which mentions lamb chops, but it is a different dish focus so it is not blocked.",
+    "notes": "Rewrite so every food claim traces to the profile (halal charcoal grill, lamb chops 4 pcs, £13.95). Vary the closing line and make the timing accurate.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:58:29.327Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:11:26.140Z"
   }
 }

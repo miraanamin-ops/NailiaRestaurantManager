@@ -107,26 +107,28 @@ describe("a shadow run", () => {
     expect(db.tables.agent_jobs).toHaveLength(1);
     expect(db.tables.agent_jobs[0]).toMatchObject({ job_key: `checker:${draft.id}:v1`, agent: "checker", kind: "checker_shadow", status: "queued" });
 
-    const { runQueuedAgentJobs } = await import("@/lib/agents/checker");
+    const { runQueuedAgentJobs } = await import("@/lib/agents/handlers");
+    const { version } = (await import("@/lib/agents/loader")).loadAgent("checker");
     expect(await runQueuedAgentJobs(A)).toEqual([{ key: `checker:${draft.id}:v1`, status: "done" }]);
 
     const saved = db.tables.drafts[0];
     expect(saved.content).toBe(REPLY); // minor fixes recorded, not applied
     expect(saved.status).toBe("pending");
-    expect(saved.agent_check).toMatchObject({ mode: "shadow", verdict: "pass", draft_version: 1, agent_version: "0.2", minor_fixes: [{ find: "Aisha —", replace: "Aisha," }] });
+    expect(saved.agent_check).toMatchObject({ mode: "shadow", verdict: "pass", draft_version: 1, agent_version: version, minor_fixes: [{ find: "Aisha —", replace: "Aisha," }] });
     // B1-B4 are listed as skipped for a review reply (no rendered preview).
     expect((saved.agent_check as { checks: { id: string; result: string }[] }).checks.filter((c) => c.result === "skipped").map((c) => c.id)).toEqual(["B1", "B2", "B3", "B4"]);
     expect(sentToOwner).toEqual([]);
 
     const log = db.tables.audit_log.find((e) => e.action === "checked");
-    expect(log).toMatchObject({ actor: "checker", agent: "checker", agent_version: "0.2", verdict: "pass", job_id: db.tables.agent_jobs[0].id });
-    expect(String(log!.detail)).toMatch(/Checker \(shadow, v0\.2\).*pass.*1 minor fix/);
+    expect(log).toMatchObject({ actor: "checker", agent: "checker", agent_version: version, verdict: "pass", job_id: db.tables.agent_jobs[0].id });
+    expect(String(log!.detail)).toContain(`Checker (shadow, v${version})`);
+    expect(String(log!.detail)).toMatch(/pass.*1 minor fix/);
   });
 
   test("the checker gets the draft, its resolved sources and the maker's rules, never the maker's reasoning", async () => {
     answers = [verdict()];
     await makeDraft();
-    const { runQueuedAgentJobs } = await import("@/lib/agents/checker");
+    const { runQueuedAgentJobs } = await import("@/lib/agents/handlers");
     await runQueuedAgentJobs(A);
     const system = requests[0].system[0].text;
     expect(system.startsWith("# House rules")).toBe(true);
@@ -155,7 +157,7 @@ describe("a shadow run", () => {
   test("invalid output twice: the job fails, the builder is alerted, the draft is untouched", async () => {
     answers = [verdict({ checks: [] }), verdict({ verdict: "fail" })];
     await makeDraft();
-    const { runQueuedAgentJobs } = await import("@/lib/agents/checker");
+    const { runQueuedAgentJobs } = await import("@/lib/agents/handlers");
     expect((await runQueuedAgentJobs(A))[0].status).toBe("failed");
     expect(alerts[0]).toMatch(/checker agent .* invalid output twice/);
     expect(db.tables.drafts[0].agent_check ?? null).toBeNull();

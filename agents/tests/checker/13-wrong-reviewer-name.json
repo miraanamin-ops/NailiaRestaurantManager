@@ -366,13 +366,13 @@
       {
         "id": "T1",
         "result": "fail",
-        "reason": "Profile tone is warm, with the customer's first name, always a thank you, and an invite back. The draft does thank and invite back, but it uses the wrong first name (see F4), and it lacks the sign-off the family voice expects.",
-        "fix": "Use the reviewer's first name, Farzana, and add the sign-off 'The Ember & Spice Grill family'."
+        "reason": "Profile tone says use the customer's first name. The draft says 'Fatima' but the reviewer is Farzana. Also the profile asks for short, upbeat sentences; this is mostly fine. The name error is the main issue (see F4).",
+        "fix": "Use the reviewer's real first name, Farzana."
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Mentions the kids loving the wings, the veggie mains point, and Ember & Spice by name.",
+        "reason": "Mentions the wings, veggie mains and Ember & Spice, specific to this review.",
         "fix": null
       },
       {
@@ -384,20 +384,20 @@
       {
         "id": "T4",
         "result": "fail",
-        "reason": "The closing 'Hope to welcome your family back... soon 🔥' closely mirrors the openings and closings of recent replies ('Hope to see you back at Ember & Spice Grill soon 🔥'; 'Can't wait to welcome you and your group again soon. 🔥'). The opening 'Thanks so much' is also close to 'Thank you so much' in both recent replies.",
-        "fix": "Use a different opening and closing, for example start with a different thank-you phrasing and close without 'Hope to... back soon'."
+        "reason": "Closing reuses the pattern of the last replies: ends with a hopeful return line plus 🔥 ('Hope to welcome your family back ... soon! 🔥'), close to the previous 'Hope to see you back at Ember & Spice Grill soon 🔥'. Opening 'Thanks so much' is similar to 'Thank you so much' in both recent replies.",
+        "fix": "Change the opening and closing wording so they differ from 'Thank you so much...' and 'Hope to see you back at Ember & Spice Grill soon'."
       },
       {
         "id": "T5",
         "result": "fail",
-        "reason": "Two emojis are used, which is within the profile limit of 2 (🙏 and 🔥 are both on the approved list), so the emoji count is fine. No em-dashes found. However the restaurant name is given as 'Ember & Spice' rather than the profile name 'Ember & Spice Grill'.",
-        "fix": "Write 'Ember & Spice Grill' in full."
+        "reason": "Two emojis are allowed (limit 2) and 🙏 and 🔥 are on the approved list, so the count is fine. No em-dashes or banned phrases. However, the draft is missing the required sign-off, which is a style/voice requirement in the profile; recorded under C8.",
+        "fix": "No style change beyond adding the sign-off (see C8)."
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "'it's genuinely on our radar as we grow the menu' claims the restaurant is considering more veggie mains and is growing the menu. Nothing in the profile or sources supports any menu plans.",
-        "fix": "Remove the claim about menu plans. Just thank her for the feedback, for example 'Thanks for the tip on veggie mains'."
+        "reason": "'it's genuinely on our radar as we grow the menu' claims the restaurant is planning to add veggie mains and is growing the menu. No source supports any menu plans.",
+        "fix": "Remove the claim about menu plans. Say only that the feedback has been noted and passed on."
       },
       {
         "id": "F2",
@@ -408,14 +408,14 @@
       {
         "id": "F3",
         "result": "pass",
-        "reason": "No dates or times in the draft.",
+        "reason": "No dates or times mentioned.",
         "fix": null
       },
       {
         "id": "F4",
         "result": "fail",
-        "reason": "Draft says 'Fatima' but the reviewer is 'Farzana Q.'.",
-        "fix": "Change 'Fatima' to 'Farzana'."
+        "reason": "Draft addresses the reviewer as 'Fatima'. The source author is 'Farzana Q.'.",
+        "fix": "Replace 'Fatima' with 'Farzana'."
       },
       {
         "id": "F5",
@@ -426,7 +426,7 @@
       {
         "id": "C1",
         "result": "pass",
-        "reason": "No food, halal or allergen claims. 'Wings' matches the Peri Peri Wings on the menu.",
+        "reason": "No food, halal, allergen or dietary claims.",
         "fix": null
       },
       {
@@ -450,57 +450,57 @@
       {
         "id": "C5",
         "result": "pass",
-        "reason": "'the kids' and 'your family' come from the review text itself, so no extra personal details.",
+        "reason": "'the kids' and 'your family' come from the review itself, so nothing personal beyond what the reviewer wrote.",
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": "No financial, tax, legal or staffing advice.",
+        "reason": "No financial, legal, tax or staffing advice.",
         "fix": null
       },
       {
         "id": "C7",
         "result": "pass",
-        "reason": "No phone numbers or links in the Google reply.",
+        "reason": "No phone numbers or links; fine for a Google review reply.",
         "fix": null
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks the maker's rules: no sign-off with the profile sign-off name; the opening and closing are too close to recent replies; and it implies menu plans, which is an invented fact about the restaurant.",
-        "fix": "Add the sign-off 'The Ember & Spice Grill family', vary the opening and closing, and remove the menu-growth claim."
+        "reason": "Maker rules broken: (1) must sign off with 'The Ember & Spice Grill family' and there is no sign-off; (2) invents facts about the restaurant ('on our radar as we grow the menu'); (3) opening may reuse the recent openings (see T4).",
+        "fix": "Add the sign-off 'The Ember & Spice Grill family', remove the menu-growth claim, and vary the opening."
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": null,
+        "reason": "no rendered preview for this kind of draft",
         "fix": null
       }
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Corrections needed: wrong name (Fatima vs Farzana), unsupported menu-growth claim, missing sign-off, and openings and closings too similar to recent replies. A 4-star review with a mild suggestion needs no recovery offer. The 'Ember & Spice' name point (T5) is a minor naming preference; the profile name is 'Ember & Spice Grill', so please use it in full.",
+    "notes": "Fix the name to Farzana, drop the unsupported menu-growth claim (just thank her for the feedback), add the sign-off, and use a fresh opening and closing. Keep emojis to two at most.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T22:23:47.711Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:13:49.226Z"
   }
 }

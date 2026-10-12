@@ -366,14 +366,14 @@
     "checks": [
       {
         "id": "T1",
-        "result": "fail",
-        "reason": "Profile tone says to apologise sincerely and invite them back to make it right on bad reviews. This is a 4-star review with a minor complaint. The reply says \"we'll tighten that up\" but does not invite him back to make it right. Also the draft ends without the profile sign-off.",
-        "fix": "Add a sincere apology and a warm invitation back, and finish with the sign-off \"The Ember & Spice Grill family\"."
+        "result": "pass",
+        "reason": "Warm, upbeat, uses first name, thanks him, apologises and invites him back, in line with tone_notes.",
+        "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Mentions lamb chops and the wait for the bill, specific to this review and restaurant.",
+        "reason": "Mentions lamb chops and the restaurant name, so it is specific to this review.",
         "fix": null
       },
       {
@@ -385,20 +385,20 @@
       {
         "id": "T4",
         "result": "fail",
-        "reason": "Closing \"See you again soon at Ember & Spice Grill!\" is very close to the previous closing \"Hope to see you back at Ember & Spice Grill soon\" (output 3). Opening \"Thanks so much, [Name]!\" repeats output 2 (\"Thanks so much, Farzana!\").",
-        "fix": "Use a different opening and closing from the last outputs."
+        "reason": "Closing 'See you again soon at Ember & Spice Grill!' is very close to the previous replies' closings ('Hope to see you back at Ember & Spice Grill soon', 'Hope to see you all again soon at Ember & Spice!'). Opening 'Thanks so much, Tariq!' repeats the opening of reply 2 ('Thanks so much, Farzana!').",
+        "fix": "Use a different opening and a different closing that does not follow the 'see you again soon at Ember & Spice' pattern."
       },
       {
         "id": "T5",
-        "result": "fail",
-        "reason": "Contains an em-dash in \"bill — we'll\". The 🔥 emoji is allowed (1 of 2 permitted, and it is on the profile's list).",
-        "fix": "Replace the em-dash with a full stop or comma."
+        "result": "pass",
+        "reason": "The emoji is allowed (review_replies cap is 2, one used, 🔥 is on the approved list). The em-dash is handled in minor_fixes. No banned words.",
+        "fix": null
       },
       {
         "id": "F1",
-        "result": "fail",
-        "reason": "\"as always\" is fine as it echoes \"as usual\" in the review. But \"we'll tighten that up\" is a commitment about operations that is not in any source. Not a fact claim about the menu, but it is a promise the profile does not support.",
-        "fix": "Remove the promise about tightening up service, or ask the owner whether to promise it. A plain apology is enough."
+        "result": "pass",
+        "reason": "Lamb chops and the wait for the bill are both in the review. The restaurant name matches the profile.",
+        "fix": null
       },
       {
         "id": "F2",
@@ -415,7 +415,7 @@
       {
         "id": "F4",
         "result": "pass",
-        "reason": "Reviewer name \"Tariq\" matches \"Tariq N.\". \"lamb chops\" matches menu item \"Lamb Chops (4 pcs)\". Restaurant name matches the profile.",
+        "reason": "'Tariq' matches the reviewer 'Tariq N.'. 'lamb chops' matches the menu item 'Lamb Chops (4 pcs)'. The restaurant name matches.",
         "fix": null
       },
       {
@@ -427,87 +427,87 @@
       {
         "id": "C1",
         "result": "pass",
-        "reason": "No food, halal or allergen claims.",
+        "reason": "No halal, allergen or dietary claims.",
         "fix": null
       },
       {
         "id": "C2",
         "result": "pass",
-        "reason": "No offers made.",
+        "reason": "No offer made.",
         "fix": null
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": "No targeting by personal traits.",
+        "reason": "No targeting.",
         "fix": null
       },
       {
         "id": "C4",
         "result": "pass",
-        "reason": "Nothing offered in exchange for a review or changing one.",
+        "reason": "Nothing offered for a review.",
         "fix": null
       },
       {
         "id": "C5",
         "result": "pass",
-        "reason": "Only uses the first name and what the reviewer wrote publicly.",
+        "reason": "No personal details beyond what the reviewer wrote publicly.",
         "fix": null
       },
       {
         "id": "C6",
         "result": "pass",
-        "reason": "No financial, tax, legal or staffing advice.",
+        "reason": "No financial, legal or staffing advice.",
         "fix": null
       },
       {
         "id": "C7",
         "result": "pass",
-        "reason": "No phone numbers or links in the Google reply.",
+        "reason": "Nothing in the text breaks Google's review reply rules.",
         "fix": null
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Maker rule \"Sign off with the owner's sign-off name from the profile\" is broken: no sign-off \"The Ember & Spice Grill family\". Rule \"Don't reuse the opening or closing of any of the last 10 replies\" is also at risk (see T4). The em-dash breaks the no em-dash rule.",
-        "fix": "Add the sign-off \"The Ember & Spice Grill family\", change the opening and closing, and remove the em-dash."
+        "reason": "Breaks the maker's rule to sign off with the profile's sign-off name: the draft ends with 'See you again soon at Ember & Spice Grill!' and has no 'The Ember & Spice Grill family' sign-off. It also breaks the rule not to reuse the opening or closing of recent replies (see T4). The em-dash is a minor fix.",
+        "fix": "Add the sign-off 'The Ember & Spice Grill family' on its own line at the end, and change the opening and closing so they do not repeat recent replies."
       },
       {
         "id": "B1",
         "result": "skipped",
-        "reason": "no rendered preview for this kind of draft",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B2",
         "result": "skipped",
-        "reason": "no rendered preview for this kind of draft",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B3",
         "result": "skipped",
-        "reason": "no rendered preview for this kind of draft",
+        "reason": null,
         "fix": null
       },
       {
         "id": "B4",
         "result": "skipped",
-        "reason": "no rendered preview for this kind of draft",
+        "reason": null,
         "fix": null
       }
     ],
     "minor_fixes": [
       {
         "check": "T5",
-        "find": "bill — we'll",
-        "replace": "bill. We'll"
+        "find": "the bill — we'll",
+        "replace": "the bill, we'll"
       }
     ],
     "owner_question": null,
-    "notes": "Maker should redraft: new opening, a plain sincere apology for the wait for the bill without promising a fix, an invitation back, a fresh closing, and the sign-off \"The Ember & Spice Grill family\". The single 🔥 is fine.",
+    "notes": "The reply is otherwise accurate and warm. The em-dash is corrected by the minor fix. The maker must also fix the missing sign-off and the repeated opening and closing.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T17:58:00.989Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:09:51.495Z"
   }
 }

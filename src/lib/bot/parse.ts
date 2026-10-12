@@ -10,6 +10,38 @@ export type Action = keyof typeof BUTTON_IDS;
 // or a typed "APPROVE 2" / "EDIT 2" / "SKIP 2" (item 2 of the latest brief).
 export type TargetedAction = { action: Action; draftId?: string; briefNumber?: number };
 
+// A question about a review (e.g. it alleges food poisoning): Reply publicly /
+// Handle privately / Both. The buttons carry the question's id ("public:<uuid>");
+// typed "PUBLIC 2" answers brief item 2; "public", "private(ly)" or "both" (or 1/2/3)
+// answer the question on screen.
+export const QUESTION_IDS = { public: "public", private: "private", both: "both" } as const;
+export type QuestionChoice = keyof typeof QUESTION_IDS;
+export type QuestionAnswer = { choice: QuestionChoice; draftId?: string; briefNumber?: number };
+
+const CHOICE_WORDS: Record<string, QuestionChoice> = {
+  "1": "public",
+  public: "public",
+  "reply publicly": "public",
+  publicly: "public",
+  "2": "private",
+  private: "private",
+  privately: "private",
+  "handle privately": "private",
+  "3": "both",
+  both: "both",
+};
+
+// onScreen: a question is the draft on screen, so plain words and 1/2/3 count.
+export function parseQuestionAnswer(buttonPayload: string | undefined, body: string, onScreen: boolean): QuestionAnswer | null {
+  const button = buttonPayload?.match(/^(public|private|both):([0-9a-f-]{36})$/);
+  if (button) return { choice: button[1] as QuestionChoice, draftId: button[2] };
+  const typed = body.trim().toUpperCase().match(/^(PUBLIC|PRIVATE|BOTH)\s*#?(\d{1,2})[.!]?$/);
+  if (typed) return { choice: typed[1].toLowerCase() as QuestionChoice, briefNumber: Number(typed[2]) };
+  if (!onScreen) return null;
+  const word = CHOICE_WORDS[body.trim().toLowerCase().replace(/[.!]$/, "")];
+  return word ? { choice: word } : null;
+}
+
 export function parseButtonPayload(payload: string | undefined) {
   const m = payload?.match(/^(approve|edit|skip):([0-9a-f-]{36})$/);
   return m ? { action: m[1] as Action, draftId: m[2] } : null;

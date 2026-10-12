@@ -6,6 +6,7 @@ import { recentLog, type AuditEntry } from "@/lib/audit";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { ReputationCompare } from "./reputation-compare";
 
 export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
 
@@ -35,6 +36,8 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   sales_saved: { icon: "🧾", label: "Till report saved" },
   sales_imported: { icon: "📊", label: "Sales file imported" },
   checked: { icon: "🔎", label: "Checked by an agent" },
+  agent_drafted: { icon: "🤖", label: "Agent draft (shadow)" },
+  answered: { icon: "💬", label: "Answered a question" },
   agent_failed: { icon: "⚠️", label: "Agent job failed" },
   profile_changed: { icon: "🗂️", label: "Profile changed" },
   profile_reverted: { icon: "↩️", label: "Profile change reverted" },
@@ -52,7 +55,11 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   const owner = await requireOwner("/log");
   const supabase = getSupabase();
   // Only ever a restaurant this person may see.
-  const rid = pickRestaurantId(owner, (await searchParams).r);
+  const sp = await searchParams;
+  const rid = pickRestaurantId(owner, sp.r);
+  // The builder can switch to the Reputation shadow comparison.
+  const compare = owner.isBuilder && sp.view === "reputation";
+  const viewParam = compare ? "&view=reputation" : "";
   const restaurant = rid ? check(await supabase.from("restaurants").select("*").eq("id", rid).maybeSingle<Restaurant>()) : null;
   if (!restaurant) return <p className="p-6">No restaurant for {owner.email} yet.</p>;
   const choices = await restaurantChoices(owner);
@@ -83,7 +90,7 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
               {choices.map((c) => (
                 <a
                   key={c.id}
-                  href={`/log?r=${c.id}`}
+                  href={`/log?r=${c.id}${viewParam}`}
                   className={`rounded-full px-3 py-1 ${c.id === restaurant.id ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}
                 >
                   {c.name}
@@ -91,8 +98,23 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
               ))}
             </div>
           )}
+          {owner.isBuilder && (
+            <div className="mt-3 flex gap-2 text-xs">
+              <a href={`/log?r=${restaurant.id}`} className={`rounded-full px-3 py-1 ${compare ? "bg-white/15 text-white underline" : "bg-white text-stone-900"}`}>
+                Everything
+              </a>
+              <a href={`/log?r=${restaurant.id}&view=reputation`} className={`rounded-full px-3 py-1 ${compare ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}>
+                Reputation comparison
+              </a>
+            </div>
+          )}
         </div>
       </header>
+      {compare ? (
+        <main className="mx-auto w-full max-w-4xl px-4 py-5">
+          <ReputationCompare restaurantId={restaurant.id} />
+        </main>
+      ) : (
       <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5">
         {!entries.length && <p className="text-sm text-stone-600">Nothing has happened yet.</p>}
         {[...days].map(([day, list]) => (
@@ -158,6 +180,7 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
           </button>
         </form>
       </main>
+      )}
     </div>
   );
 }

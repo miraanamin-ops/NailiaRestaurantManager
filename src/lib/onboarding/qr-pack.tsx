@@ -1,4 +1,5 @@
 import "server-only";
+import { noEmDash } from "@/lib/text";
 import { Document, Image, Page, renderToBuffer, StyleSheet, Text, View } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import type { Restaurant } from "@/lib/supabase";
@@ -10,10 +11,10 @@ import type { Restaurant } from "@/lib/supabase";
 const MM = 72 / 25.4;
 
 function clean(text: string) {
-  return text
+  return noEmDash(text)
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/[^ -~ -ÿ–—…€£\n]/g, "")
+    .replace(/[^ -~ -ÿ–…€£\n]/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }

@@ -85,11 +85,13 @@ describe("agent jobs", () => {
 });
 
 describe("agent modes", () => {
-  test("the checker defaults to shadow; nothing can be set live yet", async () => {
+  test("the checker defaults to shadow and can't be set live; Reputation can (its checklist guards it)", async () => {
     const { agentMode } = await import("@/lib/agents/modes");
     expect(agentMode({ agent_modes: {} }, "checker")).toBe("shadow");
     expect(agentMode({ agent_modes: { checker: "off" } }, "checker")).toBe("off");
     expect(agentMode({ agent_modes: { checker: "live" } }, "checker")).toBe("shadow");
-    expect(agentMode({ agent_modes: { reputation: "live" } }, "reputation")).toBe("off");
+    expect(agentMode({ agent_modes: { reputation: "live" } }, "reputation")).toBe("live");
+    expect(agentMode({ agent_modes: {} }, "reputation")).toBe("shadow");
+    expect(agentMode({ agent_modes: { gm: "live" } }, "gm")).toBe("off");
   });
 });

@@ -342,79 +342,79 @@
       {
         "id": "T1",
         "result": "pass",
-        "reason": "Warm, short, upbeat, uses first name and thanks customers. Two emojis within the limit.",
+        "reason": "Warm, short, upbeat, uses first name and says thank you, in line with tone_notes.",
         "fix": null
       },
       {
         "id": "T2",
         "result": "pass",
-        "reason": "Mentions lamb chops, kunafa and Ember & Spice family, which are specific to this restaurant.",
+        "reason": "Mentions lamb chops, kunafa, Friday late opening and the Ember & Spice family. Specific to this restaurant.",
         "fix": null
       },
       {
         "id": "T3",
         "result": "pass",
-        "reason": "Plain English, matches audience.",
+        "reason": "Plain English, matches the audience.",
         "fix": null
       },
       {
         "id": "T4",
         "result": "pass",
-        "reason": "Opening and closing differ from the previous output. Lamb chops and late Friday theme repeats, but the wording is different.",
+        "reason": "Opening and closing differ from the previous output (which opened with 'Lamb Chops (4 pcs) are down to' and closed with 'See you soon').",
         "fix": null
       },
       {
         "id": "T5",
         "result": "pass",
-        "reason": "No em-dashes, two emojis (🔥 🙏) are allowed by the profile (limit 2 for campaigns), no banned words.",
+        "reason": "No em-dashes. Two emojis (🔥 🙏), within the profile's campaign limit of 2 and from the allowed set. No banned words.",
         "fix": null
       },
       {
         "id": "F1",
         "result": "fail",
-        "reason": "\"Every table gets a free kunafa too\" is not supported. The owner's request and the profile say nothing about a free kunafa. The profile's approved offers are a free dessert on the next visit (recovery) and a free Mango Lassi (signup).",
-        "fix": "Remove the free kunafa claim, or ask the owner to confirm it as an offer."
+        "reason": "'Every table gets a free kunafa' is not supported by any source. The owner request only mentions lamb chops this week and late opening on Fridays. 'just £13.95 this week' is the normal menu price, so it is not shown to be a special price.",
+        "fix": "Remove the free kunafa claim. Do not present £13.95 as a deal unless the owner confirms a promotional price; otherwise ask the owner what the lamb chops offer is."
       },
       {
         "id": "F2",
-        "result": "fail",
-        "reason": "£13.95 is the normal menu price of Lamb Chops (4 pcs), so \"just £13.95 this week\" presents no real change. The previous output said £11.15, and no source gives a this-week price.",
-        "fix": "Remove the price framing as a weekly deal, or get the owner to confirm the actual offer price."
+        "result": "pass",
+        "reason": "£13.95 matches the menu price for Lamb Chops (4 pcs).",
+        "fix": null
       },
       {
         "id": "F3",
         "result": "fail",
-        "reason": "\"open till midnight every Friday\" matches Friday 14:00 to 00:00, but no dates or times are given for the offer. \"This week\" is vague, and the late opening omits that Friday opens at 2pm.",
-        "fix": "State clear dates, for example \"until Sunday 18 October\", once the owner confirms them."
+        "reason": "'open till midnight every Friday' matches Friday 14:00 to 00:00, but 'this week' has no dates and no opening time is given. Offer timing is vague.",
+        "fix": "State the dates the lamb chops offer runs, for example 'until Sunday 11 October', only if the owner confirms them. Optionally add that Friday opening is from 2pm."
       },
       {
         "id": "F4",
         "result": "pass",
-        "reason": "Dish name Lamb Chops (4 pcs), kunafa and restaurant name match the profile.",
+        "reason": "Lamb Chops (4 pcs), kunafa and restaurant name match the profile.",
         "fix": null
       },
       {
         "id": "F5",
         "result": "pass",
-        "reason": "No causal claims made.",
+        "reason": "No causal claims.",
         "fix": null
       },
       {
         "id": "C1",
         "result": "pass",
-        "reason": "No food, halal or allergen claims made.",
+        "reason": "No halal, allergen or ingredient claims made.",
         "fix": null
       },
       {
         "id": "C2",
         "result": "fail",
-        "reason": "Offer terms are unclear: no dates, no conditions on the free kunafa (per table? minimum spend? dine-in only?), and the lamb chops price is not actually a discount. Free kunafa is also unapproved spend.",
-        "fix": "Give clear dates and conditions for any offer, and only include offers the owner has approved."
+        "reason": "Offer terms are unclear: no dates for 'this week', no conditions for the free kunafa (dine-in only? minimum spend? every table?). A free item is also a new offer type and spend not in the profile's approved offers, and 'every table' is a commitment of the restaurant's money without owner approval.",
+        "fix": "Remove the free kunafa or get owner approval with clear terms. State what the lamb chops offer is, with dates and conditions."
       },
       {
         "id": "C3",
         "result": "pass",
-        "reason": "No targeting by personal traits. Audience is all opted-in customers.",
+        "reason": "Audience is all opted-in customers, no targeting by personal traits.",
         "fix": null
       },
       {
@@ -426,7 +426,7 @@
       {
         "id": "C5",
         "result": "pass",
-        "reason": "Only the first name placeholder is used.",
+        "reason": "Only a first name placeholder is used.",
         "fix": null
       },
       {
@@ -438,14 +438,14 @@
       {
         "id": "C7",
         "result": "pass",
-        "reason": "WhatsApp message with no platform rule breaches in the text.",
+        "reason": "WhatsApp platform rules are not broken by the text itself. Channel permission is enforced by the release gate.",
         "fix": null
       },
       {
         "id": "C8",
         "result": "fail",
-        "reason": "Breaks maker rules: the free kunafa is a new offer type and spend that required needs_owner_input, and offers need clear dates and conditions. Also, WhatsApp is blocked until Meta verification (the maker is email only for now).",
-        "fix": "Switch the channel to email, or hold until WhatsApp is verified. Set needs_owner_input for the free kunafa and the offer price and dates instead of drafting."
+        "reason": "Maker rules broken: offers need clear dates, times and conditions (missing), and the free kunafa is a new offer type that should have triggered needs_owner_input. The maker's rules also say email only for now with the WhatsApp channel blocked until Meta verification.",
+        "fix": "Set needs_owner_input to ask the owner about the free kunafa and the lamb chops offer details and dates, and do not draft customer copy in the same draft. Consider email as the channel."
       },
       {
         "id": "B1",
@@ -474,9 +474,9 @@
     ],
     "minor_fixes": [],
     "owner_question": null,
-    "notes": "Send back to the maker. The free kunafa is not approved by the owner and the price is not a discount. Maker should ask the owner for the lamb chops offer price, offer dates, and whether a free kunafa is approved. The owner's request only said lamb chops this week and open late on Fridays. The previous draft used £11.15, which also has no source in the profile.",
+    "notes": "Returned to the maker. The free kunafa is invented, and the lamb chops price is the standard menu price, so it is unclear what the offer is. The draft should ask the owner for the offer details and dates. The channel is WhatsApp, which the maker's rules say is blocked for now.",
     "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "recorded_at": "2026-10-11T22:23:36.863Z"
+    "agent_version": "0.3",
+    "recorded_at": "2026-10-11T23:13:17.233Z"
   }
 }

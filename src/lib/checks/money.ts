@@ -48,6 +48,11 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
     return { outcome: "blocked", reason: "duplicate", detail: `Already approved and queued ${when}. It will only go out once.` };
   }
 
+  // A question for the owner (e.g. about a review alleging food poisoning) is never sent to anyone.
+  if (draft.kind === "review_question") {
+    return { outcome: "blocked", reason: "not_approved", detail: "This is a question for you, not a message, so it's never sent." };
+  }
+
   // Nothing sends without an Approve, unless the builder set its task to Auto and
   // the live checker passed it (never campaigns, offers, hours, menu or profile).
   // Draft-only tasks never send.
