@@ -136,5 +136,219 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "Last week took £13,515 net, down 2% on the week before (£13,745) and down 2% on the average of the weeks before (£13,758). Saturday was the best day at £3,141 and Tuesday the quietest at £1,303. This is early data, with only 21 days of sales so far, and some comparison weeks have no figures yet.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 13515,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 13745,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_vs_prior_weeks_average",
+          "value": 13515,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 13758,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "net_sales_change_vs_previous_week",
+          "value": -2,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change_vs_prior_weeks_average",
+          "value": -2,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": null,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "best_day_net_sales_sat_3_oct",
+          "value": 3141,
+          "unit": "GBP",
+          "period": "2026-10-03",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        },
+        {
+          "metric": "quietest_day_net_sales_tue_29_sept",
+          "value": 1303,
+          "unit": "GBP",
+          "period": "2026-09-29",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        },
+        {
+          "metric": "days_of_sales_data",
+          "value": 21,
+          "unit": "count",
+          "period": "to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        }
+      ],
+      "confidence": "low",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2",
+        "metrics:q3"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_day",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1, q2 or q3. The small-sample caveat and the note that some comparison weeks have no figures match the source notes.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£13,515, £13,745, £13,758, £3,141, £1,303 and 21 days all match their sources. The -2% changes match the source and check out against the raw values (-1.7% and -1.8%).",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Period 28 Sept to 4 Oct is the week before today (Monday 5 October 2026). Sat 3 Oct and Tue 29 Sept are correct weekdays and match the source rows.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used. The day names match the source.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made. The draft only describes figures and comparisons.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:42:37.522Z"
+  }
 }

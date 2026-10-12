@@ -134,5 +134,132 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "Last week (Monday 28 September to Sunday 4 October) took £4,297 net, down 6% on the week before (£4,591) and down 3% on the 4-week average (£4,419). Sunday is closed, so the six trading days are all counted.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 4297,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 4591,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change",
+          "value": -6,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales",
+          "value": 4297,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 4419,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "net_sales_change",
+          "value": -3,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": null,
+          "source": "metrics:q2"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2",
+        "profile:hours"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1, metrics:q2 or profile:hours. Sunday closed is in the profile hours.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£4,297 (4296.87), £4,591 (4591.41), £4,419 (4419.18), down 6% and down 3% all match the sources after rounding.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Monday 28 September to Sunday 4 October matches the source period. Both comparison periods are consistent. 28 September 2026 is a Monday, so the dates are correct.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause is claimed. The draft only reports the figures and comparisons.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:51:00.620Z"
+  }
 }

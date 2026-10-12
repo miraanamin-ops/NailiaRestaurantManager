@@ -125,5 +125,93 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "11 people joined the email list last week (Monday 28 September to Sunday 4 October). That compares with an average of about 1 a week over the 4 weeks before (0.8). The numbers are very small, so the jump looks big in percentage terms.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "email_list_signups",
+          "value": 11,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 0.8,
+          "source": "metrics:q1"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "list_growth",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1: 11 sign-ups, the period, the 4-week comparison and the 0.8 average. The small-numbers caveat is a reasonable reading of the data.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "11 matches the value and 0.8 matches the compare value. 'About 1 a week' is a fair rounding of 0.8. The 14 in the source is a cumulative total, not the weekly figure, and the draft doesn't use it.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Period 28 September to 4 October matches the source (Monday to Sunday). The comparison window is described as the 4 weeks before. Dates are in the past, as they should be for a report.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause is claimed for the increase.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:46:03.003Z"
+  }
 }

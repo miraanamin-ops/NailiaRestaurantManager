@@ -122,5 +122,179 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "By number sold, Garlic Naan led last week with 322, against an average of 314 over the 4 weeks before. Among mains, Lamb Chops sold most with 216 plates (average 210). By value, Mixed Grill Platter brought in the most at £3,182 including VAT from 172 plates (average 170), with Lamb Chops next at £3,013.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "garlic_naan_sold",
+          "value": 322,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 314,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "lamb_chops_sold",
+          "value": 216,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 210.3,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "mixed_grill_platter_sales_incl_vat",
+          "value": 3182,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "mixed_grill_platter_sold",
+          "value": 172,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 169.8,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "lamb_chops_sales_incl_vat",
+          "value": 3013,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "item_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "item_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "item_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "item_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1. Garlic Naan has the highest quantity (322). Lamb Chops (216) is the top seller among the Grills and Burgers & Wraps items. Mixed Grill Platter has the highest value (£3,182) and Lamb Chops is next (£3,013).",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "322 and 314, 216 and 210.3 (said as 210), 172 and 169.8 (said as 170), £3,182 and £3,013 all match the source after rounding.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "'Last week' fits 28 Sept to 4 Oct, as today is Monday 5 October. The comparison of the 4 weeks before matches 31 Aug to 27 Sept.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Garlic Naan, Lamb Chops and Mixed Grill Platter match the source and profile names. 'Lamb Chops' leaves out '(4 pcs)', which is a harmless shortening.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made. The draft only reports sales and comparisons.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only, with no financial, tax, legal or staffing advice. VAT is mentioned only as a label on the figures.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:38:13.555Z"
+  }
 }

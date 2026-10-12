@@ -126,5 +126,111 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "Fridays are busiest from 7pm to 8pm, averaging £595 in that hour over the last 8 Fridays. The hours either side are next: 8pm to 9pm averages £550 and 6pm to 7pm averages £457. These are average sales per hour including VAT, compared across the Friday opening hours.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "sales_7pm_to_8pm_friday_avg",
+          "value": 595,
+          "unit": "GBP",
+          "period": "2026-08-10 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "sales_8pm_to_9pm_friday_avg",
+          "value": 550,
+          "unit": "GBP",
+          "period": "2026-08-10 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "sales_6pm_to_7pm_friday_avg",
+          "value": 457,
+          "unit": "GBP",
+          "period": "2026-08-10 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "sales_by_hour",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Friday",
+        "compare": "none",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1: busiest hour 19:00 to 20:00, the neighbouring hours, 8 Fridays, VAT included, average per hour.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£595 (595.43), £550 (550.15) and £457 (457.25) match the source after rounding. 8 Fridays matches days_with_data.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Period 2026-08-10 to 2026-10-04 matches the source and is in the past. Hours 6pm to 9pm fall inside Friday opening hours (14:00 to 00:00).",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No names of people or dishes used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims made. The draft only describes averages.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:37:24.682Z"
+  }
 }

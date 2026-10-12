@@ -130,5 +130,131 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "Saturday 3 October took £3,141 net, up 6% on the average of the 4 Saturdays before (£2,957). It had 172 bills against an average of about 161, up 7%.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 3141,
+          "unit": "GBP",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": 2957,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change",
+          "value": 6,
+          "unit": "percent",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "transactions",
+          "value": 172,
+          "unit": "count",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": 161.3,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "transactions_change",
+          "value": 7,
+          "unit": "percent",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": null,
+          "source": "metrics:q2"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "day",
+        "date": "2026-10-03",
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "same_weekday_last_4",
+        "campaign": null
+      },
+      {
+        "metric": "transactions",
+        "period": "day",
+        "date": "2026-10-03",
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "same_weekday_last_4",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "All claims trace to metrics:q1 and metrics:q2. Date, net sales, comparison basis, bill counts and percentages are all supported.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£3,141 matches 3140.58 and £2,957 matches 2956.56. 6% and 7% match change_pct. 172 matches. 'About 161' matches 161.3. The figures array values (3141, 2957, 161.3) also match.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Saturday 3 October 2026 is a Saturday and is in the past relative to Monday 5 October. The 4 prior Saturdays (5, 12, 19, 26 September) match the source compare period.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made. The draft only reports figures and comparisons.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T19:09:44.907Z"
+  }
 }

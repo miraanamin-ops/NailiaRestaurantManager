@@ -125,5 +125,360 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "report_section",
+      "channel": "owner",
+      "content": {
+        "headline": "Net sales were £13,515 last week, down 2% on the week before (£13,745) and level with the 4-week average (£13,477).",
+        "body": "Last week was steady, with 716 bills against 714 the week before. Saturday 3 October was the best day at £3,141 and Tuesday 29 September the quietest at £1,303. Average spend per bill was £18.88, down 2% on £19.25 the week before. Masala Chips fell to 267 portions from 296 and Smash Burger to 197 from 217. Rain on Tuesday, Wednesday and Thursday was light (1.6mm, 2.5mm and 1.7mm), so I would not read much into it.",
+        "actions": [
+          {
+            "title": "Rerun the Tuesday deal with a unique code",
+            "why": "The Quiet Tuesday grill deal had 3 redemptions, under 20, so too few to judge it by; offer days were £6,859 against a usual £7,221 (5% below), which does not show the offer caused it, as only a unique code would.",
+            "message": "Draft a Tuesday grill deal email for next week with a unique code, so we can see exactly how many bills it brings in."
+          },
+          {
+            "title": "Check why Smash Burger slipped",
+            "why": "Smash Burger sold 197 last week against 217 the week before, which may be linked to availability or how it was promoted.",
+            "message": "Check whether Smash Burger was off the menu or sold out any day last week, and suggest a way to feature it this week."
+          },
+          {
+            "title": "Suggest a side with each grill order",
+            "why": "Average spend was £18.88 against £19.25, and Masala Chips sold 267 against 296; the two coincided and may be linked.",
+            "message": "Draft a short staff note and a menu line suggesting Masala Chips with every grill this week."
+          }
+        ]
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 13515,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 13745,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change_vs_previous_week",
+          "value": -2,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_4_week_average",
+          "value": 13477,
+          "unit": "GBP",
+          "period": "2026-08-31 to 2026-09-27",
+          "compare_to": "last_week_net_sales",
+          "compare_value": 13515,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "transactions",
+          "value": 716,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 714,
+          "source": "metrics:q4"
+        },
+        {
+          "metric": "best_day_net_sales",
+          "value": 3141,
+          "unit": "GBP",
+          "period": "2026-10-03",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        },
+        {
+          "metric": "quietest_day_net_sales",
+          "value": 1303,
+          "unit": "GBP",
+          "period": "2026-09-29",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        },
+        {
+          "metric": "avg_spend",
+          "value": 18.88,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 19.25,
+          "source": "metrics:q5"
+        },
+        {
+          "metric": "avg_spend_change_vs_previous_week",
+          "value": -2,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q5"
+        },
+        {
+          "metric": "masala_chips_sold",
+          "value": 267,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 296,
+          "source": "metrics:q6"
+        },
+        {
+          "metric": "smash_burger_sold",
+          "value": 197,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 217,
+          "source": "metrics:q6"
+        },
+        {
+          "metric": "rain_tuesday",
+          "value": 1.6,
+          "unit": "mm",
+          "period": "2026-09-29",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q7"
+        },
+        {
+          "metric": "rain_wednesday",
+          "value": 2.5,
+          "unit": "mm",
+          "period": "2026-09-30",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q7"
+        },
+        {
+          "metric": "rain_thursday",
+          "value": 1.7,
+          "unit": "mm",
+          "period": "2026-10-01",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q7"
+        },
+        {
+          "metric": "campaign_redemptions",
+          "value": 3,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q10"
+        },
+        {
+          "metric": "net_sales_on_offer_days",
+          "value": 6859,
+          "unit": "GBP",
+          "period": "2026-09-29 to 2026-10-02",
+          "compare_to": "same_weekdays_previous_4_weeks",
+          "compare_value": 7221,
+          "source": "metrics:q10"
+        },
+        {
+          "metric": "offer_days_difference_vs_usual",
+          "value": -5,
+          "unit": "percent",
+          "period": "2026-09-29 to 2026-10-02",
+          "compare_to": "same_weekdays_previous_4_weeks",
+          "compare_value": null,
+          "source": "metrics:q10"
+        },
+        {
+          "metric": "redemptions_threshold",
+          "value": 20,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q10"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2",
+        "metrics:q3",
+        "metrics:q4",
+        "metrics:q5",
+        "metrics:q6",
+        "metrics:q7",
+        "metrics:q10"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_day",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "transactions",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "avg_spend",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "item_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "weather",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "reviews",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "list_growth",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "campaign_results",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "google_stats",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1 to q10. The availability and promotion wording on Smash Burger is hedged with 'may be linked' and is not stated as fact.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "All figures match their sources after rounding: £13,515, £13,745, £13,477, 716 and 714, £3,141, £1,303, £18.88 and £19.25, 267 and 296, 197 and 217, 1.6mm, 2.5mm and 1.7mm, 3 redemptions, £6,859 and £7,221, -5%. The -2% changes match the source change_pct values.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Saturday 3 October, Tuesday 29 September and the 28 September to 4 October period are consistent with today being Monday 5 October 2026. The comparison periods are correct.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Masala Chips and Smash Burger match the menu and item sales names. The Quiet Tuesday grill deal matches the campaign name.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "The draft says the offer-day dip does not show the offer caused it, and says only a unique code would. The rain and the average spend link are hedged with 'would not read much into it' and 'may be linked'.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "The draft gives information and suggested next steps only. There is no financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 1,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:59:27.636Z"
+  }
 }

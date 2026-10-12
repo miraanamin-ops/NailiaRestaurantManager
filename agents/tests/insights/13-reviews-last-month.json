@@ -125,5 +125,111 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "September brought 12 new Google reviews, averaging 3.3 stars, compared with 0 new reviews in the period before (Sunday 2 August to Monday 31 August). Only 3 of the 12 have been replied to so far. This is a small sample, so treat the average with care.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "new_reviews",
+          "value": 12,
+          "unit": "count",
+          "period": "2026-09-01 to 2026-09-30",
+          "compare_to": "previous_period",
+          "compare_value": 0,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "average_stars_new_reviews",
+          "value": 3.3,
+          "unit": "stars",
+          "period": "2026-09-01 to 2026-09-30",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "reviews_replied_to",
+          "value": 3,
+          "unit": "count",
+          "period": "2026-09-01 to 2026-09-30",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "reviews",
+        "period": "custom",
+        "date": null,
+        "from": "2026-09-01",
+        "to": "2026-09-30",
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "All claims trace to metrics:q1: 12 new reviews, 3.3 average, 3 replied to, comparison period with 0 reviews.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "12, 3.3, 3 and compare value 0 all match the source exactly.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Comparison period (Sunday 2 August to Monday 31 August) matches the source. 2 August 2026 is a Sunday and 31 August 2026 is a Monday. September period 2026-09-01 to 2026-09-30 matches. The draft says 'September' and today is 5 October, so the period is in the past as expected.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims made. The draft only reports figures and flags the small sample.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only, no financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:45:20.088Z"
+  }
 }
