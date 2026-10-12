@@ -243,3 +243,19 @@ test("the report may quote a weekly theme's count (counted by code), and only a 
   expect(insightsProblems({ ...report, figures: [report.figures[0], { ...report.figures[1], value: 5 }] }, { task: "report", results, themes }).join()).toMatch(/isn't a count in themes/);
   expect(insightsProblems(report, { task: "report", results }).join()).toMatch(/source must be metrics/);
 });
+
+test("a cause is only a problem when it's claimed, not when it's denied", async () => {
+  const { causeClaim } = await import("@/lib/agents/insights-rules");
+  expect(causeClaim("Sales were up. The offer caused it.")).toEqual({ words: "caused", sentence: "The offer caused it." });
+  expect(causeClaim("Sales were up, but that doesn't show the offer caused it.")).toBeNull();
+  expect(causeClaim("We can't tell whether the rain caused the dip.")).toBeNull();
+  expect(causeClaim("The dip coincided with the deal rather than being caused by it.")).toBeNull();
+  expect(causeClaim("Thanks to the offer, Thursday was busy.")?.words).toBe("Thanks to the offer");
+});
+
+test("a campaign is found by the owner's words in any order; if not, the ones that exist are listed", () => {
+  const ember = caseData(byName("01"));
+  expect(ok(queryMetrics(ember, q({ metric: "campaign_results", period: "last_12_weeks", campaign: "quiet tuesday deal" }), "q1")).value!.value).toBe(3);
+  const none = ok(queryMetrics(ember, q({ metric: "campaign_results", period: "last_12_weeks", campaign: "christmas party" }), "q1"));
+  expect(none.notes[0]).toMatch(/No campaign called "christmas party". Campaigns there are: "Quiet Tuesday grill deal" \(sent 2026-09-29\)/);
+});

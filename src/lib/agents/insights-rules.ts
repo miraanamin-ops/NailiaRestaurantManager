@@ -50,6 +50,15 @@ const EM_DASH = new RegExp(String.fromCharCode(0x2014));
 const JARGON = /\b(AOV|KPIs?|YoY|WoW|MoM|ATV|ARPU)\b/;
 // Stating a cause as fact (insights.md: "coincided with", "likely helped").
 const CAUSE = /\b(caused|causing|led to|drove|driven by|resulted in|boosted|because of (?:the|your) (?:offer|campaign|deal|email|post)|thanks to (?:the|your) (?:offer|campaign|deal|email|post)|(?:offer|campaign|deal|email) (?:increased|added|brought in|generated))\b/i;
+// A cause stated as fact, unless the sentence denies or questions it ("that doesn't show the offer caused it").
+const NOT_CLAIMED = /\b(?:not|no|never|whether|if|unclear|cannot|rather than|instead of|coincided)\b|n't\b/i;
+export function causeClaim(text: string) {
+  for (const sentence of text.split(/(?<=[.!?\n])\s*/)) {
+    const m = sentence.match(CAUSE);
+    if (m && !NOT_CLAIMED.test(sentence.slice(0, m.index))) return { words: m[0], sentence: sentence.trim() };
+  }
+  return null;
+}
 // Advice on loans, tax, pay, hiring or firing (information only; decisions are the owner's).
 const ADVICE = /\b(?:you should|you could|I(?:'d| would)? (?:recommend|suggest|advise)|consider|it(?:'s| is) worth|best to|makes sense to)\b[^.!?]*\b(?:cut|hire|fire|let (?:\w+ )?go|lay off|redundan\w*|reduce (?:staff|hours|shifts)|fewer staff|staff(?:ing)?|rota|shifts?|wages?|pay ?rise|loan|borrow|tax|VAT return)\b/i;
 const SMALL_WORDS = /\b(only|early|small|few|fewer than|under (?:4|four) weeks|under 20|not enough|too little|limited|short)\b/i;
@@ -164,21 +173,26 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
     const numbers = numbersIn(result);
     // A change can be given without its sign ("down 2%" for -2).
     const exists = (v: number, unit: string) =>
-      numbers.some((n) => (unit === n.unit || (unit === "count" && n.unit !== "GBP")) && (sameNumber(v, n.value) || (unit === "percent" && sameNumber(Math.abs(v), Math.abs(n.value)))));
+      // Money and percentages must match their own kind; any other unit (count, mm, °C, stars) can match a plain number.
+      numbers.some((n) => (unit === n.unit || (!["GBP", "percent"].includes(unit) && !["GBP", "percent"].includes(n.unit))) && (sameNumber(v, n.value) || (unit === "percent" && sameNumber(Math.abs(v), Math.abs(n.value)))));
     if (!exists(f.value, f.unit)) problems.push(`figure ${f.metric} = ${f.value} isn't in ${f.source}: never work a figure out yourself; ask query_metrics for it`);
     if (f.compare_value !== null && !exists(f.compare_value, f.unit)) problems.push(`figure ${f.metric}'s compare_value ${f.compare_value} isn't in ${f.source}`);
-    if (f.unit === "percent" && !f.compare_to) problems.push(`figure ${f.metric} is a percentage: say what it's compared against (compare_to)`);
+    // A change in percent says what it's against (a result that is itself a comparison, like rainy against dry days, already does).
+    if (f.unit === "percent" && !f.compare_to && result.available && result.compare) problems.push(`figure ${f.metric} is a percentage: say what it's compared against (compare_to)`);
   }
 
   // Every number in the words is one of the figures.
   const figureNumbers = out.figures.flatMap((f) => [{ value: f.value, unit: f.unit }, ...(f.compare_value !== null ? [{ value: f.compare_value, unit: f.unit }] : [])]);
   for (const text of texts) {
     for (const q of quotedNumbers(text)) {
-      if (!matchesFigure(q, figureNumbers)) problems.push(`"${q.text}" isn't in figures: every number in the words must be one of the figures (from query_metrics)`);
+      // Small plain counts ("3 of 7 days", "top 5") are left to the checker's F2; money, percentages and bigger counts must be figures.
+      if (q.kind === "number" && Number.isInteger(q.value) && q.value <= 12) continue;
+      if (!matchesFigure(q, figureNumbers)) problems.push(`"${q.text}" isn't in figures: every number in the words must be one of the figures (add it from the query result, or leave it out)`);
     }
   }
 
-  if (CAUSE.test(allText)) problems.push(`"${allText.match(CAUSE)![0]}" states a cause as fact: say "coincided with", "likely helped" or "may be linked to"`);
+  const cause = causeClaim(allText);
+  if (cause) problems.push(`"${cause.words}" in "${cause.sentence}" states a cause as fact: say "coincided with", "likely helped" or "may be linked to"`);
   if (ADVICE.test(allText)) problems.push("that's advice on staffing, pay, loans or tax: share the figures and leave the decision to the owner");
 
   // Small samples behind a quoted figure are flagged plainly; an answer built on one has low confidence.

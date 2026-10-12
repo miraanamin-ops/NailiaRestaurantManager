@@ -224,6 +224,14 @@ const avgSpend: SalesFn = (ds) => {
   return t ? round(known.reduce((s, d) => s + d.net, 0) / t) : null;
 };
 
+// "quiet tuesday deal" finds "Quiet Tuesday grill deal": every word the owner used, in any order.
+export function nameMatches(name: string, wanted: string) {
+  const words = wanted.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !CAMPAIGN_FILLER.has(w));
+  const have = name.toLowerCase();
+  return words.length > 0 && words.every((w) => have.includes(w));
+}
+const CAMPAIGN_FILLER = new Set(["the", "our", "my", "campaign", "offer", "email"]);
+
 // ---------- Running a query ----------
 
 export function queryMetrics(data: MetricsData, q: MetricQueryInput, id: string): MetricResult {
@@ -474,10 +482,10 @@ export function queryMetrics(data: MetricsData, q: MetricQueryInput, id: string)
     case "campaign_results": {
       const wanted = q.campaign?.trim().toLowerCase();
       const list = data.campaigns.filter((c) =>
-        wanted ? c.id.toLowerCase() === wanted || c.name.toLowerCase().includes(wanted) : c.sent_at && c.sent_at.slice(0, 10) >= range.from && c.sent_at.slice(0, 10) <= range.to,
+        wanted ? c.id.toLowerCase() === wanted || nameMatches(c.name, wanted) : c.sent_at && c.sent_at.slice(0, 10) >= range.from && c.sent_at.slice(0, 10) <= range.to,
       );
       if (!list.length) {
-        return { ...base, label: "Email campaigns", value: null, compare: null, rows: [], days_with_data: null, source: "campaign emails", small_sample: null, anomalies: [], notes: [wanted ? `No campaign called "${q.campaign}".` : "No campaigns were sent in this period."] };
+        return { ...base, label: "Email campaigns", value: null, compare: null, rows: [], days_with_data: null, source: "campaign emails", small_sample: null, anomalies: [], notes: [wanted ? `No campaign called "${q.campaign}". Campaigns there are: ${data.campaigns.map((c) => `"${c.name}" (sent ${c.sent_at ? c.sent_at.slice(0, 10) : "not yet"})`).join(", ") || "none"}.` : "No campaigns were sent in this period."] };
       }
       const byDay = new Map(data.sales_days.map((d) => [d.day, d]));
       const rows: Row[] = [];
@@ -584,9 +592,16 @@ export function numbersIn(result: MetricResult): Figure[] {
     out.push({ value: a.times, unit: "count", display: `${a.times}` });
   }
   if (result.days_with_data !== null) add(count(result.days_with_data));
-  // Counts quoted in the small-sample warning and notes ("Only 18 days of sales data").
-  for (const text of [result.small_sample ?? "", ...result.notes]) {
-    for (const m of text.replace(/£[\d,.]+/g, "").matchAll(/\b\d+\b/g)) add(count(Number(m[0])));
+  // How long the period is ("12 weeks", "28 days").
+  const days = daysBetween(result.period.from, result.period.to) + 1;
+  add(count(days));
+  if (days % 7 === 0) add(count(days / 7));
+  // Counts quoted in the small-sample warning and notes ("Only 18 days of sales data")...
+  // ...and in the comparison's wording and text details ("the average of the 4 Saturdays before", "4 days with sales figures").
+  const words = [result.compare?.label ?? "", ...result.rows.flatMap((r) => [r.label, ...Object.values(r.extra ?? {}).filter((v): v is string => typeof v === "string")])];
+  for (const text of [result.small_sample ?? "", ...result.notes, ...words]) {
+    // ("1mm" counts too: no word boundary is needed after the number; "15% off" is a percentage.)
+    for (const m of text.replace(/£[\d,.]+/g, "").matchAll(/(?<![\d.])(\d+(?:\.\d+)?)(\s?%)?/g)) add(m[2] ? pct(Number(m[1])) : count(Number(m[1])));
   }
   return out;
 }
