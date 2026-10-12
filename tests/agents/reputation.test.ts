@@ -238,3 +238,10 @@ describe("the /log comparison", () => {
     expect(html).not.toContain("for B");
   });
 });
+
+test("the escalation rate: questions as a share of reviews, flagged over 10%", async () => {
+  const { rateOf } = await import("@/app/log/reputation-compare");
+  expect(rateOf(1, 10)).toEqual({ questions: 1, reviews: 10, percent: 10, high: false });
+  expect(rateOf(2, 10)).toMatchObject({ percent: 20, high: true });
+  expect(rateOf(0, 0)).toMatchObject({ percent: null, high: false });
+});

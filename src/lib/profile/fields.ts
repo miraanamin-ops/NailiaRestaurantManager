@@ -49,7 +49,8 @@ export const PROFILE_FIELDS = {
   emoji_allowed: f("voice", "confirm", ["reputation", "growth", "visibility"], ["emoji_allowed"], true, "emojis"),
   // Facts
   menu: f("facts", "confirm", ["reputation", "growth", "visibility", "insights"], ["menu"], true, "menu"),
-  hours: f("facts", "confirm", ["gm", "growth", "visibility"], ["opening_hours"], true, "opening hours"),
+  hours: f("facts", "confirm", ["gm", "reputation", "growth", "visibility"], ["opening_hours"], true, "opening hours"),
+  special_hours: f("facts", "confirm", ["reputation", "growth", "visibility"], ["special_hours"], false, "special hours"),
   halal_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["halal_statement"], true, "halal statement"),
   allergen_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["allergen_statement"], true, "allergen statement"),
   complaint_contact: f("facts", "confirm", ["reputation"], ["complaint_contact"], true, "contact for complaints"),
@@ -59,6 +60,7 @@ export const PROFILE_FIELDS = {
   // Brand kit
   logo: f("brand_kit", "confirm", [], ["logo_url"], true, "logo"),
   colours: f("brand_kit", "confirm", [], ["brand_color", "brand_dark"], true, "colours"),
+  photo_library: f("brand_kit", "confirm", ["growth", "visibility"], ["photo_library"], false, "photo library"),
   // Controls: settings only, never changed by an agent
   discount_cap: f("controls", "settings", ["growth"], ["discount_cap_percent"], true, "discount cap"),
   send_window: f("controls", "settings", [], ["send_window_start", "send_window_end"], true, "sending hours"),

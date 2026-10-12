@@ -1,0 +1,138 @@
+{
+  "name": "2 stars at the café: shut on a Sunday, which the profile says is a closed day",
+  "source": "test review (Reputation now reads opening hours)",
+  "review": {
+    "id": "t-18",
+    "author_name": "Rhys T.",
+    "rating": 2,
+    "text": "Came by on Sunday morning for a cardamom latte and the place was shut. Really annoying, it was the whole reason we came out."
+  },
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "google_place_id": null,
+      "phone": "+44 20 8946 0456",
+      "sign_off_name": "Maya and the Cardamom Corner team",
+      "tone_notes": "Gentle, cosy and neighbourly, like a favourite local café. Calm, unhurried sentences; warm but never gushing. Use the customer's first name. Mention the bakes and the cardamom latte when it fits. Never pushy. On bad reviews: thank them for the honesty, apologise simply, and invite them back to try again.",
+      "greeting": null,
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 0,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "hours": {
+        "Monday": "07:30 – 17:00",
+        "Tuesday": "07:30 – 17:00",
+        "Wednesday": "07:30 – 17:00",
+        "Thursday": "07:30 – 19:00",
+        "Friday": "07:30 – 19:00",
+        "Saturday": "08:30 – 18:00",
+        "Sunday": "Closed"
+      },
+      "special_hours": {},
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": null
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": null
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": null
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "halal_statement": "Our chicken is halal. We don't serve pork or alcohol.",
+      "allergen_statement": "Our bakes contain nuts, gluten, eggs and dairy. Please ask before you order.",
+      "complaint_contact": "hello@cardamomcorner.co.uk",
+      "recovery_offers": [
+        "A free cake with your next coffee"
+      ]
+    }
+  },
+  "history": {
+    "recent_replies": [],
+    "owner_edits": []
+  },
+  "owner_choice": null,
+  "today": "Monday 12 October 2026",
+  "expect": {
+    "alert": true,
+    "needs_owner_input": false,
+    "sources_must_include": [
+      "review:t-18",
+      "profile:hours"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": null
+}

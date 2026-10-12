@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -140,168 +150,5 @@
       "pass"
     ]
   },
-  "recorded": {
-    "output": {
-      "type": "review_reply",
-      "channel": "google",
-      "review_id": "346d179e-5e02-4739-b8cd-1bfdf2d6c056",
-      "rating": 2,
-      "content": {
-        "text": "Hi Nusrat, thanks for being honest with us, and we're sorry about the long wait for your table. We're also sorry nobody explained the delay, as a quick word would have made a difference. We're glad the food was nice once it arrived. Please email us at hello@emberandspice.co.uk so we can talk it through, and we'd like to offer you a free dessert on your next visit. The Ember & Spice Grill family"
-      },
-      "alert": true,
-      "needs_owner_input": null,
-      "sources_used": [
-        "review:346d179e-5e02-4739-b8cd-1bfdf2d6c056",
-        "profile:complaint_contact",
-        "profile:recovery_offers",
-        "profile:sign_off_name",
-        "profile:tone_notes"
-      ]
-    },
-    "checker": {
-      "verdict": "pass",
-      "checks": [
-        {
-          "id": "T1",
-          "result": "pass",
-          "reason": "Warm, apologetic and invites her back, as the tone notes ask for bad reviews. Uses her first name and says thank you.",
-          "fix": null
-        },
-        {
-          "id": "T2",
-          "result": "pass",
-          "reason": "Refers to the long wait for the table and the lack of explanation, which are specific to this review.",
-          "fix": null
-        },
-        {
-          "id": "T3",
-          "result": "pass",
-          "reason": "English reply to an English review. Plain and clear.",
-          "fix": null
-        },
-        {
-          "id": "T4",
-          "result": "pass",
-          "reason": "Opens with 'Hi Nusrat', which differs from the recent openings ('Thank you so much', 'Thanks so much', 'Hiya Jess'). The closing is the required sign-off name.",
-          "fix": null
-        },
-        {
-          "id": "T5",
-          "result": "pass",
-          "reason": "No em-dashes, no emojis and no hashtags. 'cheap' is not used.",
-          "fix": null
-        },
-        {
-          "id": "F1",
-          "result": "pass",
-          "reason": "The email address, the free dessert offer and the sign-off all match the profile. The wait, the unexplained delay and the nice food all come from the review.",
-          "fix": null
-        },
-        {
-          "id": "F2",
-          "result": "pass",
-          "reason": "No numbers in the draft.",
-          "fix": null
-        },
-        {
-          "id": "F3",
-          "result": "pass",
-          "reason": "No dates or times stated. 'Next visit' is open-ended.",
-          "fix": null
-        },
-        {
-          "id": "F4",
-          "result": "pass",
-          "reason": "'Nusrat' matches the reviewer name 'Nusrat H.'. The sign-off name matches the profile exactly.",
-          "fix": null
-        },
-        {
-          "id": "F5",
-          "result": "pass",
-          "reason": "No causal claims are made.",
-          "fix": null
-        },
-        {
-          "id": "C1",
-          "result": "pass",
-          "reason": "No food, halal or allergen claims.",
-          "fix": null
-        },
-        {
-          "id": "C2",
-          "result": "pass",
-          "reason": "A free dessert on the next visit is clear and on the approved list. No fake urgency.",
-          "fix": null
-        },
-        {
-          "id": "C3",
-          "result": "pass",
-          "reason": "No targeting by personal traits.",
-          "fix": null
-        },
-        {
-          "id": "C4",
-          "result": "pass",
-          "reason": "The dessert is offered as a recovery gesture and is not tied to editing or removing the review.",
-          "fix": null
-        },
-        {
-          "id": "C5",
-          "result": "pass",
-          "reason": "No personal details beyond what the reviewer wrote publicly.",
-          "fix": null
-        },
-        {
-          "id": "C6",
-          "result": "pass",
-          "reason": "No financial, legal or staffing advice.",
-          "fix": null
-        },
-        {
-          "id": "C7",
-          "result": "pass",
-          "reason": "A contact email in a Google review reply is fine.",
-          "fix": null
-        },
-        {
-          "id": "C8",
-          "result": "pass",
-          "reason": "No arguing or blaming. No invented facts, staff names or booking details beyond what the reviewer wrote. Only an approved recovery offer is used. The sign-off is correct and the review raises no escalation triggers.",
-          "fix": null
-        },
-        {
-          "id": "B1",
-          "result": "skipped",
-          "reason": "No rendered preview for a text review reply.",
-          "fix": null
-        },
-        {
-          "id": "B2",
-          "result": "skipped",
-          "reason": "No rendered preview for a text review reply.",
-          "fix": null
-        },
-        {
-          "id": "B3",
-          "result": "skipped",
-          "reason": "No rendered preview for a text review reply.",
-          "fix": null
-        },
-        {
-          "id": "B4",
-          "result": "skipped",
-          "reason": "No rendered preview for a text review reply.",
-          "fix": null
-        }
-      ],
-      "minor_fixes": [],
-      "owner_question": null
-    },
-    "revisions": 0,
-    "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:40:39.133Z"
-  }
+  "recorded": null
 }

@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -140,169 +150,5 @@
       "pass"
     ]
   },
-  "recorded": {
-    "outcome": "reply",
-    "question_by": null,
-    "question": null,
-    "output": {
-      "type": "review_reply",
-      "channel": "google",
-      "review_id": "t-13",
-      "rating": 5,
-      "content": {
-        "text": "Cheers for the five stars, Zara, you've made our day! Come on back and see us soon. The Ember & Spice Grill family"
-      },
-      "alert": false,
-      "needs_owner_input": null,
-      "sources_used": [
-        "review:t-13",
-        "profile:sign_off_name",
-        "profile:tone_notes"
-      ]
-    },
-    "checker": {
-      "verdict": "pass",
-      "checks": [
-        {
-          "id": "T1",
-          "result": "pass",
-          "reason": "Warm, upbeat, uses first name and thanks her. Matches the family-run East London voice.",
-          "fix": null
-        },
-        {
-          "id": "T2",
-          "result": "pass",
-          "reason": "The review has no text, so there is nothing specific to reference. The sign-off is the restaurant's own. A short generic reply is acceptable here.",
-          "fix": null
-        },
-        {
-          "id": "T3",
-          "result": "pass",
-          "reason": "English, plain and short. The review has no text, so English is the sensible default.",
-          "fix": null
-        },
-        {
-          "id": "T4",
-          "result": "pass",
-          "reason": "Opening 'Cheers for the five stars' and closing 'Come on back and see us soon' do not repeat the openings or closings shown (Thank you so much / Thanks so much / Hiya Jess). Only 3 of the last 10 were supplied.",
-          "fix": null
-        },
-        {
-          "id": "T5",
-          "result": "pass",
-          "reason": "No em-dashes, emojis or hashtags. Contains no banned phrases ('cheap' is not used).",
-          "fix": null
-        },
-        {
-          "id": "F1",
-          "result": "pass",
-          "reason": "Only claim is a five-star rating from Zara, which matches review:t-13. Sign-off matches the profile.",
-          "fix": null
-        },
-        {
-          "id": "F2",
-          "result": "pass",
-          "reason": "'five stars' matches rating 5.",
-          "fix": null
-        },
-        {
-          "id": "F3",
-          "result": "pass",
-          "reason": "No dates or times mentioned.",
-          "fix": null
-        },
-        {
-          "id": "F4",
-          "result": "pass",
-          "reason": "'Zara' matches author 'Zara H.'. Sign-off name matches the profile exactly.",
-          "fix": null
-        },
-        {
-          "id": "F5",
-          "result": "pass",
-          "reason": "No causal claims.",
-          "fix": null
-        },
-        {
-          "id": "C1",
-          "result": "pass",
-          "reason": "No food, halal, allergen or dietary claims.",
-          "fix": null
-        },
-        {
-          "id": "C2",
-          "result": "pass",
-          "reason": "No offers made. 'Come on back' is a general invitation.",
-          "fix": null
-        },
-        {
-          "id": "C3",
-          "result": "pass",
-          "reason": "No targeting or personal-trait wording.",
-          "fix": null
-        },
-        {
-          "id": "C4",
-          "result": "pass",
-          "reason": "Nothing offered in exchange for a review or for changing one.",
-          "fix": null
-        },
-        {
-          "id": "C5",
-          "result": "pass",
-          "reason": "Uses only the public reviewer name and no private details.",
-          "fix": null
-        },
-        {
-          "id": "C6",
-          "result": "pass",
-          "reason": "No financial, tax, legal or staffing advice.",
-          "fix": null
-        },
-        {
-          "id": "C7",
-          "result": "pass",
-          "reason": "No phone numbers, links or other content that breaks Google review reply rules.",
-          "fix": null
-        },
-        {
-          "id": "C8",
-          "result": "pass",
-          "reason": "Maker's rules are followed: no invented facts, no order details, no staff names, no offers, no em-dashes or emojis, and signed off with the profile sign-off name. The opening and closing differ from the 3 supplied outputs.",
-          "fix": null
-        },
-        {
-          "id": "B1",
-          "result": "skipped",
-          "reason": null,
-          "fix": null
-        },
-        {
-          "id": "B2",
-          "result": "skipped",
-          "reason": null,
-          "fix": null
-        },
-        {
-          "id": "B3",
-          "result": "skipped",
-          "reason": null,
-          "fix": null
-        },
-        {
-          "id": "B4",
-          "result": "skipped",
-          "reason": null,
-          "fix": null
-        }
-      ],
-      "minor_fixes": [],
-      "owner_question": null
-    },
-    "revisions": 1,
-    "model": "claude-sonnet-5-5",
-    "agent_version": "0.2",
-    "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:54:52.413Z"
-  }
+  "recorded": null
 }

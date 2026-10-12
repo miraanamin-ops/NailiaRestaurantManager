@@ -65,6 +65,7 @@ export async function ReputationCompare({ restaurantId }: { restaurantId: string
     question: rows.filter((r) => r.outcome === "question").length,
     revised: rows.filter((r) => r.revisions > 0).length,
   };
+  const rate = await escalationRate(restaurantId);
 
   return (
     <section className="space-y-3">
@@ -73,6 +74,10 @@ export async function ReputationCompare({ restaurantId }: { restaurantId: string
         <p className="mt-1 text-stone-600">
           {counts.total} review{counts.total === 1 ? "" : "s"}: {counts.pass} replies the checker passed, {counts.question} would ask the owner, {counts.revised} needed a revision.
           The owner only ever saw the left-hand reply.
+        </p>
+        <p className={`mt-2 ${rate.high ? "font-semibold text-red-800" : "text-stone-700"}`}>
+          Escalation rate, last 30 days: {rate.percent === null ? "no reviews yet" : `${rate.percent}% (${rate.questions} question${rate.questions === 1 ? "" : "s"} from ${rate.reviews} review${rate.reviews === 1 ? "" : "s"})`}
+          {rate.high && ". Over 10%: worth a look."}
         </p>
       </div>
       {!rows.length && <p className="text-sm text-stone-600">Nothing yet. Send NEW REVIEW (test mode) or wait for the hourly review check.</p>}
@@ -143,4 +148,28 @@ export async function ReputationCompare({ restaurantId }: { restaurantId: string
       })}
     </section>
   );
+}
+
+// Questions raised as a share of reviews in the last 30 days, shadow and live
+// together: Reputation's own questions and the checker's escalations.
+export async function escalationRate(restaurantId: string, now = new Date()) {
+  const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const supabase = getSupabase();
+  const count = async (q: PromiseLike<{ count: number | null; error: { message: string } | null }>) => {
+    const res = await q;
+    return res.error ? 0 : (res.count ?? 0);
+  };
+  const head = { count: "exact" as const, head: true };
+  const [shadowAll, shadowQ, liveQ, liveReplies] = await Promise.all([
+    count(supabase.from("shadow_drafts").select("id", head).eq("restaurant_id", restaurantId).eq("agent", "reputation").gte("created_at", since)),
+    count(supabase.from("shadow_drafts").select("id", head).eq("restaurant_id", restaurantId).eq("agent", "reputation").eq("outcome", "question").gte("created_at", since)),
+    count(supabase.from("drafts").select("id", head).eq("restaurant_id", restaurantId).eq("kind", "review_question").gte("created_at", since)),
+    count(supabase.from("drafts").select("id", head).eq("restaurant_id", restaurantId).eq("kind", "review_reply").not("agent_check", "is", null).eq("agent_check->>mode", "live").gte("created_at", since)),
+  ]);
+  return rateOf(shadowQ + liveQ, shadowAll + liveQ + liveReplies);
+}
+
+export function rateOf(questions: number, reviews: number) {
+  const percent = reviews ? Math.round((questions / reviews) * 100) : null;
+  return { questions, reviews, percent, high: percent !== null && percent > 10 };
 }

@@ -53,6 +53,18 @@ describe("profile fields", () => {
     }
   });
 
+  test("which agents read each field matches docs/profile-schema.md", () => {
+    const doc = readFileSync("docs/profile-schema.md", "utf8");
+    const ABBR: Record<string, string> = { GM: "gm", Rep: "reputation", Gro: "growth", Vis: "visibility", Ins: "insights" };
+    for (const name of PROFILE_FIELD_NAMES) {
+      const row = doc.split("\n").find((l) => l.startsWith(`| \`${name}\``))!;
+      const readBy = row.split("|")[4].trim();
+      const want = readBy === "All" ? "all" : readBy.split(/,\s*|\s+\(/).map((x) => ABBR[x.trim()]).filter(Boolean).sort();
+      const have = PROFILE_FIELDS[name].readBy === "all" ? "all" : [...(PROFILE_FIELDS[name].readBy as string[])].sort();
+      expect(have, name).toEqual(want);
+    }
+  });
+
   test("columns map back to their field", () => {
     expect(fieldForColumn("brand_voice")).toBe("tone_notes");
     expect(fieldForColumn("brand_dark")).toBe("colours");
@@ -67,7 +79,8 @@ describe("profile fields", () => {
     expect(view).toHaveProperty("complaint_contact");
     expect(view).toHaveProperty("recovery_offers");
     expect(view).not.toHaveProperty("discount_cap");
-    expect(view).not.toHaveProperty("hours");
+    expect(view).toHaveProperty("hours");
+    expect(view).toHaveProperty("special_hours");
     expect(view).not.toHaveProperty("owner_whatsapp");
   });
 
