@@ -1,0 +1,516 @@
+{
+  "name": "the cafe's Monday report, with Reputation's weekly themes",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "report",
+  "question": null,
+  "restaurant": "cardamom-corner",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 0,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": "Three eggs, onion, chilli and coriander, with toast"
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": "Sourdough, smashed avocado, chilli flakes, poached egg"
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": "House granola, Greek yoghurt, honey and berries"
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": "Grilled halloumi, salad and mint yoghurt"
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": "With warm bread"
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": "Our signature"
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            },
+            {
+              "name": "Fresh Orange Juice",
+              "price": 3.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": "Slice"
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            },
+            {
+              "name": "Date & Walnut Loaf",
+              "price": 3.75,
+              "description": "Slice"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "07:30 â€“ 19:00",
+        "Monday": "07:30 â€“ 17:00",
+        "Sunday": "Closed",
+        "Tuesday": "07:30 â€“ 17:00",
+        "Saturday": "08:30 â€“ 18:00",
+        "Thursday": "07:30 â€“ 19:00",
+        "Wednesday": "07:30 â€“ 17:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": {
+    "week": "2026-09-28",
+    "praise": [
+      {
+        "label": "the cardamom latte",
+        "count": 4
+      },
+      {
+        "label": "friendly staff",
+        "count": 2
+      }
+    ],
+    "complaints": [
+      {
+        "label": "slow service at lunch",
+        "count": 3
+      }
+    ]
+  },
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "net sales 28 Sep to 4 Oct",
+        "value": 4296.87,
+        "unit": "GBP"
+      }
+    ],
+    "must_not_contain": [
+      "Ember & Spice"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "report_section",
+      "channel": "owner",
+      "content": {
+        "headline": "Net sales were £4,297 last week, down 6% on the week before (£4,591) and 3% below the 4-week average (£4,419).",
+        "body": "Saturday was the best day at £1,076, and Tuesday was the quietest at £555. Bills fell to 606 from 644 the week before, down 6%, while average spend barely moved at £7.09 against £7.13. So the dip looks like fewer customers, not smaller orders. The Cardamom Latte is still your top seller at 150 cups, against 161 the week before. Sales figures cover 6 days because Sunday is a closed day on your opening hours.",
+        "actions": [
+          {
+            "title": "Reply to your 2 new Google reviews",
+            "why": "Both new reviews (average 4.5 stars) are still unanswered, and your rating across all 5 reviews is 3.8.",
+            "message": "Reputation agent: please draft replies to the 2 new Google reviews from last week for me to approve."
+          },
+          {
+            "title": "Look into slow lunch service",
+            "why": "Slow service at lunch came up 3 times in review themes, the top complaint.",
+            "message": "Reputation agent: show me the 3 reviews that mention slow service at lunch, so I can talk to the team about lunch timing this week."
+          },
+          {
+            "title": "Start collecting email sign-ups",
+            "why": "There were 0 new sign-ups last week and 0 the week before, even though Saturday had 150 bills.",
+            "message": "Please draft a short counter sign to ask customers to join our email list, to put out this Saturday."
+          }
+        ]
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 4297,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 4591,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales",
+          "value": 4297,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 4419,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "net_sales_change_vs_previous_week",
+          "value": -6,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change_vs_4_week_average",
+          "value": -3,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": null,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "best_day_net_sales_saturday",
+          "value": 1076,
+          "unit": "GBP",
+          "period": "2026-10-03",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        },
+        {
+          "metric": "quietest_day_net_sales_tuesday",
+          "value": 555,
+          "unit": "GBP",
+          "period": "2026-09-29",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        },
+        {
+          "metric": "transactions",
+          "value": 606,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 644,
+          "source": "metrics:q4"
+        },
+        {
+          "metric": "transactions_change",
+          "value": -6,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q4"
+        },
+        {
+          "metric": "avg_spend",
+          "value": 7.09,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 7.13,
+          "source": "metrics:q5"
+        },
+        {
+          "metric": "cardamom_latte_sold",
+          "value": 150,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 161,
+          "source": "metrics:q6"
+        },
+        {
+          "metric": "days_with_sales_data",
+          "value": 6,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "new_reviews",
+          "value": 2,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 1,
+          "source": "metrics:q8"
+        },
+        {
+          "metric": "new_reviews_average_stars",
+          "value": 4.5,
+          "unit": "stars",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q8"
+        },
+        {
+          "metric": "rating_all_reviews",
+          "value": 3.8,
+          "unit": "stars",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q8"
+        },
+        {
+          "metric": "reviews_total",
+          "value": 5,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q8"
+        },
+        {
+          "metric": "slow_lunch_service_mentions",
+          "value": 3,
+          "unit": "count",
+          "period": "2026-09-28 week",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "themes:2026-09-28"
+        },
+        {
+          "metric": "email_signups",
+          "value": 0,
+          "unit": "count",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 0,
+          "source": "metrics:q9"
+        },
+        {
+          "metric": "saturday_transactions",
+          "value": 150,
+          "unit": "count",
+          "period": "2026-10-03",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q3"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2",
+        "metrics:q3",
+        "metrics:q4",
+        "metrics:q5",
+        "metrics:q6",
+        "metrics:q8",
+        "metrics:q9",
+        "profile:hours",
+        "themes:2026-09-28"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_day",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "transactions",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "avg_spend",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "item_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "weather",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "reviews",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "list_growth",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "campaign_results",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "google_stats",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to a resolved source. Sunday closed comes from profile:hours and 6 of 7 days from metrics:q1. The lunch complaint comes from themes:2026-09-28 and the unanswered reviews from metrics:q8.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "All numbers match their sources after rounding: £4,297, £4,591, £4,419, -6%, -3%, £1,076, £555, 606 vs 644, £7.09 vs £7.13, 150 vs 161 cups, 2 reviews at 4.5, rating 3.8 across 5 reviews, 3 slow-service mentions, 0 sign-ups, 150 Saturday bills.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "The period 28 September to 4 October is correct. Saturday 3 October and Tuesday 29 September match the daily rows. Sunday 4 October is closed per the profile hours.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Cardamom Latte matches the menu and sales data exactly.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "The only causal wording is \"the dip looks like fewer customers, not smaller orders\". It is hedged and backed by bills down 6% against average spend down about 1%. Nothing else is claimed as a cause.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "The draft gives information and suggests next steps for the owner to approve. It contains no financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:53:23.369Z"
+  }
+}

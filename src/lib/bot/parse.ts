@@ -180,3 +180,23 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (cap && Number(cap[1]) <= 100) return { name: "cap", percent: Number(cap[1]) };
   return null;
 }
+
+// A question about the restaurant's numbers ("how was last week?", "how did
+// Saturday compare?", "what sold best?"). Until the GM router (phase 4), this is
+// how an owner's message reaches Insights. A request for something to be written
+// ("Thursday is quiet, draft an offer") isn't one: that stays with the assistant.
+const NUMBER_WORDS =
+  /\b(sales|sold|sell(?:s|ing)?|takings?|took|take|made|make|revenue|turnover|money|earn(?:t|ed)?|covers|bills?|transactions?|spend|spent|busy|busiest|quiet(?:est)?|dead|slow(?:est)?|best ?sellers?|popular|margins?|profit|rating|stars?|reviews?|sign[- ]?ups?|signed up|joined|email list|campaign|offer|deal|redeem\w*|weather|rain\w*|numbers|figures|compare[ds]?|week|weekend|month|yesterday|last night|staff|(?:mon|tues|wednes|thurs|fri|satur|sun)days?)\b/i;
+// Opening hours and other profile questions aren't about the numbers.
+const NOT_NUMBERS = /\b(open|opening|close|closing|hours|menu|address|allergens?|halal)\b/i;
+const ASKING = /\?|^(how|what|whats|what's|which|when|did|was|were|is|are|do|does|have|has|should|can|could|compare|any)\b|\b(how (?:was|were|did|much|many|is|are|does)|compare[ds]?|vs\.?|versus|than|last (?:week|month|year|night)|yesterday|this (?:week|month))\b/i;
+const WRITING = /\b(draft|write|reply|respond|post|send|email them|make (?:an? )?(?:offer|post|campaign)|create|set up|change|add|remove|update)\b/i;
+// "Thursday is quiet" (step 6) asks for an offer to fill it, not for figures.
+const QUIET_REQUEST = /\b(is|are|gonna be|will be|always|usually|tends to be|looks)\s+(?:so |really |very |a bit |always )?(quiet|dead|slow)\b/i;
+
+export function looksLikeNumbersQuestion(text: string) {
+  const t = text.trim();
+  if (!t || t.length > 300) return false;
+  if (WRITING.test(t) || NOT_NUMBERS.test(t) || (QUIET_REQUEST.test(t) && !/\?/.test(t))) return false;
+  return NUMBER_WORDS.test(t) && ASKING.test(t);
+}

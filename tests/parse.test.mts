@@ -1,7 +1,7 @@
 // Unit tests for reading the owner's WhatsApp messages, and the shared helpers. Run with: npm test
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { parseAction, parseButtonPayload, parseCommand, parseTargetedAction } from "../src/lib/bot/parse.ts";
+import { looksLikeNumbersQuestion, parseAction, parseButtonPayload, parseCommand, parseTargetedAction } from "../src/lib/bot/parse.ts";
 import { londonLongDate, londonWeekday, londonYmd, startOfLondonDay } from "../src/lib/clock.ts";
 import { clip, plural, shorten } from "../src/lib/text.ts";
 
@@ -66,4 +66,13 @@ test("text helpers", () => {
   assert.equal(clip("abc", 4), "abc");
   assert.equal(shorten("Warm kunafa with pistachio and cream", 20), "Warm kunafa with…");
   assert.equal(shorten("Two\n\nlines", 20), "Two lines");
+});
+
+test("number questions go to Insights (shadow); requests to write something don't", () => {
+  for (const q of ["how was last week?", "how did Saturday compare?", "what sold best last week", "how many covers did we do friday", "do we do worse when it rains?", "how did the quiet tuesday deal do?", "should I cut a member of staff on mondays?", "thursday was dead?", "How many people joined the email list last week", "whats our average spend looking like"]) {
+    assert.equal(looksLikeNumbersQuestion(q), true, q);
+  }
+  for (const q of ["Thursday is quiet", "thursday is always dead, draft an offer", "Draft a Google post about lamb chops", "reply to the latest review", "change Friday hours to 11pm", "hello", "thanks!", "APPROVE", "are we open on sunday?", "what time do we close friday?"]) {
+    assert.equal(looksLikeNumbersQuestion(q), false, q);
+  }
 });

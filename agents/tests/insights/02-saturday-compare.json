@@ -1,0 +1,260 @@
+{
+  "name": "how did Saturday compare?",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "answer",
+  "question": "how did Saturday compare?",
+  "restaurant": "ember-spice",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "net sales Sat 3 Oct",
+        "value": 3140.58,
+        "unit": "GBP"
+      },
+      {
+        "what": "average of the 4 Saturdays before",
+        "value": 2956.56,
+        "unit": "GBP"
+      }
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "Saturday 3 October took £3,141 net, up 6% on the average of the 4 Saturdays before (£2,957). It had 172 bills against an average of about 161, up 7%.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 3141,
+          "unit": "GBP",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": 2957,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change",
+          "value": 6,
+          "unit": "percent",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "transactions",
+          "value": 172,
+          "unit": "count",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": 161.3,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "transactions_change",
+          "value": 7,
+          "unit": "percent",
+          "period": "2026-10-03",
+          "compare_to": "average of the 4 Saturdays before",
+          "compare_value": null,
+          "source": "metrics:q2"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "day",
+        "date": "2026-10-03",
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "same_weekday_last_4",
+        "campaign": null
+      },
+      {
+        "metric": "transactions",
+        "period": "day",
+        "date": "2026-10-03",
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "same_weekday_last_4",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "All claims trace to metrics:q1 and metrics:q2. Date, net sales, comparison basis, bill counts and percentages are all supported.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£3,141 matches 3140.58 and £2,957 matches 2956.56. 6% and 7% match change_pct. 172 matches. 'About 161' matches 161.3. The figures array values (3141, 2957, 161.3) also match.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Saturday 3 October 2026 is a Saturday and is in the past relative to Monday 5 October. The 4 prior Saturdays (5, 12, 19, 26 September) match the source compare period.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made. The draft only reports figures and comparisons.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T19:09:44.907Z"
+  }
+}

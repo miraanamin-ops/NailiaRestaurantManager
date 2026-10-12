@@ -1,0 +1,265 @@
+{
+  "name": "the cafe: how was last week? (closed Sundays)",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "answer",
+  "question": "How was last week?",
+  "restaurant": "cardamom-corner",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 0,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": "Three eggs, onion, chilli and coriander, with toast"
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": "Sourdough, smashed avocado, chilli flakes, poached egg"
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": "House granola, Greek yoghurt, honey and berries"
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": "Grilled halloumi, salad and mint yoghurt"
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": "With warm bread"
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": "Our signature"
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            },
+            {
+              "name": "Fresh Orange Juice",
+              "price": 3.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": "Slice"
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            },
+            {
+              "name": "Date & Walnut Loaf",
+              "price": 3.75,
+              "description": "Slice"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "07:30 â€“ 19:00",
+        "Monday": "07:30 â€“ 17:00",
+        "Sunday": "Closed",
+        "Tuesday": "07:30 â€“ 17:00",
+        "Saturday": "08:30 â€“ 18:00",
+        "Thursday": "07:30 â€“ 19:00",
+        "Wednesday": "07:30 â€“ 17:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "net sales 28 Sep to 4 Oct",
+        "value": 4296.87,
+        "unit": "GBP"
+      },
+      {
+        "what": "the week before",
+        "value": 4591.41,
+        "unit": "GBP"
+      }
+    ],
+    "must_not_contain": [
+      "Ember & Spice",
+      "Ember and Spice"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "Last week (Monday 28 September to Sunday 4 October) took £4,297 net, down 6% on the week before (£4,591) and down 3% on the 4-week average (£4,419). Sunday is closed, so the six trading days are all counted.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "net_sales",
+          "value": 4297,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": 4591,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales_change",
+          "value": -6,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "previous_week",
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "net_sales",
+          "value": 4297,
+          "unit": "GBP",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": 4419,
+          "source": "metrics:q2"
+        },
+        {
+          "metric": "net_sales_change",
+          "value": -3,
+          "unit": "percent",
+          "period": "2026-09-28 to 2026-10-04",
+          "compare_to": "average_of_previous_4_weeks",
+          "compare_value": null,
+          "source": "metrics:q2"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2",
+        "profile:hours"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      },
+      {
+        "metric": "net_sales",
+        "period": "last_week",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "average_of_previous_4_weeks",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to metrics:q1, metrics:q2 or profile:hours. Sunday closed is in the profile hours.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£4,297 (4296.87), £4,591 (4591.41), £4,419 (4419.18), down 6% and down 3% all match the sources after rounding.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Monday 28 September to Sunday 4 October matches the source period. Both comparison periods are consistent. 28 September 2026 is a Monday, so the dates are correct.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause is claimed. The draft only reports the figures and comparisons.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:51:00.620Z"
+  }
+}

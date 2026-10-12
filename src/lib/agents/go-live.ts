@@ -27,7 +27,12 @@ export function goLiveChecklist(restaurant: Restaurant, agent: AgentName, confir
 }
 
 export async function goLiveChecklistFor(restaurant: Restaurant, agent: AgentName) {
-  return goLiveChecklist(restaurant, agent, await confirmedFields(restaurant.id));
+  const fields = goLiveChecklist(restaurant, agent, await confirmedFields(restaurant.id));
+  if (agent !== "insights") return fields;
+  // Insights needs data, not profile fields: at least 2 weeks of sales figures.
+  const { insightsChecklist } = await import("./insights");
+  const data = await insightsChecklist(restaurant);
+  return { ready: fields.ready && data.ready, missing: fields.missing, labels: [...fields.labels, ...data.labels] };
 }
 
 // "your sign-off name, contact for complaints and halal statement"

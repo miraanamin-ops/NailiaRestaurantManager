@@ -145,6 +145,7 @@ function Sales({ s, ctx }: { s: SalesSection; ctx: Ctx }) {
   return (
     <Card title={SECTION_TITLES.sales}>
       <Stat label="Net sales (excluding VAT)" value={s.net} format="money" big />
+      {s.summary && <p className="mt-3 text-sm text-stone-700">{s.summary}</p>}
       {s.lastMonth !== null && (
         <p className="mt-1 text-xs text-stone-600">{changeText({ now: s.net.now, before: s.lastMonth }, "money", "the same week last month")}</p>
       )}

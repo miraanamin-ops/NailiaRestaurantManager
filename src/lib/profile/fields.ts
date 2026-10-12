@@ -42,6 +42,8 @@ export const PROFILE_FIELDS = {
   // Owner
   owner_name: f("owner", "confirm", ["gm"], ["owner_name"], true, "your name"),
   sign_off_name: f("owner", "confirm", ["reputation"], ["sign_off_name"], true, "sign-off name"),
+  language: f("owner", "confirm", ["gm"], ["owner_language"], true, "language"),
+  quiet_hours: f("owner", "confirm", ["gm"], ["quiet_hours_start", "quiet_hours_end"], true, "quiet hours"),
   // Voice
   tone_notes: f("voice", "auto", ["reputation", "growth", "visibility"], ["brand_voice"], true, "how you sound"),
   greeting: f("voice", "auto", ["reputation", "growth"], ["greeting"], false, "greeting"),
@@ -49,8 +51,8 @@ export const PROFILE_FIELDS = {
   emoji_allowed: f("voice", "confirm", ["reputation", "growth", "visibility"], ["emoji_allowed"], true, "emojis"),
   // Facts
   menu: f("facts", "confirm", ["reputation", "growth", "visibility", "insights"], ["menu"], true, "menu"),
-  hours: f("facts", "confirm", ["gm", "reputation", "growth", "visibility"], ["opening_hours"], true, "opening hours"),
-  special_hours: f("facts", "confirm", ["reputation", "growth", "visibility"], ["special_hours"], false, "special hours"),
+  hours: f("facts", "confirm", ["gm", "reputation", "growth", "visibility", "insights"], ["opening_hours"], true, "opening hours"),
+  special_hours: f("facts", "confirm", ["reputation", "growth", "visibility", "insights"], ["special_hours"], false, "special hours"),
   halal_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["halal_statement"], true, "halal statement"),
   allergen_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["allergen_statement"], true, "allergen statement"),
   complaint_contact: f("facts", "confirm", ["reputation"], ["complaint_contact"], true, "contact for complaints"),

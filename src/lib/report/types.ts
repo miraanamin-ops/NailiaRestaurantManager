@@ -73,6 +73,8 @@ export type SalesSection = {
   topItems: { name: string; quantity: number; amount: number }[]; // last week (amount includes VAT)
   netEstimated: boolean; // some days only had totals with VAT: net worked out at 20%
   dummy: boolean; // includes dummy data
+  // A few sentences about the week's sales, written by the Insights agent (live mode only).
+  summary?: string | null;
 };
 
 export type ActionsSection = {

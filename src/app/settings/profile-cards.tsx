@@ -7,9 +7,10 @@ import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
 import { ALWAYS_APPROVE, NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
 import { costsFor } from "@/lib/agents/costs";
 import { confirmedFields, goLiveChecklist } from "@/lib/agents/go-live";
+import { insightsChecklist } from "@/lib/agents/insights";
 import { dollars } from "@/lib/agents/usage";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
-import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveVoice } from "./actions";
+import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveOwner, saveVoice } from "./actions";
 
 // Settings cards for the restaurant profile: how replies and messages sound
 // (fields the agents use), and the profile's change history with Revert.
@@ -78,6 +79,43 @@ export function VoiceCard({ r }: { r: Restaurant }) {
   );
 }
 
+// About the owner: what Naila calls them, the language it writes to them in, and when not to disturb them.
+export function OwnerCard({ r }: { r: Restaurant }) {
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">About you</h2>
+      <p className="text-sm text-stone-600">How Naila talks to you on WhatsApp.</p>
+      <form action={saveOwner} className="space-y-4">
+        <input type="hidden" name="r" value={r.id} />
+        <label className="block">
+          <span className={label}>Your name</span>
+          <input name="owner_name" defaultValue={r.owner_name ?? ""} placeholder="Bilal" maxLength={60} className={`mt-1 ${input}`} />
+        </label>
+        <label className="block">
+          <span className={label}>Language</span>
+          <input name="owner_language" defaultValue={r.owner_language ?? "English"} placeholder="English, with Urdu replies welcome" maxLength={60} className={`mt-1 ${input}`} />
+          <span className={hint}>The language Naila writes to you in. Customers always get replies in their own language.</span>
+        </label>
+        <fieldset>
+          <legend className={label}>Quiet hours</legend>
+          <div className="mt-1 grid grid-cols-2 gap-3">
+            <label className="block text-xs text-stone-600">
+              From
+              <input name="quiet_hours_start" type="time" defaultValue={(r.quiet_hours_start ?? "23:00").slice(0, 5)} className={`mt-1 ${input}`} />
+            </label>
+            <label className="block text-xs text-stone-600">
+              Until
+              <input name="quiet_hours_end" type="time" defaultValue={(r.quiet_hours_end ?? "09:00").slice(0, 5)} className={`mt-1 ${input}`} />
+            </label>
+          </div>
+          <span className={hint}>No alerts between these times (UK time). Anything urgent waits until they end.</span>
+        </fieldset>
+        <button className={button}>Save</button>
+      </form>
+    </Card>
+  );
+}
+
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -129,6 +167,7 @@ export async function HistoryCard({ restaurantId }: { restaurantId: string }) {
 // Builder only: trust level per task, and each agent's mode. Owners never see this.
 export async function BuilderCard({ r }: { r: Restaurant }) {
   const confirmed = await confirmedFields(r.id);
+  const insights = await insightsChecklist(r);
   const levelNames: Record<TrustLevel, string> = { draft_only: "Draft only", approve: "Approve", auto: "Auto" };
   return (
     <Card>
@@ -180,6 +219,12 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
                       </span>
                     ))}
                     {missing.size > 0 && " (stays in shadow until all are filled)"}
+                  </p>
+                )}
+                {agent === "insights" && (
+                  <p className="text-xs text-stone-600">
+                    Go-live checklist: {insights.ready ? "✅" : "❌"} {insights.label}
+                    {!insights.ready && " (stays in shadow until then)"}. Live answers only reach the owner in test mode for now.
                   </p>
                 )}
               </div>

@@ -1,0 +1,232 @@
+{
+  "name": "staffing question: information, not advice (asking for staff costs is fine)",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "answer",
+  "question": "should I cut a member of staff on mondays?",
+  "restaurant": "ember-spice",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "mention_any": [
+      "monday"
+    ],
+    "must_not_contain": [
+      "you should cut",
+      "i recommend",
+      "i'd recommend",
+      "i suggest",
+      "you could cut",
+      "worth cutting",
+      "consider cutting"
+    ],
+    "checker": [
+      "pass"
+    ],
+    "question_ok": true
+  },
+  "recorded": {
+    "outcome": "question",
+    "question_by": "insights",
+    "question": "Staff costs aren't recorded, so I can't show whether Mondays pay their way, and staffing is your decision. Can you send the weekly wage bill or rota hours by day? Then I can show Monday labour against Monday sales, which average £1,422 net over the last 8 weeks.",
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "",
+        "actions": []
+      },
+      "figures": [],
+      "confidence": "low",
+      "needs_owner_input": "Staff costs aren't recorded, so I can't show whether Mondays pay their way, and staffing is your decision. Can you send the weekly wage bill or rota hours by day? Then I can show Monday labour against Monday sales, which average £1,422 net over the last 8 weeks.",
+      "sources_used": [
+        "metrics:q1",
+        "metrics:q2"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "labour_cost",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Monday",
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_weekday",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": null,
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_hour",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Monday",
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_hour",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Monday",
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_hour",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Monday",
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "sales_by_hour",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Monday",
+        "compare": "none",
+        "campaign": null
+      },
+      {
+        "metric": "covers",
+        "period": "last_8_weeks",
+        "date": null,
+        "from": null,
+        "to": null,
+        "weekday": "Monday",
+        "compare": "none",
+        "campaign": null
+      }
+    ],
+    "checker": null,
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T18:44:18.137Z"
+  }
+}

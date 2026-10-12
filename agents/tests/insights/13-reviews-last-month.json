@@ -1,0 +1,235 @@
+{
+  "name": "reviews last month",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "answer",
+  "question": "how did our google reviews do in september?",
+  "restaurant": "ember-spice",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "new reviews in September",
+        "value": 12,
+        "unit": "count"
+      }
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "answer",
+      "channel": "owner",
+      "content": {
+        "headline": "",
+        "body": "September brought 12 new Google reviews, averaging 3.3 stars, compared with 0 new reviews in the period before (Sunday 2 August to Monday 31 August). Only 3 of the 12 have been replied to so far. This is a small sample, so treat the average with care.",
+        "actions": []
+      },
+      "figures": [
+        {
+          "metric": "new_reviews",
+          "value": 12,
+          "unit": "count",
+          "period": "2026-09-01 to 2026-09-30",
+          "compare_to": "previous_period",
+          "compare_value": 0,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "average_stars_new_reviews",
+          "value": 3.3,
+          "unit": "stars",
+          "period": "2026-09-01 to 2026-09-30",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        },
+        {
+          "metric": "reviews_replied_to",
+          "value": 3,
+          "unit": "count",
+          "period": "2026-09-01 to 2026-09-30",
+          "compare_to": null,
+          "compare_value": null,
+          "source": "metrics:q1"
+        }
+      ],
+      "confidence": "high",
+      "needs_owner_input": null,
+      "sources_used": [
+        "metrics:q1"
+      ]
+    },
+    "queries": [
+      {
+        "metric": "reviews",
+        "period": "custom",
+        "date": null,
+        "from": "2026-09-01",
+        "to": "2026-09-30",
+        "weekday": null,
+        "compare": "previous_period",
+        "campaign": null
+      }
+    ],
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "All claims trace to metrics:q1: 12 new reviews, 3.3 average, 3 replied to, comparison period with 0 reviews.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "12, 3.3, 3 and compare value 0 all match the source exactly.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Comparison period (Sunday 2 August to Monday 31 August) matches the source. 2 August 2026 is a Sunday and 31 August 2026 is a Monday. September period 2026-09-01 to 2026-09-30 matches. The draft says 'September' and today is 5 October, so the period is in the past as expected.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names used.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims made. The draft only reports figures and flags the small sample.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only, no financial, tax, legal or staffing advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T18:45:20.088Z"
+  }
+}

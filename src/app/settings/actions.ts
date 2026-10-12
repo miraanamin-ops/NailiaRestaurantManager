@@ -125,6 +125,31 @@ export async function saveVoice(form: FormData) {
   back(r.id, "saved=voice");
 }
 
+// About the owner: their name, the language messages to them are written in, and
+// their quiet hours (no alerts between these times, UK time; can run over midnight).
+export async function saveOwner(form: FormData) {
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const r = await own(get("r"));
+  const start = get("quiet_hours_start");
+  const end = get("quiet_hours_end");
+  const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (!TIME.test(start) || !TIME.test(end)) back(r.id, `error=${encodeURIComponent("Quiet hours need a start and an end time, e.g. 23:00 and 09:00.")}`);
+  if (start === end) back(r.id, `error=${encodeURIComponent("Quiet hours need to start and end at different times.")}`);
+  // Postgres gives times back as "23:00:00"; saving the same time the other way isn't a change.
+  const sameTime = (a: string | null, b: string) => (a ?? "").slice(0, 5) === b;
+  await saveProfileFields(
+    r,
+    {
+      owner_name: get("owner_name").slice(0, 60) || null,
+      owner_language: get("owner_language").slice(0, 60) || "English",
+      ...(sameTime(r.quiet_hours_start, start) ? {} : { quiet_hours_start: start }),
+      ...(sameTime(r.quiet_hours_end, end) ? {} : { quiet_hours_end: end }),
+    },
+    "Changed in settings",
+  );
+  back(r.id, "saved=owner");
+}
+
 // Builder controls: trust level per task and each agent's mode. Only the builder
 // (BUILDER_EMAIL) can change these; owners never see them. Logged as the builder,
 // so the owner's UNDO never reverses them.

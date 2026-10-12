@@ -32,6 +32,11 @@ export type EditableFields = ProfileFields &
     | "words_to_avoid"
     | "emoji_allowed"
     | "special_hours"
+    // The owner (settings page): name, language, quiet hours
+    | "owner_name"
+    | "owner_language"
+    | "quiet_hours_start"
+    | "quiet_hours_end"
   >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
@@ -57,6 +62,10 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   words_to_avoid: "words to avoid",
   emoji_allowed: "emojis",
   special_hours: "special hours",
+  owner_name: "your name",
+  owner_language: "language",
+  quiet_hours_start: "quiet hours start",
+  quiet_hours_end: "quiet hours end",
 };
 
 export async function saveProfileFields(restaurant: Restaurant, fields: Partial<EditableFields>, detail: string) {
