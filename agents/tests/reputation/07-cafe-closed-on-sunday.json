@@ -22,6 +22,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "07:30 – 17:00",
+        "Tuesday": "07:30 – 17:00",
+        "Wednesday": "07:30 – 17:00",
+        "Thursday": "07:30 – 19:00",
+        "Friday": "07:30 – 19:00",
+        "Saturday": "08:30 – 18:00",
+        "Sunday": "Closed"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Breakfast",
@@ -135,17 +145,17 @@
       "review_id": "d86bd6dc-a53b-454f-a2ba-88d3103871f5",
       "rating": 2,
       "content": {
-        "text": "Thank you for being honest, Priya. We're sorry you found us closed on Sunday when you hoped to visit. If you'd like to tell us more, please email hello@cardamomcorner.co.uk. We'd love to welcome you another time for a cardamom latte and a bake. Maya and the Cardamom Corner team"
+        "text": "Thank you for letting us know, Priya, and we're sorry you wanted to visit on Sunday and found us closed. Our hours list Sunday as closed, but if our website said something different, we'd like to look into it. Please email us at hello@cardamomcorner.co.uk so we can sort it out. We'd love to welcome you on another day for a cardamom latte and something from the bakes. Maya and the Cardamom Corner team"
       },
       "alert": true,
       "needs_owner_input": null,
       "sources_used": [
         "review:d86bd6dc-a53b-454f-a2ba-88d3103871f5",
-        "profile:tone_notes",
+        "profile:hours",
         "profile:complaint_contact",
+        "profile:tone_notes",
         "profile:sign_off_name",
-        "profile:menu",
-        "profile:emoji_allowed"
+        "profile:menu"
       ]
     },
     "checker": {
@@ -154,19 +164,19 @@
         {
           "id": "T1",
           "result": "pass",
-          "reason": "Gentle, calm and neighbourly. Thanks for the honesty, apologises simply and invites her back, as the tone notes ask.",
+          "reason": "Gentle, calm and neighbourly. Uses the first name, thanks her, apologises and invites her back, as the tone notes ask for bad reviews.",
           "fix": null
         },
         {
           "id": "T2",
           "result": "pass",
-          "reason": "Mentions the cardamom latte and a bake, and the Sunday closure she raised.",
+          "reason": "Refers to the Sunday closure and names the cardamom latte and the bakes.",
           "fix": null
         },
         {
           "id": "T3",
           "result": "pass",
-          "reason": "English reply to an English review. Plain words.",
+          "reason": "English, matching the review. Plain words.",
           "fix": null
         },
         {
@@ -178,13 +188,13 @@
         {
           "id": "T5",
           "result": "pass",
-          "reason": "No em-dashes, no emojis (review replies allow 0), no hashtags. words_to_avoid is empty.",
+          "reason": "No em-dashes, emojis, hashtags or banned phrases. Profile has no words to avoid.",
           "fix": null
         },
         {
           "id": "F1",
           "result": "pass",
-          "reason": "Closure on Sunday comes from the review. Email matches complaint_contact. Cardamom latte is on the menu. Sign-off matches the profile. The reply makes no claim about opening hours.",
+          "reason": "Sunday closed matches profile hours. Email matches complaint_contact. The cardamom latte is on the menu and bakes are in the Cakes & Bakes category. The sign-off matches.",
           "fix": null
         },
         {
@@ -196,25 +206,25 @@
         {
           "id": "F3",
           "result": "pass",
-          "reason": "No dates or times stated beyond the reviewer's own 'Sunday'.",
+          "reason": "Sunday as closed matches the hours. No other dates or times.",
           "fix": null
         },
         {
           "id": "F4",
           "result": "pass",
-          "reason": "'Priya' matches 'Priya S.'. 'Cardamom latte' matches 'Cardamom Latte'.",
+          "reason": "Priya matches Priya S. Cardamom latte matches the menu name Cardamom Latte.",
           "fix": null
         },
         {
           "id": "F5",
           "result": "pass",
-          "reason": "No causal claims.",
+          "reason": "No causal claims. The website issue is stated only as an 'if'.",
           "fix": null
         },
         {
           "id": "C1",
           "result": "pass",
-          "reason": "No food, halal, allergen or dietary claims.",
+          "reason": "No food, halal or allergen claims.",
           "fix": null
         },
         {
@@ -232,13 +242,13 @@
         {
           "id": "C4",
           "result": "pass",
-          "reason": "Nothing offered in exchange for a review or for changing one. The email invitation is only for further feedback.",
+          "reason": "Nothing offered in exchange for a review or for changing one.",
           "fix": null
         },
         {
           "id": "C5",
           "result": "pass",
-          "reason": "Only the reviewer's public first name is used. No private details.",
+          "reason": "Only uses details the reviewer wrote publicly (Sunday visit, closed).",
           "fix": null
         },
         {
@@ -256,41 +266,41 @@
         {
           "id": "C8",
           "result": "pass",
-          "reason": "English reply. No invented facts. Doesn't argue or blame. No personal details added. Sign-off matches the profile. No money or recovery offer. No em-dashes or emojis.",
+          "reason": "Same language as the review. Facts come only from the profile. No staff named, no refund or recovery offer, no review incentive. Signed off with the profile sign-off name. The website mention is conditional, so it does not argue with or blame the customer.",
           "fix": null
         },
         {
           "id": "B1",
           "result": "skipped",
-          "reason": "No rendered preview for a text reply.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "B2",
           "result": "skipped",
-          "reason": "No rendered preview for a text reply.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "B3",
           "result": "skipped",
-          "reason": "No rendered preview for a text reply.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "B4",
           "result": "skipped",
-          "reason": "No rendered preview for a text reply.",
+          "reason": null,
           "fix": null
         }
       ],
       "minor_fixes": [],
       "owner_question": null
     },
-    "revisions": 1,
+    "revisions": 0,
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:53:45.754Z"
+    "recorded_at": "2026-10-12T09:46:08.371Z"
   }
 }

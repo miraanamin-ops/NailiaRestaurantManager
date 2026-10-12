@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -141,13 +151,16 @@
     ]
   },
   "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
     "output": {
       "type": "review_reply",
       "channel": "google",
       "review_id": "t-15",
       "rating": 5,
       "content": {
-        "text": "¡Gracias, Lucía! Nos alegra mucho que las chuletas de cordero y el lassi de mango os gustaran, y pasaremos vuestras palabras al equipo. ¡Os esperamos muy pronto! 🔥\n\nThe Ember & Spice Grill family"
+        "text": "¡Muchas gracias, Lucía! Nos alegra un montón que las chuletas de cordero y el lassi de mango te hayan gustado, y que el equipo te haya tratado tan bien. ¡Os esperamos pronto! 🔥\n\nThe Ember & Spice Grill family"
       },
       "alert": false,
       "needs_owner_input": null,
@@ -165,109 +178,109 @@
         {
           "id": "T1",
           "result": "pass",
-          "reason": "Warm, short, upbeat, uses first name and says thank you, as the profile's tone notes ask.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T2",
           "result": "pass",
-          "reason": "Names the lamb chops and mango lassi from the review.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T3",
           "result": "pass",
-          "reason": "The review is in Spanish and the reply is in Spanish. The English sign-off is the profile's sign-off name.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T4",
           "result": "pass",
-          "reason": "Opening '¡Gracias, Lucía!' and closing '¡Os esperamos muy pronto!' differ from the recent replies.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T5",
           "result": "pass",
-          "reason": "No em-dashes, no banned words, and one emoji, which is within the profile's limit of 1 for review replies.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F1",
           "result": "pass",
-          "reason": "The dishes come from the review and match the menu. 'Pasaremos vuestras palabras al equipo' is a courtesy promise, not a factual claim.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F2",
           "result": "pass",
-          "reason": "No numbers in the draft.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F3",
           "result": "pass",
-          "reason": "No dates or times in the draft.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F4",
           "result": "pass",
-          "reason": "'Lucía' matches the review author. 'Chuletas de cordero' and 'lassi de mango' match the review and the menu items Lamb Chops and Mango Lassi.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F5",
           "result": "pass",
-          "reason": "No causal claims.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C1",
           "result": "pass",
-          "reason": "No food, halal, allergen or dietary claims.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C2",
           "result": "pass",
-          "reason": "No offers.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C3",
           "result": "pass",
-          "reason": "No targeting and no wording aimed at personal traits.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C4",
           "result": "pass",
-          "reason": "Nothing offered in exchange for a review.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C5",
           "result": "pass",
-          "reason": "Only the name the reviewer shared publicly and what she wrote.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C6",
           "result": "pass",
-          "reason": "No financial, tax, legal or staffing advice.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C7",
           "result": "pass",
-          "reason": "Plain text reply that follows Google review reply norms.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C8",
           "result": "pass",
-          "reason": "Replies in the review's language, signs off with the profile's sign-off name, has no invented facts, and names no staff or order details. The emoji is allowed, there are no hashtags, and the opening and closing are not reused.",
+          "reason": null,
           "fix": null
         },
         {
@@ -302,6 +315,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:47:18.896Z"
+    "recorded_at": "2026-10-12T09:50:40.850Z"
   }
 }

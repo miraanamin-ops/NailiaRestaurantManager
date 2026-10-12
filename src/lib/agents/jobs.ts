@@ -4,6 +4,7 @@ import { alertBuilder } from "@/lib/builder-alerts";
 // (Its own small check helper: lib/drafts.ts queues jobs, so this file mustn't import it.)
 import { getSupabase } from "@/lib/supabase";
 import { AgentOutputError } from "./run";
+import { addUsage, totals, type Usage } from "./usage";
 
 // Agent jobs: every piece of agent work has a unique key (job_key), so a
 // repeat or retry never does the same work twice. Jobs are queued when
@@ -29,7 +30,15 @@ export type AgentJob = {
   verdict: string | null;
   error: string | null;
   created_at: string;
+  usage?: Usage | null;
+  cost_usd?: number | null;
 };
+
+// The job's tokens per agent and its estimated cost (only written when known, so
+// older jobs and tests without them are unchanged).
+function usageFields(usage: Usage | undefined) {
+  return usage && Object.keys(usage).length ? { usage, cost_usd: Number(totals(usage).cost.toFixed(6)) } : {};
+}
 
 // What a job's handler reports back.
 export type JobOutcome = {
@@ -41,6 +50,8 @@ export type JobOutcome = {
   actor: AgentActor;
   // The audit log action (default: checked).
   action?: AuditAction;
+  // Tokens and estimated cost, per agent.
+  usage?: Usage;
 };
 export type JobHandler = (job: AgentJob) => Promise<JobOutcome>;
 
@@ -149,6 +160,7 @@ async function runOne(job: AgentJob, handlers: Record<string, JobHandler>) {
     const out = await handler(job);
     await finish(job, {
       status: "done",
+      ...usageFields(out.usage),
       output: out.output,
       agent_version: out.agentVersion,
       verdict: out.verdict ?? null,
@@ -172,7 +184,14 @@ async function runOne(job: AgentJob, handlers: Record<string, JobHandler>) {
     // Invalid output twice is final (the builder was already alerted). Anything
     // else (the API down, a timeout) is tried again, up to MAX_ATTEMPTS.
     const final = err instanceof AgentOutputError || job.attempts >= MAX_ATTEMPTS;
-    await finish(job, { status: final ? "failed" : "queued", error: message.slice(0, 1000), locked_until: null, finished_at: final ? new Date().toISOString() : null });
+    await finish(job, {
+      status: final ? "failed" : "queued",
+      error: message.slice(0, 1000),
+      locked_until: null,
+      finished_at: final ? new Date().toISOString() : null,
+      // What the failed attempts used still counts.
+      ...(err instanceof AgentOutputError ? usageFields(addUsage(job.usage ?? {}, err.usage)) : {}),
+    });
     if (final) {
       if (!(err instanceof AgentOutputError)) {
         await alertBuilder(`agent-job-failed:${job.agent}`, `The ${job.agent} agent job ${job.job_key} failed after ${job.attempts} tries.\n${message.slice(0, 400)}`);
@@ -208,6 +227,7 @@ export async function recordAgentRun(input: {
   output: Record<string, unknown>;
   agentVersion: string;
   verdict: string | null;
+  usage?: Usage;
 }) {
   const now = new Date().toISOString();
   const { data, error } = await getSupabase()
@@ -226,6 +246,7 @@ export async function recordAgentRun(input: {
       verdict: input.verdict,
       started_at: now,
       finished_at: now,
+      ...usageFields(input.usage),
     })
     .select("id")
     .maybeSingle<{ id: string }>();

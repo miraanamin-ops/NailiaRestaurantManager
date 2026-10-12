@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { approveDraft, check, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
+import { approveDraft, check, isQuestion, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
 import { feedbackForBrief, markFeedbackReported } from "@/lib/feedback";
 import { approveAllMessage, draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -61,6 +61,7 @@ async function campaignNames(restaurantId: string, drafts: Draft[]) {
 // One line per item for the numbered summary.
 function itemLine(d: Draft, review: ReviewInfo | undefined, campaignName: string | undefined) {
   const flag = d.check_notes?.flags?.length ? " ⚠️" : "";
+  if (d.kind === "hours_question") return `📅 ${d.audience ?? "Your hours on a bank holiday"}`;
   if (d.kind === "review_question") return `❓ Your call on ${review ? `${review.author_name.replace(/.$/, "")}'s ${review.rating}⭐ review` : d.audience ?? "a review"}`;
   if (d.kind === "review_reply" && review) {
     const name = review.author_name.replace(/\.$/, "");
@@ -158,7 +159,7 @@ export async function sendBrief(
   await send(brief.summary);
   await markFeedbackReported(restaurant.id, feedback.ids);
   for (const [i, d] of items.entries()) {
-    await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1, buttons: d.kind === "review_question" ? "question" : "approval" }, draftPreviewUrl(d));
+    await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1, buttons: d.kind === "review_question" ? "question" : d.kind === "hours_question" ? "hours" : "approval" }, draftPreviewUrl(d));
   }
   return { sent: true, items: items.length, tally };
 }
@@ -192,7 +193,7 @@ export function composeBrief(input: {
       "",
       items.length === 1
         ? "It's below with its own buttons."
-        : `Each one is below with its own buttons. Or reply *APPROVE ALL* to approve all ${items.length}${items.some((d) => d.kind === "review_question") ? " drafts (questions need your answer)" : ""}.`,
+        : `Each one is below with its own buttons. Or reply *APPROVE ALL* to approve all ${items.length}${items.some((d) => isQuestion(d.kind)) ? " drafts (questions need your answer)" : ""}.`,
     );
   }
   if (note) lines.push("", note);
@@ -263,10 +264,10 @@ export function remainingNote(left: Draft[]) {
 export async function approveAll(restaurant: Restaurant, now: Date) {
   // Questions about a review need the owner's own answer, so APPROVE ALL leaves them.
   const remaining = await remainingInBrief(restaurant);
-  const left = remaining.filter((d) => d.kind !== "review_question");
+  const left = remaining.filter((d) => !isQuestion(d.kind));
   const questions = remaining.length - left.length;
   if (!left.length) {
-    if (questions) return `Only ${questions === 1 ? "a question is" : `${questions} questions are`} left, and ${questions === 1 ? "it needs" : "they need"} your answer: tap Reply publicly, Handle privately or Both.`;
+    if (questions) return `Only ${questions === 1 ? "a question is" : `${questions} questions are`} left, and ${questions === 1 ? "it needs" : "they need"} your answer: tap one of its buttons.`;
     return restaurant.last_brief_at
       ? "Everything from your brief has already been dealt with. 🎉"
       : "There's no brief to approve yet. Text RUN BRIEF to get one now.";

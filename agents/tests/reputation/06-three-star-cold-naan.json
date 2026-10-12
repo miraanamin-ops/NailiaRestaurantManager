@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -141,13 +151,16 @@
     ]
   },
   "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
     "output": {
       "type": "review_reply",
       "channel": "google",
       "review_id": "66f5bc39-cd45-4106-9c05-1b48f95967ae",
       "rating": 3,
       "content": {
-        "text": "Hi Ellie, thanks for the honest feedback, and we're glad the food was tasty. We're sorry your order came out in the wrong order and the naan wasn't hot. That's not how we like to do things. Please drop us a line at hello@emberandspice.co.uk and we'll gladly give you a free dessert on your next visit. We'd love to make it right.\n\nThe Ember & Spice Grill family"
+        "text": "Hi Ellie, thanks for dropping in and sharing this. Glad the food was tasty, but we're sorry your order came out in the wrong order and the naan was cold. That's not how we like to do things. Please email us at hello@emberandspice.co.uk so we can make it right, and we'd be happy to offer a free dessert on your next visit.\n\nThe Ember & Spice Grill family"
       },
       "alert": true,
       "needs_owner_input": null,
@@ -165,61 +178,61 @@
         {
           "id": "T1",
           "result": "pass",
-          "reason": "Warm, first name used, thanks given, sincere apology, invites them back. Matches the tone notes for bad reviews.",
+          "reason": "Warm, first-name, apologises and invites her back to make it right, as the profile's tone notes ask.",
           "fix": null
         },
         {
           "id": "T2",
           "result": "pass",
-          "reason": "Refers to the wrong-order issue and the naan, and offers the restaurant's own recovery gesture.",
+          "reason": "Refers to her cold naan and the order mix-up, so it is not generic.",
           "fix": null
         },
         {
           "id": "T3",
           "result": "pass",
-          "reason": "English reply to an English review. Plain and clear.",
+          "reason": "English review, English reply, plain words.",
           "fix": null
         },
         {
           "id": "T4",
           "result": "pass",
-          "reason": "Opening 'Hi Ellie' differs from the recent openings. The closing line is not reused. The sign-off is the required profile sign-off.",
+          "reason": "Opening 'Hi Ellie, thanks for dropping in' differs from the last three openings. The sign-off is required by the maker's rules.",
           "fix": null
         },
         {
           "id": "T5",
           "result": "pass",
-          "reason": "No em-dashes, no emojis, no hashtags, no banned words such as 'cheap'.",
+          "reason": "No em-dashes, no emojis (up to 1 allowed), no hashtags, no banned words.",
           "fix": null
         },
         {
           "id": "F1",
           "result": "pass",
-          "reason": "Complaint details come from the review. The email address and free dessert come from the profile.",
+          "reason": "Every claim traces to the review, complaint_contact or recovery_offers.",
           "fix": null
         },
         {
           "id": "F2",
           "result": "pass",
-          "reason": "No numbers in the draft.",
+          "reason": "No numbers used.",
           "fix": null
         },
         {
           "id": "F3",
           "result": "pass",
-          "reason": "No dates or times. 'Next visit' is not tied to a date.",
+          "reason": "No dates or times stated.",
           "fix": null
         },
         {
           "id": "F4",
           "result": "pass",
-          "reason": "Reviewer's first name 'Ellie' matches 'Ellie S.'. The sign-off matches the profile exactly.",
+          "reason": "Name 'Ellie' matches 'Ellie S.'. Email address and sign-off match the profile exactly.",
           "fix": null
         },
         {
           "id": "F5",
           "result": "pass",
-          "reason": "No cause claims made.",
+          "reason": "No causal claims.",
           "fix": null
         },
         {
@@ -231,25 +244,25 @@
         {
           "id": "C2",
           "result": "pass",
-          "reason": "The free dessert on the next visit is clear, matches the approved offer, and uses no false urgency.",
+          "reason": "Free dessert on next visit matches the approved recovery offer, with no urgency or scarcity.",
           "fix": null
         },
         {
           "id": "C3",
           "result": "pass",
-          "reason": "No targeting by personal traits.",
+          "reason": "No targeting or personal-trait wording.",
           "fix": null
         },
         {
           "id": "C4",
           "result": "pass",
-          "reason": "The dessert is a recovery gesture and is not tied to a review being changed or removed.",
+          "reason": "The gesture is not tied to a review, and nothing asks her to change or remove it.",
           "fix": null
         },
         {
           "id": "C5",
           "result": "pass",
-          "reason": "Only details from the public review are repeated. The business email is not personal data.",
+          "reason": "Only details she wrote in her review are mentioned.",
           "fix": null
         },
         {
@@ -261,37 +274,37 @@
         {
           "id": "C7",
           "result": "pass",
-          "reason": "A business email address is fine in a Google review reply.",
+          "reason": "An email address in a Google review reply is fine. No links or phone numbers that break platform rules.",
           "fix": null
         },
         {
           "id": "C8",
           "result": "pass",
-          "reason": "No argument or blame. Order details mentioned were written by the reviewer. The offer is from the approved list. No money, staff names or em-dashes. Signed off with the profile sign-off name.",
+          "reason": "Same language, no arguing or blaming, only order details she wrote, approved gesture only, no refunds, sign-off from the profile.",
           "fix": null
         },
         {
           "id": "B1",
           "result": "skipped",
-          "reason": null,
+          "reason": "No rendered preview for a text reply.",
           "fix": null
         },
         {
           "id": "B2",
           "result": "skipped",
-          "reason": null,
+          "reason": "No rendered preview for a text reply.",
           "fix": null
         },
         {
           "id": "B3",
           "result": "skipped",
-          "reason": null,
+          "reason": "No rendered preview for a text reply.",
           "fix": null
         },
         {
           "id": "B4",
           "result": "skipped",
-          "reason": null,
+          "reason": "No rendered preview for a text reply.",
           "fix": null
         }
       ],
@@ -302,6 +315,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:43:50.279Z"
+    "recorded_at": "2026-10-12T09:45:21.105Z"
   }
 }

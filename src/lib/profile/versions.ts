@@ -86,6 +86,11 @@ export async function recordColumnChange(input: {
         .select("*")
         .single<ProfileVersion>(),
     );
+    // Hours, special hours or the menu: Visibility drafts the matching Google update.
+    if (field === "hours" || field === "special_hours" || field === "menu") {
+      const { profileChanged } = await import("@/lib/agents/visibility");
+      await profileChanged(input.restaurantId, field, input.before, input.after);
+    }
     return row;
   } catch (err) {
     console.error("Couldn't record the profile version", err);

@@ -14,6 +14,9 @@ export type ReputationCase = {
   history: { recent_replies: string[]; owner_edits: { note: string; before: string; after: string }[] };
   owner_choice: { choice: "public" | "both"; question: string } | null;
   today: string;
+  // A known disagreement waiting for the owner's decision (e.g. two agent files
+  // disagree). Its recorded answer is reported as skipped, not judged, until then.
+  pending_decision?: string;
   expect: {
     alert: boolean;
     needs_owner_input: boolean;

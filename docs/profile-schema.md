@@ -50,8 +50,8 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 | Field | Example | Change | Read by | Pilot |
 | --- | --- | --- | --- | --- |
 | `menu` | items: name, price, description, category, dietary tags, allergens, available | Confirm | Rep, Gro, Vis, Ins | Yes |
-| `hours` | regular weekly hours | Confirm | GM, Gro, Vis | Yes |
-| `special_hours` | Christmas Day closed | Confirm | Gro, Vis | No |
+| `hours` | regular weekly hours | Confirm | GM, Rep, Gro, Vis | Yes |
+| `special_hours` | Christmas Day closed | Confirm | Rep, Gro, Vis | No |
 | `halal_statement` | owner's exact wording, certifier if any | Confirm | Rep, Gro, Vis | Yes |
 | `allergen_statement` | owner's exact wording | Confirm | Rep, Gro, Vis | Yes |
 | `complaint_contact` | hello@restaurant.co.uk | Confirm | Rep | Yes |

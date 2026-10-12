@@ -1,0 +1,309 @@
+{
+  "name": "Monday Google post for the café",
+  "source": "real post history (Cardamom Corner Café)",
+  "task": "google_post",
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "address": "87 Cranbrook Road, Ilford IG1 4PG",
+      "cuisine": "Neighbourhood café and bakery",
+      "links": null,
+      "phone": "+44 20 8946 0456",
+      "tone_notes": "Gentle, cosy and neighbourly. Calm, unhurried sentences; warm but never gushing. Mention the bakes and the cardamom latte when it fits. Never pushy.",
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "review_replies": 0,
+        "posts": 1,
+        "campaigns": 1
+      },
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": null
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": null
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": null
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            },
+            {
+              "name": "Date & Walnut Loaf",
+              "price": 3.75,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "07:30 – 17:00",
+        "Tuesday": "07:30 – 17:00",
+        "Wednesday": "07:30 – 17:00",
+        "Thursday": "07:30 – 19:00",
+        "Friday": "07:30 – 19:00",
+        "Saturday": "08:30 – 18:00",
+        "Sunday": "Closed"
+      },
+      "special_hours": {},
+      "halal_statement": "Our chicken is halal. We don't serve pork or alcohol.",
+      "allergen_statement": "Our bakes contain nuts, gluten, eggs and dairy. Please ask before you order.",
+      "photo_library": []
+    }
+  },
+  "history": {
+    "recent_posts": [
+      {
+        "date": "2026-10-12",
+        "text": "There's a quiet kind of comfort in a Cardamom Latte (£3.85) and a slice of Pistachio Rose Cake (£4.50), and we think they were made for each other. Our signature latte is warm with spice, and the cake is fresh and fragrant. Settle in by the window and take your time. Pop in this week, we're open from 07:30 on weekdays. ☕"
+      }
+    ]
+  },
+  "slot": "Monday",
+  "request": null,
+  "photo": null,
+  "event": null,
+  "trends": [],
+  "today": "Monday 12 October 2026",
+  "expect": {
+    "types": [
+      "google_post"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "google_post",
+      "channel": "google",
+      "content": {
+        "text": "Start the week slowly with a Masala Omelette (£7.50) and a cup of Karak Chai (£2.95). It's a simple, warming breakfast, made for a quiet table and an unhurried morning. We're open from 7:30am on weekdays, so come in whenever suits you. A slice of Date & Walnut Loaf (£3.75) is there too, if you'd like something sweet to follow. Please ask us about allergens before you order.",
+        "cta": "Learn more",
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": "2026-10-12T12:00",
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:menu",
+        "profile:hours",
+        "profile:tone_notes",
+        "profile:allergen_statement",
+        "post:2026-10-12"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Calm, unhurried and neighbourly, and not pushy, which fits the tone notes.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Names real menu items with prices and the café's weekday opening time.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "Plain UK English, no jargon.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening and closing differ from the previous post, which opens 'There's a quiet kind of comfort' and ends 'Pop in this week'.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis, no hashtags. The profile has no words to avoid.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Dishes, prices and hours trace to the profile menu and hours. The allergen line traces to the profile's allergen statement.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£7.50, £2.95 and £3.75 match the menu exactly.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "7:30am opening is correct for every weekday (Monday to Friday). 'Start the week' fits Monday 12 October.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Masala Omelette, Karak Chai and Date & Walnut Loaf match the menu names.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No allergen-free or suitability claims. It points customers to staff to ask about allergens, in line with the profile.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer, no urgency or scarcity.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting by personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing is offered for reviews.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "No personal data.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "No phone number in the post text. The CTA is a standard Google button.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "Topic (breakfast and loaf) differs from the latte and cake post, so there is no repeat within 3 weeks. Claims come from the profile, with no em-dashes or emojis.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "pass",
+          "reason": "Preview shows the correct café name and standard Google post card.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "pass",
+          "reason": "Text-only post with no photo, so there is no mismatch.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "pass",
+          "reason": "Text fits on a phone with no overflow or cut-off.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "pass",
+          "reason": "No empty slots or placeholder text, and the button renders.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:12:55.795Z"
+  }
+}

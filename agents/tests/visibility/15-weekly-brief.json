@@ -1,0 +1,315 @@
+{
+  "name": "The Monday content brief (Ember & Spice)",
+  "source": "real menu and post history (Ember & Spice Grill)",
+  "task": "content_brief",
+  "profile": {
+    "version": 1,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "phone": "+44 20 7946 0123",
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. One or two emojis at most. Never pushy or salesy. Always say thank you.",
+      "words_to_avoid": [
+        "cheap"
+      ],
+      "emoji_allowed": {
+        "review_replies": 1,
+        "posts": 2,
+        "campaigns": 2
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": null
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": null
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": null
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": null
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
+      "halal_statement": "All our meat is halal, certified by HMC.",
+      "allergen_statement": "Our kitchen handles nuts, sesame, gluten and dairy. Please tell our team about any allergy before you order.",
+      "photo_library": [
+        {
+          "id": "ph_1",
+          "url": "https://example.test/mixed-grill.jpg",
+          "source": "owner",
+          "caption": "Mixed Grill Platter on the pass",
+          "added_at": "2026-10-09"
+        },
+        {
+          "id": "ph_2",
+          "url": "https://example.test/lamb-chops.jpg",
+          "source": "google",
+          "caption": "Lamb chops on the charcoal grill",
+          "added_at": "2026-09-01"
+        },
+        {
+          "id": "ph_3",
+          "url": "https://example.test/kunafa.jpg",
+          "source": "google",
+          "caption": "Kunafa with pistachio",
+          "added_at": "2026-09-01"
+        }
+      ]
+    }
+  },
+  "history": {
+    "recent_posts": [
+      {
+        "date": "2026-10-12",
+        "text": "Our Smash Burger is a little East London favourite 😋 Double beef patty, melted cheese, our house sauce and a soft brioche bun, £8.95. Add Masala Chips for £3.50 and you're sorted. Thank you for supporting our family kitchen. Pop in this week!"
+      },
+      {
+        "date": "2026-10-09",
+        "text": "Our Seekh Kebabs are minced lamb with fresh herbs and a little green chilli, flame-grilled over charcoal, two pieces for £7.95. Simple, honest grilling, just the way we like it 🙏 Come say hello this week."
+      },
+      {
+        "date": "2026-10-09",
+        "text": "Our Mixed Grill Platter is a proper feast 🔥 Lamb chops, chicken tikka, seekh kebab and wings, all flame-grilled over charcoal and served with naan and salad, just £18.50. Perfect for sharing (or not, we won't judge). Pop in tonight and dig in!"
+      },
+      {
+        "date": "2026-10-09",
+        "text": "Warm kunafa with pistachio and cream, £5.95. The perfect way to finish your grill. 😋"
+      },
+      {
+        "date": "2026-10-05",
+        "text": "This weekend: a free Mango Lassi with every Mixed Grill Platter. See you Saturday!"
+      },
+      {
+        "date": "2026-09-28",
+        "text": "Our lamb chops are marinated overnight and flame-grilled over real charcoal. Four pieces for £13.95. Pop in tonight! 🔥"
+      }
+    ]
+  },
+  "slot": null,
+  "request": null,
+  "photo": null,
+  "event": null,
+  "trends": [],
+  "today": "Monday 12 October 2026",
+  "expect": {
+    "types": [
+      "content_brief"
+    ],
+    "shoots": 3,
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "content_brief",
+      "channel": "owner",
+      "content": {
+        "text": "Morning team, here are this week's 3 quick shoots. Each takes about 5 minutes on a phone during service. Please keep customers' faces and children out of shot. Thank you!",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [
+        {
+          "what": "Peri Peri Wings (8) on the pass, ready to go out",
+          "where": "The pass, just before the plate goes to the table",
+          "how": "Phone held vertical, 10 seconds. Shoot from slightly above, using the kitchen light. Pan slowly across the plate. Wipe the plate rim and keep the background tidy.",
+          "who": "Anyone on the pass",
+          "day": "Tuesday",
+          "platform": "TikTok",
+          "caption": "Peri Peri Wings, 8 to a plate, £7.50. Charcoal grill favourites from our family kitchen. Thank you for being our regulars 😋",
+          "hashtags": [
+            "#EastLondon",
+            "#Whitechapel",
+            "#HalalFood",
+            "#PeriPeriWings",
+            "#CharcoalGrill"
+          ]
+        },
+        {
+          "what": "Karak Chai being poured into a cup",
+          "where": "The drinks station or a clean table by the window",
+          "how": "Phone vertical, 8 to 10 seconds. Film the pour close up, then a short hold on the cup. Natural window light works best. Keep hands and cup in shot, no customers' faces.",
+          "who": "Whoever is on drinks",
+          "day": "Thursday",
+          "platform": "Instagram",
+          "caption": "Karak Chai, £2.50. Pour one, stay a while. Thank you for popping in to see us.",
+          "hashtags": [
+            "#KarakChai",
+            "#EastLondon",
+            "#Whitechapel",
+            "#HalalEats",
+            "#FamilyRun"
+          ]
+        },
+        {
+          "what": "Chicken Tikka plated up, with a quick close-up of the plate",
+          "where": "The pass or a clean table near the window",
+          "how": "Phone vertical, a photo plus a 6 second clip. Shoot at a slight angle, about 30cm away. Use window light if you can and avoid the flash. Wipe the plate rim first.",
+          "who": "A server or anyone on the pass",
+          "day": "Saturday",
+          "platform": "Instagram",
+          "caption": "Chicken Tikka, £9.50. All our meat is halal, certified by HMC. Come and see us this weekend, we'd love to have you. Thank you!",
+          "hashtags": [
+            "#ChickenTikka",
+            "#HalalCertified",
+            "#EastLondon",
+            "#Whitechapel",
+            "#CharcoalGrill"
+          ]
+        }
+      ],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:name",
+        "profile:cuisine",
+        "profile:menu",
+        "profile:tone_notes",
+        "profile:words_to_avoid",
+        "profile:emoji_allowed",
+        "profile:halal_statement",
+        "profile:hours"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Dish names, prices, halal statement, cuisine, area and 'family kitchen' and charcoal grill claims all trace to the profile (menu, halal_statement, cuisine, tone_notes). Location hashtags match the address (Whitechapel, East London).",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "Peri Peri Wings (8) £7.50, Karak Chai £2.50 and Chicken Tikka £9.50 all match the menu. '3 quick shoots' matches the three shoots listed. '8 to a plate' matches the (8) in the item name.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Shoot days Tuesday, Thursday and Saturday all fall after Monday 12 October 2026 and are within opening hours (12:00 on all three days). Saturday 'this weekend' is consistent.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Peri Peri Wings (8), Karak Chai and Chicken Tikka match the menu names. Restaurant is not named wrongly anywhere.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice. Asking staff to shoot during service is a content task, not employment advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 2,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:21:19.444Z"
+  }
+}

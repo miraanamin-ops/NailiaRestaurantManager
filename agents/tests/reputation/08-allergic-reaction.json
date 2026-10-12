@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -137,6 +147,9 @@
     ]
   },
   "recorded": {
+    "outcome": "question",
+    "question_by": "reputation",
+    "question": "This review alleges an allergic reaction (EpiPen used) after the chicken tikka. Do you want to reply publicly, contact Hannah privately, or both?",
     "output": {
       "type": "review_reply",
       "channel": "google",
@@ -156,6 +169,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": null,
-    "recorded_at": "2026-10-11T23:45:24.342Z"
+    "recorded_at": "2026-10-12T09:46:50.281Z"
   }
 }

@@ -12,6 +12,8 @@ export const MODES_AVAILABLE: Partial<Record<AgentName, { allowed: AgentMode[]; 
   checker: { allowed: ["off", "shadow"], default: "shadow" },
   // Live only once its go-live checklist passes (lib/agents/reputation.ts reputationMode).
   reputation: { allowed: ["off", "shadow", "live"], default: "shadow" },
+  // Live only once its go-live checklist passes (lib/agents/visibility.ts visibilityMode).
+  visibility: { allowed: ["off", "shadow", "live"], default: "shadow" },
 };
 
 export function agentMode(restaurant: { agent_modes?: Record<string, string> | null }, agent: AgentName): AgentMode {

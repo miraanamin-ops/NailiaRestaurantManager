@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -137,6 +147,9 @@
     ]
   },
   "recorded": {
+    "outcome": "question",
+    "question_by": "reputation",
+    "question": "This 1-star review calls you a crook and sends people to a competitor (Mangal), with no detail about a visit. It may be abusive or written by a competitor. Do you want to reply publicly, flag it to Google as a policy violation, or leave it?",
     "output": {
       "type": "review_reply",
       "channel": "google",
@@ -146,7 +159,7 @@
         "text": ""
       },
       "alert": true,
-      "needs_owner_input": "This 1-star review calls the owner a crook, which is an abusive claim I can't check, and it tells people to go to a competitor. It may be fake or written by a rival. Do you want to reply publicly, report it to Google, or leave it?",
+      "needs_owner_input": "This 1-star review calls you a crook and sends people to a competitor (Mangal), with no detail about a visit. It may be abusive or written by a competitor. Do you want to reply publicly, flag it to Google as a policy violation, or leave it?",
       "sources_used": [
         "review:t-11"
       ]
@@ -156,6 +169,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": null,
-    "recorded_at": "2026-10-11T23:45:39.298Z"
+    "recorded_at": "2026-10-12T09:47:19.097Z"
   }
 }

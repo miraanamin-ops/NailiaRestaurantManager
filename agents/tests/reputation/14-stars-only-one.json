@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -151,7 +161,7 @@
       "review_id": "t-14",
       "rating": 1,
       "content": {
-        "text": "Hi Mo, thank you for taking the time to rate us, and we're sorry your visit wasn't a good one. Please get in touch on hello@emberandspice.co.uk so we can make it right. The Ember & Spice Grill family"
+        "text": "Hi Mo, thank you for letting us know, and we're sorry your visit wasn't right. Please get in touch at hello@emberandspice.co.uk so we can make it right. The Ember & Spice Grill family"
       },
       "alert": true,
       "needs_owner_input": null,
@@ -168,37 +178,37 @@
         {
           "id": "T1",
           "result": "pass",
-          "reason": "Warm, uses the first name, apologises, never argues. Short sentences.",
+          "reason": "Warm, uses first name, apologises, says thank you, never argues. Matches the profile's bad-review guidance.",
           "fix": null
         },
         {
           "id": "T2",
           "result": "pass",
-          "reason": "The review is a 1-star with no text, so there is nothing specific to reference. Naming the complaint contact and the family sign-off is the right level of detail.",
+          "reason": "The review has no text, so there is nothing specific to refer to. Naming the complaint contact is the most specific thing available.",
           "fix": null
         },
         {
           "id": "T3",
           "result": "pass",
-          "reason": "English, plain and clear.",
+          "reason": "Plain English, and the review has no text to set a different language.",
           "fix": null
         },
         {
           "id": "T4",
           "result": "pass",
-          "reason": "The opening 'Hi Mo' differs from the last 3 openings. The closing is the required profile sign-off.",
+          "reason": "Opening 'Hi Mo, thank you for letting us know' differs from the last outputs. The closing is the mandatory profile sign-off.",
           "fix": null
         },
         {
           "id": "T5",
           "result": "pass",
-          "reason": "No em-dashes, emojis or hashtags. No banned words.",
+          "reason": "No em-dashes, emojis, hashtags or banned words.",
           "fix": null
         },
         {
           "id": "F1",
           "result": "pass",
-          "reason": "The name, email and sign-off all trace to resolved sources. The apology is based on the 1-star rating.",
+          "reason": "The 1-star rating supports the apology. The email and sign-off match the profile.",
           "fix": null
         },
         {
@@ -210,13 +220,13 @@
         {
           "id": "F3",
           "result": "pass",
-          "reason": "No dates or times in the draft.",
+          "reason": "No dates or times.",
           "fix": null
         },
         {
           "id": "F4",
           "result": "pass",
-          "reason": "'Mo' matches the author name 'Mo S.'. The sign-off matches the profile exactly.",
+          "reason": "'Mo' matches the author name 'Mo S.'. The sign-off name matches the profile exactly.",
           "fix": null
         },
         {
@@ -228,7 +238,7 @@
         {
           "id": "C1",
           "result": "pass",
-          "reason": "No food, halal or allergen claims.",
+          "reason": "No food claims.",
           "fix": null
         },
         {
@@ -252,7 +262,7 @@
         {
           "id": "C5",
           "result": "pass",
-          "reason": "No personal details beyond the name the reviewer shows publicly.",
+          "reason": "No personal details beyond the public reviewer name.",
           "fix": null
         },
         {
@@ -264,13 +274,13 @@
         {
           "id": "C7",
           "result": "pass",
-          "reason": "An email address in a Google review reply is fine.",
+          "reason": "An email address is fine in a Google review reply.",
           "fix": null
         },
         {
           "id": "C8",
           "result": "pass",
-          "reason": "No invented facts, no blame, no order details, no refund or money offer, no staff named. The sign-off matches the profile and there are no emojis or em-dashes.",
+          "reason": "No invented facts, no blame, no refund or money, no order details, and signed off with the profile sign-off name. The review has no text, so none of the escalation triggers apply.",
           "fix": null
         },
         {
@@ -305,6 +315,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:56:13.324Z"
+    "recorded_at": "2026-10-12T09:49:45.823Z"
   }
 }

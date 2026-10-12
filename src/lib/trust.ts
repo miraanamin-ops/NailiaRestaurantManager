@@ -41,6 +41,9 @@ export const TASK_LABELS: Record<Task, string> = {
 
 // Campaigns, offers, hours, menu and profile changes: never Auto (enforced here, in code).
 export const NEVER_AUTO: ReadonlySet<Task> = new Set<Task>(["email_campaign", "promotion", "birthday_batch", "hours_update", "menu_update", "profile_change"]);
+// Changes to what Google shows about the restaurant (hours, menu): always the owner's
+// Approve, never Auto and never Draft only, whatever is stored.
+export const ALWAYS_APPROVE: ReadonlySet<Task> = new Set<Task>(["hours_update", "menu_update"]);
 
 // Text that offers something (a discount, a freebie, a deal) counts as an offer,
 // whatever task it came from, so it can't go out on Auto either.
@@ -54,7 +57,7 @@ export function taskFor(kind: string): Task | null {
 }
 
 export function trustLevel(stored: Record<string, string> | null | undefined, task: Task | null): TrustLevel {
-  if (!task) return "approve";
+  if (!task || ALWAYS_APPROVE.has(task)) return "approve";
   const level = stored?.[task];
   if (!level || !(TRUST_LEVELS as readonly string[]).includes(level)) return "approve";
   if (level === "auto" && NEVER_AUTO.has(task)) return "approve";

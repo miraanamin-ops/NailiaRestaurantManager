@@ -7,6 +7,7 @@ import { claude, fallbackFor, MAX_TOKENS } from "@/lib/claude";
 import type { AgentName } from "./definition";
 import { loadAgent } from "./loader";
 import type { Problems } from "./schema";
+import { addUsage, NO_TOKENS, tokensFrom, type Usage } from "./usage";
 
 // One call to one agent: its system prompt (house rules + its file), the job's
 // data, and a fixed output shape. The output is checked by code; if it's invalid
@@ -17,6 +18,8 @@ export class AgentOutputError extends Error {
   constructor(
     readonly agent: AgentName,
     readonly problems: Problems,
+    // What the failed attempts used, so the job's cost still counts them.
+    readonly usage: Usage = {},
   ) {
     super(`The ${agent} agent returned invalid output twice: ${problems.join("; ")}`);
   }
@@ -34,7 +37,7 @@ export type AgentCall<T> = {
   label: string;
 };
 
-export type AgentResult<T> = { output: T; attempts: number; agentVersion: string; houseRulesVersion: string; model: string };
+export type AgentResult<T> = { output: T; attempts: number; agentVersion: string; houseRulesVersion: string; model: string; usage: Usage };
 
 export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> {
   const agent = loadAgent(call.agent);
@@ -42,6 +45,7 @@ export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> 
   const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: agent.systemPrompt, cache_control: { type: "ephemeral" } }];
 
   let problems: Problems = [];
+  let tokens = NO_TOKENS;
   for (let attempt = 1; attempt <= 2; attempt++) {
     const retryNote: Anthropic.Beta.BetaContentBlockParam[] = problems.length
       ? [{ type: "text", text: `Your previous answer was rejected by the system for these reasons:\n${problems.map((p) => `- ${p}`).join("\n")}\nReturn a corrected answer.` }]
@@ -54,6 +58,8 @@ export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> 
       system,
       messages: [{ role: "user", content: [...call.content, ...retryNote] }],
     });
+    // Every attempt counts towards the cost, priced by the model that answered.
+    tokens = addUsage({ t: tokens }, { t: tokensFrom(response.model ?? agent.modelId, response.usage) }).t;
     const out = response.parsed_output as T | null;
     if (response.stop_reason === "refusal" || !out) {
       problems = [`no usable answer (${response.stop_reason})`];
@@ -61,12 +67,12 @@ export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> 
     }
     problems = call.validate(out);
     if (!problems.length) {
-      return { output: out, attempts: attempt, agentVersion: agent.version, houseRulesVersion: agent.houseRulesVersion, model: agent.modelId };
+      return { output: out, attempts: attempt, agentVersion: agent.version, houseRulesVersion: agent.houseRulesVersion, model: agent.modelId, usage: { [call.agent]: tokens } };
     }
   }
   await alertBuilder(
     `agent-invalid:${call.agent}`,
     `The ${call.agent} agent (v${agent.version}) returned invalid output twice for ${call.label}.\n${problems.slice(0, 5).join("\n")}`,
   );
-  throw new AgentOutputError(call.agent, problems);
+  throw new AgentOutputError(call.agent, problems, { [call.agent]: tokens });
 }

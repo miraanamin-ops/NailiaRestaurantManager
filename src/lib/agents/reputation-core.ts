@@ -1,10 +1,12 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
-import { runChecker, type CheckerInput } from "./checker-core";
+import type { CheckerInput } from "./checker-core";
+import { makerCheckerLoop, MAX_REVISIONS, type LoopStep, type Revision as LoopRevision } from "./loop";
 import { loadAgent } from "./loader";
 import { callAgent } from "./run";
 import { reputationProblems, ReputationReply, type ReputationReplyOutput, type ReviewInput } from "./reputation-rules";
 import { applyMinorFixes, type CheckerVerdictOutput } from "./schema";
+import type { Usage } from "./usage";
 import type { Resolved } from "./tools";
 
 // The Reputation agent and its checker loop, without the database: everything
@@ -16,7 +18,7 @@ import type { Resolved } from "./tools";
 //                   fail = back to Reputation with the fix notes (at most 2 revisions)
 //                   escalate, or still failing after 2 revisions = a question for the owner
 
-export const MAX_REVISIONS = 2;
+export { MAX_REVISIONS } from "./loop";
 
 export type OwnerChoice = { choice: "public" | "both"; question: string };
 
@@ -29,7 +31,7 @@ export type ReputationInput = {
   today: string;
 };
 
-type Revision = { previous: ReputationReplyOutput; fixes: { id: string; reason: string | null; fix: string | null }[] };
+type Revision = LoopRevision<ReputationReplyOutput>;
 
 function content(input: ReputationInput, revision: Revision | null): Anthropic.Beta.BetaContentBlockParam[] {
   const r = input.review;
@@ -71,58 +73,28 @@ export type CheckerDeps = {
   recent: string[];
 };
 
-export type LoopStep = { agent: "reputation" | "checker"; version: string; verdict?: string; summary: string };
+export type { LoopStep };
 
 export type ReputationOutcome =
-  | { kind: "reply"; output: ReputationReplyOutput; checker: CheckerVerdictOutput; revisions: number; minorFixesApplied: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string }
-  | { kind: "question"; output: ReputationReplyOutput; question: string; by: "reputation" | "checker"; checker: CheckerVerdictOutput | null; revisions: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string | null };
+  | { kind: "reply"; output: ReputationReplyOutput; checker: CheckerVerdictOutput; revisions: number; minorFixesApplied: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string; usage: Usage }
+  | { kind: "question"; output: ReputationReplyOutput; question: string; by: "reputation" | "checker"; checker: CheckerVerdictOutput | null; revisions: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string | null; usage: Usage };
 
 export async function reputationLoop(input: ReputationInput, deps: CheckerDeps, label: string): Promise<ReputationOutcome> {
-  const steps: LoopStep[] = [];
-  let made = await runReputation(input, `${label} (draft)`);
-  let output = made.output;
-  steps.push({ agent: "reputation", version: made.agentVersion, summary: output.needs_owner_input ? `asks the owner: ${output.needs_owner_input}` : "drafted a reply" });
-  if (output.needs_owner_input) {
-    return { kind: "question", output, question: output.needs_owner_input, by: "reputation", checker: null, revisions: 0, steps, agentVersion: made.agentVersion, checkerVersion: null };
-  }
-
-  for (let revisions = 0; ; revisions++) {
-    const checked = await runChecker(await checkerInput(output, input, deps), `${label} (check ${revisions + 1})`);
-    const verdict = checked.output;
-    const failed = verdict.checks.filter((c) => c.result === "fail");
-    steps.push({ agent: "checker", version: checked.agentVersion, verdict: verdict.verdict, summary: failed.map((c) => `${c.id}: ${c.reason ?? ""}`).join("; ") || verdict.verdict });
-
-    if (verdict.verdict === "pass") {
-      // Minor fixes are applied by code, and the result must still pass the reply rules.
-      const fixed = applyMinorFixes(output.content.text, verdict.minor_fixes);
-      const candidate = { ...output, content: { text: fixed } };
-      const ok = reputationProblems(candidate, { review: input.review, profile: input.profile.fields }).length === 0;
-      return {
-        kind: "reply",
-        output: ok ? candidate : output,
-        checker: verdict,
-        revisions,
-        minorFixesApplied: ok ? verdict.minor_fixes.length : 0,
-        steps,
-        agentVersion: made.agentVersion,
-        checkerVersion: checked.agentVersion,
-      };
-    }
-    if (verdict.verdict === "escalate" || revisions >= MAX_REVISIONS) {
-      const question =
-        verdict.verdict === "escalate" && verdict.owner_question
-          ? verdict.owner_question
-          : `I couldn't get a reply to ${input.review.author_name}'s review right after ${MAX_REVISIONS} tries (${failed[0]?.reason ?? "the checker kept failing it"}). Do you want to reply publicly, handle it privately, or both?`;
-      return { kind: "question", output, question, by: "checker", checker: verdict, revisions, steps, agentVersion: made.agentVersion, checkerVersion: checked.agentVersion };
-    }
-
-    made = await runReputation(input, `${label} (revision ${revisions + 1})`, { previous: output, fixes: failed });
-    output = made.output;
-    steps.push({ agent: "reputation", version: made.agentVersion, summary: output.needs_owner_input ? `asks the owner: ${output.needs_owner_input}` : `revision ${revisions + 1}` });
-    if (output.needs_owner_input) {
-      return { kind: "question", output, question: output.needs_owner_input, by: "reputation", checker: verdict, revisions: revisions + 1, steps, agentVersion: made.agentVersion, checkerVersion: checked.agentVersion };
-    }
-  }
+  const outcome = await makerCheckerLoop<ReputationReplyOutput>({
+    maker: "reputation",
+    label,
+    make: (revision, l) => runReputation(input, l, revision),
+    question: (out) => out.needs_owner_input,
+    checkerInput: (out) => checkerInput(out, input, deps),
+    applyFixes: (out, fixes) => {
+      const candidate = { ...out, content: { text: applyMinorFixes(out.content.text, fixes) } };
+      return reputationProblems(candidate, { review: input.review, profile: input.profile.fields }).length ? null : candidate;
+    },
+    stuckQuestion: (reason) =>
+      `I couldn't get a reply to ${input.review.author_name}'s review right after ${MAX_REVISIONS} tries (${reason}). Do you want to reply publicly, handle it privately, or both?`,
+    describe: (_out, r) => (r ? `revision ${r}` : "drafted a reply"),
+  });
+  return outcome.kind === "question" ? { ...outcome, by: outcome.by === "maker" ? "reputation" : "checker" } : outcome;
 }
 
 // The owner's answer to a question, as a source the checker can see: without it,

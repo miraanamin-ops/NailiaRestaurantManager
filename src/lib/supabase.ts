@@ -94,10 +94,16 @@ export type Restaurant = {
   trust_levels: Record<string, string> | null;
   // When the owner was last asked for the go-live fields (020), at most once a day.
   pilot_prompted_at: string | null;
+  // Phase 3a (021): special hours by date, and the photo library.
+  special_hours: Record<string, { label?: string | null; hours: string }> | null;
+  photo_library: PhotoItem[] | null;
 };
 
 // The most emojis allowed per kind of customer message.
 export type EmojiAllowed = { review_replies: number; posts: number; campaigns: number };
+
+// One photo in the library: from Google at onboarding, or sent by the owner or staff.
+export type PhotoItem = { id: string; url: string; source: "google" | "owner" | "staff"; caption: string | null; added_at: string };
 
 // The app's address, used for every link we make (emails, QR codes, rewards,
 // reports, login links): the APP_URL setting (https://app.dinerai.co.uk on the live

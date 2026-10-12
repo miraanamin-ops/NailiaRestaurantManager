@@ -92,7 +92,11 @@ export async function POST(req: NextRequest) {
   }
 
   if (staff) {
-    after(() => handleStaffMessage({ restaurantId: staff.restaurant_id, staffNumber: owner, sandbox, body, media }));
+    after(async () => {
+      await handleStaffMessage({ restaurantId: staff.restaurant_id, staffNumber: owner, sandbox, body, media });
+      // A staff photo for Visibility (if it took one) is looked at straight away.
+      await runQueuedAgentJobs(staff.restaurant_id);
+    });
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 

@@ -6,7 +6,7 @@ import { recentLog, type AuditEntry } from "@/lib/audit";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { ReputationCompare } from "./reputation-compare";
+import { AgentCompare, type CompareAgent } from "./agent-compare";
 
 export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
 
@@ -58,8 +58,9 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   const sp = await searchParams;
   const rid = pickRestaurantId(owner, sp.r);
   // The builder can switch to the Reputation shadow comparison.
-  const compare = owner.isBuilder && sp.view === "reputation";
-  const viewParam = compare ? "&view=reputation" : "";
+  // The builder can switch to an agent's shadow comparison.
+  const compare: CompareAgent | null = owner.isBuilder && (sp.view === "reputation" || sp.view === "visibility") ? sp.view : null;
+  const viewParam = compare ? `&view=${compare}` : "";
   const restaurant = rid ? check(await supabase.from("restaurants").select("*").eq("id", rid).maybeSingle<Restaurant>()) : null;
   if (!restaurant) return <p className="p-6">No restaurant for {owner.email} yet.</p>;
   const choices = await restaurantChoices(owner);
@@ -103,16 +104,18 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
               <a href={`/log?r=${restaurant.id}`} className={`rounded-full px-3 py-1 ${compare ? "bg-white/15 text-white underline" : "bg-white text-stone-900"}`}>
                 Everything
               </a>
-              <a href={`/log?r=${restaurant.id}&view=reputation`} className={`rounded-full px-3 py-1 ${compare ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}>
-                Reputation comparison
-              </a>
+              {(["reputation", "visibility"] as const).map((a) => (
+                <a key={a} href={`/log?r=${restaurant.id}&view=${a}`} className={`rounded-full px-3 py-1 ${compare === a ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}>
+                  {a === "reputation" ? "Reputation" : "Visibility"} comparison
+                </a>
+              ))}
             </div>
           )}
         </div>
       </header>
       {compare ? (
         <main className="mx-auto w-full max-w-4xl px-4 py-5">
-          <ReputationCompare restaurantId={restaurant.id} />
+          <AgentCompare restaurantId={restaurant.id} agent={compare} />
         </main>
       ) : (
       <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5">

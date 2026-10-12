@@ -2,7 +2,7 @@
 // TEST_MODE as a gate step, and the 7-day campaign limit. Plain code only.
 import { describe, expect, test } from "vitest";
 import { moneyAndRisk, type RuleDraft } from "@/lib/checks/money";
-import { checkerPassed, gateApproval, looksLikeOffer, NEVER_AUTO, TASKS, trustLevel } from "@/lib/trust";
+import { ALWAYS_APPROVE, checkerPassed, gateApproval, looksLikeOffer, NEVER_AUTO, TASKS, trustLevel } from "@/lib/trust";
 
 const restaurant = { paused: false, discount_cap_percent: 20, send_window_start: "09:00:00", send_window_end: "21:00:00" };
 const noonUk = new Date("2026-10-09T11:00:00Z");
@@ -29,6 +29,15 @@ describe("trust levels", () => {
     for (const task of ["email_campaign", "promotion", "birthday_batch", "hours_update", "menu_update", "profile_change"] as const) {
       expect(NEVER_AUTO.has(task)).toBe(true);
       expect(trustLevel({ [task]: "auto" }, task)).toBe("approve");
+    }
+  });
+
+  test("hours and menu updates on Google always need Approve: never Auto, never Draft only", () => {
+    for (const task of ["hours_update", "menu_update"] as const) {
+      expect(ALWAYS_APPROVE.has(task)).toBe(true);
+      expect(trustLevel({ [task]: "auto" }, task)).toBe("approve");
+      expect(trustLevel({ [task]: "draft_only" }, task)).toBe("approve");
+      expect(gateApproval({ kind: task, content: "Friday: 12:00 – 23:00", approved_at: null, agent_check: livePass }, { [task]: "auto" })).toMatchObject({ ok: false, reason: "not_approved" });
     }
   });
 
@@ -152,6 +161,40 @@ describe("TEST_MODE inside attemptSend", () => {
     expect(db.tables.sent_log[0]).toMatchObject({ simulated: true });
     expect(JSON.stringify(db.tables.drafts[0].checks)).toContain("not posted to the live Google listing");
     vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/supabase");
+    vi.doUnmock("@/lib/google");
+  });
+});
+
+describe("an approved hours update (Google not connected for hours yet)", () => {
+  test("is logged as what would have been sent, and nothing else happens", async () => {
+    const { vi } = await import("vitest");
+    const { memoryDb } = await import("./support/memory-db");
+    vi.resetModules();
+    const A = "aaaaaaaa-0000-0000-0000-000000000001";
+    const db = memoryDb({
+      restaurants: [{ id: A, ...restaurant, trust_levels: {} }],
+      drafts: [
+        {
+          id: "d1", restaurant_id: A, kind: "hours_update", review_id: null, content: "Friday hours change.", audience: "your Google listing",
+          status: "approved", approved_at: "2026-10-09T10:00:00Z", sent_at: null, scheduled_for: null, version: 1, checks: {}, customer_id: null,
+          agent_input: { change: { field: "hours", from: "Friday 14:00 – 00:00", to: "Friday 12:00 – 23:00" } },
+        },
+      ],
+      sent_log: [],
+      audit_log: [],
+      blocked_sends: [],
+    });
+    const publishPost = vi.fn();
+    vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
+    vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "dummy", replyToReview: vi.fn(), publishPost }) }));
+    const { attemptSend } = await import("@/lib/send");
+    const result = await attemptSend("d1", db.tables.restaurants[0] as never, noonUk, "approve");
+    expect(result).toMatchObject({ outcome: "sent" });
+    expect(result.outcome === "sent" && result.note).toContain("Would have updated your hours on Google to: Friday 12:00 – 23:00");
+    expect(publishPost).not.toHaveBeenCalled();
+    expect(db.tables.sent_log[0]).toMatchObject({ channel: "google", simulated: true });
+    expect(db.tables.audit_log.find((e) => e.action === "sent")?.detail).toContain("(simulated)");
     vi.doUnmock("@/lib/supabase");
     vi.doUnmock("@/lib/google");
   });

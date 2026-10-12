@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -141,21 +151,25 @@
     ]
   },
   "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
     "output": {
       "type": "review_reply",
       "channel": "google",
       "review_id": "58853706-89a9-43f9-9401-04395e38cfec",
       "rating": 1,
       "content": {
-        "text": "Peter, we're really sorry your table wasn't ready for you and that you ended up leaving. That's a poor start to an evening out, and we're sorry we let you down. Please email us at hello@emberandspice.co.uk so we can look into what happened. We'd also like to offer you a free dessert on your next visit, and we'd love the chance to make it right.\n\nThe Ember & Spice Grill family"
+        "text": "Peter, thank you for letting us know, and we're really sorry your evening started like this. Arriving with a group of six and not getting a table is a real letdown, and we're sorry you had to go elsewhere. We'd like to find out what happened, so please email us at hello@emberandspice.co.uk or call +44 20 7946 0123. We'd love to welcome you back with a free dessert on your next visit.\n\nThe Ember & Spice Grill family"
       },
       "alert": true,
       "needs_owner_input": null,
       "sources_used": [
         "review:58853706-89a9-43f9-9401-04395e38cfec",
-        "profile:complaint_contact",
-        "profile:recovery_offers",
         "profile:sign_off_name",
+        "profile:complaint_contact",
+        "profile:phone",
+        "profile:recovery_offers",
         "profile:tone_notes"
       ]
     },
@@ -302,6 +316,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:41:43.849Z"
+    "recorded_at": "2026-10-12T09:43:30.366Z"
   }
 }

@@ -23,7 +23,7 @@ export function testModeStep(input: { testMode: boolean; channel: SendChannel; g
 }
 
 export function channelFor(kind: string): SendChannel {
-  if (kind === "review_reply" || kind === "google_post") return "google";
+  if (kind === "review_reply" || kind === "google_post" || kind === "hours_update" || kind === "menu_update") return "google";
   if (kind === "email_campaign") return "email";
   return "whatsapp";
 }

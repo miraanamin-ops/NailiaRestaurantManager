@@ -31,6 +31,7 @@ export type EditableFields = ProfileFields &
     | "recovery_offers"
     | "words_to_avoid"
     | "emoji_allowed"
+    | "special_hours"
   >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
@@ -55,6 +56,7 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   recovery_offers: "recovery offers",
   words_to_avoid: "words to avoid",
   emoji_allowed: "emojis",
+  special_hours: "special hours",
 };
 
 export async function saveProfileFields(restaurant: Restaurant, fields: Partial<EditableFields>, detail: string) {

@@ -179,14 +179,18 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       note = `📍 Post published on Google${google().mode === "dummy" ? " _(dummy Google: see the listing preview)_" : ""}.`;
       simulated = google().mode === "dummy";
     }
+  } else if (claimed.kind === "hours_update" || claimed.kind === "menu_update") {
+    // The Google connector can't change hours or the menu yet (dummy mode, and the
+    // live connector is a stub): it's logged as what would have been sent.
+    const change = (claimed.agent_input as { change?: { from: string; to: string } } | null)?.change;
+    note = `📍 Would have updated your ${claimed.kind === "menu_update" ? "menu" : "hours"} on Google${change ? ` to: ${change.to}` : ""} _(not connected to Google yet, so nothing changed there)_.`;
   }
 
   const { error: logError } = await supabase.from("sent_log").insert({
     restaurant_id: claimed.restaurant_id,
     draft_id: claimed.id,
     customer_id: claimed.customer_id,
-    channel:
-      claimed.kind === "review_reply" || claimed.kind === "google_post" ? "google" : claimed.kind === "email_campaign" ? "email" : "whatsapp",
+    channel: channelFor(claimed.kind),
     recipient: note ? `${claimed.audience}: ${note}` : claimed.audience,
     content: claimed.content,
     status: "sent",

@@ -17,7 +17,7 @@ export default defineConfig({
   test: {
     include: ["tests/agents-live/**/*.eval.ts"],
     environment: "node",
-    testTimeout: 300_000,
+    testTimeout: 900_000, // 3 runs, each up to 2 revisions with a preview picture
     // One case at a time, so a run stays well within the API's rate limits.
     fileParallelism: false,
   },

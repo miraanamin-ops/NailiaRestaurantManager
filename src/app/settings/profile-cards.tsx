@@ -4,8 +4,10 @@ import type { Restaurant } from "@/lib/supabase";
 import { button, Card, input } from "../onboarding/ui";
 import type { AgentName } from "@/lib/agents/definition";
 import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
-import { NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
-import { goLiveChecklist } from "@/lib/agents/go-live";
+import { ALWAYS_APPROVE, NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
+import { costsFor } from "@/lib/agents/costs";
+import { confirmedFields, goLiveChecklist } from "@/lib/agents/go-live";
+import { dollars } from "@/lib/agents/usage";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveVoice } from "./actions";
 
@@ -125,7 +127,8 @@ export async function HistoryCard({ restaurantId }: { restaurantId: string }) {
 }
 
 // Builder only: trust level per task, and each agent's mode. Owners never see this.
-export function BuilderCard({ r }: { r: Restaurant }) {
+export async function BuilderCard({ r }: { r: Restaurant }) {
+  const confirmed = await confirmedFields(r.id);
   const levelNames: Record<TrustLevel, string> = { draft_only: "Draft only", approve: "Approve", auto: "Auto" };
   return (
     <Card>
@@ -141,7 +144,7 @@ export function BuilderCard({ r }: { r: Restaurant }) {
             <label key={task} className="flex items-center gap-3">
               <span className="w-40 shrink-0 text-sm">{TASK_LABELS[task]}</span>
               <select name={`trust_${task}`} defaultValue={trustLevel(r.trust_levels, task)} className={input}>
-                {TRUST_LEVELS.filter((l) => l !== "auto" || !NEVER_AUTO.has(task)).map((l) => (
+                {TRUST_LEVELS.filter((l) => (ALWAYS_APPROVE.has(task) ? l === "approve" : l !== "auto" || !NEVER_AUTO.has(task))).map((l) => (
                   <option key={l} value={l}>
                     {levelNames[l]}
                   </option>
@@ -154,7 +157,7 @@ export function BuilderCard({ r }: { r: Restaurant }) {
           <legend className={label}>Agents</legend>
           {Object.entries(MODES_AVAILABLE).map(([agent, available]) => {
             const fields = GO_LIVE_FIELDS[agent as AgentName];
-            const missing = new Set(fields ? goLiveChecklist(r, agent as AgentName).missing : []);
+            const missing = new Set(fields ? goLiveChecklist(r, agent as AgentName, confirmed).missing : []);
             return (
               <div key={agent} className="space-y-1">
                 <label className="flex items-center gap-3">
@@ -173,7 +176,7 @@ export function BuilderCard({ r }: { r: Restaurant }) {
                     {fields.map((f, i) => (
                       <span key={f}>
                         {i > 0 && " · "}
-                        {missing.has(f) ? "❌" : "✅"} {PROFILE_FIELDS[f].label}
+                        {missing.has(f) ? "❌" : "✅"} {f === "photo_library" ? `5+ photos (${(r.photo_library ?? []).length})` : f === "emoji_allowed" ? "emoji setting" : PROFILE_FIELDS[f].label}
                       </span>
                     ))}
                     {missing.size > 0 && " (stays in shadow until all are filled)"}
@@ -185,12 +188,38 @@ export function BuilderCard({ r }: { r: Restaurant }) {
         </fieldset>
         <button className={button}>Save builder controls</button>
       </form>
-      {Object.keys(GO_LIVE_FIELDS).some((a) => !goLiveChecklist(r, a as AgentName).ready) && (
+      {Object.keys(GO_LIVE_FIELDS).some((a) => !goLiveChecklist(r, a as AgentName, confirmed).ready) && (
         <form action={askOwnerForGoLive}>
           <input type="hidden" name="r" value={r.id} />
           <button className="text-sm text-emerald-700 underline">Ask the owner on WhatsApp for the missing details</button>
         </form>
       )}
+    </Card>
+  );
+}
+
+// Builder only: what the agents cost this restaurant this month and last month.
+export async function CostCard({ restaurantId }: { restaurantId: string }) {
+  const months = await costsFor(restaurantId);
+  const name = (agent: string) => agent[0].toUpperCase() + agent.slice(1);
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">Agent costs</h2>
+      <p className="text-sm text-stone-600">Estimated from each job&apos;s tokens and the API&apos;s published prices (US dollars). Shadow work counts too.</p>
+      {!months.length && <p className="text-sm text-stone-500">No agent work recorded yet.</p>}
+      <ul className="space-y-2 text-sm">
+        {months.map((m) => (
+          <li key={m.month}>
+            <b>{new Date(`${m.month}-01T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>: {dollars(m.total)} from {m.jobs} job{m.jobs === 1 ? "" : "s"}
+            <span className="block text-xs text-stone-600">
+              {Object.entries(m.byAgent)
+                .sort(([, a], [, b]) => b - a)
+                .map(([agent, cost]) => `${name(agent)} ${dollars(cost)}`)
+                .join(" · ")}
+            </span>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

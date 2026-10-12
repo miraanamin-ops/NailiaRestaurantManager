@@ -1,6 +1,6 @@
 import "server-only";
 import twilio from "twilio";
-import { BUTTON_IDS, QUESTION_IDS } from "@/lib/bot/parse";
+import { BUTTON_IDS, HOURS_IDS, QUESTION_IDS } from "@/lib/bot/parse";
 import { clip } from "@/lib/text";
 
 // Quick-reply template with Approve / Edit / Skip buttons. Created in the
@@ -16,8 +16,11 @@ const TEXT_MAX = 1600;
 const TARGETED_TEMPLATE_NAME = "naila_draft_buttons_targeted_v1";
 // buttons "question": Reply publicly / Handle privately / Both, for a question
 // about a review (ids "public:<id>", "private:<id>", "both:<id>").
-export type ButtonTarget = { draftId: string; briefNumber?: number; buttons?: "approval" | "question" };
+// buttons "hours": Same hours / Closed / Different hours, for a question about a
+// bank holiday's hours (ids "same:<id>", "closed:<id>", "different:<id>").
+export type ButtonTarget = { draftId: string; briefNumber?: number; buttons?: "approval" | "question" | "hours" };
 const QUESTION_TEMPLATE_NAME = "naila_review_question_v1";
+const HOURS_TEMPLATE_NAME = "naila_hours_question_v1";
 
 export function getTwilio() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -28,8 +31,19 @@ export function getTwilio() {
 
 const templateSids = new Map<string, Promise<string>>();
 
-type TemplateKind = "approval" | "approval_targeted" | "question";
-const TEMPLATE_NAMES: Record<TemplateKind, string> = { approval: TEMPLATE_NAME, approval_targeted: TARGETED_TEMPLATE_NAME, question: QUESTION_TEMPLATE_NAME };
+type TemplateKind = "approval" | "approval_targeted" | "question" | "hours";
+const TEMPLATE_NAMES: Record<TemplateKind, string> = {
+  approval: TEMPLATE_NAME,
+  approval_targeted: TARGETED_TEMPLATE_NAME,
+  question: QUESTION_TEMPLATE_NAME,
+  hours: HOURS_TEMPLATE_NAME,
+};
+const FALLBACKS: Record<TemplateKind, string> = {
+  approval: "Reply 1 = Approve, 2 = Edit, 3 = Skip",
+  approval_targeted: "Reply 1 = Approve, 2 = Edit, 3 = Skip",
+  question: "Reply PUBLIC, PRIVATE or BOTH",
+  hours: "Reply SAME, CLOSED or DIFFERENT",
+};
 
 async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
   const client = getTwilio();
@@ -40,7 +54,13 @@ async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
   const targeted = kind !== "approval";
   const id = (action: string) => (targeted ? `${action}:{{2}}` : action);
   const buttons =
-    kind === "question"
+    kind === "hours"
+      ? [
+          { title: "Same hours", id: id(HOURS_IDS.same) },
+          { title: "Closed", id: id(HOURS_IDS.closed) },
+          { title: "Different hours", id: id(HOURS_IDS.different) },
+        ]
+      : kind === "question"
       ? [
           { title: "Reply publicly", id: id(QUESTION_IDS.public) },
           { title: "Handle privately", id: id(QUESTION_IDS.private) },
@@ -51,7 +71,7 @@ async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
           { title: "Edit", id: id(BUTTON_IDS.edit) },
           { title: "Skip", id: id(BUTTON_IDS.skip) },
         ];
-  const fallback = kind === "question" ? "Reply PUBLIC, PRIVATE or BOTH" : "Reply 1 = Approve, 2 = Edit, 3 = Skip";
+  const fallback = FALLBACKS[kind];
   // The SDK posts this object as-is, so it uses Twilio's wire format.
   const created = await client.content.v1.contents.create({
     friendly_name: name,
@@ -97,7 +117,7 @@ export async function sendText(from: string, to: string, body: string) {
 export async function sendWithApprovalButtons(from: string, to: string, body: string, target?: ButtonTarget) {
   if (body.length <= BUTTON_BODY_MAX) {
     try {
-      const contentSid = await templateSid(target?.buttons === "question" ? "question" : target ? "approval_targeted" : "approval");
+      const contentSid = await templateSid(target?.buttons === "question" || target?.buttons === "hours" ? target.buttons : target ? "approval_targeted" : "approval");
       const msg = await getTwilio().messages.create({
         from,
         to,
@@ -110,7 +130,9 @@ export async function sendWithApprovalButtons(from: string, to: string, body: st
     }
   }
   const n = target?.briefNumber;
-  const text = target?.buttons === "question"
+  const text = target?.buttons === "hours"
+    ? `${clip(body, TEXT_MAX - 70)}\n\nReply *SAME*${n ? ` ${n}` : ""} · *CLOSED*${n ? ` ${n}` : ""} · *DIFFERENT*${n ? ` ${n}` : ""}`
+    : target?.buttons === "question"
     ? `${clip(body, TEXT_MAX - 70)}
 
 Reply *PUBLIC*${n ? ` ${n}` : ""} · *PRIVATE*${n ? ` ${n}` : ""} · *BOTH*${n ? ` ${n}` : ""}`

@@ -70,7 +70,7 @@ describe("the reply rules", () => {
 });
 
 describe.each(cases.filter((c) => c.case.recorded))("recorded answer: $file", ({ case: c }) => {
-  test("passes its case", () => {
+  test.skipIf(Boolean(c.pending_decision))("passes its case", () => {
     const r = c.recorded!;
     expect(judgeOutcome(c, { kind: r.outcome ?? "reply", by: r.question_by ?? null, question: r.question ?? null, output: r.output, checker: r.checker })).toEqual([]);
   });

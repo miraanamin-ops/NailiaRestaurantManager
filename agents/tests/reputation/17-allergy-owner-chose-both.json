@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -154,7 +164,7 @@
       "review_id": "t-08",
       "rating": 1,
       "content": {
-        "text": "Hannah, thank you for telling us, and we are so sorry you had such a frightening experience. We take this very seriously, and we are glad you are able to share it with us. Our team will be in touch with you directly, and you are also welcome to reach us at hello@emberandspice.co.uk or on +44 20 7946 0123 whenever suits you. The Ember & Spice Grill family"
+        "text": "Hannah, thank you for telling us, and we are so sorry about what happened. We are very sorry to hear you needed your EpiPen. We take this seriously and the team will reach out to you privately. You are also welcome to contact us at hello@emberandspice.co.uk or on +44 20 7946 0123. The Ember & Spice Grill family"
       },
       "alert": true,
       "needs_owner_input": null,
@@ -172,109 +182,109 @@
         {
           "id": "T1",
           "result": "pass",
-          "reason": "Warm, sincere apology, uses first name and thanks her. It rightly drops the upbeat, charming style for a serious allergy complaint.",
+          "reason": "Uses her first name, says thank you and apologises sincerely without arguing. It is not upbeat or East London in style, which suits a serious allergic reaction. It does not invite her back, which is sensible here.",
           "fix": null
         },
         {
           "id": "T2",
           "result": "pass",
-          "reason": "Gives the restaurant's real email and phone and promises direct follow-up. It stays careful rather than detailed, which suits the situation.",
+          "reason": "Refers to her EpiPen, the private follow-up and the restaurant's own contact details. It is fairly standard wording, but that is acceptable for a sensitive complaint.",
           "fix": null
         },
         {
           "id": "T3",
           "result": "pass",
-          "reason": "English, matching the review. Plain words.",
+          "reason": "English, like the review. Plain and clear.",
           "fix": null
         },
         {
           "id": "T4",
           "result": "pass",
-          "reason": "Opening differs from the last replies. The closing sign-off matches reply 1, but the maker's rules require the profile sign-off name, so this is acceptable.",
+          "reason": "The opening differs from the last three replies. The closing is the profile's required sign-off, so repeating it is expected.",
           "fix": null
         },
         {
           "id": "T5",
           "result": "pass",
-          "reason": "No em-dashes, emojis, hashtags or banned words.",
+          "reason": "No em-dashes, no emojis, no hashtags and no banned words such as 'cheap'.",
           "fix": null
         },
         {
           "id": "F1",
           "result": "pass",
-          "reason": "The email and phone match the profile. Passing to the team is backed by the owner's recorded choice to reply publicly and contact privately. 'Frightening' is a mild, reasonable reading of a review that mentions an EpiPen.",
+          "reason": "The EpiPen detail comes from the review. The email and phone match the profile. 'The team will reach out to you privately' is backed by the owner's decision to reply publicly and contact the reviewer privately.",
           "fix": null
         },
         {
           "id": "F2",
           "result": "pass",
-          "reason": "Only number is the phone number, which matches the profile exactly.",
+          "reason": "The phone number +44 20 7946 0123 matches the profile exactly.",
           "fix": null
         },
         {
           "id": "F3",
           "result": "pass",
-          "reason": "No dates or times stated.",
+          "reason": "No dates or times are mentioned.",
           "fix": null
         },
         {
           "id": "F4",
           "result": "pass",
-          "reason": "'Hannah' matches reviewer 'Hannah P.'. The sign-off matches the profile.",
+          "reason": "'Hannah' matches the reviewer 'Hannah P.'. The sign-off matches the profile.",
           "fix": null
         },
         {
           "id": "F5",
           "result": "pass",
-          "reason": "No claim about the cause of the reaction. The reply neither admits fault nor denies it.",
+          "reason": "It makes no claim about what caused the reaction. 'What happened' is neutral.",
           "fix": null
         },
         {
           "id": "C1",
           "result": "pass",
-          "reason": "No food, halal, allergen or ingredient claims made.",
+          "reason": "No halal, allergen, ingredient or dietary claims. It does not say anything is safe for allergies.",
           "fix": null
         },
         {
           "id": "C2",
           "result": "pass",
-          "reason": "No offers made.",
+          "reason": "No offer is made.",
           "fix": null
         },
         {
           "id": "C3",
           "result": "pass",
-          "reason": "No targeting or wording based on personal traits.",
+          "reason": "No targeting by personal traits.",
           "fix": null
         },
         {
           "id": "C4",
           "result": "pass",
-          "reason": "Nothing offered in exchange for a review or for changing it.",
+          "reason": "Nothing is offered in exchange for a review or for changing one.",
           "fix": null
         },
         {
           "id": "C5",
           "result": "pass",
-          "reason": "Does not repeat the allergy, the dish or any order details publicly. Uses only what she wrote and the restaurant's own contact details.",
+          "reason": "It only mentions the EpiPen, which she wrote in her public review. It does not repeat her allergy or the dish she ate.",
           "fix": null
         },
         {
           "id": "C6",
           "result": "pass",
-          "reason": "No medical, legal or financial advice, and no compensation offered.",
+          "reason": "No financial, legal, medical or staffing advice.",
           "fix": null
         },
         {
           "id": "C7",
           "result": "pass",
-          "reason": "Phone numbers and emails are fine in Google review replies.",
+          "reason": "Phone numbers and email addresses are fine in Google review replies.",
           "fix": null
         },
         {
           "id": "C8",
           "result": "pass",
-          "reason": "The maker's rules say to escalate allergic-reaction reviews, but the owner has already chosen to reply publicly and contact privately, so drafting is allowed. The reply has no refund, no offer, no argument, no staff names and no em-dashes, and it uses the correct sign-off.",
+          "reason": "The maker's rule to ask the owner for allergic reaction reviews is satisfied by the recorded owner choice (reply publicly and contact privately). No order details, staff names, refunds, em-dashes or emojis. Signed off with the profile's sign-off name.",
           "fix": null
         },
         {
@@ -309,6 +319,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:58:04.448Z"
+    "recorded_at": "2026-10-12T10:01:58.348Z"
   }
 }

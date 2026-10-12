@@ -9,12 +9,13 @@ import { isEmail } from "@/lib/email/route";
 import { isSupportedImage, saveLogo } from "@/lib/photos";
 import { revertProfileChange, saveProfileFields } from "@/lib/profile-edits";
 import type { AgentName } from "@/lib/agents/definition";
-import { goLiveChecklist, promptOwnerForGoLive } from "@/lib/agents/go-live";
+import { goLiveChecklistFor, promptOwnerForGoLive } from "@/lib/agents/go-live";
+import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { MODES_AVAILABLE } from "@/lib/agents/modes";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
-import { NEVER_AUTO, TASKS, TRUST_LEVELS } from "@/lib/trust";
+import { ALWAYS_APPROVE, NEVER_AUTO, TASKS, TRUST_LEVELS } from "@/lib/trust";
 
 // The settings page's save buttons. Every change is logged (UNDO on WhatsApp puts it back).
 
@@ -137,7 +138,7 @@ export async function saveBuilderControls(form: FormData) {
     const level = get(`trust_${task}`);
     if (!(TRUST_LEVELS as readonly string[]).includes(level)) continue;
     // Never-Auto tasks can't be stored as Auto (the gate ignores it anyway).
-    trust[task] = level === "auto" && NEVER_AUTO.has(task) ? "approve" : level;
+    trust[task] = ALWAYS_APPROVE.has(task) || (level === "auto" && NEVER_AUTO.has(task)) ? "approve" : level;
   }
   const modes: Record<string, string> = { ...(r.agent_modes ?? {}) };
   const blocked: string[] = [];
@@ -145,7 +146,7 @@ export async function saveBuilderControls(form: FormData) {
     const mode = get(`mode_${agent}`);
     if (!(available.allowed as string[]).includes(mode)) continue;
     // Go-live checklist: an agent can't go live until the fields it needs are filled.
-    const checklist = goLiveChecklist(r, agent as AgentName);
+    const checklist = await goLiveChecklistFor(r, agent as AgentName);
     if (mode === "live" && !checklist.ready) {
       blocked.push(`${agent} can't go live yet: missing ${checklist.labels.join(", ")}`);
       const prompted = await promptOwnerForGoLive(r, agent as AgentName);
@@ -171,7 +172,11 @@ export async function askOwnerForGoLive(form: FormData) {
   const owner = await currentOwner();
   if (!owner?.isBuilder) throw new Error("Only the builder can do this");
   const r = await own(String(form.get("r") ?? ""));
-  const sent = await promptOwnerForGoLive(r, "reputation");
+  // One prompt a day covers one agent: the first one that's missing details.
+  let sent = false;
+  for (const agent of Object.keys(GO_LIVE_FIELDS) as AgentName[]) {
+    if (!sent && !(await goLiveChecklistFor(r, agent)).ready) sent = await promptOwnerForGoLive(r, agent);
+  }
   back(r.id, sent ? "saved=asked" : `error=${encodeURIComponent("Not sent: the owner was already asked in the last day, nothing is missing, or their WhatsApp isn't linked yet.")}`);
 }
 

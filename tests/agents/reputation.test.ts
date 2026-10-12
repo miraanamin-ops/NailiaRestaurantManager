@@ -229,12 +229,19 @@ describe("the /log comparison", () => {
     });
     db.tables.shadow_drafts = [row("s1", A, "Today's reply for A", "Reputation's reply for A"), row("s2", B, "Today's reply for B", "Reputation's reply for B")];
     const { renderToStaticMarkup } = await import("react-dom/server");
-    const { ReputationCompare } = await import("@/app/log/reputation-compare");
-    const html = renderToStaticMarkup(await ReputationCompare({ restaurantId: A }));
+    const { AgentCompare } = await import("@/app/log/agent-compare");
+    const html = renderToStaticMarkup(await AgentCompare({ restaurantId: A, agent: "reputation" }));
     expect(html).toContain("Today&#x27;s reply for A");
     expect(html).toContain("Reputation&#x27;s reply for A");
     expect(html).toContain("Checker v0.3: pass");
     expect(html).toContain("1 revision");
     expect(html).not.toContain("for B");
   });
+});
+
+test("the escalation rate: questions as a share of reviews, flagged over 10%", async () => {
+  const { rateOf } = await import("@/app/log/agent-compare");
+  expect(rateOf(1, 10)).toEqual({ questions: 1, reviews: 10, percent: 10, high: false });
+  expect(rateOf(2, 10)).toMatchObject({ percent: 20, high: true });
+  expect(rateOf(0, 0)).toMatchObject({ percent: null, high: false });
 });

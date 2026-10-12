@@ -3,8 +3,9 @@ import { getCampaignForDraft, campaignStats, recipientsFor, type Campaign } from
 import { check, type Draft } from "@/lib/drafts";
 import { emailPreviewImage } from "@/lib/email/preview-image";
 import { previewContent } from "@/lib/email/previews";
+import { postPreviewPng } from "@/lib/google/post-preview";
 import { agentProfile } from "@/lib/profile/versions";
-import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { getSupabase, type PhotoItem, type Restaurant } from "@/lib/supabase";
 import { assertToolAllowed, type AgentName } from "./definition";
 import { loadAgent } from "./loader";
 import { parseSourceRef } from "./sources";
@@ -46,6 +47,14 @@ async function resolveSources(restaurantId: string, refs: string[]): Promise<Res
       const restaurant = check(await supabase.from("restaurants").select("*").eq("id", restaurantId).single<Restaurant>());
       const { eligible, excluded } = await recipientsFor(restaurant!, id as Parameters<typeof recipientsFor>[1], new Date());
       out.push({ ref, found: true, data: { segment: id, can_be_emailed: eligible.length, left_out_no_consent: excluded } });
+    } else if (kind === "photo") {
+      const r = check(await supabase.from("restaurants").select("photo_library").eq("id", restaurantId).maybeSingle<{ photo_library: PhotoItem[] | null }>());
+      const photo = (r?.photo_library ?? []).find((x) => x.id === id);
+      out.push(photo ? { ref, found: true, data: photo } : { ref, found: false, reason: "no such photo in the library" });
+    } else if (kind === "post") {
+      // The same dates get_post_history shows (published, else drafted).
+      const posts = (await postHistory(restaurantId, 30)).filter((p) => p.date === id);
+      out.push(posts.length ? { ref, found: true, data: posts.map((p) => p.text) } : { ref, found: false, reason: "no Google post on that date" });
     } else if (kind === "history") {
       const campaign = check(await supabase.from("campaigns").select("*").eq("restaurant_id", restaurantId).eq("id", id).maybeSingle<Campaign>());
       out.push(campaign ? { ref, found: true, data: { campaign: { name: campaign.name, offer: campaign.offer, sent_at: campaign.sent_at }, results: await campaignStats(campaign) } } : { ref, found: false, reason: "no such campaign" });
@@ -73,7 +82,17 @@ async function recentOutputs(restaurantId: string, kind: string, excludeId: stri
 
 // get_rendered_preview: a picture of the email as a customer sees it (emails only for now).
 async function renderedPreview(restaurantId: string, draftId: string): Promise<{ media_type: "image/png"; data: string } | null> {
-  const draft = check(await getSupabase().from("drafts").select("id, kind").eq("restaurant_id", restaurantId).eq("id", draftId).maybeSingle<{ id: string; kind: string }>());
+  const supabase = getSupabase();
+  const draft = check(await supabase.from("drafts").select("id, kind, content").eq("restaurant_id", restaurantId).eq("id", draftId).maybeSingle<{ id: string; kind: string; content: string }>());
+  // A Google post: a drawing of the post card (name, logo, photo, text).
+  if (draft?.kind === "google_post") {
+    const [post, r] = await Promise.all([
+      supabase.from("google_posts").select("photo_url").eq("restaurant_id", restaurantId).eq("draft_id", draft.id).maybeSingle<{ photo_url: string | null }>(),
+      supabase.from("restaurants").select("name, logo_url, brand_color").eq("id", restaurantId).single<{ name: string; logo_url: string | null; brand_color: string }>(),
+    ]);
+    if (!r.data) return null;
+    return postPreviewPng({ name: r.data.name, logoUrl: r.data.logo_url, brandColor: r.data.brand_color, text: draft.content, cta: null, photo: post.data?.photo_url ?? null });
+  }
   if (draft?.kind !== "email_campaign" || !(await getCampaignForDraft(draft.id))) return null;
   const content = await previewContent(`draft-${draft.id}`);
   if (!content) return null;
@@ -115,8 +134,32 @@ async function reviewHistory(restaurantId: string) {
   };
 }
 
+// get_post_history: this restaurant's recent Google posts, with the date each went out.
+async function postHistory(restaurantId: string, limit = 10) {
+  const rows =
+    check(
+      await getSupabase()
+        .from("google_posts")
+        .select("text, published_at, created_at")
+        .eq("restaurant_id", restaurantId)
+        .order("created_at", { ascending: false })
+        .limit(limit)
+        .returns<{ text: string; published_at: string | null; created_at: string }[]>(),
+    ) ?? [];
+  return rows.map((r) => ({ date: (r.published_at ?? r.created_at).slice(0, 10), text: r.text }));
+}
+
+// get_photo_library: the approved photos (from Google, or sent by the owner or staff).
+async function photoLibrary(restaurantId: string) {
+  const r = check(await getSupabase().from("restaurants").select("photo_library").eq("id", restaurantId).maybeSingle<{ photo_library: PhotoItem[] | null }>());
+  return r?.photo_library ?? [];
+}
+
 type ToolArgs = {
   get_profile: Record<string, never>;
+  get_post_history: Record<string, never>;
+  get_photo_library: Record<string, never>;
+  get_trends: Record<string, never>;
   get_new_reviews: { reviewId: string };
   get_review_history: Record<string, never>;
   resolve_sources: { refs: string[] };
@@ -127,6 +170,9 @@ type ToolArgs = {
 export type ToolName = keyof ToolArgs;
 type ToolResults = {
   get_profile: Awaited<ReturnType<typeof agentProfile>>;
+  get_post_history: Awaited<ReturnType<typeof postHistory>>;
+  get_photo_library: PhotoItem[];
+  get_trends: string[];
   get_new_reviews: Awaited<ReturnType<typeof reviewById>>;
   get_review_history: Awaited<ReturnType<typeof reviewHistory>>;
   resolve_sources: Resolved[];
@@ -144,6 +190,13 @@ async function runTool(name: ToolName, agent: AgentName, restaurantId: string, a
   switch (name) {
     case "get_profile":
       return agentProfile(restaurantId, agent);
+    case "get_post_history":
+      return postHistory(restaurantId);
+    case "get_photo_library":
+      return photoLibrary(restaurantId);
+    case "get_trends":
+      // No trend scan yet: trend ideas wait until there is one.
+      return [];
     case "get_new_reviews":
       return reviewById(restaurantId, (args as ToolArgs["get_new_reviews"]).reviewId);
     case "get_review_history":

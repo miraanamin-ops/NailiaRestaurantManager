@@ -9,6 +9,7 @@ import { check } from "@/lib/drafts";
 import { queueResultsMessage } from "@/lib/format";
 import { ownerChannel } from "@/lib/followups";
 import { runPostJob } from "@/lib/google-jobs";
+import { mondayVisibility } from "@/lib/agents/visibility";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { createReport, reportPeriod } from "@/lib/report/build";
 import { processQueue } from "@/lib/send";
@@ -97,6 +98,14 @@ export async function runMorning(restaurant: Restaurant, now: Date) {
       await setFields(r, { last_report_on: today });
       r = { ...r, last_report_on: today };
       done.push("report");
+    }
+
+    // 3b. Monday: Visibility looks 4 weeks ahead for bank holidays with no special
+    //     hours set (questions held for this brief), and queues the content brief.
+    //     It never stops the morning job.
+    if (weekday === 1) {
+      const asked = await mondayVisibility(r, today);
+      if (asked.length) done.push(`hours questions: ${asked.join(", ")}`);
     }
 
     // 4. The brief itself.

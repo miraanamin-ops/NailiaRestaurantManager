@@ -24,6 +24,16 @@
         "posts": 2,
         "campaigns": 2
       },
+      "hours": {
+        "Monday": "12:00 – 23:00",
+        "Tuesday": "12:00 – 23:00",
+        "Wednesday": "12:00 – 23:00",
+        "Thursday": "12:00 – 23:00",
+        "Friday": "14:00 – 00:00",
+        "Saturday": "12:00 – 00:00",
+        "Sunday": "12:00 – 22:30"
+      },
+      "special_hours": {},
       "menu": [
         {
           "category": "Grills",
@@ -140,13 +150,16 @@
     ]
   },
   "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
     "output": {
       "type": "review_reply",
       "channel": "google",
       "review_id": "6c1de297-be1f-47a2-b1ef-f47887c58053",
       "rating": 5,
       "content": {
-        "text": "Aisha, you've made our week! Chuffed the lamb chops won you over, and we'll tell the team how welcoming they were. Next week it is, then, your table's waiting. 🔥\n\nThe Ember & Spice Grill family"
+        "text": "Aisha, that's made our day, thank you! Chuffed our lamb chops won you over and that the team made you feel at home. The mixed grill is a big one, so bring an appetite next week! 🔥\n\nThe Ember & Spice Grill family"
       },
       "alert": false,
       "needs_owner_input": null,
@@ -164,109 +177,109 @@
         {
           "id": "T1",
           "result": "pass",
-          "reason": "Warm, short, upbeat, uses first name, East London charm ('Chuffed'), matches tone notes.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T2",
           "result": "pass",
-          "reason": "Refers to the lamb chops, the welcoming team and her plan to return next week.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T3",
           "result": "pass",
-          "reason": "English reply to an English review, plain language.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T4",
           "result": "pass",
-          "reason": "Opening 'Aisha, you've made our week!' and closing 'your table's waiting' differ from the last 3 outputs, which open with Thank you/Thanks/Hiya and close with 'back soon' or 'welcome you back'. Only 3 of the last 10 were provided.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "T5",
           "result": "pass",
-          "reason": "No em-dashes. One emoji, within the profile limit of 1 for review replies. No banned words.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F1",
           "result": "pass",
-          "reason": "Lamb chops and welcoming staff are in the review. 'Next week' comes from 'Will be back next week'. Sign-off matches the profile.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F2",
           "result": "pass",
-          "reason": "No numbers in the reply.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F3",
           "result": "pass",
-          "reason": "'Next week' matches the review. No specific dates or times are stated.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F4",
           "result": "pass",
-          "reason": "Name 'Aisha' matches 'Aisha R.'. Lamb chops are on the menu.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "F5",
           "result": "pass",
-          "reason": "No causal claims.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C1",
           "result": "pass",
-          "reason": "No food, halal, allergen or dietary claims.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C2",
           "result": "pass",
-          "reason": "No offers. 'Your table's waiting' is a friendly invitation, not an offer or fake urgency.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C3",
           "result": "pass",
-          "reason": "No targeting by personal traits.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C4",
           "result": "pass",
-          "reason": "Nothing offered in exchange for a review.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C5",
           "result": "pass",
-          "reason": "Uses only what the reviewer wrote publicly. No booking or order details.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C6",
           "result": "pass",
-          "reason": "No financial, legal, tax or staffing advice.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C7",
           "result": "pass",
-          "reason": "Google review reply with no phone numbers, links or prohibited content.",
+          "reason": null,
           "fix": null
         },
         {
           "id": "C8",
           "result": "pass",
-          "reason": "English reply, no invented facts, no staff named, no offers, no em-dashes, emoji within the allowance, correct sign-off. 'We'll tell the team' is a pledge that is plausible and does not break a rule.",
+          "reason": null,
           "fix": null
         },
         {
@@ -301,6 +314,6 @@
     "model": "claude-sonnet-5-5",
     "agent_version": "0.2",
     "checker_version": "0.3",
-    "recorded_at": "2026-10-11T23:37:53.125Z"
+    "recorded_at": "2026-10-12T09:40:23.883Z"
   }
 }

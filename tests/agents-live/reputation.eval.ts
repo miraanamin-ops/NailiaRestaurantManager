@@ -4,6 +4,7 @@
 // (npm run test:agents / test:agents:stability / test:agents:record).
 import { describe, expect, test, vi } from "vitest";
 import type { Resolved } from "@/lib/agents/tools";
+import type { Usage } from "@/lib/agents/usage";
 import { judgeOutcome, loadReputationCases, saveReputationRecorded, type ReputationCase } from "../agents/support/reputation-cases";
 import { hasKey, RECORD, reportRuns, RUNS } from "./support";
 
@@ -24,6 +25,7 @@ describe.skipIf(!hasKey)("reputation (live)", () => {
   test.each(loadReputationCases())("$file", async ({ file, case: c }) => {
     const { reputationLoop } = await import("@/lib/agents/reputation-core");
     const verdicts: string[] = [];
+    const usages: Usage[] = [];
     const wrong: string[] = [];
     for (let run = 1; run <= RUNS; run++) {
       const outcome = await reputationLoop(
@@ -33,6 +35,7 @@ describe.skipIf(!hasKey)("reputation (live)", () => {
       );
       // What happened, in one word: reply (with the checker's verdict), or who asked the owner.
       verdicts.push(outcome.kind === "reply" ? `reply/${outcome.checker.verdict}` : `question by ${outcome.by}`);
+      usages.push(outcome.usage);
       const problems = judgeOutcome(c, {
         kind: outcome.kind,
         by: outcome.kind === "question" ? outcome.by : null,
@@ -56,7 +59,7 @@ describe.skipIf(!hasKey)("reputation (live)", () => {
         });
       }
     }
-    reportRuns("reputation", file, verdicts);
+    reportRuns("reputation", file, verdicts, usages);
     expect(wrong).toEqual([]);
   });
 });
