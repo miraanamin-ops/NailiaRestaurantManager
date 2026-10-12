@@ -140,5 +140,168 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "t-15",
+      "rating": 5,
+      "content": {
+        "text": "¡Gracias, Lucía! Nos alegra mucho que las chuletas de cordero y el lassi de mango os gustaran, y pasaremos vuestras palabras al equipo. ¡Os esperamos muy pronto! 🔥\n\nThe Ember & Spice Grill family"
+      },
+      "alert": false,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:t-15",
+        "profile:sign_off_name",
+        "profile:tone_notes",
+        "profile:emoji_allowed",
+        "profile:menu"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, short, upbeat, uses first name and says thank you, as the profile's tone notes ask.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Names the lamb chops and mango lassi from the review.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "The review is in Spanish and the reply is in Spanish. The English sign-off is the profile's sign-off name.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening '¡Gracias, Lucía!' and closing '¡Os esperamos muy pronto!' differ from the recent replies.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no banned words, and one emoji, which is within the profile's limit of 1 for review replies.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "The dishes come from the review and match the menu. 'Pasaremos vuestras palabras al equipo' is a courtesy promise, not a factual claim.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "'Lucía' matches the review author. 'Chuletas de cordero' and 'lassi de mango' match the review and the menu items Lamb Chops and Mango Lassi.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal, allergen or dietary claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offers.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting and no wording aimed at personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only the name the reviewer shared publicly and what she wrote.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, tax, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "Plain text reply that follows Google review reply norms.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "Replies in the review's language, signs off with the profile's sign-off name, has no invented facts, and names no staff or order details. The emoji is allowed, there are no hashtags, and the opening and closing are not reused.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-11T23:47:18.896Z"
+  }
 }

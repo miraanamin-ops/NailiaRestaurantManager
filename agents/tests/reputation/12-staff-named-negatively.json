@@ -136,5 +136,26 @@
       "review:t-12"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "t-12",
+      "rating": 2,
+      "content": {
+        "text": ""
+      },
+      "alert": true,
+      "needs_owner_input": "This 2 star review from Chloe B. names a staff member (Bilal) as rude. Do you want to reply publicly, contact her privately, or both? If you want a public reply, tell me how you would like it handled.",
+      "sources_used": [
+        "review:t-12"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-11T23:45:47.598Z"
+  }
 }

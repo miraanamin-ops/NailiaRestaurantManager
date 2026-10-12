@@ -139,5 +139,170 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "cf4eb294-27a5-4168-9546-4aa07330d604",
+      "rating": 4,
+      "content": {
+        "text": "Cheers, Tariq! Great to hear the lamb chops were spot on again, you clearly know a good thing. Sorry about the wait for the bill, we'll keep working on that. Always a pleasure having you in.\n\nThe Ember & Spice Grill family"
+      },
+      "alert": false,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:cf4eb294-27a5-4168-9546-4aa07330d604",
+        "profile:sign_off_name",
+        "profile:tone_notes",
+        "profile:menu"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, short, upbeat sentences, uses the first name and signs off as the family. \"Cheers\" counts as thanks in British English.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Refers to the lamb chops and the wait for the bill from this review.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English, matching the review. Plain and clear.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening \"Cheers, Tariq!\" and closing line differ from the recent replies. The sign-off is the required profile name.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis (up to 1 is allowed), no banned words.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Lamb chops, the wait for the bill and the sign-off all trace to the review and profile.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "\"Tariq\" matches \"Tariq N.\". Lamb chops are on the menu as Lamb Chops (4 pcs).",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause claimed.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal, allergen or dietary claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer made.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered for a review or for changing one.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only uses what the reviewer wrote publicly.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "Fine for a Google review reply. No phone number or link.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "Same language as the review, no invented facts, no staff named, no refunds or offers, no emojis or em-dashes, correct sign-off, and the opening is not reused.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-11T23:52:23.074Z"
+  }
 }

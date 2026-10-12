@@ -116,6 +116,7 @@
   "expect": {
     "alert": true,
     "needs_owner_input": false,
+    "question_ok": true,
     "sources_must_include": [
       "review:d86bd6dc-a53b-454f-a2ba-88d3103871f5",
       "profile:complaint_contact"
@@ -124,5 +125,172 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "d86bd6dc-a53b-454f-a2ba-88d3103871f5",
+      "rating": 2,
+      "content": {
+        "text": "Thank you for being honest, Priya. We're sorry you found us closed on Sunday when you hoped to visit. If you'd like to tell us more, please email hello@cardamomcorner.co.uk. We'd love to welcome you another time for a cardamom latte and a bake. Maya and the Cardamom Corner team"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:d86bd6dc-a53b-454f-a2ba-88d3103871f5",
+        "profile:tone_notes",
+        "profile:complaint_contact",
+        "profile:sign_off_name",
+        "profile:menu",
+        "profile:emoji_allowed"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Gentle, calm and neighbourly. Thanks for the honesty, apologises simply and invites her back, as the tone notes ask.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Mentions the cardamom latte and a bake, and the Sunday closure she raised.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English reply to an English review. Plain words.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "No previous outputs to repeat.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis (review replies allow 0), no hashtags. words_to_avoid is empty.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Closure on Sunday comes from the review. Email matches complaint_contact. Cardamom latte is on the menu. Sign-off matches the profile. The reply makes no claim about opening hours.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times stated beyond the reviewer's own 'Sunday'.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "'Priya' matches 'Priya S.'. 'Cardamom latte' matches 'Cardamom Latte'.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal, allergen or dietary claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer made.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review or for changing one. The email invitation is only for further feedback.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only the reviewer's public first name is used. No private details.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "An email address is fine in a Google review reply.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "English reply. No invented facts. Doesn't argue or blame. No personal details added. Sign-off matches the profile. No money or recovery offer. No em-dashes or emojis.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 1,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-11T23:53:45.754Z"
+  }
 }

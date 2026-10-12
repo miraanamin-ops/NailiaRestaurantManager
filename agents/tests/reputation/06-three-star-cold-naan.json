@@ -140,5 +140,168 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "66f5bc39-cd45-4106-9c05-1b48f95967ae",
+      "rating": 3,
+      "content": {
+        "text": "Hi Ellie, thanks for the honest feedback, and we're glad the food was tasty. We're sorry your order came out in the wrong order and the naan wasn't hot. That's not how we like to do things. Please drop us a line at hello@emberandspice.co.uk and we'll gladly give you a free dessert on your next visit. We'd love to make it right.\n\nThe Ember & Spice Grill family"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:66f5bc39-cd45-4106-9c05-1b48f95967ae",
+        "profile:complaint_contact",
+        "profile:recovery_offers",
+        "profile:sign_off_name",
+        "profile:tone_notes"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, first name used, thanks given, sincere apology, invites them back. Matches the tone notes for bad reviews.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Refers to the wrong-order issue and the naan, and offers the restaurant's own recovery gesture.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English reply to an English review. Plain and clear.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening 'Hi Ellie' differs from the recent openings. The closing line is not reused. The sign-off is the required profile sign-off.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis, no hashtags, no banned words such as 'cheap'.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Complaint details come from the review. The email address and free dessert come from the profile.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times. 'Next visit' is not tied to a date.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Reviewer's first name 'Ellie' matches 'Ellie S.'. The sign-off matches the profile exactly.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause claims made.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal or allergen claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "The free dessert on the next visit is clear, matches the approved offer, and uses no false urgency.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting by personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "The dessert is a recovery gesture and is not tied to a review being changed or removed.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only details from the public review are repeated. The business email is not personal data.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "A business email address is fine in a Google review reply.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "No argument or blame. Order details mentioned were written by the reviewer. The offer is from the approved list. No money, staff names or em-dashes. Signed off with the profile sign-off name.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-11T23:43:50.279Z"
+  }
 }
