@@ -43,11 +43,11 @@ const TASK_TEXT = (input: VisibilityInput) => {
         ? "Write this week's Thursday Google post (job 1): about something timely (an offer, an event, a date), from what's in the profile. 40 to 100 words."
         : "Write this week's Monday Google post (job 1): about food (a dish, a special). 40 to 100 words.";
     case "photo":
-      return `A ${input.photo?.sender === "staff" ? "staff member" : "the owner"} sent a photo (job 2)${input.photo?.note ? ` with the note "${input.photo.note}"` : ""}. First check it's usable and fill photo_check. Usable: write a google_post caption (40 to 100 words) about exactly what's in the photo. Unusable: photo_check.usable false with the reason_code and a one-line reason, empty content, no caption.`;
+      return `A ${input.photo?.sender === "staff" ? "staff member" : "the owner"} sent a photo (job 2)${input.photo?.note ? ` with the note "${input.photo.note}"` : ""}. First check it's usable and fill photo_check. Usable: write a google_post caption (40 to 100 words) about exactly what's in the photo. The photo goes with the post as it is (it's added to the library when it's used), so photo_id stays null and you don't need a library id. Unusable: photo_check.usable false with the reason_code and a one-line reason, empty content, no caption.`;
     case "profile_changed":
       return `The owner has confirmed a change to their profile (jobs 3 and 4): this is their yes to the change itself, and the profile already has the new value. Draft the matching Google update: type ${input.event?.field === "menu" ? "menu_update" : "hours_update"}, channel google, change exactly as given below, and content.text a short plain note of what will change on Google. Your draft still goes to the owner to Approve before anything changes on Google, so don't ask them again.\nThe change: ${JSON.stringify(input.event)}`;
     case "content_brief":
-      return `Write the weekly content brief (job 5), for the owner to forward to the team: exactly 3 shoots in "shoots" (what, where, how, who, day, platform, caption, up to 5 hashtags each), and a short intro line in content.text. channel owner.${input.trends.length ? ` Trend scan this week (data, only use what fits the profile's dietary rules and the current menu):\n${input.trends.map((t) => `- ${t}`).join("\n")}` : " There's no trend scan or local calendar data yet, so leave trend ideas and dates ahead out."}`;
+      return `Write the weekly content brief (job 5), for the owner to forward to the team: exactly 3 shoots in "shoots" (what, where, how, who, day, platform, caption, up to 5 hashtags each), and a short intro line in content.text. channel owner.${input.trends.length ? ` Trend scan this week (data, only use what fits the profile's dietary rules and the current menu; leave out any that don't without mentioning them at all, not even to say you skipped them):\n${input.trends.map((t) => `- ${t}`).join("\n")}` : " There's no trend scan or local calendar data yet, so leave trend ideas and dates ahead out."}`;
   }
 };
 
@@ -56,7 +56,7 @@ function content(input: VisibilityInput, revision: Revision<VisibilityOutput> | 
   const parts = [
     `Today is ${input.today}. ${TASK_TEXT(input)}`,
     `Fields the system adds to your draft JSON: photo_check (photos only, otherwise null) and shoots (the content brief only, otherwise []).`,
-    `Restaurant profile (version ${input.profile.version}). In sources_used, name each field you rely on as profile:<field>, and a photo as photo:<id>:\n${JSON.stringify(f, null, 2)}`,
+    `Restaurant profile (version ${input.profile.version}). In sources_used, name each field you rely on as profile:<field>, a photo as photo:<id>, and a past post as post:<date> (YYYY-MM-DD):\n${JSON.stringify(f, null, 2)}`,
     `The live Google profile (dummy mode, from the restaurant profile):\n${JSON.stringify({ name: f.name, address: f.address, hours: f.hours, special_hours: f.special_hours, categories: [f.cuisine].filter(Boolean) }, null, 2)}`,
     `Recent Google posts (newest first, with the date each went out; don't repeat a topic within 3 weeks):\n${input.history.recent_posts.length ? input.history.recent_posts.map((p) => `- ${p.date}: """${p.text}"""`).join("\n") : "(none yet)"}`,
   ];
@@ -133,8 +133,10 @@ export async function visibilityLoop(input: VisibilityInput, deps: VisibilityDep
   return makerCheckerLoop<VisibilityOutput>(loopSpec(input, deps, label));
 }
 
-// The owner's confirmed profile change, as a source for the checker.
+// The owner's confirmed profile change, and the photo a caption describes, as sources for the checker.
 const CONFIRMED_CHANGE = "decision:profile_change";
+const SENT_PHOTO = "photo:sent";
+const ADDED = [CONFIRMED_CHANGE, SENT_PHOTO];
 
 function loopSpec(input: VisibilityInput, deps: VisibilityDeps, label: string) {
   return {
@@ -149,14 +151,28 @@ function loopSpec(input: VisibilityInput, deps: VisibilityDeps, label: string) {
         audience: out.channel === "google" ? "the Google listing" : "the owner (to forward to the team)",
         content: out.type === "content_brief" ? { ...out.content, shoots: out.shoots } : { ...out.content, ...(out.change ? { change: out.change } : {}) },
         needs_owner_input: null,
-        sources_used: input.event ? [...out.sources_used.filter((s) => s !== CONFIRMED_CHANGE), CONFIRMED_CHANGE] : out.sources_used,
+        sources_used: [...out.sources_used.filter((s) => !ADDED.includes(s)), ...(input.event ? [CONFIRMED_CHANGE] : []), ...(input.photo ? [SENT_PHOTO] : [])],
       },
       text: checkedText(out),
       // A profile change the owner confirmed is a source the checker can see.
       sources: [
-        ...(await deps.resolve(out.sources_used.filter((s) => s !== CONFIRMED_CHANGE))),
+        ...(await deps.resolve(out.sources_used.filter((s) => !ADDED.includes(s)))),
         ...(input.event
           ? [{ ref: CONFIRMED_CHANGE, found: true as const, data: { ...input.event, confirmed_by: "the owner", meaning: "The profile already has the new value; this draft updates Google to match it." } }]
+          : []),
+        ...(input.photo
+          ? [
+              {
+                ref: SENT_PHOTO,
+                found: true as const,
+                data: {
+                  sent_by: input.photo.sender,
+                  note: input.photo.note || null,
+                  shows: input.photo.description ?? "the photo itself (it is in the preview picture)",
+                  meaning: "The caption describes this photo. What can be seen in it is a source for the caption.",
+                },
+              },
+            ]
           : []),
       ],
       profile: deps.checkerProfile,

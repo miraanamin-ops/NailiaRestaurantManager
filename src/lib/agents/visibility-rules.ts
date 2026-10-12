@@ -140,3 +140,52 @@ export const PHOTO_TIPS: Record<Exclude<PhotoReason, "ok">, string> = {
   not_on_menu: "📸 Thanks! That dish isn't on our menu yet, so we'll hold off posting it. The owner can add it first.",
   other: "📸 Thanks! That one won't work for Google. Try a bright, close-up shot of a dish.",
 };
+
+// ---------- Profile changes, in words ----------
+
+type Dish = { name: string; price: number };
+const dishes = (menu: unknown): Dish[] =>
+  (Array.isArray(menu) ? menu : []).flatMap((c: { items?: Dish[] }) => (Array.isArray(c?.items) ? c.items : [])).filter((d) => d && typeof d.name === "string");
+const money = (n: number) => `£${Number(n).toFixed(2).replace(/\.00$/, "")}`;
+const entries = (v: unknown) => Object.entries(v && typeof v === "object" ? (v as Record<string, unknown>) : {});
+const dayHours = (v: unknown) => (typeof v === "string" ? v : v && typeof v === "object" && "hours" in v ? String((v as { hours: unknown }).hours) : "not set");
+const dayLabel = (date: string, v: unknown) => (v && typeof v === "object" && "label" in v && (v as { label: unknown }).label ? `${(v as { label: string }).label} (${date})` : date);
+
+// What changed on a profile field Google shows (opening hours, special hours,
+// the menu), as from/to text for Visibility's update and the owner's Approve.
+// Null if nothing Google shows changed (e.g. only allergens were confirmed).
+export function describeProfileChange(field: ProfileChangedEvent["field"], before: unknown, after: unknown): ProfileChangedEvent | null {
+  const from: string[] = [];
+  const to: string[] = [];
+  if (field === "hours" || field === "special_hours") {
+    const a = new Map(entries(before));
+    const b = new Map(entries(after));
+    for (const key of [...new Set([...a.keys(), ...b.keys()])]) {
+      const x = a.has(key) ? dayHours(a.get(key)) : null;
+      const y = b.has(key) ? dayHours(b.get(key)) : null;
+      if (x === y) continue;
+      const label = field === "special_hours" ? dayLabel(key, b.get(key) ?? a.get(key)) : key;
+      from.push(`${label}: ${x ?? (field === "special_hours" ? "usual hours" : "not set")}`);
+      to.push(`${label}: ${y ?? (field === "special_hours" ? "usual hours" : "closed")}`);
+    }
+  } else {
+    const a = new Map(dishes(before).map((d) => [d.name.toLowerCase(), d]));
+    const b = new Map(dishes(after).map((d) => [d.name.toLowerCase(), d]));
+    for (const [k, d] of b) {
+      const old = a.get(k);
+      if (!old) {
+        from.push(`${d.name}: not on the menu`);
+        to.push(`${d.name}: added, ${money(d.price)}`);
+      } else if (Number(old.price) !== Number(d.price)) {
+        from.push(`${d.name}: ${money(old.price)}`);
+        to.push(`${d.name}: ${money(d.price)}`);
+      }
+    }
+    for (const [k, d] of a) {
+      if (b.has(k)) continue;
+      from.push(`${d.name}: ${money(d.price)}`);
+      to.push(`${d.name}: removed`);
+    }
+  }
+  return from.length ? { field, from: from.join("; "), to: to.join("; ") } : null;
+}

@@ -7,7 +7,8 @@ import { applyProfileChanges } from "@/lib/profile-edits";
 import { getSupabase } from "@/lib/supabase";
 import { decideOnScreen, decideTargeted } from "./decisions";
 import { campaignCreateAndSend, checkCreateAndSend, pastedReviewReply, reviseAndSend, reviseCampaignAndSend } from "./flows";
-import { parseAction, parseQuestionAnswer, parseTargetedAction } from "./parse";
+import { answerHoursQuestion, hoursForQuestion } from "./hours-questions";
+import { parseAction, parseHoursAnswer, parseQuestionAnswer, parseTargetedAction } from "./parse";
 import { answerQuestion } from "./questions";
 import type { Turn } from "./turn";
 
@@ -23,6 +24,11 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   const questionOnScreen = active?.kind === "review_question" && active.waiting_for === "decision";
   const answer = parseQuestionAnswer(buttonPayload, body, questionOnScreen);
   if (answer) return answerQuestion(turn, answer, questionOnScreen ? active : null);
+  // A bank holiday coming up: Same hours / Closed / Different hours, then (Different) the hours.
+  const hoursOnScreen = active?.kind === "hours_question" && active.waiting_for === "decision";
+  const hoursAnswer = parseHoursAnswer(buttonPayload, body, hoursOnScreen);
+  if (hoursAnswer) return answerHoursQuestion(turn, hoursAnswer, hoursOnScreen ? active : null);
+  if (active?.kind === "hours_question" && active.waiting_for === "edit_instructions") return hoursForQuestion(turn, active, body);
 
   const targeted = parseTargetedAction(buttonPayload, body);
   if (targeted) return decideTargeted(turn, targeted);

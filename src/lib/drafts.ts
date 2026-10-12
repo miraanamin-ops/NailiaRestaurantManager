@@ -5,7 +5,10 @@ import { queueDraftCheck } from "@/lib/agents/enqueue";
 import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question"] as const;
+export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question"] as const;
+// Questions for the owner: answered with their own buttons, never approved or sent.
+export const QUESTION_KINDS: ReadonlySet<string> = new Set(["review_question", "hours_question"]);
+export const isQuestion = (kind: string | null | undefined) => QUESTION_KINDS.has(kind ?? "");
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
 
@@ -75,6 +78,9 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   email_campaign: "Email campaign",
   google_post: "Google post",
   review_question: "Question about a review",
+  hours_update: "Google hours update",
+  menu_update: "Google menu update",
+  hours_question: "Question about your hours",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {
@@ -176,7 +182,7 @@ export async function createDraft(input: {
     detail: `Drafted ${draftName(draft)}${mode === "hold" ? ", held for the morning brief" : ""}. Checks: ${checksLine(input.checks)}`,
   });
   // The checker agent (shadow mode) reviews it in the background; nothing waits for it.
-  if (!input.agentCheck && draft.kind !== "review_question") await queueDraftCheck(draft);
+  if (!input.agentCheck && !isQuestion(draft.kind)) await queueDraftCheck(draft);
   return draft;
 }
 

@@ -11,6 +11,7 @@ export const SOURCE_KINDS = [
   "calendar", // a date in the local calendar
   "metrics", // a figure from query_metrics
   "photo", // a photo in the library
+  "post", // a past Google post (the date it went out, YYYY-MM-DD)
   "themes", // Reputation's weekly themes
   "decision", // an owner decision (approve, edit, skip)
 ] as const;

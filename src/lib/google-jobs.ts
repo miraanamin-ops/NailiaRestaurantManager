@@ -1,12 +1,15 @@
 import "server-only";
 import { writeGooglePost, writeReviewReply, type RestaurantContext } from "@/lib/assistant";
 import { checkDraft } from "@/lib/checks";
-import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, type Draft } from "@/lib/drafts";
+import type { DraftChecks } from "@/lib/checks/types";
+import { check, createDraft, getLearningContext, getQueue, takeNextFromQueue, type AgentCheck, type Draft } from "@/lib/drafts";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
 import { liveReputation, queueReputationShadow, reputationMode } from "@/lib/agents/reputation";
-import { getSupabase } from "@/lib/supabase";
+import { queueVisibilityLive, queueVisibilityShadow, visibilityMode } from "@/lib/agents/visibility";
+import { londonWeekday, londonYmd } from "@/lib/clock";
+import { getSupabase, type Restaurant } from "@/lib/supabase";
 import type { ButtonTarget } from "@/lib/whatsapp";
 
 // mediaUrl: a picture sent first (the preview image of an email draft).
@@ -17,6 +20,7 @@ export const stars = (n: number) => "⭐".repeat(n);
 // The buttons a draft gets on WhatsApp: a question about a review gets Reply
 // publicly / Handle privately / Both (carrying its id); everything else Approve / Edit / Skip.
 export function buttonsFor(draft: Pick<Draft, "id" | "kind">): true | ButtonTarget {
+  if (draft.kind === "hours_question") return { draftId: draft.id, buttons: "hours" };
   return draft.kind === "review_question" ? { draftId: draft.id, buttons: "question" } : true;
 }
 
@@ -104,6 +108,15 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
 
 // Drafts one Google post and holds it for the morning brief. Runs Mondays and Thursdays.
 export async function runPostJob(ctx: RestaurantContext) {
+  const slot = londonWeekday(ctx.now) === 4 ? "Thursday" : "Monday";
+  // Visibility live: it writes the post (checked by the checker), held for the brief.
+  // Run straight away, so the post is ready for the brief that follows.
+  if ((await visibilityMode(ctx.restaurant)) === "live") {
+    await queueVisibilityLive(ctx.restaurant, { task: "google_post", slot }, `visibility:post:${slot}:${londonYmd(ctx.now)}`);
+    const { runQueuedAgentJobs } = await import("@/lib/agents/handlers");
+    await runQueuedAgentJobs(ctx.restaurantId);
+    return null;
+  }
   const recent =
     check(
       await getSupabase()
@@ -116,7 +129,15 @@ export async function runPostJob(ctx: RestaurantContext) {
     ) ?? [];
   const learning = await getLearningContext(ctx.restaurantId);
   const post = await writeGooglePost(ctx, learning, recent.map((p) => p.text));
-  return createPostDraft(ctx, { topic: post.topic, text: post.text, photoUrl: null, request: "Twice-weekly Google post", mode: "hold" });
+  const draft = await createPostDraft(ctx, { topic: post.topic, text: post.text, photoUrl: null, request: "Twice-weekly Google post", mode: "hold" });
+  // Shadow mode: Visibility writes its own post in the background, for the /log comparison.
+  await queueVisibilityShadow(ctx.restaurant, {
+    task: "google_post",
+    slot,
+    legacy_draft_id: draft.id,
+    legacy_text: draft.content,
+  });
+  return draft;
 }
 
 // Checker, then a draft plus its google_posts row (published only once approved).
@@ -151,7 +172,28 @@ export async function createPostDraft(
   return draft;
 }
 
-const TOPIC_LABELS: Record<GooglePost["topic"], string> = { update: "Update", offer: "Offer", event: "Event" };
+// A Google post Visibility wrote (live mode): already checked by the checker agent,
+// so it's saved with that verdict, plus its google_posts row (published only once approved).
+export async function createAgentPostDraft(
+  restaurant: Restaurant,
+  input: { text: string; photoUrl: string | null; request: string; checks: DraftChecks; agentCheck: AgentCheck; mode: "present" | "hold" },
+) {
+  const draft = await createDraft({
+    restaurantId: restaurant.id,
+    kind: "google_post",
+    content: input.text,
+    audience: "your Google listing",
+    request: input.request,
+    checks: input.checks,
+    mode: input.mode,
+    actor: "visibility",
+    agentCheck: input.agentCheck,
+  });
+  check(await getSupabase().from("google_posts").insert({ restaurant_id: restaurant.id, draft_id: draft.id, topic: "update", text: input.text, photo_url: input.photoUrl }));
+  return draft;
+}
+
+const TOPIC_LABELS:Record<GooglePost["topic"], string> = { update: "Update", offer: "Offer", event: "Event" };
 
 export function postMessage(draft: Draft, topic: GooglePost["topic"], photoUrl: string | null, ctx: RestaurantContext) {
   const extra = `_Type: ${TOPIC_LABELS[topic]}${photoUrl ? " · with your photo 📷" : ""}_`;

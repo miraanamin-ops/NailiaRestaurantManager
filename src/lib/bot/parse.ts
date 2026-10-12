@@ -42,6 +42,36 @@ export function parseQuestionAnswer(buttonPayload: string | undefined, body: str
   return word ? { choice: word } : null;
 }
 
+// A question about special hours (a bank holiday coming up): Same hours / Closed /
+// Different hours. Buttons carry the question's id ("same:<uuid>"); typed "SAME 2",
+// "CLOSED 2" or "DIFFERENT 2" answer brief item 2; plain words or 1/2/3 answer the
+// question on screen.
+export const HOURS_IDS = { same: "same", closed: "closed", different: "different" } as const;
+export type HoursChoice = keyof typeof HOURS_IDS;
+export type HoursAnswer = { choice: HoursChoice; draftId?: string; briefNumber?: number };
+
+const HOURS_WORDS: Record<string, HoursChoice> = {
+  "1": "same",
+  same: "same",
+  "same hours": "same",
+  "usual hours": "same",
+  "2": "closed",
+  closed: "closed",
+  "3": "different",
+  different: "different",
+  "different hours": "different",
+};
+
+export function parseHoursAnswer(buttonPayload: string | undefined, body: string, onScreen: boolean): HoursAnswer | null {
+  const button = buttonPayload?.match(/^(same|closed|different):([0-9a-f-]{36})$/);
+  if (button) return { choice: button[1] as HoursChoice, draftId: button[2] };
+  const typed = body.trim().toUpperCase().match(/^(SAME|CLOSED|DIFFERENT)\s*#?(\d{1,2})[.!]?$/);
+  if (typed) return { choice: typed[1].toLowerCase() as HoursChoice, briefNumber: Number(typed[2]) };
+  if (!onScreen) return null;
+  const word = HOURS_WORDS[body.trim().toLowerCase().replace(/[.!]$/, "")];
+  return word ? { choice: word } : null;
+}
+
 export function parseButtonPayload(payload: string | undefined) {
   const m = payload?.match(/^(approve|edit|skip):([0-9a-f-]{36})$/);
   return m ? { action: m[1] as Action, draftId: m[2] } : null;

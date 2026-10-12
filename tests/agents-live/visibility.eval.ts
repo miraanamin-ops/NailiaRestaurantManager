@@ -22,6 +22,10 @@ function resolverFor(c: VisibilityCase) {
         return p ? { ref, found: true, data: p } : { ref, found: false, reason: "no such photo" };
       }
       if (kind === "request" && c.request) return { ref, found: true, data: { owner_asked: c.request } };
+      if (kind === "post") {
+        const posts = c.history.recent_posts.filter((p) => p.date.startsWith(id));
+        return posts.length ? { ref, found: true, data: posts.map((p) => p.text) } : { ref, found: false, reason: "no Google post on that date" };
+      }
       return { ref, found: false, reason: "not in this case's data" };
     });
 }

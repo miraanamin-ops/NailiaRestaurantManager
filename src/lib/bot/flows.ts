@@ -19,6 +19,7 @@ import { checkNoteLines, checksLine } from "@/lib/checks/types";
 import { applyEdit, createDraft, getLearningContext, type Draft, type DraftKind } from "@/lib/drafts";
 import { randomDummyReview } from "@/lib/dummy-reviews";
 import { liveReputation, pastedReviewId, queueReputationShadow, reputationMode } from "@/lib/agents/reputation";
+import { addToPhotoLibrary, queueVisibilityLive, queueVisibilityShadow, visibilityMode } from "@/lib/agents/visibility";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -195,8 +196,23 @@ export async function photoPost(ctx: RestaurantContext, media: { url: string; co
   await send("📷 Got your photo! Writing a caption…");
   const bytes = await downloadTwilioMedia(media.url);
   const photoUrl = await savePostPhoto(ctx.restaurantId, bytes, media.contentType);
+  // Visibility live: it checks the photo and writes the caption (the draft arrives in a moment).
+  if ((await visibilityMode(ctx.restaurant)) === "live") {
+    await addToPhotoLibrary(ctx.restaurant, photoUrl, "owner", note.trim() || null);
+    await queueVisibilityLive(ctx.restaurant, { task: "photo", photo: { url: photoUrl, content_type: media.contentType, note: note.trim(), sender: "owner" } });
+    return;
+  }
   const learning = await getLearningContext(ctx.restaurantId);
   const post = await captionPhoto(ctx, learning, { base64: bytes.toString("base64"), mediaType: media.contentType }, note.trim());
   const draft = await createPostDraft(ctx, { topic: post.topic, text: post.text, photoUrl, request: note || "Photo post", mode: "present" });
   await send(`📷 *Photo post for Google*\n\n${postMessage(draft, post.topic, photoUrl, ctx)}`, true);
+  // The owner's photo goes into the photo library, and (shadow mode) Visibility checks
+  // and captions it in the background for the /log comparison.
+  await addToPhotoLibrary(ctx.restaurant, photoUrl, "owner", post.text);
+  await queueVisibilityShadow(ctx.restaurant, {
+    task: "photo",
+    photo: { url: photoUrl, content_type: media.contentType, note: note.trim(), sender: "owner" },
+    legacy_draft_id: draft.id,
+    legacy_text: draft.content,
+  });
 }

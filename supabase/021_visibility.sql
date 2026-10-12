@@ -25,4 +25,25 @@ alter table agent_jobs add column if not exists usage    jsonb;          -- { "r
 alter table agent_jobs add column if not exists cost_usd numeric(10, 6);
 create index if not exists agent_jobs_cost_idx on agent_jobs (restaurant_id, created_at);
 
+-- 4. Shadow drafts for any agent: what the job was about (a review, a photo, a
+--    profile change...) and which task it was (e.g. google_post, photo).
+alter table shadow_drafts alter column review drop not null;
+alter table shadow_drafts add column if not exists task    text;
+alter table shadow_drafts add column if not exists subject jsonb;   -- e.g. { "slot": "Monday" }, { "photo_url": ..., "sender": "staff" }
+
+-- 5. Three new kinds of draft: the Google update that matches a change to the
+--    opening hours (or special hours) or the menu (they always need Approve), and
+--    a question about a bank holiday coming up (Same hours / Closed / Different hours).
+alter table drafts drop constraint if exists drafts_kind_check;
+alter table drafts add constraint drafts_kind_check
+  check (kind in ('review_reply', 'promotion', 'other', 'email_campaign', 'google_post', 'review_question', 'hours_update', 'menu_update', 'hours_question'));
+
+-- 6. Data we fetch from elsewhere and keep for a while (the UK bank holidays from gov.uk).
+create table if not exists cached_data (
+  key        text primary key,
+  data       jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+alter table cached_data enable row level security;
+
 insert into schema_migrations (name) values ('021_visibility.sql') on conflict (name) do nothing;

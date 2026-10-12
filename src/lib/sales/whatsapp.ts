@@ -1,4 +1,5 @@
 import "server-only";
+import { staffPhotoReceived } from "@/lib/agents/visibility";
 import { londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { ownerChannel } from "@/lib/followups";
@@ -109,7 +110,16 @@ export async function handleStaffMessage(input: {
     if (!r) return;
     if (input.media) {
       const outcome = await salesFromMedia(sender, input.media, input.body, now);
-      if (outcome === "not_report") await reply(`That doesn't look like a till report. ${staffHelp(r.name)}`);
+      if (outcome === "not_report") {
+        // A photo of food or the restaurant: Visibility looks at it (shadow mode: in the background).
+        const mode = await staffPhotoReceived(r, input.media, input.body, input.staffNumber).catch((err) => {
+          console.error("Visibility couldn't take the staff photo", err);
+          return null;
+        });
+        // Live: Visibility replies once it has looked (a fixed tip if the photo can't be used).
+        if (mode === "live") await reply("📸 Thanks! Got your photo. I'll check it works for Google.");
+        else await reply(`That doesn't look like a till report. ${staffHelp(r.name)}`);
+      }
       if (outcome === "unsupported") await reply(staffHelp(r.name));
       return;
     }
