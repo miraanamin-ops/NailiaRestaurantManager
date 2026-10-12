@@ -36,6 +36,36 @@ const dishes = (menu: unknown): Dish[] =>
 
 const norm = (s: string) => s.toLowerCase().replace(/\(.*?\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
+// "with any main" / "with any grill": the cheapest dish it could come with. "any grill"
+// means a category with that word; "any main" means every dish outside sides, drinks,
+// desserts, starters and extras.
+const NOT_MAINS = /side|drink|dessert|sweet|starter|extra|sauce|bread|kids|dip/i;
+export function cheapestFor(menu: unknown, appliesTo: string): Dish | null {
+  const m = appliesTo.trim().toLowerCase().match(/^any\s+(.+?)s?$/);
+  if (!m) return null;
+  const cats = (Array.isArray(menu) ? menu : []) as { category?: string; items?: Dish[] }[];
+  const word = m[1];
+  const pick = word === "main" || word === "dish" || word === "meal" ? cats.filter((c) => !NOT_MAINS.test(c.category ?? "")) : cats.filter((c) => (c.category ?? "").toLowerCase().includes(word));
+  const list = pick.flatMap((c) => c.items ?? []).filter((d) => d && d.price > 0);
+  return list.length ? list.reduce((a, b) => (b.price < a.price ? b : a)) : null;
+}
+
+// The owner's own offers (typed in settings): the gate doesn't cap them, but only when
+// the offer's description is that offer, word for word (code decides, never the agent).
+// A campaign that merely gives away the same item ("free Mango Lassi with any platter")
+// is a new offer and is capped.
+export type OwnerOffers = { birthday_offer?: string | null; signup_reward?: string | null };
+const same = (a: string, b: string) => {
+  // Lower case, words only, without a leading "a", "an" or "the" ("a free Mango Lassi" = "Free Mango Lassi").
+  const n = (s: string) => s.toLowerCase().replace(/[^a-z0-9£%]+/g, " ").trim().replace(/^(?:a|an|the) /, "");
+  return Boolean(n(b)) && n(a) === n(b);
+};
+export function ownerSetOffer(description: string, owner: OwnerOffers): "birthday_offer" | "signup_reward" | null {
+  if (owner.birthday_offer && same(description, owner.birthday_offer)) return "birthday_offer";
+  if (owner.signup_reward && same(description, owner.signup_reward)) return "signup_reward";
+  return null;
+}
+
 // A dish on the menu by name ("lamb chops" finds "Lamb Chops (4 pcs)").
 export function findDish(menu: unknown, name: string | null | undefined): Dish | null {
   if (!name) return null;
@@ -45,12 +75,19 @@ export function findDish(menu: unknown, name: string | null | undefined): Dish |
 }
 
 export type CapResult =
-  | { ok: true; percent: number }
+  | { ok: true; percent: number; ownerSet?: boolean }
   | { ok: false; reason: "over_cap"; percent: number; detail: string }
   | { ok: false; reason: "unknown"; detail: string };
 
 // The offer's discount as a percentage, against the cap.
-export function offerCap(offer: Pick<StructuredOffer, "type" | "applies_to" | "discount_percent" | "discount_value_gbp" | "description">, menu: unknown, capPercent: number): CapResult {
+export function offerCap(
+  offer: Pick<StructuredOffer, "type" | "applies_to" | "discount_percent" | "discount_value_gbp" | "description">,
+  menu: unknown,
+  capPercent: number,
+  owner: OwnerOffers = {},
+): CapResult {
+  // The owner's own birthday offer or sign-up reward: their decision, not capped.
+  if (ownerSetOffer(offer.description, owner)) return { ok: true, percent: 0, ownerSet: true };
   let percent: number;
   if (offer.type === "percent_off") {
     if (offer.discount_percent == null || !(offer.discount_percent > 0)) return { ok: false, reason: "unknown", detail: "a % off offer needs its percentage" };
@@ -59,7 +96,7 @@ export function offerCap(offer: Pick<StructuredOffer, "type" | "applies_to" | "d
     // Two for the price of one is half off the pair.
     percent = 50;
   } else {
-    const dish = findDish(menu, offer.applies_to);
+    const dish = findDish(menu, offer.applies_to) ?? (offer.applies_to ? cheapestFor(menu, offer.applies_to) : null);
     if (!dish || !(dish.price > 0)) return { ok: false, reason: "unknown", detail: `can't check "${offer.description}" against the cap: name the menu dish it comes with` };
     if (offer.discount_value_gbp == null || !(offer.discount_value_gbp > 0)) return { ok: false, reason: "unknown", detail: `can't check "${offer.description}" against the cap: it needs its value in £` };
     percent = (offer.discount_value_gbp / dish.price) * 100;

@@ -64,3 +64,26 @@ describe("the gate", () => {
     expect(moneyAtDraft(draft.content, 15, { details: offer({}), menu: MENU })).toEqual([expect.stringMatching(/19% off, above the 15% cap, so it will be blocked/)]);
   });
 });
+
+describe("the owner's own offers, and 'with any main'", () => {
+  const owner = { birthday_offer: "Free Kunafa with any main in your birthday week", signup_reward: "A free Mango Lassi" };
+  test("the owner's birthday offer and sign-up reward aren't capped; anything else still is", () => {
+    const birthday = offer({ description: "Free Kunafa with any main in your birthday week", items: ["Kunafa"], applies_to: "any main", discount_value_gbp: 5.95 });
+    expect(offerCap(birthday, MENU, 20, owner)).toMatchObject({ ok: true, ownerSet: true });
+    expect(offerCap(birthday, MENU, 20)).toMatchObject({ ok: false, reason: "over_cap" });
+    expect(offerCap(offer({ description: "A free Mango Lassi" }), MENU, 15, owner)).toMatchObject({ ok: true, ownerSet: true });
+    expect(offerCap(offer({ description: "A free Mango Lassi with every platter" }), MENU, 15, owner)).toMatchObject({ ok: false, reason: "over_cap" });
+    expect(offerCap(offer({ description: "Free Kunafa with every platter", items: ["Kunafa"], discount_value_gbp: 5.95 }), MENU, 20, owner)).toMatchObject({ ok: false, percent: 32 });
+  });
+  test("'with any main' is measured against the cheapest main; 'any grill' against the cheapest grill", () => {
+    expect(offerCap(offer({ applies_to: "any main", discount_value_gbp: 2 }), MENU, 20)).toEqual({ ok: true, percent: 14 });
+    expect(offerCap(offer({ applies_to: "any grill", discount_value_gbp: 3.5 }), MENU, 20)).toMatchObject({ ok: false, percent: 25 });
+  });
+  test("the gate checks the owner's offer against the restaurant's own settings, not the agent's word", () => {
+    const draft = { kind: "email_campaign", status: "approved", approved_at: "2026-10-12T10:00:00Z", sent_at: null, scheduled_for: null, content: "Happy birthday! A free Kunafa with any main this week." };
+    const details = offer({ description: "Free Kunafa with any main in your birthday week", items: ["Kunafa"], applies_to: "any main", discount_value_gbp: 5.95 });
+    const r = { paused: false, discount_cap_percent: 20, send_window_start: "09:00:00", send_window_end: "21:00:00", menu: MENU };
+    expect(moneyAndRisk({ ...draft, offer_details: details }, { ...r, birthday_offer: owner.birthday_offer }, new Date("2026-10-12T11:00:00Z"), "approve")).toMatchObject({ outcome: "ok" });
+    expect(moneyAndRisk({ ...draft, offer_details: details }, { ...r, birthday_offer: "10% off in your birthday week" }, new Date("2026-10-12T11:00:00Z"), "approve")).toMatchObject({ outcome: "blocked", reason: "discount_cap" });
+  });
+});
