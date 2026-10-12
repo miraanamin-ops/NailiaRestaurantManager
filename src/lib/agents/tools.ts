@@ -3,6 +3,7 @@ import { getCampaignForDraft, campaignStats, recipientsFor, type Campaign } from
 import { check, type Draft } from "@/lib/drafts";
 import { emailPreviewImage } from "@/lib/email/preview-image";
 import { previewContent } from "@/lib/email/previews";
+import { postPreviewPng } from "@/lib/google/post-preview";
 import { agentProfile } from "@/lib/profile/versions";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { assertToolAllowed, type AgentName } from "./definition";
@@ -73,7 +74,17 @@ async function recentOutputs(restaurantId: string, kind: string, excludeId: stri
 
 // get_rendered_preview: a picture of the email as a customer sees it (emails only for now).
 async function renderedPreview(restaurantId: string, draftId: string): Promise<{ media_type: "image/png"; data: string } | null> {
-  const draft = check(await getSupabase().from("drafts").select("id, kind").eq("restaurant_id", restaurantId).eq("id", draftId).maybeSingle<{ id: string; kind: string }>());
+  const supabase = getSupabase();
+  const draft = check(await supabase.from("drafts").select("id, kind, content").eq("restaurant_id", restaurantId).eq("id", draftId).maybeSingle<{ id: string; kind: string; content: string }>());
+  // A Google post: a drawing of the post card (name, logo, photo, text).
+  if (draft?.kind === "google_post") {
+    const [post, r] = await Promise.all([
+      supabase.from("google_posts").select("photo_url").eq("restaurant_id", restaurantId).eq("draft_id", draft.id).maybeSingle<{ photo_url: string | null }>(),
+      supabase.from("restaurants").select("name, logo_url, brand_color").eq("id", restaurantId).single<{ name: string; logo_url: string | null; brand_color: string }>(),
+    ]);
+    if (!r.data) return null;
+    return postPreviewPng({ name: r.data.name, logoUrl: r.data.logo_url, brandColor: r.data.brand_color, text: draft.content, cta: null, photo: post.data?.photo_url ?? null });
+  }
   if (draft?.kind !== "email_campaign" || !(await getCampaignForDraft(draft.id))) return null;
   const content = await previewContent(`draft-${draft.id}`);
   if (!content) return null;

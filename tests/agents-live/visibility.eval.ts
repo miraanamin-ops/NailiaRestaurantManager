@@ -5,6 +5,7 @@
 import { describe, expect, test, vi } from "vitest";
 import type { Resolved } from "@/lib/agents/tools";
 import type { Usage } from "@/lib/agents/usage";
+import type { VisibilityOutput } from "@/lib/agents/visibility-rules";
 import { judgeVisibility, loadVisibilityCases, saveVisibilityRecorded, type VisibilityCase } from "../agents/support/visibility-cases";
 import { hasKey, RECORD, reportRuns, RUNS } from "./support";
 
@@ -33,6 +34,16 @@ async function photoFor(c: VisibilityCase) {
   return { image: { media_type: "image/jpeg" as const, data }, note: c.photo.note, sender: c.photo.sender };
 }
 
+// A drawing of a Google post for the brand checks (the case's own photo, if it has one).
+function previewFor(c: VisibilityCase, photo: Awaited<ReturnType<typeof photoFor>>) {
+  return async (out: VisibilityOutput) => {
+    if (out.type !== "google_post" && out.type !== "google_photo") return null;
+    const { postPreviewPng } = await import("@/lib/google/post-preview");
+    const image = photo && "image" in photo ? `data:${photo.image.media_type};base64,${photo.image.data}` : null;
+    return postPreviewPng({ name: String(c.profile.fields.name), logoUrl: null, brandColor: "#c2410c", text: out.content.text, cta: out.content.cta, photo: image });
+  };
+}
+
 describe.skipIf(!hasKey)("visibility (live)", () => {
   test.each(loadVisibilityCases())("$file", async ({ file, case: c }) => {
     const { visibilityLoop } = await import("@/lib/agents/visibility-core");
@@ -43,7 +54,7 @@ describe.skipIf(!hasKey)("visibility (live)", () => {
     for (let run = 1; run <= RUNS; run++) {
       const outcome = await visibilityLoop(
         { task: c.task, profile: c.profile, history: c.history, slot: c.slot, request: c.request, photo, event: c.event, trends: c.trends, today: c.today },
-        { resolve: resolverFor(c), checkerProfile: c.profile, recent: c.history.recent_posts.map((p) => p.text), preview: async () => null },
+        { resolve: resolverFor(c), checkerProfile: c.profile, recent: c.history.recent_posts.map((p) => p.text), preview: previewFor(c, photo) },
         `case ${file}`,
       );
       const by = outcome.kind === "question" ? (outcome.by === "maker" ? "visibility" : "checker") : null;

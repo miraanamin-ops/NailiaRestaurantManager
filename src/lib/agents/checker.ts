@@ -54,7 +54,7 @@ export async function runCheckerShadow(job: AgentJob): Promise<JobOutcome> {
     callTool("checker", "resolve_sources", rid, { refs: json.sources_used }),
     callTool("checker", "get_recent_outputs", rid, { kind: draft.kind, excludeDraftId: draft.id }),
     callTool("checker", "get_maker_rules", rid, { maker }),
-    draft.kind === "email_campaign" ? callTool("checker", "get_rendered_preview", rid, { draftId: draft.id }).catch(() => null) : Promise.resolve(null),
+    draft.kind === "email_campaign" || draft.kind === "google_post" ? callTool("checker", "get_rendered_preview", rid, { draftId: draft.id }).catch(() => null) : Promise.resolve(null),
   ]);
   const result = await runChecker(
     { draft: json, text, sources, profile, recent, maker, makerRules, preview, today: londonToday() },
