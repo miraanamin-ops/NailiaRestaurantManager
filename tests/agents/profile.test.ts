@@ -129,6 +129,22 @@ describe("profile versions", () => {
     expect(rowOf(B).profile_version).toBe(0);
   });
 
+  test("the owner's language and quiet hours are profile fields only the GM (and the checker) reads", async () => {
+    const row = restaurantRow(A, { owner_language: "English", quiet_hours_start: "23:00:00", quiet_hours_end: "09:00:00" });
+    expect(profileView(row, "gm", (m) => m)).toMatchObject({ language: "English", quiet_hours: { quiet_hours_start: "23:00:00", quiet_hours_end: "09:00:00" } });
+    expect(profileView(row, "reputation", (m) => m)).not.toHaveProperty("quiet_hours");
+    expect(missingPilotFields(row)).not.toContain("language");
+    expect(missingPilotFields(row)).not.toContain("quiet_hours");
+    expect(fieldForColumn("quiet_hours_end")).toBe("quiet_hours");
+
+    const { saveProfileFields } = await import("@/lib/profile-edits");
+    await saveProfileFields({ ...rowOf(A), ...row } as never, { owner_language: "English, with Urdu replies welcome", quiet_hours_start: "22:30" }, "Changed in settings");
+    expect(db.tables.profile_versions.map((v) => [v.field, v.new_value])).toEqual([
+      ["language", "English, with Urdu replies welcome"],
+      ["quiet_hours", { quiet_hours_start: "22:30" }],
+    ]);
+  });
+
   test("settings that aren't profile fields (PAUSE, the test clock) make no version", async () => {
     const { logSetting } = await import("@/lib/audit");
     await logSetting(A, "paused", false, true, "Paused all sending");

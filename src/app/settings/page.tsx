@@ -8,11 +8,11 @@ import { AllergenEditor, MenuEditor } from "../onboarding/setup/editors";
 import { button, Card, Frame, input } from "../onboarding/ui";
 import { getSupabase } from "@/lib/supabase";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
-import { BuilderCard, CostCard, HistoryCard, VoiceCard } from "./profile-cards";
+import { BuilderCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
-const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", asked: "✅ The owner has been asked on WhatsApp." };
+const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", asked: "✅ The owner has been asked on WhatsApp." };
 
 // Change anything set up during onboarding. (Or just message Naila on WhatsApp:
 // "change Friday hours to 11pm", "add lamb chops, £14".)
@@ -90,6 +90,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
             <button className={button}>Save details</button>
           </form>
         </Card>
+
+        <OwnerCard r={r} />
 
         <VoiceCard r={r} />
 

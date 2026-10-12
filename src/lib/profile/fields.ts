@@ -42,6 +42,8 @@ export const PROFILE_FIELDS = {
   // Owner
   owner_name: f("owner", "confirm", ["gm"], ["owner_name"], true, "your name"),
   sign_off_name: f("owner", "confirm", ["reputation"], ["sign_off_name"], true, "sign-off name"),
+  language: f("owner", "confirm", ["gm"], ["owner_language"], true, "language"),
+  quiet_hours: f("owner", "confirm", ["gm"], ["quiet_hours_start", "quiet_hours_end"], true, "quiet hours"),
   // Voice
   tone_notes: f("voice", "auto", ["reputation", "growth", "visibility"], ["brand_voice"], true, "how you sound"),
   greeting: f("voice", "auto", ["reputation", "growth"], ["greeting"], false, "greeting"),

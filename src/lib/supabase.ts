@@ -97,6 +97,10 @@ export type Restaurant = {
   // Phase 3a (021): special hours by date, and the photo library.
   special_hours: Record<string, { label?: string | null; hours: string }> | null;
   photo_library: PhotoItem[] | null;
+  // Phase 3b (022): the owner's language and quiet hours (UK time, "23:00:00" to "09:00:00").
+  owner_language: string | null;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
 };
 
 // The most emojis allowed per kind of customer message.
