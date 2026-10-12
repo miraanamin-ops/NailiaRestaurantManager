@@ -1,4 +1,5 @@
 import "server-only";
+import { insightsMode, legacyReportText, queueInsightsShadow, reportWordsFromInsights } from "@/lib/agents/insights";
 import { reputationMode, weeklyThemesFor } from "@/lib/agents/reputation";
 import { noEmDash } from "@/lib/text";
 import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
@@ -348,6 +349,14 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
   } catch (err) {
     console.error("Report insights failed; using plain summaries", err);
   }
+  // Insights live (test mode only): it writes the headline, the sales words and the
+  // 3 actions around the figures code prepared. If it can't, today's words stay.
+  const reportDay = londonYmd(period.end);
+  const fromInsights = (await insightsMode(restaurant)) === "live" ? await reportWordsFromInsights(restaurant, reportDay) : null;
+  if (fromInsights) {
+    insights = { praise: insights?.praise ?? [], complaints: insights?.complaints ?? [], sentence: fromInsights.content.headline, actions: fromInsights.content.actions };
+    if (sales) sales.summary = fromInsights.content.body;
+  }
   // With Reputation's themes in their own section, the reputation section doesn't repeat them.
   const themes = dataSections.some((s) => s.id === "themes");
   if (reputation && insights && !themes) {
@@ -406,6 +415,10 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
       .select("id")
       .single<{ id: string }>(),
   );
+  // Insights in shadow: its words for the same week, next to these ones on /log.
+  if (!fromInsights) {
+    await queueInsightsShadow(restaurant, { task: "report", today: reportDay, report_id: row.id, legacy_text: legacyReportText(headline.sentence, actions.actions) }, `insights:report:${row.id}`);
+  }
   return { id: row.id, token, headline: text, url, data };
 }
 

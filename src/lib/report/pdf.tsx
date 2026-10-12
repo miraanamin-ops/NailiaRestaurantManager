@@ -165,6 +165,7 @@ function Sales({ x, brand }: { x: SalesSection; brand: string }) {
         {x.avgSpend && <Stat label="Average spend per sale" value={x.avgSpend} format="money" />}
         {x.transactions && <Stat label="Number of sales" value={x.transactions} />}
       </View>
+      {x.summary ? <Text style={[s.item, { marginTop: 6 }]}>{clean(x.summary)}</Text> : null}
       {x.lastMonth !== null && (
         <Text style={[s.change, { color: SOFT }]}>{clean(changeText({ now: x.net.now, before: x.lastMonth }, "money", "the same week last month"))}</Text>
       )}
