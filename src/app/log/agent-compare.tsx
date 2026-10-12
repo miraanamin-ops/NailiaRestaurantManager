@@ -7,7 +7,7 @@ import { PHOTO_TIPS, type PhotoReason } from "@/lib/agents/visibility-rules";
 // checker's verdict, side by side. This is what decides when a restaurant
 // switches an agent to live.
 
-export type CompareAgent = "reputation" | "visibility" | "insights";
+export type CompareAgent = "reputation" | "visibility" | "insights" | "growth";
 
 type ShadowRow = {
   id: string;
@@ -15,14 +15,14 @@ type ShadowRow = {
   source: string;
   task: string | null;
   review: { author_name: string; rating: number | null; text: string | null } | null;
-  subject: { question?: string | null; today?: string | null; ms?: number | null; queries?: { id: string; metric: string; available: boolean }[] | null; slot?: string | null; request?: string | null; photo_url?: string | null; sender?: string | null; event?: { field: string; from: string; to: string } | null; holiday?: { date: string; title: string } | null } | null;
+  subject: { entry?: { day: string; name: string; date_uncertain: boolean } | null; option?: number | null; question?: string | null; today?: string | null; ms?: number | null; queries?: { id: string; metric: string; available: boolean }[] | null; slot?: string | null; request?: string | null; photo_url?: string | null; sender?: string | null; event?: { field: string; from: string; to: string } | null; holiday?: { date: string; title: string } | null } | null;
   legacy_draft_id: string | null;
   legacy_text: string | null;
-  outcome: "reply" | "question" | "unusable";
+  outcome: "reply" | "question" | "unusable" | "none";
   output: {
     type?: string;
     // Reputation and Visibility: text and cta. Insights: headline, body and actions.
-    content?: { text?: string; cta?: string | null; headline?: string; body?: string; actions?: { title: string; why: string; message: string }[] };
+    content?: { text?: string; cta?: string | null; headline?: string; body?: string; subject?: string; actions?: { title: string; why: string; message: string }[] };
     sources_used?: string[];
     change?: { field: string; from: string; to: string } | null;
     photo_check?: { usable: boolean; reason_code: string; reason: string } | null;
@@ -30,6 +30,14 @@ type ShadowRow = {
     // Insights: every figure it quoted, and how sure it is.
     figures?: { metric: string; value: number; unit: string; period: string; compare_to: string | null; compare_value: number | null; source: string }[];
     confidence?: string;
+    // Growth: the campaign around the email, or a special idea.
+    name?: string;
+    segment?: string | null;
+    audience_size?: number | null;
+    send_at?: string | null;
+    offer?: { type: string; description: string; conditions: string; valid_from: string; valid_to: string; applies_to: string | null } | null;
+    idea?: { name: string; uses_dishes: string[]; ingredients: string[]; steps: string[]; why_now: string } | null;
+    expected_outcome?: string;
   };
   question: string | null;
   checker: { verdict: string; checks: { id: string; result: string; reason: string | null }[]; minor_fixes: { find: string; replace: string }[] } | null;
@@ -43,7 +51,7 @@ type ShadowRow = {
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const VERDICT_STYLE: Record<string, string> = { pass: "bg-emerald-100 text-emerald-900", fail: "bg-red-100 text-red-900", escalate: "bg-amber-100 text-amber-900" };
-const NAMES: Record<CompareAgent, string> = { reputation: "Reputation", visibility: "Visibility", insights: "Insights" };
+const NAMES: Record<CompareAgent, string> = { reputation: "Reputation", visibility: "Visibility", insights: "Insights", growth: "Growth" };
 
 // What the owner did with today's draft (the real one).
 function ownerDid(d: Pick<Draft, "status" | "version"> | undefined) {
@@ -74,6 +82,11 @@ function Subject({ r }: { r: ShadowRow }) {
     content_brief: "Weekly content brief",
     bank_holiday: `Bank holiday ahead: ${s.holiday?.title ?? ""} (${s.holiday?.date ?? ""}), no special hours set`,
     owner_question: "The owner asked",
+    owner_request: "The owner asked for an offer",
+    weekly_plan: `The Monday plan${s.option ? ` (option ${s.option})` : ""}`,
+    calendar: `Calendar: ${s.entry?.name ?? ""} (${s.entry?.day ?? ""}${s.entry?.date_uncertain ? ", date uncertain" : ""})`,
+    birthdays: "The weekly birthday email",
+    special_ideas: `Special idea${s.option ? ` ${s.option}` : ""}`,
     monday_report: `The Monday report (made ${s.today ?? ""})`,
   };
   return (
@@ -81,6 +94,7 @@ function Subject({ r }: { r: ShadowRow }) {
       <p className="font-semibold">{title[r.source] ?? r.source}</p>
       {s.request && <p className="mt-1 italic text-stone-700">&ldquo;{s.request}&rdquo;</p>}
       {s.question && <p className="mt-1 italic text-stone-700">&ldquo;{s.question}&rdquo;</p>}
+      {r.agent === "growth" && (s as { request?: string | null }).request && <p className="mt-1 italic text-stone-700">&ldquo;{(s as { request?: string }).request}&rdquo;</p>}
       {s.event && (
         <p className="mt-1 text-stone-700">
           {s.event.from} → <b>{s.event.to}</b>
@@ -132,6 +146,46 @@ function InsightsOutput({ r }: { r: ShadowRow }) {
   );
 }
 
+// Growth: the email (subject, words, offer, who and when, with a picture of it as
+// customers see it), or a special idea, or nothing this week.
+function GrowthOutput({ r }: { r: ShadowRow }) {
+  const o = r.output;
+  if (r.outcome === "none") return <p>Would propose nothing this week.</p>;
+  if (o.idea) {
+    return (
+      <>
+        <p className="font-semibold">{o.idea.name}</p>
+        <p className="text-xs text-stone-600">Uses: {o.idea.uses_dishes.join(", ")} ({o.idea.ingredients.join(", ")})</p>
+        <ol className="mt-1 list-decimal pl-5 text-xs">
+          {o.idea.steps.map((s, i) => (
+            <li key={i}>{s}</li>
+          ))}
+        </ol>
+        <p className="mt-1 text-xs">Why now: {o.idea.why_now}</p>
+      </>
+    );
+  }
+  return (
+    <>
+      <p className="font-semibold">{o.content?.subject}</p>
+      {o.content?.headline && <p className="font-medium">{o.content.headline}</p>}
+      <p className="whitespace-pre-line">{o.content?.body}</p>
+      {o.content?.cta && <p className="text-xs text-stone-600">Button: {o.content.cta}</p>}
+      {o.offer && (
+        <p className="mt-2 rounded-lg bg-white px-2 py-1 text-xs">
+          🎁 <b>{o.offer.description}</b> ({o.offer.type.replace(/_/g, " ")}{o.offer.applies_to ? `, with ${o.offer.applies_to}` : ""}). {o.offer.conditions}. Valid {o.offer.valid_from} to {o.offer.valid_to}.
+        </p>
+      )}
+      <p className="mt-1 text-xs text-stone-600">
+        To {o.segment} ({o.audience_size}) · send {o.send_at?.replace("T", " ")}
+        {o.expected_outcome ? ` · expected: ${o.expected_outcome}` : ""}
+      </p>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a drawing of the email, for the builder only */}
+      <img src={`/log/growth-preview/${r.id}`} alt="The email as customers see it" className="mt-2 w-48 rounded-lg border border-stone-200" />
+    </>
+  );
+}
+
 // What the agent would have produced.
 function AgentOutput({ r }: { r: ShadowRow }) {
   if (r.outcome === "question") return <p className="whitespace-pre-line">❓ Would ask the owner: {r.question}</p>;
@@ -146,6 +200,7 @@ function AgentOutput({ r }: { r: ShadowRow }) {
     );
   }
   if (r.agent === "insights") return <InsightsOutput r={r} />;
+  if (r.agent === "growth") return <GrowthOutput r={r} />;
   return (
     <>
       {o.change && (
@@ -202,6 +257,7 @@ export async function AgentCompare({ restaurantId, agent }: { restaurantId: stri
   };
   const rate = agent === "reputation" ? await escalationRate(restaurantId) : null;
   const unit = agent === "reputation" ? "review" : agent === "insights" ? "question or report" : "piece of work";
+  const none = rows.filter((r) => r.outcome === "none").length;
 
   return (
     <section className="space-y-3">
@@ -209,7 +265,8 @@ export async function AgentCompare({ restaurantId, agent }: { restaurantId: stri
         <p className="font-semibold">{NAMES[agent]} in shadow mode</p>
         <p className="mt-1 text-stone-600">
           {counts.total} {unit === "review" ? `review${counts.total === 1 ? "" : "s"}` : unit === "question or report" ? `question${counts.total === 1 ? "" : "s"} and reports` : counts.total === 1 ? "piece of work" : "pieces of work"}: {counts.pass} {agent === "insights" ? "answers" : "drafts"} the checker passed, {counts.question} would ask the owner
-          {agent === "visibility" ? `, ${counts.unusable} photos judged unusable` : ""}, {counts.revised} needed a revision. The owner only ever saw the left-hand side.
+          {agent === "visibility" ? `, ${counts.unusable} photos judged unusable` : ""}
+          {agent === "growth" ? `, ${none} weekly plan${none === 1 ? "" : "s"} with nothing worth sending` : ""}, {counts.revised} needed a revision. The owner only ever saw the left-hand side.
         </p>
         {rate && (
           <p className={`mt-2 ${rate.high ? "font-semibold text-red-800" : "text-stone-700"}`}>
@@ -225,7 +282,9 @@ export async function AgentCompare({ restaurantId, agent }: { restaurantId: stri
             ? "Send NEW REVIEW (test mode) or wait for the hourly review check."
             : agent === "insights"
               ? "Ask a question about the numbers on WhatsApp (e.g. how was last week?), or send RUN REPORT (test mode)."
-              : "Send RUN POSTS (test mode) or a photo on WhatsApp, or wait for Monday."}
+              : agent === "growth"
+                ? "Ask for an offer on WhatsApp (e.g. Thursday is quiet), send BIRTHDAY CAMPAIGN, or wait for Monday."
+                : "Send RUN POSTS (test mode) or a photo on WhatsApp, or wait for Monday."}
         </p>
       )}
       {rows.map((r) => {

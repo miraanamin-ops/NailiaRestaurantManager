@@ -59,7 +59,7 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   const rid = pickRestaurantId(owner, sp.r);
   // The builder can switch to the Reputation shadow comparison.
   // The builder can switch to an agent's shadow comparison.
-  const compare: CompareAgent | null = owner.isBuilder && (sp.view === "reputation" || sp.view === "visibility" || sp.view === "insights") ? sp.view : null;
+  const compare: CompareAgent | null = owner.isBuilder && (sp.view === "reputation" || sp.view === "visibility" || sp.view === "insights" || sp.view === "growth") ? sp.view : null;
   const viewParam = compare ? `&view=${compare}` : "";
   const restaurant = rid ? check(await supabase.from("restaurants").select("*").eq("id", rid).maybeSingle<Restaurant>()) : null;
   if (!restaurant) return <p className="p-6">No restaurant for {owner.email} yet.</p>;
@@ -104,9 +104,9 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
               <a href={`/log?r=${restaurant.id}`} className={`rounded-full px-3 py-1 ${compare ? "bg-white/15 text-white underline" : "bg-white text-stone-900"}`}>
                 Everything
               </a>
-              {(["reputation", "visibility", "insights"] as const).map((a) => (
+              {(["reputation", "visibility", "insights", "growth"] as const).map((a) => (
                 <a key={a} href={`/log?r=${restaurant.id}&view=${a}`} className={`rounded-full px-3 py-1 ${compare === a ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}>
-                  {a === "reputation" ? "Reputation" : a === "visibility" ? "Visibility" : "Insights"} comparison
+                  {a === "reputation" ? "Reputation" : a === "visibility" ? "Visibility" : a === "insights" ? "Insights" : "Growth"} comparison
                 </a>
               ))}
             </div>
