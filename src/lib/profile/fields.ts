@@ -122,9 +122,24 @@ export function columnsFor(field: ProfileFieldName, value: unknown): Record<stri
 // Decision 14: an agent can't leave shadow mode until the fields it needs are filled.
 export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
   reputation: ["sign_off_name", "complaint_contact", "recovery_offers", "halal_statement", "allergen_statement"],
+  visibility: ["logo", "colours", "hours", "emoji_allowed", "photo_library"],
 };
 
-export function missingForGoLive(row: Record<string, unknown>, agent: AgentName): ProfileFieldName[] {
-  const empty = (v: unknown) => v == null || (typeof v === "string" && !v.trim()) || (Array.isArray(v) && !v.filter((x) => String(x).trim()).length);
-  return (GO_LIVE_FIELDS[agent] ?? []).filter((f) => empty(fieldValue(row, f)));
+// The app's starting values: colours and the emoji setting always have one, so
+// they only count as set once the owner changed them or confirmed them (a profile version).
+export const DEFAULT_COLOURS = { brand_color: "#c2410c", brand_dark: "#1c1917" };
+export const MIN_LIBRARY_PHOTOS = 5;
+
+// confirmed: fields the owner has saved at least once (from profile_versions).
+export function missingForGoLive(row: Record<string, unknown>, agent: AgentName, confirmed: ReadonlySet<string> = new Set()): ProfileFieldName[] {
+  const empty = (v: unknown) =>
+    v == null || (typeof v === "string" && !v.trim()) || (Array.isArray(v) && !v.filter((x) => String(typeof x === "object" ? JSON.stringify(x) : x).trim()).length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v as object).length);
+  const missing = (f: ProfileFieldName) => {
+    const v = fieldValue(row, f);
+    if (f === "photo_library") return !Array.isArray(v) || v.length < MIN_LIBRARY_PHOTOS;
+    if (f === "colours") return !confirmed.has(f) && JSON.stringify(v) === JSON.stringify(DEFAULT_COLOURS);
+    if (f === "emoji_allowed") return !confirmed.has(f) && (v == null || JSON.stringify(v) === JSON.stringify(DEFAULT_EMOJI_ALLOWED));
+    return empty(v);
+  };
+  return (GO_LIVE_FIELDS[agent] ?? []).filter(missing);
 }
