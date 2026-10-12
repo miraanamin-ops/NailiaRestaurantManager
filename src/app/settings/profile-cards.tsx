@@ -7,6 +7,7 @@ import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
 import { ALWAYS_APPROVE, NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
 import { costsFor } from "@/lib/agents/costs";
 import { confirmedFields, goLiveChecklist } from "@/lib/agents/go-live";
+import { insightsChecklist } from "@/lib/agents/insights";
 import { dollars } from "@/lib/agents/usage";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveOwner, saveVoice } from "./actions";
@@ -166,6 +167,7 @@ export async function HistoryCard({ restaurantId }: { restaurantId: string }) {
 // Builder only: trust level per task, and each agent's mode. Owners never see this.
 export async function BuilderCard({ r }: { r: Restaurant }) {
   const confirmed = await confirmedFields(r.id);
+  const insights = await insightsChecklist(r);
   const levelNames: Record<TrustLevel, string> = { draft_only: "Draft only", approve: "Approve", auto: "Auto" };
   return (
     <Card>
@@ -217,6 +219,12 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
                       </span>
                     ))}
                     {missing.size > 0 && " (stays in shadow until all are filled)"}
+                  </p>
+                )}
+                {agent === "insights" && (
+                  <p className="text-xs text-stone-600">
+                    Go-live checklist: {insights.ready ? "✅" : "❌"} {insights.label}
+                    {!insights.ready && " (stays in shadow until then)"}. Live answers only reach the owner in test mode for now.
                   </p>
                 )}
               </div>
