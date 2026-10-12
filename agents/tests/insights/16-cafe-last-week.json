@@ -1,0 +1,137 @@
+{
+  "name": "the cafe: how was last week? (closed Sundays)",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "answer",
+  "question": "How was last week?",
+  "restaurant": "cardamom-corner",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 0,
+    "fields": {
+      "name": "Cardamom Corner Café",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Breakfast",
+          "items": [
+            {
+              "name": "Masala Omelette",
+              "price": 7.5,
+              "description": "Three eggs, onion, chilli and coriander, with toast"
+            },
+            {
+              "name": "Avocado Toast",
+              "price": 8.25,
+              "description": "Sourdough, smashed avocado, chilli flakes, poached egg"
+            },
+            {
+              "name": "Granola Bowl",
+              "price": 6.5,
+              "description": "House granola, Greek yoghurt, honey and berries"
+            }
+          ]
+        },
+        {
+          "category": "Lunch",
+          "items": [
+            {
+              "name": "Halloumi Wrap",
+              "price": 8.95,
+              "description": "Grilled halloumi, salad and mint yoghurt"
+            },
+            {
+              "name": "Chicken Pesto Panini",
+              "price": 8.5,
+              "description": null
+            },
+            {
+              "name": "Soup of the Day",
+              "price": 6.25,
+              "description": "With warm bread"
+            }
+          ]
+        },
+        {
+          "category": "Drinks",
+          "items": [
+            {
+              "name": "Cardamom Latte",
+              "price": 3.85,
+              "description": "Our signature"
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Flat White",
+              "price": 3.4,
+              "description": null
+            },
+            {
+              "name": "Fresh Orange Juice",
+              "price": 3.5,
+              "description": null
+            }
+          ]
+        },
+        {
+          "category": "Cakes & Bakes",
+          "items": [
+            {
+              "name": "Pistachio Rose Cake",
+              "price": 4.5,
+              "description": "Slice"
+            },
+            {
+              "name": "Almond Croissant",
+              "price": 3.25,
+              "description": null
+            },
+            {
+              "name": "Date & Walnut Loaf",
+              "price": 3.75,
+              "description": "Slice"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "07:30 â€“ 19:00",
+        "Monday": "07:30 â€“ 17:00",
+        "Sunday": "Closed",
+        "Tuesday": "07:30 â€“ 17:00",
+        "Saturday": "08:30 â€“ 18:00",
+        "Thursday": "07:30 â€“ 19:00",
+        "Wednesday": "07:30 â€“ 17:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "net sales 28 Sep to 4 Oct",
+        "value": 4296.87,
+        "unit": "GBP"
+      },
+      {
+        "what": "the week before",
+        "value": 4591.41,
+        "unit": "GBP"
+      }
+    ],
+    "must_not_contain": [
+      "Ember"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": null
+}

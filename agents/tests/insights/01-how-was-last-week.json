@@ -1,0 +1,135 @@
+{
+  "name": "how was last week?",
+  "source": "written for phase 3b from the demo restaurant's dummy year of sales",
+  "task": "answer",
+  "question": "how was last week?",
+  "restaurant": "ember-spice",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": null,
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "net sales 28 Sep to 4 Oct",
+        "value": 13514.92,
+        "unit": "GBP"
+      },
+      {
+        "what": "net sales the week before",
+        "value": 13745.33,
+        "unit": "GBP"
+      }
+    ],
+    "confidence": "high",
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": null
+}
