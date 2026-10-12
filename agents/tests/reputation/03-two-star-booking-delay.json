@@ -150,5 +150,171 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "346d179e-5e02-4739-b8cd-1bfdf2d6c056",
+      "rating": 2,
+      "content": {
+        "text": "Thanks for telling us, Nusrat, and we're really sorry you waited so long for your table and didn't hear why. That's not how we like to welcome anyone. We're glad the food made up for it a little. Please email us at hello@emberandspice.co.uk so we can make it right, and we'd love to treat you to a free dessert on your next visit.\n\nThe Ember & Spice Grill family"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:346d179e-5e02-4739-b8cd-1bfdf2d6c056",
+        "profile:complaint_contact",
+        "profile:recovery_offers",
+        "profile:sign_off_name",
+        "profile:tone_notes"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:42:43.814Z"
+  }
 }

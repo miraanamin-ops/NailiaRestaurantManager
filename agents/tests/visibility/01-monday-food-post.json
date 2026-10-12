@@ -146,10 +146,6 @@
   "history": {
     "recent_posts": [
       {
-        "date": "2026-10-12",
-        "text": "Our Smash Burger is a little East London favourite 😋 Double beef patty, melted cheese, our house sauce and a soft brioche bun, £8.95. Add Masala Chips for £3.50 and you're sorted. Thank you for supporting our family kitchen. Pop in this week!"
-      },
-      {
         "date": "2026-10-09",
         "text": "Our Seekh Kebabs are minced lamb with fresh herbs and a little green chilli, flame-grilled over charcoal, two pieces for £7.95. Simple, honest grilling, just the way we like it 🙏 Come say hello this week."
       },
@@ -185,5 +181,178 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "google_post",
+      "channel": "google",
+      "content": {
+        "text": "Craving a burger? Our Smash Burger is £8.95, and all our meat is halal, certified by HMC. Add Masala Chips for £3.50 and a Mango Lassi for £3.95 and you have a proper East London feast. Open today from 12pm to 11pm. Thank you for backing our family-run kitchen 🍔 Please tell our team about any allergy before you order.",
+        "cta": "Call",
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": "2026-10-12T10:00",
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:menu",
+        "profile:halal_statement",
+        "profile:allergen_statement",
+        "profile:hours",
+        "profile:tone_notes",
+        "profile:emoji_allowed",
+        "post:2026-10-09",
+        "post:2026-10-05",
+        "post:2026-09-28"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, upbeat, thanks the customer and not pushy, in line with the tone notes.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Names the Smash Burger, Masala Chips and Mango Lassi, and mentions East London and the family-run kitchen.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "Plain English, short sentences, no jargon.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening and closing differ from the last posts. A burger post is also a new topic.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes. One emoji, within the limit of 2 for posts. No hashtags. No banned words such as 'cheap'.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Menu, halal statement, allergen statement and hours all trace to resolved sources. 'Family-run' comes from the tone notes. 'East London' fits the Whitechapel address.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£8.95, £3.50 and £3.95 match the menu exactly.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Today is Monday 12 October 2026 and Monday hours are 12:00 to 23:00, so 'Open today from 12pm to 11pm' is correct.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Smash Burger, Masala Chips and Mango Lassi match the menu names.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "The halal claim matches the profile: all meat halal, certified by HMC. The allergy line points people to staff and makes no safety claim.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer or discount. The items are listed at their menu prices, with no bundle price or urgency.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting by personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "No personal data and no photo of people.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, tax, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "No phone number in the post text. The Call button is used.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "No maker rules are broken. Claims come from the profile, there are no em-dashes, the emoji is allowed, and the topic is not repeated within 3 weeks.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "pass",
+          "reason": "Renders as a standard Ember & Spice Grill Google update card. No brand kit was supplied to compare against, and nothing looks off.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": "No photo is attached to this post.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "pass",
+          "reason": "Text fits the card cleanly on mobile and the Call button is visible.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "pass",
+          "reason": "No placeholders, empty slots or broken elements.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:11:11.270Z"
+  }
 }

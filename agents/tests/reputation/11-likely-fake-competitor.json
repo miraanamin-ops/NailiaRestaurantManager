@@ -146,5 +146,29 @@
       "review:t-11"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "reputation",
+    "question": "This 1-star review calls you a crook and sends people to a competitor (Mangal), with no detail about a visit. It may be abusive or written by a competitor. Do you want to reply publicly, flag it to Google as a policy violation, or leave it?",
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "t-11",
+      "rating": 1,
+      "content": {
+        "text": ""
+      },
+      "alert": true,
+      "needs_owner_input": "This 1-star review calls you a crook and sends people to a competitor (Mangal), with no detail about a visit. It may be abusive or written by a competitor. Do you want to reply publicly, flag it to Google as a policy violation, or leave it?",
+      "sources_used": [
+        "review:t-11"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T09:47:19.097Z"
+  }
 }

@@ -157,5 +157,171 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "72263e68-8896-4b8f-a0e4-052422dfb2bb",
+      "rating": 3,
+      "content": {
+        "text": "Hi Kofi, thanks for the honest feedback and the kind words about our Chicken Tikka and the friendly team. We're sorry the portion felt smaller than last time. That's not what we want for you. Please call us on +44 20 7946 0123 or email hello@emberandspice.co.uk and we'll look into it. We hope your next visit hits the mark.\n\nThe Ember & Spice Grill family"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:72263e68-8896-4b8f-a0e4-052422dfb2bb",
+        "profile:phone",
+        "profile:complaint_contact",
+        "profile:sign_off_name",
+        "profile:tone_notes"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, uses first name, apologises, says thank you and invites contact to make it right, as the profile's tone notes ask for bad reviews.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Refers to Kofi's Chicken Tikka, the smaller portion and the friendly service.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English reply to an English review, plain and clear.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening 'Hi Kofi, thanks for the honest feedback' and closing 'hits the mark' differ from the three previous replies provided. Only 3 of the last 10 were supplied.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis, no hashtags, and no banned word ('cheap').",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to the review or profile: Chicken Tikka, friendly service, smaller portion, phone and email contacts, sign-off.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "The only number is the phone number, which matches profile:phone exactly.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times mentioned.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "'Kofi' matches the reviewer 'Kofi A.' and 'Chicken Tikka' matches the menu.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims made.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal or allergen claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offers made.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting or wording based on personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review or for changing one.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only details from the public review are used. The phone and email are the business's own.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal, tax or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "Phone numbers are allowed in Google review replies.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "None of the maker's rules are broken: English reply, no argument, no refund or compensation offered, no staff named, correct sign-off. The review is a 3-star complaint about portion size, which is not an escalation case.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:44:16.244Z"
+  }
 }

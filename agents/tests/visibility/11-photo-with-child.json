@@ -192,5 +192,36 @@
       "person_or_child"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "unusable",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "google_photo",
+      "channel": "google",
+      "content": {
+        "text": "",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": {
+        "usable": false,
+        "reason_code": "person_or_child",
+        "reason": "A toddler is in the photo and the parents' faces are clearly visible, so it can't be posted."
+      },
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "photo:new_staff_photo"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T10:19:29.234Z"
+  }
 }

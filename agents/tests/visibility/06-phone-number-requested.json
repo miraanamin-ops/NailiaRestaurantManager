@@ -190,5 +190,181 @@
       "7946"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "checker",
+    "question": "Do you take table bookings by phone? Your profile doesn't say, and this post tells people to call to reserve a table.",
+    "output": {
+      "type": "google_post",
+      "channel": "google",
+      "content": {
+        "text": "Planning Friday night? Book a table at Ember & Spice Grill and let the charcoal grill do the work. We open at 2pm on Friday and stay open until midnight. Tap the Call button to reserve your table. Thank you for making us part of your week. We can't wait to see you. 🔥",
+        "cta": "Call",
+        "hashtags": []
+      },
+      "photo_id": "ph_1",
+      "change": null,
+      "publish_at": "2026-10-12T16:00",
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:name",
+        "profile:cuisine",
+        "profile:hours",
+        "profile:phone",
+        "profile:tone_notes",
+        "profile:emoji_allowed",
+        "profile:photo_library",
+        "photo:ph_1",
+        "post:2026-10-12",
+        "post:2026-10-09",
+        "post:2026-10-05",
+        "post:2026-09-28"
+      ]
+    },
+    "checker": {
+      "verdict": "escalate",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm and not pushy, and it says thank you. It has little of the East London charm the profile asks for, but that is only a style note.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Names the restaurant and the charcoal grill, and gives Friday's specific hours. A bit generic, but acceptable.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "Plain UK English, short sentences.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening and closing differ from the last 6 posts.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes. One emoji, within the profile's limit of 2 for posts. No banned words.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "fail",
+          "reason": "\"Book a table\" and \"Tap the Call button to reserve your table\" claim the restaurant takes phone reservations. Nothing in the profile says it takes bookings. The profile only lists a phone number.",
+          "fix": "Owner to confirm whether bookings are taken by phone. If not, the maker should reword the post to avoid reservations, for example \"Give us a call\" or \"Pop in\"."
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "The only numbers are 2pm and midnight, and they match the Friday hours of 14:00 to 00:00.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Today is Monday 12 October 2026, so Friday is 16 October. The post is in the future and the times fall inside Friday's opening hours.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "The restaurant name matches the profile exactly.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No cause-and-effect claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal or allergen claims are made. \"Charcoal grill\" matches the cuisine in the profile.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer, and no fake urgency.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting by personal traits.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "No review incentive.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "No personal data.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "No phone number in the post text. It uses the Call button, as Google requires.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "No phone number in the text, no em-dashes, and the emoji is allowed. The topic does not repeat a recent post. The only open question is the booking claim, which is covered under F1.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "pass",
+          "reason": "The preview shows the correct restaurant name and a clean Google post layout.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "pass",
+          "reason": "The preview shows no photo and the copy does not describe one. photo:ph_1 is listed in sources but not attached. Worth a note, not a failure.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "pass",
+          "reason": "The text fits on mobile with no overflow, and the Call button is visible.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "pass",
+          "reason": "No placeholders or broken elements.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": "Do you take table bookings by phone? Your profile doesn't say, and this post tells people to call to reserve a table."
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:16:09.492Z"
+  }
 }

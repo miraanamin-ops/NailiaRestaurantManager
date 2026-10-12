@@ -195,5 +195,78 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "menu_update",
+      "channel": "google",
+      "content": {
+        "text": "We will add the Lamb Kofta Wrap at £7.95 to the Burgers & Wraps section of the menu on Google. The Smash Burger (£8.95) and Chicken Tikka Wrap (£7.50) stay the same.",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": {
+        "field": "menu",
+        "from": "Burgers & Wraps: Smash Burger £8.95, Chicken Tikka Wrap £7.50",
+        "to": "Burgers & Wraps: Smash Burger £8.95, Chicken Tikka Wrap £7.50, Lamb Kofta Wrap £7.95"
+      },
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:menu"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Lamb Kofta Wrap, Smash Burger, Chicken Tikka Wrap, the Burgers & Wraps section and the change are all supported by profile:menu and decision:profile_change.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "£7.95, £8.95 and £7.50 all match the menu prices in the sources.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times are stated. 'We will add' is consistent with the profile already holding the new value and Google being updated to match.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Dish names Lamb Kofta Wrap, Smash Burger and Chicken Tikka Wrap match the menu exactly, as does the section name Burgers & Wraps.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No halal, allergen, dietary or ingredient claims are made. The menu change is owner-confirmed per decision:profile_change.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:20:22.206Z"
+  }
 }

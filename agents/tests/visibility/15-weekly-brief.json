@@ -186,5 +186,130 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "content_brief",
+      "channel": "owner",
+      "content": {
+        "text": "Morning team, here are this week's 3 quick shoots. Each takes about 5 minutes on a phone during service. Please keep customers' faces and children out of shot. Thank you!",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [
+        {
+          "what": "Peri Peri Wings (8) on the pass, ready to go out",
+          "where": "The pass, just before the plate goes to the table",
+          "how": "Phone held vertical, 10 seconds. Shoot from slightly above, using the kitchen light. Pan slowly across the plate. Wipe the plate rim and keep the background tidy.",
+          "who": "Anyone on the pass",
+          "day": "Tuesday",
+          "platform": "TikTok",
+          "caption": "Peri Peri Wings, 8 to a plate, £7.50. Charcoal grill favourites from our family kitchen. Thank you for being our regulars 😋",
+          "hashtags": [
+            "#EastLondon",
+            "#Whitechapel",
+            "#HalalFood",
+            "#PeriPeriWings",
+            "#CharcoalGrill"
+          ]
+        },
+        {
+          "what": "Karak Chai being poured into a cup",
+          "where": "The drinks station or a clean table by the window",
+          "how": "Phone vertical, 8 to 10 seconds. Film the pour close up, then a short hold on the cup. Natural window light works best. Keep hands and cup in shot, no customers' faces.",
+          "who": "Whoever is on drinks",
+          "day": "Thursday",
+          "platform": "Instagram",
+          "caption": "Karak Chai, £2.50. Pour one, stay a while. Thank you for popping in to see us.",
+          "hashtags": [
+            "#KarakChai",
+            "#EastLondon",
+            "#Whitechapel",
+            "#HalalEats",
+            "#FamilyRun"
+          ]
+        },
+        {
+          "what": "Chicken Tikka plated up, with a quick close-up of the plate",
+          "where": "The pass or a clean table near the window",
+          "how": "Phone vertical, a photo plus a 6 second clip. Shoot at a slight angle, about 30cm away. Use window light if you can and avoid the flash. Wipe the plate rim first.",
+          "who": "A server or anyone on the pass",
+          "day": "Saturday",
+          "platform": "Instagram",
+          "caption": "Chicken Tikka, £9.50. All our meat is halal, certified by HMC. Come and see us this weekend, we'd love to have you. Thank you!",
+          "hashtags": [
+            "#ChickenTikka",
+            "#HalalCertified",
+            "#EastLondon",
+            "#Whitechapel",
+            "#CharcoalGrill"
+          ]
+        }
+      ],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:name",
+        "profile:cuisine",
+        "profile:menu",
+        "profile:tone_notes",
+        "profile:words_to_avoid",
+        "profile:emoji_allowed",
+        "profile:halal_statement",
+        "profile:hours"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Dish names, prices, halal statement, cuisine, area and 'family kitchen' and charcoal grill claims all trace to the profile (menu, halal_statement, cuisine, tone_notes). Location hashtags match the address (Whitechapel, East London).",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "Peri Peri Wings (8) £7.50, Karak Chai £2.50 and Chicken Tikka £9.50 all match the menu. '3 quick shoots' matches the three shoots listed. '8 to a plate' matches the (8) in the item name.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Shoot days Tuesday, Thursday and Saturday all fall after Monday 12 October 2026 and are within opening hours (12:00 on all three days). Saturday 'this weekend' is consistent.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Peri Peri Wings (8), Karak Chai and Chicken Tikka match the menu names. Restaurant is not named wrongly anywhere.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "Information only. No financial, tax, legal or staffing advice. Asking staff to shoot during service is a content task, not employment advice.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 2,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:21:19.444Z"
+  }
 }

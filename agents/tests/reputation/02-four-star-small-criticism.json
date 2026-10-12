@@ -149,5 +149,170 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "cf4eb294-27a5-4168-9546-4aa07330d604",
+      "rating": 4,
+      "content": {
+        "text": "Thank you, Tariq! Glad the lamb chops were spot on again, that's what we like to hear. Sorry about the wait for the bill, we'll keep working on it. Your table is always ready for you here 🔥 \n\nThe Ember & Spice Grill family"
+      },
+      "alert": false,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:cf4eb294-27a5-4168-9546-4aa07330d604",
+        "profile:sign_off_name",
+        "profile:tone_notes",
+        "profile:emoji_allowed"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 1,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:42:01.081Z"
+  }
 }

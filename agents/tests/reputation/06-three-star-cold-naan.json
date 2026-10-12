@@ -150,5 +150,171 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "66f5bc39-cd45-4106-9c05-1b48f95967ae",
+      "rating": 3,
+      "content": {
+        "text": "Hi Ellie, thanks for dropping in and sharing this. Glad the food was tasty, but we're sorry your order came out in the wrong order and the naan was cold. That's not how we like to do things. Please email us at hello@emberandspice.co.uk so we can make it right, and we'd be happy to offer a free dessert on your next visit.\n\nThe Ember & Spice Grill family"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:66f5bc39-cd45-4106-9c05-1b48f95967ae",
+        "profile:complaint_contact",
+        "profile:recovery_offers",
+        "profile:sign_off_name",
+        "profile:tone_notes"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, first-name, apologises and invites her back to make it right, as the profile's tone notes ask.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "Refers to her cold naan and the order mix-up, so it is not generic.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "English review, English reply, plain words.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening 'Hi Ellie, thanks for dropping in' differs from the last three openings. The sign-off is required by the maker's rules.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis (up to 1 allowed), no hashtags, no banned words.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Every claim traces to the review, complaint_contact or recovery_offers.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers used.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times stated.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Name 'Ellie' matches 'Ellie S.'. Email address and sign-off match the profile exactly.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal or allergen claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "Free dessert on next visit matches the approved recovery offer, with no urgency or scarcity.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting or personal-trait wording.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "The gesture is not tied to a review, and nothing asks her to change or remove it.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "Only details she wrote in her review are mentioned.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, legal or staffing advice.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "An email address in a Google review reply is fine. No links or phone numbers that break platform rules.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "Same language, no arguing or blaming, only order details she wrote, approved gesture only, no refunds, sign-off from the profile.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": "No rendered preview for a text reply.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:45:21.105Z"
+  }
 }

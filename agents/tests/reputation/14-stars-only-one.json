@@ -151,5 +151,170 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "t-14",
+      "rating": 1,
+      "content": {
+        "text": "Hi Mo, thank you for letting us know, and we're sorry your visit wasn't right. Please get in touch at hello@emberandspice.co.uk so we can make it right. The Ember & Spice Grill family"
+      },
+      "alert": true,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:t-14",
+        "profile:sign_off_name",
+        "profile:complaint_contact",
+        "profile:tone_notes"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, uses first name, apologises, says thank you, never argues. Matches the profile's bad-review guidance.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": "The review has no text, so there is nothing specific to refer to. Naming the complaint contact is the most specific thing available.",
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "Plain English, and the review has no text to set a different language.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": "Opening 'Hi Mo, thank you for letting us know' differs from the last outputs. The closing is the mandatory profile sign-off.",
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, emojis, hashtags or banned words.",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "The 1-star rating supports the apology. The email and sign-off match the profile.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "'Mo' matches the author name 'Mo S.'. The sign-off name matches the profile exactly.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offer made.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered in exchange for a review or for changing one.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "No personal details beyond the public reviewer name.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No advice given.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "An email address is fine in a Google review reply.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": "No invented facts, no blame, no refund or money, no order details, and signed off with the profile sign-off name. The review has no text, so none of the escalation triggers apply.",
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:49:45.823Z"
+  }
 }

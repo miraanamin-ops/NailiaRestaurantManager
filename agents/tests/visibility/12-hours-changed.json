@@ -190,5 +190,78 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "hours_update",
+      "channel": "google",
+      "content": {
+        "text": "Friday opening hours on Google will change from 2pm to midnight to 12pm to 11pm. All other days stay the same.",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": {
+        "field": "hours",
+        "from": "Friday 14:00 – 00:00",
+        "to": "Friday 12:00 – 23:00"
+      },
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:hours"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "The change is supported by profile:hours (Friday 12:00 – 23:00) and decision:profile_change, which confirms the owner approved moving from Friday 14:00 – 00:00 to 12:00 – 23:00. 'All other days stay the same' is consistent with the profile, which holds all other days.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "Times in the text (2pm to midnight, 12pm to 11pm) match the from/to values in the decision and the profile (14:00 – 00:00, 12:00 – 23:00).",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Times are consistent between the text and the change object, and match the profile's Friday hours. No specific date is claimed. The text does not say when the change starts, but the profile already holds the new value, so no inconsistency.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "No reviewer, dish or staff names are used. Day name 'Friday' matches the source.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal, allergen or dietary claims in the draft. The change is to hours only.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:19:41.243Z"
+  }
 }

@@ -194,5 +194,131 @@
       "espresso martini"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "content_brief",
+      "channel": "owner",
+      "content": {
+        "text": "Hi team, here are this week's 3 quick shoots. Each one takes about 5 minutes on a phone during service. Thank you for all you do.",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [
+        {
+          "what": "Lamb Chops (4 pcs) on the charcoal grill, with the sizzle and a bit of smoke",
+          "where": "At the charcoal grill",
+          "how": "Phone held vertical, about 10 seconds. Get close to the chops from a slight angle. Keep the sound on for the sizzle. Slow-motion if your phone has it. Keep faces out of shot and make sure the grill area is tidy first.",
+          "who": "Whoever is on the grill, or anyone on the pass",
+          "day": "Tuesday 13 October",
+          "platform": "TikTok",
+          "caption": "Four lamb chops, straight off the charcoal grill. Halal, certified by HMC. £13.95. Come and say hello, we'd love to see you.",
+          "hashtags": [
+            "#halal",
+            "#charcoalgrill",
+            "#lambchops",
+            "#whitechapel",
+            "#eastlondonfood"
+          ]
+        },
+        {
+          "what": "Kunafa plated and ready to go out, close-up",
+          "where": "On the pass, by the window or under the best light you have",
+          "how": "Phone vertical, one still photo plus a 5 second clip. Shoot from just above at a slight angle so the whole plate shows. Wipe the plate edge first. Wait until no customers are in the frame.",
+          "who": "Anyone on the pass or front of house",
+          "day": "Thursday 15 October",
+          "platform": "Instagram",
+          "caption": "Save room for pudding. Kunafa, £5.95. Our team will gladly talk you through the dish, just ask about allergens before you order. Thank you for being part of our family kitchen.",
+          "hashtags": [
+            "#kunafa",
+            "#halaldesserts",
+            "#whitechapel",
+            "#londondesserts",
+            "#familyrun"
+          ]
+        },
+        {
+          "what": "Mixed Grill Platter arriving on the pass, then lifted to go out to a table",
+          "where": "The pass, at the busiest part of service",
+          "how": "Phone vertical, 10 to 15 seconds. Start on the platter, then follow it a step or two. Shoot from the side, not at customers, so no faces or children appear. Best around 7pm when it's busy.",
+          "who": "Anyone on the pass",
+          "day": "Saturday 17 October",
+          "platform": "Instagram",
+          "caption": "Saturday sorted. The Mixed Grill Platter, £18.50, made for sharing. All our meat is halal, certified by HMC. Thank you for spending your weekend with us.",
+          "hashtags": [
+            "#mixedgrill",
+            "#halalfood",
+            "#charcoalgrill",
+            "#eastlondon",
+            "#whitechapeleats"
+          ]
+        }
+      ],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:menu",
+        "profile:tone_notes",
+        "profile:halal_statement",
+        "profile:allergen_statement",
+        "profile:hours",
+        "profile:cuisine",
+        "photo:ph_1",
+        "photo:ph_2",
+        "photo:ph_3"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Prices, dish names, halal statement and allergen guidance all trace to the menu, halal_statement and allergen_statement sources. Platforms and shoot instructions are the maker's own plan, not factual claims.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "Lamb Chops £13.95, Kunafa £5.95 and Mixed Grill Platter £18.50 match the menu exactly. '3 quick shoots' matches the three shoots listed.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "Today is Monday 12 October 2026. Tuesday 13 October, Thursday 15 October and Saturday 17 October are all future dates with correct weekdays. Tuesday and Thursday are open 12:00 to 23:00 and Saturday 12:00 to 00:00, so 'around 7pm' on Saturday is within opening hours.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Dish names 'Lamb Chops (4 pcs)', 'Kunafa' and 'Mixed Grill Platter' match the menu. 'HMC' matches the halal statement.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims are made.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No financial, tax, legal or staffing advice. The brief is shoot guidance only.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:18:14.203Z"
+  }
 }

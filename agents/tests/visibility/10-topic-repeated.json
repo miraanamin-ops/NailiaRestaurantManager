@@ -189,5 +189,33 @@
       "Smash Burger"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "visibility",
+    "question": "A Smash Burger post already went out today, Monday 12 October, and I can't repeat a Google post topic within 3 weeks. Would you like me to write about something else instead? The Smash Burger could go out again from Monday 2 November. Also, that post describes the burger as a double beef patty with melted cheese, house sauce and a brioche bun, but the menu has no description for it, so I can't confirm those details. Can you tell me what's in the burger so I can use it next time?",
+    "output": {
+      "type": "google_post",
+      "channel": "owner",
+      "content": {
+        "text": "",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": "A Smash Burger post already went out today, Monday 12 October, and I can't repeat a Google post topic within 3 weeks. Would you like me to write about something else instead? The Smash Burger could go out again from Monday 2 November. Also, that post describes the burger as a double beef patty with melted cheese, house sauce and a brioche bun, but the menu has no description for it, so I can't confirm those details. Can you tell me what's in the burger so I can use it next time?",
+      "sources_used": [
+        "post:2026-10-12",
+        "profile:menu"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T10:19:20.712Z"
+  }
 }

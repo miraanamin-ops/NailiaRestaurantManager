@@ -195,5 +195,79 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "hours_update",
+      "channel": "google",
+      "content": {
+        "text": "Google will show Ember & Spice Grill as closed on Friday 25 December (Christmas Day). It currently shows usual hours of 2pm to midnight for that day. Regular weekly hours stay the same.",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": {
+        "field": "special_hours",
+        "from": "Friday 25 December: usual hours (14:00 – 00:00)",
+        "to": "Friday 25 December: Closed"
+      },
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": null,
+      "sources_used": [
+        "profile:special_hours",
+        "profile:hours"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Closure on 25 December matches profile:special_hours. The 'currently shows usual hours' claim and 'confirmed' change match decision:profile_change. 'Regular weekly hours stay the same' is supported by profile:hours.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "2pm to midnight matches Friday 14:00 – 00:00 in the profile. No other figures.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "2026-12-25 is a Friday and is in the future from Monday 12 October 2026. Date format is correct, and the change field matches the source.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Restaurant name 'Ember & Spice Grill' and the 'Christmas Day' label match the profile.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal, allergen or dietary claims. This is an hours-only change.",
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T10:20:01.323Z"
+  }
 }

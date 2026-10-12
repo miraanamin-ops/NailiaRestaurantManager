@@ -1,5 +1,5 @@
 {
-  "name": "Thursday Google post about something timely",
+  "name": "Thursday Google post about something timely (no calendar data yet, so asking is fine too)",
   "source": "real post history (Ember & Spice Grill)",
   "task": "google_post",
   "profile": {
@@ -183,7 +183,37 @@
     ],
     "checker": [
       "pass"
-    ]
+    ],
+    "question_ok": true
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "visibility",
+    "question": "The profile has no current offer, event or special hours, so I have nothing timely to post for Thursday 15 October. Is there an offer or event you'd like to promote this week? (The free Mango Lassi on 5 October isn't in the profile, so I can't repeat it without your yes.)",
+    "output": {
+      "type": "google_post",
+      "channel": "google",
+      "content": {
+        "text": "",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": "The profile has no current offer, event or special hours, so I have nothing timely to post for Thursday 15 October. Is there an offer or event you'd like to promote this week? (The free Mango Lassi on 5 October isn't in the profile, so I can't repeat it without your yes.)",
+      "sources_used": [
+        "profile:special_hours",
+        "profile:menu",
+        "post:2026-10-05"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T10:12:20.705Z"
+  }
 }

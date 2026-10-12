@@ -191,5 +191,34 @@
       "local farm"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "visibility",
+    "question": "I can't say the lamb is organic or locally sourced, as nothing in our profile says so and I can't state it as fact without proof. Also, we posted about lamb chops on 28 September, which is under 3 weeks ago. Two questions: can you confirm the lamb's source and any organic certification so we can add it to the profile? And would you like a different dish this week, or should we hold the lamb chops post until after 19 October?",
+    "output": {
+      "type": "google_post",
+      "channel": "owner",
+      "content": {
+        "text": "",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": null,
+      "shoots": [],
+      "needs_owner_input": "I can't say the lamb is organic or locally sourced, as nothing in our profile says so and I can't state it as fact without proof. Also, we posted about lamb chops on 28 September, which is under 3 weeks ago. Two questions: can you confirm the lamb's source and any organic certification so we can add it to the profile? And would you like a different dish this week, or should we hold the lamb chops post until after 19 October?",
+      "sources_used": [
+        "profile:menu",
+        "profile:halal_statement",
+        "post:2026-09-28"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T10:17:47.577Z"
+  }
 }

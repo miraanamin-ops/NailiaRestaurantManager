@@ -192,5 +192,38 @@
       "not_on_menu"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "unusable",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "google_photo",
+      "channel": "owner",
+      "content": {
+        "text": "",
+        "cta": null,
+        "hashtags": []
+      },
+      "photo_id": null,
+      "change": null,
+      "publish_at": null,
+      "photo_check": {
+        "usable": false,
+        "reason_code": "not_on_menu",
+        "reason": "The photo shows sushi rolls, which are not on the menu (we are a halal charcoal grill), so it can't go on Google."
+      },
+      "shoots": [],
+      "needs_owner_input": "Staff sent a photo of a sushi platter, but sushi isn't on our menu. Is this a new dish you're adding? If so, please send the name, price and description (including halal and allergen details), and confirm with the profile keeper so the menu is updated first. If not, I'll hold the photo.",
+      "sources_used": [
+        "profile:menu",
+        "profile:cuisine",
+        "profile:halal_statement"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T10:17:39.691Z"
+  }
 }

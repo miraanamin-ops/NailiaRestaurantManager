@@ -139,6 +139,7 @@
   },
   "owner_choice": null,
   "today": "Monday 12 October 2026",
+  "pending_decision": "The checker fails the one-line thanks reputation.md asks for on a stars-only review as generic (T check): 2 of 3 runs escalate. Needs a wording decision on checker.md or reputation.md (phase 3a report).",
   "expect": {
     "alert": false,
     "needs_owner_input": false,
@@ -150,5 +151,170 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "checker",
+    "question": "I couldn't get a reply to Zara H.'s review right after 2 tries (The review has no text, and the reply says nothing specific. 'the grill's always lit for you' is generic and could suit any grill restaurant.). Do you want to reply publicly, handle it privately, or both?",
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "t-13",
+      "rating": 5,
+      "content": {
+        "text": "Cheers, Zara, lovely to have you with us at Ember & Spice Grill, the grill's always lit for you! The Ember & Spice Grill family"
+      },
+      "alert": false,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:t-13",
+        "profile:name",
+        "profile:sign_off_name",
+        "profile:tone_notes"
+      ]
+    },
+    "checker": {
+      "verdict": "fail",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": "Warm, short and upbeat, uses first name, says thanks in spirit.",
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "fail",
+          "reason": "The review has no text, and the reply says nothing specific. 'the grill's always lit for you' is generic and could suit any grill restaurant.",
+          "fix": "Rewrite with a specific detail only this restaurant would say, grounded in the profile (e.g. the grills or a menu item), without claiming anything about the unseen review."
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": "Plain English, matches the audience. Review has no text, so no language conflict.",
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "fail",
+          "reason": "The closing sign-off 'The Ember & Spice Grill family' is the same as the closing of the last output (Ollie reply). The maker's rule forbids reusing the closing of recent replies.",
+          "fix": "Use a different closing line before the sign-off, and avoid repeating the previous closing wording."
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": "No em-dashes, no emojis, no banned words ('cheap' not used).",
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": "Claims are limited to the restaurant name, sign-off and a general welcome, all supported by sources. 'always lit for you' is figurative.",
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": "No numbers in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": "No dates or times in the draft.",
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": "Reviewer first name 'Zara' matches 'Zara H.'. Restaurant name matches the profile.",
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": "No causal claims.",
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": "No food, halal or allergen claims.",
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": "No offers.",
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": "No targeting.",
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": "Nothing offered for a review.",
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": "No personal details beyond the public reviewer name.",
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": "No advice given.",
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": "No Google platform issues such as phone numbers or links.",
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "fail",
+          "reason": "Maker rule: don't reuse the closing of recent replies. The sign-off closing is identical to the Ollie reply. Also the draft has no thank you, and the profile requires always saying thank you; 'Cheers' is a weak substitute.",
+          "fix": "Add a clear 'thank you', and vary the closing before the sign-off."
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 2,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:48:10.373Z"
+  }
 }

@@ -149,5 +149,171 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "reply",
+    "question_by": null,
+    "question": null,
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "6c1de297-be1f-47a2-b1ef-f47887c58053",
+      "rating": 5,
+      "content": {
+        "text": "Aisha, that's made our day, thank you! Chuffed our lamb chops won you over and that the team made you feel at home. The mixed grill is a big one, so bring an appetite next week! 🔥\n\nThe Ember & Spice Grill family"
+      },
+      "alert": false,
+      "needs_owner_input": null,
+      "sources_used": [
+        "review:6c1de297-be1f-47a2-b1ef-f47887c58053",
+        "profile:sign_off_name",
+        "profile:tone_notes",
+        "profile:emoji_allowed",
+        "profile:menu"
+      ]
+    },
+    "checker": {
+      "verdict": "pass",
+      "checks": [
+        {
+          "id": "T1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "T5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "F5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C1",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C2",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C3",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C4",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C5",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C6",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C7",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "C8",
+          "result": "pass",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B1",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B2",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B3",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        },
+        {
+          "id": "B4",
+          "result": "skipped",
+          "reason": null,
+          "fix": null
+        }
+      ],
+      "minor_fixes": [],
+      "owner_question": null
+    },
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T09:40:23.883Z"
+  }
 }

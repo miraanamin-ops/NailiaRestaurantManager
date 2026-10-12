@@ -146,5 +146,29 @@
       "review:t-12"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcome": "question",
+    "question_by": "reputation",
+    "question": "This 2-star review from Chloe B. names a waiter (Bilal) as rude. Our rules say I can't draft a public reply when a staff member is named negatively. Do you want to reply publicly, contact her privately, or both?",
+    "output": {
+      "type": "review_reply",
+      "channel": "google",
+      "review_id": "t-12",
+      "rating": 2,
+      "content": {
+        "text": ""
+      },
+      "alert": true,
+      "needs_owner_input": "This 2-star review from Chloe B. names a waiter (Bilal) as rude. Our rules say I can't draft a public reply when a staff member is named negatively. Do you want to reply publicly, contact her privately, or both?",
+      "sources_used": [
+        "review:t-12"
+      ]
+    },
+    "checker": null,
+    "revisions": 0,
+    "model": "claude-sonnet-5-5",
+    "agent_version": "0.2",
+    "checker_version": null,
+    "recorded_at": "2026-10-12T09:47:26.463Z"
+  }
 }
