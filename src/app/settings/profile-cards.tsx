@@ -5,7 +5,9 @@ import { button, Card, input } from "../onboarding/ui";
 import type { AgentName } from "@/lib/agents/definition";
 import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
 import { NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
+import { costsFor } from "@/lib/agents/costs";
 import { goLiveChecklist } from "@/lib/agents/go-live";
+import { dollars } from "@/lib/agents/usage";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveVoice } from "./actions";
 
@@ -191,6 +193,32 @@ export function BuilderCard({ r }: { r: Restaurant }) {
           <button className="text-sm text-emerald-700 underline">Ask the owner on WhatsApp for the missing details</button>
         </form>
       )}
+    </Card>
+  );
+}
+
+// Builder only: what the agents cost this restaurant this month and last month.
+export async function CostCard({ restaurantId }: { restaurantId: string }) {
+  const months = await costsFor(restaurantId);
+  const name = (agent: string) => agent[0].toUpperCase() + agent.slice(1);
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">Agent costs</h2>
+      <p className="text-sm text-stone-600">Estimated from each job&apos;s tokens and the API&apos;s published prices (US dollars). Shadow work counts too.</p>
+      {!months.length && <p className="text-sm text-stone-500">No agent work recorded yet.</p>}
+      <ul className="space-y-2 text-sm">
+        {months.map((m) => (
+          <li key={m.month}>
+            <b>{new Date(`${m.month}-01T12:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>: {dollars(m.total)} from {m.jobs} job{m.jobs === 1 ? "" : "s"}
+            <span className="block text-xs text-stone-600">
+              {Object.entries(m.byAgent)
+                .sort(([, a], [, b]) => b - a)
+                .map(([agent, cost]) => `${name(agent)} ${dollars(cost)}`)
+                .join(" · ")}
+            </span>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

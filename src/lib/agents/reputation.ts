@@ -127,6 +127,7 @@ export async function runReputationShadow(job: AgentJob): Promise<JobOutcome> {
     output: { outcome: outcome.kind, revisions: outcome.revisions, checker_version: outcome.checkerVersion, steps: outcome.steps },
     agentVersion: outcome.agentVersion,
     verdict: outcome.kind === "reply" ? outcome.checker.verdict : "question",
+    usage: outcome.usage,
     actor: "reputation",
     action: "agent_drafted",
     detail: `Reputation (shadow, v${outcome.agentVersion}) on ${name}'s ${input.review.rating ?? "no"}-star review: ${outcomeLine(outcome)}`,
@@ -175,6 +176,7 @@ export async function liveReputation(
     output: { outcome: outcome.kind, revisions: outcome.revisions, steps: outcome.steps, profile_version: profileVersion },
     agentVersion: outcome.agentVersion,
     verdict: outcome.kind === "reply" ? outcome.checker.verdict : "question",
+    usage: outcome.usage,
   });
   const job = { jobId, agent: "reputation", agentVersion: outcome.agentVersion, verdict: outcome.kind === "reply" ? outcome.checker.verdict : "question" };
 
@@ -251,12 +253,23 @@ export async function weeklyThemesFor(restaurantId: string, weekStart: string, w
         { onConflict: "restaurant_id,week_start" },
       ),
     );
+    const jobId = await recordAgentRun({
+      restaurantId,
+      key: `reputation:themes:${weekStart}`,
+      agent: "reputation",
+      kind: "reputation_themes",
+      trigger: "weekly_themes_monday",
+      output: { praise: themes.praise.length, complaints: themes.complaints.length, reviews: reviews.length },
+      agentVersion: themes.agentVersion,
+      verdict: null,
+      usage: themes.usage,
+    });
     await logAction({
       restaurantId,
       actor: "reputation",
       action: "agent_drafted",
       detail: `Reputation (v${themes.agentVersion}) found this week's themes from ${reviews.length} review${reviews.length === 1 ? "" : "s"}: ${themes.praise.length} praised, ${themes.complaints.length} complained about`,
-      job: { jobId: null, agent: "reputation", agentVersion: themes.agentVersion, verdict: null },
+      job: { jobId, agent: "reputation", agentVersion: themes.agentVersion, verdict: null },
     });
     return { praise: themes.praise, complaints: themes.complaints };
   } catch (err) {

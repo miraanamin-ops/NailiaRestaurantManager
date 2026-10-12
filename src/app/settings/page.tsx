@@ -8,7 +8,7 @@ import { AllergenEditor, MenuEditor } from "../onboarding/setup/editors";
 import { button, Card, Frame, input } from "../onboarding/ui";
 import { getSupabase } from "@/lib/supabase";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
-import { BuilderCard, HistoryCard, VoiceCard } from "./profile-cards";
+import { BuilderCard, CostCard, HistoryCard, VoiceCard } from "./profile-cards";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
@@ -195,6 +195,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <HistoryCard restaurantId={restaurantId} />
 
         {owner.isBuilder && <BuilderCard r={r} />}
+        {owner.isBuilder && <CostCard restaurantId={restaurantId} />}
       </div>
     </Frame>
   );

@@ -19,4 +19,10 @@ set photo_library = (
 )
 where r.photo_library = '[]'::jsonb and jsonb_array_length(coalesce(r.photos, '[]'::jsonb)) > 0;
 
+-- 3. What each agent job used: tokens per agent, and the estimated cost in US dollars
+--    (the API's own prices). Builder controls show it per restaurant per month.
+alter table agent_jobs add column if not exists usage    jsonb;          -- { "reputation": { input, output, cacheRead, cacheWrite, cost }, "checker": {...} }
+alter table agent_jobs add column if not exists cost_usd numeric(10, 6);
+create index if not exists agent_jobs_cost_idx on agent_jobs (restaurant_id, created_at);
+
 insert into schema_migrations (name) values ('021_visibility.sql') on conflict (name) do nothing;

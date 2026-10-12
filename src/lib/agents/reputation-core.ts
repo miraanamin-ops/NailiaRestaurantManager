@@ -5,6 +5,7 @@ import { loadAgent } from "./loader";
 import { callAgent } from "./run";
 import { reputationProblems, ReputationReply, type ReputationReplyOutput, type ReviewInput } from "./reputation-rules";
 import { applyMinorFixes, type CheckerVerdictOutput } from "./schema";
+import { addUsage, type Usage } from "./usage";
 import type { Resolved } from "./tools";
 
 // The Reputation agent and its checker loop, without the database: everything
@@ -74,20 +75,22 @@ export type CheckerDeps = {
 export type LoopStep = { agent: "reputation" | "checker"; version: string; verdict?: string; summary: string };
 
 export type ReputationOutcome =
-  | { kind: "reply"; output: ReputationReplyOutput; checker: CheckerVerdictOutput; revisions: number; minorFixesApplied: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string }
-  | { kind: "question"; output: ReputationReplyOutput; question: string; by: "reputation" | "checker"; checker: CheckerVerdictOutput | null; revisions: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string | null };
+  | { kind: "reply"; output: ReputationReplyOutput; checker: CheckerVerdictOutput; revisions: number; minorFixesApplied: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string; usage: Usage }
+  | { kind: "question"; output: ReputationReplyOutput; question: string; by: "reputation" | "checker"; checker: CheckerVerdictOutput | null; revisions: number; steps: LoopStep[]; agentVersion: string; checkerVersion: string | null; usage: Usage };
 
 export async function reputationLoop(input: ReputationInput, deps: CheckerDeps, label: string): Promise<ReputationOutcome> {
   const steps: LoopStep[] = [];
   let made = await runReputation(input, `${label} (draft)`);
+  let usage: Usage = addUsage(made.usage);
   let output = made.output;
   steps.push({ agent: "reputation", version: made.agentVersion, summary: output.needs_owner_input ? `asks the owner: ${output.needs_owner_input}` : "drafted a reply" });
   if (output.needs_owner_input) {
-    return { kind: "question", output, question: output.needs_owner_input, by: "reputation", checker: null, revisions: 0, steps, agentVersion: made.agentVersion, checkerVersion: null };
+    return { kind: "question", output, question: output.needs_owner_input, by: "reputation", checker: null, revisions: 0, steps, agentVersion: made.agentVersion, checkerVersion: null, usage };
   }
 
   for (let revisions = 0; ; revisions++) {
     const checked = await runChecker(await checkerInput(output, input, deps), `${label} (check ${revisions + 1})`);
+    usage = addUsage(usage, checked.usage);
     const verdict = checked.output;
     const failed = verdict.checks.filter((c) => c.result === "fail");
     steps.push({ agent: "checker", version: checked.agentVersion, verdict: verdict.verdict, summary: failed.map((c) => `${c.id}: ${c.reason ?? ""}`).join("; ") || verdict.verdict });
@@ -106,6 +109,7 @@ export async function reputationLoop(input: ReputationInput, deps: CheckerDeps, 
         steps,
         agentVersion: made.agentVersion,
         checkerVersion: checked.agentVersion,
+        usage,
       };
     }
     if (verdict.verdict === "escalate" || revisions >= MAX_REVISIONS) {
@@ -113,14 +117,15 @@ export async function reputationLoop(input: ReputationInput, deps: CheckerDeps, 
         verdict.verdict === "escalate" && verdict.owner_question
           ? verdict.owner_question
           : `I couldn't get a reply to ${input.review.author_name}'s review right after ${MAX_REVISIONS} tries (${failed[0]?.reason ?? "the checker kept failing it"}). Do you want to reply publicly, handle it privately, or both?`;
-      return { kind: "question", output, question, by: "checker", checker: verdict, revisions, steps, agentVersion: made.agentVersion, checkerVersion: checked.agentVersion };
+      return { kind: "question", output, question, by: "checker", checker: verdict, revisions, steps, agentVersion: made.agentVersion, checkerVersion: checked.agentVersion, usage };
     }
 
     made = await runReputation(input, `${label} (revision ${revisions + 1})`, { previous: output, fixes: failed });
+    usage = addUsage(usage, made.usage);
     output = made.output;
     steps.push({ agent: "reputation", version: made.agentVersion, summary: output.needs_owner_input ? `asks the owner: ${output.needs_owner_input}` : `revision ${revisions + 1}` });
     if (output.needs_owner_input) {
-      return { kind: "question", output, question: output.needs_owner_input, by: "reputation", checker: verdict, revisions: revisions + 1, steps, agentVersion: made.agentVersion, checkerVersion: checked.agentVersion };
+      return { kind: "question", output, question: output.needs_owner_input, by: "reputation", checker: verdict, revisions: revisions + 1, steps, agentVersion: made.agentVersion, checkerVersion: checked.agentVersion, usage };
     }
   }
 }

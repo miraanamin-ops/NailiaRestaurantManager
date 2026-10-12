@@ -80,6 +80,7 @@ export async function runCheckerShadow(job: AgentJob): Promise<JobOutcome> {
     output: { ...agentCheck, model: result.model, attempts: result.attempts, house_rules_version: result.houseRulesVersion, profile_version: profile.version },
     agentVersion: result.agentVersion,
     verdict: result.output.verdict,
+    usage: result.usage,
     actor: "checker",
     detail: `Checker (shadow, v${result.agentVersion}) on the ${draftName(draft)}, version ${version}: ${verdictLine(result.output)}`,
   };

@@ -75,5 +75,6 @@ export async function runWeeklyThemes(reviews: ThemeReview[], weekLabel: string,
     praise: countThemes(result.output.content.praise),
     complaints: countThemes(result.output.content.complaints),
     agentVersion: result.agentVersion,
+    usage: result.usage,
   };
 }
