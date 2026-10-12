@@ -115,7 +115,12 @@
         "Saturday": "12:00 – 00:00",
         "Sunday": "12:00 – 22:30"
       },
-      "special_hours": {},
+      "special_hours": {
+        "2026-12-25": {
+          "label": "Christmas Day",
+          "hours": "Closed"
+        }
+      },
       "halal_statement": "All our meat is halal, certified by HMC.",
       "allergen_statement": "Our kitchen handles nuts, sesame, gluten and dairy. Please tell our team about any allergy before you order.",
       "photo_library": [

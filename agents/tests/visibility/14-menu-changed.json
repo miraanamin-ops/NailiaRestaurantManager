@@ -62,6 +62,11 @@
               "name": "Chicken Tikka Wrap",
               "price": 7.5,
               "description": null
+            },
+            {
+              "name": "Lamb Kofta Wrap",
+              "price": 7.95,
+              "description": null
             }
           ]
         },
