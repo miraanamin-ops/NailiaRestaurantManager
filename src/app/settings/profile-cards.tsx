@@ -10,7 +10,11 @@ import { confirmedFields, goLiveChecklist } from "@/lib/agents/go-live";
 import { insightsChecklist } from "@/lib/agents/insights";
 import { dollars } from "@/lib/agents/usage";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
-import { askOwnerForGoLive, revertProfile, saveBuilderControls, saveOwner, saveVoice } from "./actions";
+import { addDays } from "@/lib/sales/format";
+import { londonYmd } from "@/lib/clock";
+import { calendarFor, syncBankHolidays } from "@/lib/local-calendar";
+import { CALENDAR_TYPE_LABELS, CALENDAR_TYPES, type CalendarEntry } from "@/lib/local-calendar-rules";
+import { addCalendarEntry, askOwnerForGoLive, removeCalendarEntry, revertProfile, saveBuilderControls, saveOwner, saveVoice } from "./actions";
 
 // Settings cards for the restaurant profile: how replies and messages sound
 // (fields the agents use), and the profile's change history with Revert.
@@ -265,6 +269,77 @@ export async function CostCard({ restaurantId }: { restaurantId: string }) {
           </li>
         ))}
       </ul>
+    </Card>
+  );
+}
+
+// Builder only: the local calendar (dates Growth plans campaigns around), the next 4 months.
+export async function CalendarCard({ restaurantId }: { restaurantId: string }) {
+  const today = londonYmd(new Date());
+  await syncBankHolidays(today);
+  let entries: CalendarEntry[] = [];
+  try {
+    entries = await calendarFor(restaurantId, today, addDays(today, 120));
+  } catch {
+    // Before supabase/023_growth.sql has been run there's no calendar yet.
+  }
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">Local calendar</h2>
+      <p className="text-sm text-stone-600">
+        Only you can see this. Growth drafts a campaign 2 to 3 weeks before each date. UK bank holidays come from gov.uk. Mark a date uncertain (e.g. Eid) and Growth asks the owner which day to plan for.
+      </p>
+      {!entries.length && <p className="text-sm text-stone-500">Nothing in the next 4 months yet.</p>}
+      <ul className="divide-y divide-stone-100 text-sm">
+        {entries.map((e) => (
+          <li key={e.id} className="flex items-center gap-3 py-2">
+            <div className="min-w-0 flex-1">
+              <b>{e.name}</b> · {e.day} · {CALENDAR_TYPE_LABELS[e.type]}
+              {e.date_uncertain && " · date uncertain"}
+              <span className="text-xs text-stone-500"> · {e.restaurant_id ? "this restaurant" : "every restaurant"}{e.source === "gov.uk" ? ", from gov.uk" : ""}</span>
+            </div>
+            {e.source === "builder" && (
+              <form action={removeCalendarEntry}>
+                <input type="hidden" name="r" value={restaurantId} />
+                <input type="hidden" name="id" value={e.id} />
+                <button className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-900 ring-1 ring-stone-300">Remove</button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+      <form action={addCalendarEntry} className="grid grid-cols-2 gap-3">
+        <input type="hidden" name="r" value={restaurantId} />
+        <label className="block text-xs text-stone-600">
+          Date
+          <input name="day" type="date" required className={`mt-1 ${input}`} />
+        </label>
+        <label className="block text-xs text-stone-600">
+          Name
+          <input name="name" required maxLength={80} placeholder="Eid al-Adha" className={`mt-1 ${input}`} />
+        </label>
+        <label className="block text-xs text-stone-600">
+          Type
+          <select name="type" className={`mt-1 ${input}`} defaultValue="religious">
+            {CALENDAR_TYPES.filter((t) => t !== "bank_holiday").map((t) => (
+              <option key={t} value={t}>
+                {CALENDAR_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-xs text-stone-600">
+          For
+          <select name="scope" className={`mt-1 ${input}`} defaultValue="all">
+            <option value="all">Every restaurant</option>
+            <option value="this">This restaurant only</option>
+          </select>
+        </label>
+        <label className="col-span-2 flex items-center gap-2 text-sm">
+          <input type="checkbox" name="uncertain" value="yes" className="h-5 w-5" /> Date uncertain (e.g. it depends on the moon)
+        </label>
+        <button className={`col-span-2 ${button}`}>Add to the calendar</button>
+      </form>
     </Card>
   );
 }
