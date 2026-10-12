@@ -115,7 +115,7 @@ export function runInsights(input: InsightsInput, session: MetricsSession, prepa
     agent: "insights",
     content: content(input, prepared, revision),
     schema: InsightsDraft,
-    validate: (out) => insightsProblems(out, { task: input.task, results: session.results }),
+    validate: (out) => insightsProblems(out, { task: input.task, results: session.results, themes: input.themes }),
     tools: [session.tool()],
     label,
   });
@@ -176,7 +176,7 @@ export async function insightsLoop(input: InsightsInput, deps: InsightsDeps, lab
         ...out,
         content: { headline: fix(out.content.headline), body: fix(out.content.body), actions: out.content.actions.map((a) => ({ title: fix(a.title), why: fix(a.why), message: fix(a.message) })) },
       };
-      return insightsProblems(candidate, { task: input.task, results: session.results }).length ? null : candidate;
+      return insightsProblems(candidate, { task: input.task, results: session.results, themes: input.themes }).length ? null : candidate;
     },
     stuckQuestion: (reason) =>
       input.task === "report"

@@ -225,3 +225,21 @@ test("a percentage figure may be given without its sign (down 2% for -2)", () =>
   };
   expect(insightsProblems(out, { task: "answer", results })).toEqual([]);
 });
+
+test("the report may quote a weekly theme's count (counted by code), and only a real one", () => {
+  const results = new Map<string, MetricResult>([["q1", queryMetrics(caseData(byName("01")), q({ metric: "net_sales", period: "last_week" }), "q1")]]);
+  const themes = { week: "2026-09-28", praise: [{ label: "the lamb chops", count: 4 }], complaints: [{ label: "waiting for a table", count: 3 }] };
+  const action = { title: "Speed up table turns", why: "3 reviews last week mentioned waiting for a table.", message: "Draft a reply about table waits" };
+  const report: InsightsOutput = {
+    type: "report_section", channel: "owner",
+    content: { headline: "Last week took £13,515 net.", body: "Sales were £13,515.", actions: [action, action, action] },
+    figures: [
+      { metric: "net_sales", value: 13514.92, unit: "GBP", period: "last week", compare_to: null, compare_value: null, source: "metrics:q1" },
+      { metric: "waiting_mentions", value: 3, unit: "count", period: "last week", compare_to: null, compare_value: null, source: "themes:2026-09-28" },
+    ],
+    confidence: "high", needs_owner_input: null, sources_used: ["metrics:q1", "themes:2026-09-28"],
+  };
+  expect(insightsProblems(report, { task: "report", results, themes })).toEqual([]);
+  expect(insightsProblems({ ...report, figures: [report.figures[0], { ...report.figures[1], value: 5 }] }, { task: "report", results, themes }).join()).toMatch(/isn't a count in themes/);
+  expect(insightsProblems(report, { task: "report", results }).join()).toMatch(/source must be metrics/);
+});

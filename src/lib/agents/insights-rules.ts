@@ -114,6 +114,8 @@ export type InsightsContext = {
   task: InsightsTask;
   // Every query_metrics result this job has seen, by id (q1, q2...).
   results: Map<string, MetricResult>;
+  // Reputation's weekly themes (the Monday report), counted by code: a figure may quote a count.
+  themes?: { week: string; praise: { label: string; count: number }[]; complaints: { label: string; count: number }[] } | null;
 };
 
 const metricsId = (ref: string) => (ref.startsWith("metrics:") ? ref.slice("metrics:".length).trim() : null);
@@ -146,10 +148,16 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
 
   // Figures: each one is a number its query returned (never worked out by the agent).
   for (const f of out.figures) {
+    if (ctx.themes && f.source === `themes:${ctx.themes.week}`) {
+      const counts = [...ctx.themes.praise, ...ctx.themes.complaints].map((t) => t.count);
+      if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);
+      if (f.unit !== "count" || !counts.includes(f.value)) problems.push(`figure ${f.metric} = ${f.value} isn't a count in ${f.source}`);
+      continue;
+    }
     const id = metricsId(f.source);
     const result = id ? ctx.results.get(id) : undefined;
     if (!result) {
-      problems.push(`figure ${f.metric} (${f.value}): source must be metrics:<id> of a query this job ran`);
+      problems.push(`figure ${f.metric} (${f.value}): source must be metrics:<id> of a query this job ran${ctx.themes ? ` (or themes:${ctx.themes.week} for a weekly theme count)` : ""}`);
       continue;
     }
     if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);

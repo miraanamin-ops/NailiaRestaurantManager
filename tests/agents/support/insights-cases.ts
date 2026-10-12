@@ -132,10 +132,10 @@ export function judgeInsights(c: InsightsCase, r: InsightsResult) {
   const problems: string[] = [];
   if (r.outcome === "question") {
     if (e.outcome !== "question" && !e.question_ok) return [`expected an answer, got a question (${r.by}): ${r.question ?? ""}`];
-    if (r.by === "insights") problems.push(...insightsProblems(out, { task: c.task, results: r.results }));
+    if (r.by === "insights") problems.push(...insightsProblems(out, { task: c.task, results: r.results, themes: c.themes }));
   } else {
     if (e.outcome === "question") problems.push(`expected a question for the owner, got: ${out.content.body}`);
-    problems.push(...insightsProblems(out, { task: c.task, results: r.results }));
+    problems.push(...insightsProblems(out, { task: c.task, results: r.results, themes: c.themes }));
     for (const f of e.figures ?? []) {
       if (!out.figures.some((x) => (x.unit === f.unit || (f.unit === "count" && x.unit !== "GBP")) && (close(x.value, f.value) || (x.compare_value !== null && close(x.compare_value, f.value))))) {
         problems.push(`missing the figure ${f.what} = ${f.value}`);
