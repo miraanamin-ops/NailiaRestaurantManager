@@ -101,6 +101,9 @@ export type Restaurant = {
   owner_language: string | null;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
+  // Phase 3c (023): the kinds of offer the owner is happy to run (lib/offers.ts), and the birthday offer.
+  approved_offer_types: string[] | null;
+  birthday_offer: string | null;
 };
 
 // The most emojis allowed per kind of customer message.

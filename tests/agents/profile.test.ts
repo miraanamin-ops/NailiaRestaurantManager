@@ -199,3 +199,18 @@ describe("profile versions", () => {
     vi.doUnmock("@/lib/audit");
   });
 });
+
+describe("Growth's offer fields (phase 3c)", () => {
+  test("approved offer types and the birthday offer are Commercial fields Growth reads", () => {
+    const row = restaurantRow(A, { approved_offer_types: ["percent_off", "free_item"], birthday_offer: "Free dessert in your birthday week" });
+    expect(profileView(row, "growth", (m) => m)).toMatchObject({ approved_offer_types: ["percent_off", "free_item"], birthday_offer: "Free dessert in your birthday week", discount_cap: 20 });
+    expect(profileView(row, "reputation", (m) => m)).not.toHaveProperty("approved_offer_types");
+  });
+
+  test("Growth's go-live checklist: cap, offer types, sign-up offer, logo and colours", async () => {
+    const { missingForGoLive } = await import("@/lib/profile/fields");
+    expect(missingForGoLive(restaurantRow(A, { approved_offer_types: [] }), "growth")).toEqual(["approved_offer_types", "logo", "colours"]);
+    const ready = restaurantRow(A, { approved_offer_types: ["percent_off"], logo_url: "https://x.test/logo.png", brand_color: "#123456" });
+    expect(missingForGoLive(ready, "growth")).toEqual([]);
+  });
+});

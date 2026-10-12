@@ -6,6 +6,7 @@ import { DAYS } from "@/lib/onboarding/profile-data";
 import { getRestaurant } from "@/lib/onboarding/store";
 import { AllergenEditor, MenuEditor } from "../onboarding/setup/editors";
 import { button, Card, Frame, input } from "../onboarding/ui";
+import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
 import { BuilderCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
@@ -86,6 +87,23 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
             <label className="block">
               <span className={label}>Biggest discount (%)</span>
               <input name="cap" type="number" min={0} max={100} defaultValue={r.discount_cap_percent} className={`mt-1 ${input}`} />
+              <span className="mt-1 block text-xs text-stone-500">A free item or £ off counts as a % of the dish it comes with (a free £3.50 drink with an £18.50 platter is 19%).</span>
+            </label>
+            <fieldset>
+              <legend className={label}>Kinds of offer you&apos;re happy to run</legend>
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                {OFFER_TYPES.map((t) => (
+                  <label key={t} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name={`offer_${t}`} value="yes" defaultChecked={(r.approved_offer_types ?? []).includes(t)} className="h-5 w-5" /> {OFFER_TYPE_LABELS[t]}
+                  </label>
+                ))}
+              </div>
+              <span className="mt-1 block text-xs text-stone-500">Naila only suggests these kinds of offer.</span>
+            </fieldset>
+            <label className="block">
+              <span className={label}>Birthday offer</span>
+              <input name="birthday_offer" defaultValue={r.birthday_offer ?? ""} placeholder="Free dessert in your birthday week" maxLength={100} className={`mt-1 ${input}`} />
+              <span className="mt-1 block text-xs text-stone-500">Used in the weekly birthday email. Leave empty and Naila will ask you.</span>
             </label>
             <button className={button}>Save details</button>
           </form>

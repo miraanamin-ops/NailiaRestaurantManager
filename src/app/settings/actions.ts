@@ -14,6 +14,7 @@ import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { MODES_AVAILABLE } from "@/lib/agents/modes";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
+import { OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { ALWAYS_APPROVE, NEVER_AUTO, TASKS, TRUST_LEVELS } from "@/lib/trust";
 
@@ -46,6 +47,7 @@ export async function saveDetails(form: FormData) {
   const cap = Number(get("cap"));
   if (!(cap >= 0 && cap <= 100)) back(r.id, `error=${encodeURIComponent("The discount cap needs to be between 0 and 100.")}`);
   const website = get("website");
+  const offerTypes = OFFER_TYPES.filter((t) => form.get(`offer_${t}`) === "yes");
   await saveProfileFields(
     r,
     {
@@ -55,6 +57,8 @@ export async function saveDetails(form: FormData) {
       website: website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : null,
       signup_reward: get("reward").slice(0, 100) || null,
       discount_cap_percent: Math.round(cap),
+      approved_offer_types: offerTypes,
+      birthday_offer: get("birthday_offer").slice(0, 100) || null,
     },
     "Changed in settings",
   );
