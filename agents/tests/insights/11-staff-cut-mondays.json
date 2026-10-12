@@ -1,5 +1,5 @@
 {
-  "name": "staffing question: information, not advice",
+  "name": "staffing question: information, not advice (asking for staff costs is fine)",
   "source": "written for phase 3b from the demo restaurant's dummy year of sales",
   "task": "answer",
   "question": "should I cut a member of staff on mondays?",
@@ -128,7 +128,8 @@
     ],
     "checker": [
       "pass"
-    ]
+    ],
+    "question_ok": true
   },
   "recorded": null
 }

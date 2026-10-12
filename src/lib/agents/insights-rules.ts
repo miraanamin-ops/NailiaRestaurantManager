@@ -82,6 +82,7 @@ export function quotedNumbers(text: string): QuotedNumber[] {
     .replace(/\b\d{1,2}:\d{2}\b/g, " ")
     .replace(/\b(?:19|20)\d{2}\b/g, " ")
     .replace(new RegExp(`\\b(?:[1-9]|1[0-2])\\s+(?:${UNITS})\\b`, "gi"), " ")
+    .replace(/\b(?:[1-9]|1[0-2])-(?:day|week|month|year)\b/gi, " ")
     .replace(new RegExp(`\\b(?:last|past|previous|next|the)\\s+(?:[1-9]|1[0-2])\\b`, "gi"), " ")
     .replace(/\b\d{1,2}(?:st|nd|rd|th)\b/gi, " ");
   const out: QuotedNumber[] = [];
@@ -153,7 +154,9 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
     }
     if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);
     const numbers = numbersIn(result);
-    const exists = (v: number, unit: string) => numbers.some((n) => (unit === n.unit || (unit === "count" && n.unit !== "GBP")) && sameNumber(v, n.value));
+    // A change can be given without its sign ("down 2%" for -2).
+    const exists = (v: number, unit: string) =>
+      numbers.some((n) => (unit === n.unit || (unit === "count" && n.unit !== "GBP")) && (sameNumber(v, n.value) || (unit === "percent" && sameNumber(Math.abs(v), Math.abs(n.value)))));
     if (!exists(f.value, f.unit)) problems.push(`figure ${f.metric} = ${f.value} isn't in ${f.source}: never work a figure out yourself; ask query_metrics for it`);
     if (f.compare_value !== null && !exists(f.compare_value, f.unit)) problems.push(`figure ${f.metric}'s compare_value ${f.compare_value} isn't in ${f.source}`);
     if (f.unit === "percent" && !f.compare_to) problems.push(`figure ${f.metric} is a percentage: say what it's compared against (compare_to)`);
@@ -170,11 +173,12 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
   if (CAUSE.test(allText)) problems.push(`"${allText.match(CAUSE)![0]}" states a cause as fact: say "coincided with", "likely helped" or "may be linked to"`);
   if (ADVICE.test(allText)) problems.push("that's advice on staffing, pay, loans or tax: share the figures and leave the decision to the owner");
 
-  // Small samples are flagged plainly, and confidence is low.
-  const small = used.filter((r) => r.available && r.small_sample);
+  // Small samples behind a quoted figure are flagged plainly; an answer built on one has low confidence.
+  const quoted = new Set(out.figures.map((f) => metricsId(f.source)));
+  const small = used.filter((r) => r.available && r.small_sample && quoted.has(r.id));
   if (small.length) {
-    if (out.confidence !== "low") problems.push("a figure you used has a small sample (see small_sample): confidence must be low");
-    if (!SMALL_WORDS.test(`${out.content.headline} ${out.content.body}`)) problems.push(`say plainly that the sample is small: ${(small[0] as { small_sample: string }).small_sample}`);
+    if (ctx.task === "answer" && out.confidence !== "low") problems.push("a figure you used has a small sample (see small_sample): confidence must be low");
+    if (!SMALL_WORDS.test(allText)) problems.push(`say plainly that the sample is small: ${(small[0] as { small_sample: string }).small_sample}`);
   }
 
   // A till figure that looks wrong: ask before answering with it (the report flags it).

@@ -211,3 +211,17 @@ function replay(c: InsightsCase) {
 describe.each(cases.filter((c) => c.case.recorded))("recorded answer: $file", ({ case: c }) => {
   test("passes its case", () => expect(judgeInsights(c, replay(c))).toEqual([]));
 });
+
+test("a percentage figure may be given without its sign (down 2% for -2)", () => {
+  const data = caseData(byName("01"));
+  const results = new Map<string, MetricResult>([["q1", queryMetrics(data, q({ metric: "net_sales", period: "last_week", compare: "previous_period" }), "q1")]]);
+  const out: InsightsOutput = {
+    type: "answer", channel: "owner", content: { headline: "", body: "Last week took £13,515 net, down 2% on the week before.", actions: [] },
+    figures: [
+      { metric: "net_sales", value: 13514.92, unit: "GBP", period: "last week", compare_to: null, compare_value: null, source: "metrics:q1" },
+      { metric: "change_down", value: 2, unit: "percent", period: "last week", compare_to: "the week before", compare_value: null, source: "metrics:q1" },
+    ],
+    confidence: "high", needs_owner_input: null, sources_used: ["metrics:q1"],
+  };
+  expect(insightsProblems(out, { task: "answer", results })).toEqual([]);
+});
