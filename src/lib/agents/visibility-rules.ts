@@ -2,6 +2,7 @@
 // (on top of the shared draft rules). Used to check each answer (one retry if it
 // fails) and by the agent tests. Zod and pure code only, so it's unit-tested.
 import { z } from "zod";
+import { priceProblems } from "@/lib/prices";
 import { draftProblems, type Problems } from "./schema";
 
 export const VISIBILITY_TYPES = ["google_post", "google_photo", "hours_update", "menu_update", "content_brief", "one_off"] as const;
@@ -107,6 +108,7 @@ export function visibilityProblems(out: VisibilityOutput, input: { task: Visibil
     if (PHONE.test(text)) problems.push("no phone numbers in Google text (Google rejects them): use the Call button");
     if (out.content.hashtags.length || /(^|\s)#[A-Za-z]/.test(text)) problems.push("no hashtags on Google");
     problems.push(...textRules(text, profile, "the post", maxEmoji));
+    problems.push(...priceProblems(text, { menu: profile.menu }, "the post"));
   }
 
   if (task === "profile_changed") {

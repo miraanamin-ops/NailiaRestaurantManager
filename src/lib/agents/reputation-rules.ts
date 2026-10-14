@@ -2,6 +2,7 @@
 // (on top of the shared draft rules). Used to check each answer (one retry if it
 // fails) and by the agent tests. Zod and pure code only, so it's unit-tested.
 import { z } from "zod";
+import { priceProblems } from "@/lib/prices";
 import { draftProblems, type Problems } from "./schema";
 
 // What Reputation returns for one review (reputation.md "Output").
@@ -25,6 +26,7 @@ export type ReplyProfile = {
   words_to_avoid?: string[] | null;
   emoji_allowed?: { review_replies?: number } | null;
   phone?: string | null;
+  menu?: unknown;
 };
 
 const EM_DASH = new RegExp(String.fromCharCode(0x2014));
@@ -64,6 +66,8 @@ export function reputationProblems(out: ReputationReplyOutput, input: { review: 
   if (FOOD_SAFETY.test(text)) problems.push("never say a dish is allergen-free, safe for allergies or suitable for a condition");
   if (REVIEW_INCENTIVE.test(text)) problems.push("never offer anything in exchange for a review or for changing one");
   if (MONEY_BACK.test(text)) problems.push("never offer refunds, money or compensation");
+  // Every £ amount is a menu price or written in one of the owner's recovery offers.
+  problems.push(...priceProblems(text, { menu: profile.menu, ownerTexts: profile.recovery_offers ?? [] }, "the reply"));
   for (const w of profile.words_to_avoid ?? []) if (w && new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text)) problems.push(`"${w}" is in the profile's words to avoid`);
 
   // reputation.md: stars only, no text = one short line (of thanks, or inviting them to get in touch).

@@ -26,7 +26,7 @@ beforeEach(() => {
   db = memoryDb({
     restaurants: [
       {
-        id: A, name: "Ember & Spice Grill", agent_modes: {}, active: true, owner_whatsapp: "whatsapp:+447700900111", whatsapp_from: "whatsapp:+14155238886", trust_levels: {}, menu: [], opening_hours: { Monday: "12:00 – 23:00" }, special_hours: {}, photo_library: [], brand_color: "#c2410c", brand_dark: "#1c1917",
+        id: A, name: "Ember & Spice Grill", agent_modes: {}, active: true, owner_whatsapp: "whatsapp:+447700900111", whatsapp_from: "whatsapp:+14155238886", trust_levels: {}, menu: [{ category: "Grills", items: [{ name: "Lamb Chops (4 pcs)", price: 13.95, description: null }] }], opening_hours: { Monday: "12:00 – 23:00" }, special_hours: {}, photo_library: [], brand_color: "#c2410c", brand_dark: "#1c1917",
         logo_url: null, emoji_allowed: { posts: 2 }, words_to_avoid: [], profile_version: 1, discount_cap_percent: 20,
       },
     ],

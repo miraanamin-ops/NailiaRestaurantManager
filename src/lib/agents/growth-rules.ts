@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { findDish, OFFER_TYPES, offerCap } from "@/lib/offers";
 import { quotedNumbers } from "./insights-rules";
+import { priceProblems } from "@/lib/prices";
 import { draftProblems, type Problems } from "./schema";
 import { textRules, type VisibilityProfile } from "./visibility-rules";
 
@@ -158,6 +159,10 @@ export function growthProblems(d: GrowthDraftOutput, ctx: GrowthContext): Proble
   if (words(d.content.body) > 60) problems.push(`body 60 words at most (this is ${words(d.content.body)})`);
   if (!d.content.cta.trim()) problems.push("a call to action (cta)");
   problems.push(...textRules(text, p, "the email", p.emoji_allowed?.campaigns ?? 0));
+  // Every £ amount is a menu price, the offer's own value, or in the owner's own offers.
+  const offerText = d.offer ? `${d.offer.description} ${d.offer.conditions}` : "";
+  problems.push(...priceProblems(`${text}
+${offerText}`, { menu: p.menu, values: [d.offer?.discount_value_gbp], ownerTexts: [p.birthday_offer, p.signup_offer] }, "the email"));
   if (FAKE_URGENCY.test(text)) problems.push(`no fake urgency ("${text.match(FAKE_URGENCY)![0]}")`);
   if (TARGETING.test(text) || TARGETING.test(d.name)) problems.push(`never word or target by religion or background ("${(text.match(TARGETING) ?? d.name.match(TARGETING))![0]}"): word it for everyone`);
 
