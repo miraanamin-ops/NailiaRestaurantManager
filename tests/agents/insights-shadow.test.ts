@@ -137,6 +137,8 @@ describe("shadow mode", () => {
 
 describe("the switch and its go-live checklist", () => {
   test("live needs 2+ weeks of sales data and test mode; a demo's dummy data only counts in test mode", async () => {
+    // Starts with test mode off, whatever the machine running the tests has (Vercel has it on).
+    vi.stubEnv("TEST_MODE", "false");
     db.tables.restaurants[0].agent_modes = { insights: "live" };
     const { insightsMode, insightsChecklist } = await import("@/lib/agents/insights");
     expect(await insightsMode(restaurant())).toBe("shadow");
