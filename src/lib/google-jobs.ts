@@ -94,6 +94,13 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
     if (urgent) {
       alerts++;
       const quote = `${review.author_name} ${stars(review.rating)}\n_"${review.text ?? "(rating only)"}"_`;
+      // The GM live (test mode): at most one alert an hour, held in quiet hours.
+      const { gmMode } = await import("@/lib/agents/gm");
+      if ((await gmMode(ctx.restaurant)) === "live") {
+        const { gmAlert } = await import("@/lib/agents/gm-brief");
+        await gmAlert(ctx.restaurant, send, ctx.now, { draft, detail: `*${review.rating}-star review just came in.*\n\n${quote}` });
+        continue;
+      }
       const question = draft.kind === "review_question";
       await send(
         `🚨 *${review.rating}-star review just came in.* ${question ? "It needs your decision before anything is drafted." : "I've drafted a careful reply below. Nothing is posted until you approve it."}\n\n${quote}\n\n${draftMessage(draft, ctx.restaurant)}${await queueNote(ctx.restaurantId)}`,
