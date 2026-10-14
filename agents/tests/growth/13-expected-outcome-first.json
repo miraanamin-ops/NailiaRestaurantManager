@@ -175,5 +175,200 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Lunchtime grill deal",
+          "segment": "everyone",
+          "audience_size": 18,
+          "send_at": "2026-10-18T10:00",
+          "template": "offer",
+          "photo_id": null,
+          "content": {
+            "subject": "10% off grills at lunch next week",
+            "headline": "10% off any grill at lunch",
+            "body": "Hey, thank you for being part of the Ember & Spice family. Next week, treat yourself to a proper lunch from the charcoal grill. Lamb chops, chicken tikka, seekh kebab or our Mixed Grill Platter. All our meat is halal. We would love to see you.",
+            "cta": "Come in for lunch"
+          },
+          "offer": {
+            "type": "percent_off",
+            "description": "10% off any grill",
+            "items": [
+              "Mixed Grill Platter",
+              "Lamb Chops (4 pcs)",
+              "Chicken Tikka",
+              "Seekh Kebab (2 pcs)",
+              "Peri Peri Wings (8)"
+            ],
+            "applies_to": null,
+            "discount_percent": 10,
+            "discount_value_gbp": null,
+            "valid_from": "2026-10-19T12:00",
+            "valid_to": "2026-10-22T15:00",
+            "conditions": "Dine-in only. Monday 19 to Thursday 22 October, 12 to 3pm. Applies to any dish in the Grills section of the menu."
+          },
+          "idea": null,
+          "expected_outcome": "First campaign of this kind, no baseline yet.",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:discount_cap",
+            "profile:approved_offer_types",
+            "profile:menu",
+            "profile:halal_statement",
+            "profile:hours",
+            "segment:everyone"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "T1",
+              "result": "pass",
+              "reason": "Warm, short sentences, uses the profile greeting 'Hey', says thank you, not pushy.",
+              "fix": null
+            },
+            {
+              "id": "T2",
+              "result": "pass",
+              "reason": "Names the charcoal grill and specific dishes from this menu.",
+              "fix": null
+            },
+            {
+              "id": "T3",
+              "result": "pass",
+              "reason": "Plain English, matches audience.",
+              "fix": null
+            },
+            {
+              "id": "T4",
+              "result": "pass",
+              "reason": "No previous outputs to repeat.",
+              "fix": null
+            },
+            {
+              "id": "T5",
+              "result": "pass",
+              "reason": "No em-dashes, emojis or banned phrases (words_to_avoid is empty).",
+              "fix": null
+            },
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Dishes, halal statement, hours, discount and offer type all trace to resolved sources. Template extras (Show at the till, one use per person) come from the template source.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "10% is under the 20% cap. Audience of 18 matches segment can_be_emailed 18.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "Send on Sunday 18 October 2026 at 10am is in the future. Offer runs Monday 19 to Thursday 22 October, 12 to 3pm. Those dates match the weekdays, and the times are inside opening hours (Mon-Thu open 12:00 to 23:00). 'Next week' is correct relative to the send date.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "Dish names match the menu. The body uses lamb chops, chicken tikka and seekh kebab as plain descriptions, and Mixed Grill Platter matches exactly.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal claims. Expected outcome states there is no baseline.",
+              "fix": null
+            },
+            {
+              "id": "C1",
+              "result": "pass",
+              "reason": "'All our meat is halal' matches the profile halal statement exactly.",
+              "fix": null
+            },
+            {
+              "id": "C2",
+              "result": "pass",
+              "reason": "Terms are clear: what, when, dine-in only, which menu section. No fake urgency. The offer box repeats the dates and times.",
+              "fix": null
+            },
+            {
+              "id": "C3",
+              "result": "pass",
+              "reason": "Sent to the whole list, wording is not aimed at any group.",
+              "fix": null
+            },
+            {
+              "id": "C4",
+              "result": "pass",
+              "reason": "No review incentive.",
+              "fix": null
+            },
+            {
+              "id": "C5",
+              "result": "pass",
+              "reason": "No personal data included.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "No financial, legal or staffing advice.",
+              "fix": null
+            },
+            {
+              "id": "C7",
+              "result": "pass",
+              "reason": "Email channel. Footer has Unsubscribe and Delete my data links, and no platform rule is broken.",
+              "fix": null
+            },
+            {
+              "id": "C8",
+              "result": "pass",
+              "reason": "Within the discount cap and an approved offer type. Subject is 34 characters (under 50), headline is 6 words (under 8), body is about 40 words (under 60). Dates, times and conditions are clear. Items are all on the current menu. No em-dashes and no emojis.",
+              "fix": null
+            },
+            {
+              "id": "B1",
+              "result": "pass",
+              "reason": "Dark header with restaurant name, orange offer box and button, consistent with the template.",
+              "fix": null
+            },
+            {
+              "id": "B2",
+              "result": "skipped",
+              "reason": "No photo in the draft or photo library. The template's no-photo version is used, as the maker rules allow.",
+              "fix": null
+            },
+            {
+              "id": "B3",
+              "result": "pass",
+              "reason": "Copy fits the slots and reads well on a phone, with no overflow or cut-off.",
+              "fix": null
+            },
+            {
+              "id": "B4",
+              "result": "pass",
+              "reason": "No empty slots, placeholders or broken elements. The footer is cut off at the bottom of the preview image only.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 0
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-14T09:27:25.092Z"
+  }
 }

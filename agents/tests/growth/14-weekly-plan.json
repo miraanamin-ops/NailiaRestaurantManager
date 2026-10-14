@@ -170,5 +170,200 @@
       "pass"
     ]
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Quiet Wednesday Karak Chai",
+          "segment": "everyone",
+          "audience_size": 18,
+          "send_at": "2026-10-13T11:00",
+          "template": "offer",
+          "photo_id": null,
+          "content": {
+            "subject": "Midweek treat at Ember & Spice Grill",
+            "headline": "A warm Karak Chai on us",
+            "body": "Hey [First name], thank you for being part of the Ember & Spice family. Midweek is the perfect time for a proper charcoal grill. Treat yourself to our Mixed Grill Platter and we will warm you up with a Karak Chai. See you soon.",
+            "cta": "Come and see us"
+          },
+          "offer": {
+            "type": "free_item",
+            "description": "Free Karak Chai with every Mixed Grill Platter",
+            "items": [
+              "Karak Chai",
+              "Mixed Grill Platter"
+            ],
+            "applies_to": "Mixed Grill Platter",
+            "discount_percent": null,
+            "discount_value_gbp": 2.5,
+            "valid_from": "2026-10-14",
+            "valid_to": "2026-10-14",
+            "conditions": "Wednesday 14 October only. Dine-in only. One free Karak Chai per Mixed Grill Platter."
+          },
+          "idea": null,
+          "expected_outcome": "Last similar offer (free Mango Lassi with every Mixed Grill Platter): 6 redeemed from 37 emailed.",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:menu",
+            "profile:approved_offer_types",
+            "profile:discount_cap",
+            "profile:tone_notes",
+            "profile:greeting",
+            "segment:everyone",
+            "history:cmp_1",
+            "history:cmp_2",
+            "calendar:2026-10-14"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "T1",
+              "result": "pass",
+              "reason": "Warm, short and upbeat, uses the 'Hey' greeting and first name, says thank you, not pushy. Emojis are optional under the profile.",
+              "fix": null
+            },
+            {
+              "id": "T2",
+              "result": "pass",
+              "reason": "Refers to the charcoal grill, the Mixed Grill Platter and the Ember & Spice family.",
+              "fix": null
+            },
+            {
+              "id": "T3",
+              "result": "pass",
+              "reason": "Plain English, short sentences, no jargon.",
+              "fix": null
+            },
+            {
+              "id": "T4",
+              "result": "pass",
+              "reason": "No previous outputs of this type to compare against.",
+              "fix": null
+            },
+            {
+              "id": "T5",
+              "result": "pass",
+              "reason": "No em-dashes, no emojis, and the profile has no banned words.",
+              "fix": null
+            },
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Mixed Grill Platter and Karak Chai are on the menu. 'Charcoal grill' matches the profile cuisine. The offer type is approved. Campaign history supports the expected outcome.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "Audience of 18 matches the segment. 6 redeemed from 37 emailed matches cmp_2. The £2.50 value matches the Karak Chai price.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "12 October 2026 is a Monday, so Wednesday 14 October is correct. The send on Tuesday 13 October is before the offer. Wednesday hours are 12:00 to 23:00. The preview shows consistent dates.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "'Mixed Grill Platter', 'Karak Chai' and 'Ember & Spice Grill' match the sources exactly.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal claims. The expected outcome only quotes the last offer's results.",
+              "fix": null
+            },
+            {
+              "id": "C1",
+              "result": "pass",
+              "reason": "No halal, allergen or dietary claims made.",
+              "fix": null
+            },
+            {
+              "id": "C2",
+              "result": "pass",
+              "reason": "What, when and conditions are clear: Wednesday 14 October only, dine-in only, one Karak Chai per platter. No false urgency.",
+              "fix": null
+            },
+            {
+              "id": "C3",
+              "result": "pass",
+              "reason": "Sent to the whole opted-in list. No targeting by personal traits.",
+              "fix": null
+            },
+            {
+              "id": "C4",
+              "result": "pass",
+              "reason": "Nothing offered in exchange for a review.",
+              "fix": null
+            },
+            {
+              "id": "C5",
+              "result": "pass",
+              "reason": "Only the first name is used, and no other personal data.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "No financial, legal or staffing advice.",
+              "fix": null
+            },
+            {
+              "id": "C7",
+              "result": "pass",
+              "reason": "Email footer shows the reason for the email and the restaurant address. The template adds unsubscribe and delete-data links, and the gate enforces them.",
+              "fix": null
+            },
+            {
+              "id": "C8",
+              "result": "pass",
+              "reason": "Offer is within the cap and an approved type, and the kitchen can deliver it from the current menu. Subject is 36 characters, headline is 6 words and body is about 44 words. No em-dashes. Last campaign went out Tuesday 6 October, so this is in a different calendar week.",
+              "fix": null
+            },
+            {
+              "id": "B1",
+              "result": "pass",
+              "reason": "Template header, dark band and orange offer box look consistent. No brand kit mismatch visible.",
+              "fix": null
+            },
+            {
+              "id": "B2",
+              "result": "pass",
+              "reason": "No photo, so the no-photo template is used, as the maker's rules allow.",
+              "fix": null
+            },
+            {
+              "id": "B3",
+              "result": "pass",
+              "reason": "Copy fits and reads well on a phone, with no overflow.",
+              "fix": null
+            },
+            {
+              "id": "B4",
+              "result": "pass",
+              "reason": "No broken slots. [First name] is filled in per customer by the template, and the button is present.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-14T09:28:34.614Z"
+  }
 }

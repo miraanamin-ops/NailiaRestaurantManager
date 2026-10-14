@@ -175,5 +175,202 @@
     ],
     "question_ok": true
   },
-  "recorded": null
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Weekend Mixed Grill chai deal",
+          "segment": "everyone",
+          "audience_size": 18,
+          "send_at": "2026-10-16T10:00",
+          "template": "offer",
+          "photo_id": null,
+          "content": {
+            "subject": "A free chai with our Mixed Grill Platter",
+            "headline": "Fire up your weekend with Mixed Grill",
+            "body": "Hey [First name], thank you for being part of the Ember & Spice family. Our Mixed Grill Platter brings lamb chops, chicken tikka, seekh kebab and wings with naan and salad. Lamb chops flame-grilled over charcoal. All our meat is halal. Bring someone hungry this weekend. 🔥",
+            "cta": "Show this at the till"
+          },
+          "offer": {
+            "type": "free_item",
+            "description": "Free Karak Chai with every Mixed Grill Platter",
+            "items": [
+              "Mixed Grill Platter",
+              "Karak Chai"
+            ],
+            "applies_to": "Mixed Grill Platter",
+            "discount_percent": null,
+            "discount_value_gbp": 2.5,
+            "valid_from": "2026-10-17",
+            "valid_to": "2026-10-18",
+            "conditions": "Saturday 17 and Sunday 18 October only. One free Karak Chai per Mixed Grill Platter ordered. Cannot be combined with other offers."
+          },
+          "idea": null,
+          "expected_outcome": "Last similar offer (free Mango Lassi with every Mixed Grill Platter): 6 redemptions from 37 emailed. This one uses a different free item, so results may differ.",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:menu",
+            "profile:discount_cap",
+            "profile:approved_offer_types",
+            "profile:halal_statement",
+            "profile:tone_notes",
+            "profile:emoji_allowed",
+            "segment:everyone",
+            "history:cmp_2",
+            "history:cmp_1",
+            "calendar:2026-10-17",
+            "calendar:2026-10-18"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "T1",
+              "result": "pass",
+              "reason": "Warm, upbeat and family-run, uses 'Hey' and the first name, thanks the customer, not pushy.",
+              "fix": null
+            },
+            {
+              "id": "T2",
+              "result": "pass",
+              "reason": "Names the Mixed Grill Platter contents and charcoal-grilled lamb chops, which are specific to this restaurant.",
+              "fix": null
+            },
+            {
+              "id": "T3",
+              "result": "pass",
+              "reason": "Plain English, short sentences, no jargon.",
+              "fix": null
+            },
+            {
+              "id": "T4",
+              "result": "pass",
+              "reason": "No previous outputs of this type to repeat.",
+              "fix": null
+            },
+            {
+              "id": "T5",
+              "result": "pass",
+              "reason": "No em-dashes. One emoji, within the profile limit of 2 for campaigns. No banned words.",
+              "fix": null
+            },
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Dish contents, charcoal grilling, halal statement, offer type and history all trace to resolved sources. The calendar entries not being found only means no special occasion, and no claim relies on them.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "Audience 18 matches the segment. £2.50 matches the Karak Chai price. 6 redemptions from 37 emailed matches cmp_2.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "Saturday 17 and Sunday 18 October 2026 are correct weekdays. Send on Friday 16 October at 10:00 is in the future and before the offer starts. The offer falls within opening hours.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "Mixed Grill Platter and Karak Chai match the menu exactly.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal claims. The expected outcome is hedged ('results may differ') and based on the previous campaign.",
+              "fix": null
+            },
+            {
+              "id": "C1",
+              "result": "pass",
+              "reason": "'All our meat is halal' matches the profile statement. Ingredient wording matches the menu. No allergen claims.",
+              "fix": null
+            },
+            {
+              "id": "C2",
+              "result": "pass",
+              "reason": "What, when and conditions are clear. Free item is an approved offer type. No fake urgency.",
+              "fix": null
+            },
+            {
+              "id": "C3",
+              "result": "pass",
+              "reason": "Sent to the whole list, wording not aimed at any group.",
+              "fix": null
+            },
+            {
+              "id": "C4",
+              "result": "pass",
+              "reason": "Nothing offered for a review.",
+              "fix": null
+            },
+            {
+              "id": "C5",
+              "result": "pass",
+              "reason": "Only the first name is used. No other personal data.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "No financial, legal or staffing advice.",
+              "fix": null
+            },
+            {
+              "id": "C7",
+              "result": "pass",
+              "reason": "Email footer carries the unsubscribe link. Nothing breaks email rules.",
+              "fix": null
+            },
+            {
+              "id": "C8",
+              "result": "pass",
+              "reason": "Subject is 40 characters, headline 7 words, body about 46 words. Offer is deliverable from the menu. No em-dashes. Emoji allowed. Last campaign was 6 October, so the weekly limit is respected.",
+              "fix": null
+            },
+            {
+              "id": "B1",
+              "result": "pass",
+              "reason": "Preview shows the restaurant name header and the template's offer box and button, consistent with the template.",
+              "fix": null
+            },
+            {
+              "id": "B2",
+              "result": "skipped",
+              "reason": "Template has no photo and the photo library is empty, so the no-photo version is correct.",
+              "fix": null
+            },
+            {
+              "id": "B3",
+              "result": "pass",
+              "reason": "Text fits on a phone with nothing cut off, and the button is visible without crowding.",
+              "fix": null
+            },
+            {
+              "id": "B4",
+              "result": "pass",
+              "reason": "No empty slots. [First name] is filled in per customer by the template. Offer box, button, note, sign-off and footer are all present.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-14T09:29:27.969Z"
+  }
 }
