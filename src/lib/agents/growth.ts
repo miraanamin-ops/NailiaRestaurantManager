@@ -17,6 +17,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { isTestMode } from "@/lib/test-mode";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
+import { gmIsLive, holdAgentQuestion, holdSpecialIdea } from "./gm-held";
 import { growthLoop, type GrowthInput, type GrowthOutcome } from "./growth-core";
 import { growthPreviewPng } from "./growth-preview";
 import { campaignFieldsFrom, growthText, type GrowthDraftOutput } from "./growth-rules";
@@ -191,6 +192,10 @@ export async function mondayGrowth(restaurant: Restaurant, today: string) {
       await queue({ task: "calendar", today, entry: { day: e.day, name: e.name, type: e.type, date_uncertain: e.date_uncertain } }, `growth:calendar:${e.day}:${e.name}`.slice(0, 200));
     }
     if (mode === "shadow") await queueGrowthShadow(restaurant, { task: "special_ideas", today }, `growth:ideas:${today}`);
+    // Live special ideas need the GM live, which brings them to the brief as Draft-only cards.
+    else if (await gmIsLive(restaurant)) {
+      if (await liveGrowthMonday(restaurant, { task: "special_ideas", today }, `growth:ideas:live:${today}`)) queued.push("special_ideas");
+    }
     return queued;
   } catch (err) {
     console.error("Growth's Monday steps failed", err);
@@ -278,15 +283,24 @@ export async function liveGrowthRequest(restaurant: Restaurant, request: string,
   }
 }
 
-// Live Monday work: drafts held for the brief. A question is recorded (the GM, phase 4,
-// will bring questions into the brief); nothing is messaged from here.
+// Live Monday work: drafts held for the brief. With the GM live, a question and a
+// special idea are held for the brief too (otherwise a question is only recorded);
+// nothing is messaged from here.
 async function liveGrowthMonday(restaurant: Restaurant, job: GrowthJob, key: string) {
   const seen = ok(await getSupabase().from("agent_jobs").select("id").eq("restaurant_id", restaurant.id).eq("job_key", key).maybeSingle<{ id: string }>());
   if (seen) return null;
   try {
     const { outcome, ms } = await runGrowthFor(restaurant, job, `${TASK_WORDS[job.task]} (live)`);
     const jobId = await recordLive(restaurant, job, key, outcome, ms);
-    for (const d of outcome.drafts) if (d.kind === "reply") await saveLiveDraft(restaurant, d, job.task === "calendar" ? `${job.entry?.name} is coming up` : "This week's plan", "hold", jobId);
+    const request = job.task === "calendar" ? `${job.entry?.name} is coming up` : "This week's plan";
+    const gm = await gmIsLive(restaurant);
+    for (const d of outcome.drafts) {
+      if (d.kind === "question") {
+        if (gm) await holdAgentQuestion(restaurant, "growth", d.question, { task: job.task, request });
+      } else if (d.output.type === "special_idea") {
+        if (gm) await holdSpecialIdea(restaurant, growthText(d.output));
+      } else await saveLiveDraft(restaurant, d, request, "hold", jobId);
+    }
     return jobId;
   } catch (err) {
     console.error("Growth's live Monday work failed", err);

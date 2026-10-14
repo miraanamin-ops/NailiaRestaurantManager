@@ -184,6 +184,13 @@ export async function answerAgentQuestion(turn: Turn, draft: Draft, answer: stri
       return;
     }
   }
+  if (input.agent === "insights") {
+    const { insightsMode, answerWithInsights } = await import("./insights");
+    if ((await insightsMode(turn.ctx.restaurant)) === "live") {
+      const question = `You asked: ${draft.content}\nThe owner answered: ${answer}\nTake this into account and tell the owner briefly what it changes.`;
+      if (await withOnIt(answerWithInsights(turn.ctx.restaurant, question, turn.ctx.now, turn.send), turn.send, expectedLanguage({ ownerMessage: answer }))) return;
+    }
+  }
   await turn.send("👍 Thanks, noted.");
 }
 
