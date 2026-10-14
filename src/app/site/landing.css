@@ -1,0 +1,146 @@
+/* DinerAI landing page: the data grid, the phone's messages and the checker gate.
+   Every animation stops under prefers-reduced-motion (bottom of this file). */
+
+/* The faint data grid behind sections, fading out at the edges. */
+.dai-grid {
+  background-image:
+    linear-gradient(to right, rgb(237 239 232 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(237 239 232 / 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
+}
+
+/* A slow signal line travelling down the hero grid. */
+.dai-scan {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgb(200 240 60 / 0.5), transparent);
+  animation: dai-scan 9s linear infinite;
+}
+@keyframes dai-scan {
+  from { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  to { transform: translateY(640px); opacity: 0; }
+}
+
+/* A live dot. */
+.dai-pulse {
+  animation: dai-pulse 2s ease-in-out infinite;
+}
+@keyframes dai-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(200 240 60 / 0.55); }
+  50% { box-shadow: 0 0 0 6px rgb(200 240 60 / 0); }
+}
+
+/* Phone: each new message rises in. */
+.dai-in {
+  animation: dai-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes dai-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.dai-typing span {
+  animation: dai-typing 1s ease-in-out infinite;
+}
+.dai-typing span:nth-child(2) { animation-delay: 0.15s; }
+.dai-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dai-typing {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+.dai-press {
+  animation: dai-press 500ms ease-out both;
+}
+@keyframes dai-press {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.94); background-color: rgb(200 240 60 / 0.25); }
+  100% { transform: scale(1); }
+}
+.dai-tick {
+  stroke-dasharray: 24;
+  animation: dai-tick 500ms ease-out both;
+}
+@keyframes dai-tick {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* The checker gate: cards travel left to right through it, one every 3.5 seconds.
+   The wrapper is as wide as the track, so its translate is a share of the track. */
+.dai-lane {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: dai-pass 14s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation-delay: var(--d, 0s);
+}
+.dai-lane[data-held="true"] {
+  animation-name: dai-hold;
+}
+@keyframes dai-pass {
+  0% { transform: translateX(-80%); opacity: 0; }
+  4% { opacity: 1; }
+  10% { transform: translateX(0); }
+  15% { transform: translateX(0); opacity: 1; }
+  23% { transform: translateX(80%); opacity: 1; }
+  25%, 100% { transform: translateX(80%); opacity: 0; }
+}
+@keyframes dai-hold {
+  0% { transform: translateX(-80%); opacity: 0; }
+  4% { opacity: 1; }
+  10% { transform: translateX(-24%); }
+  22% { transform: translateX(-24%); opacity: 1; }
+  25%, 100% { transform: translateX(-24%) translateY(14px); opacity: 0; }
+}
+/* What the card shows changes once it reaches the gate. */
+.dai-before { animation: dai-before 14s linear infinite; animation-delay: var(--d, 0s); }
+.dai-after { animation: dai-after 14s linear infinite; animation-delay: var(--d, 0s); }
+@keyframes dai-before {
+  0%, 12% { opacity: 1; }
+  13%, 100% { opacity: 0; }
+}
+@keyframes dai-after {
+  0%, 12% { opacity: 0; }
+  13%, 100% { opacity: 1; }
+}
+.dai-beam {
+  animation: dai-beam 1.75s ease-in-out infinite;
+}
+@keyframes dai-beam {
+  0%, 100% { transform: translateY(-40%); opacity: 0.2; }
+  50% { transform: translateY(40%); opacity: 0.9; }
+}
+
+/* FAQs: the plus turns into a minus. */
+.dai-faq summary::-webkit-details-marker { display: none; }
+.dai-faq[open] .dai-plus-v { transform: scaleY(0); }
+.dai-plus-v { transition: transform 200ms ease; transform-origin: center; }
+
+/* Fallbacks shown only when motion is reduced. */
+.dai-rm-only { display: none; }
+/* Read by screen readers always; shown on screen only when motion is reduced. */
+.dai-sr-reveal {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dai-sr-reveal { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dai-scan, .dai-lane, .dai-beam { animation: none; display: none; }
+  .dai-pulse, .dai-in, .dai-typing span, .dai-press, .dai-tick, .dai-before, .dai-after { animation: none; }
+  .dai-rm-hide { display: none; }
+  .dai-rm-only { display: block; }
+  html:has(.dai-site) { scroll-behavior: auto; }
+}
+html:has(.dai-site) { scroll-behavior: smooth; }

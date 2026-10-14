@@ -10,6 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* DinerAI site: near-black base, "signal" chartreuse accent, warm "ember" used sparingly. */
+  --color-ink-950: #0b0c0a;
+  --color-ink-900: #121410;
+  --color-ink-850: #171a14;
+  --color-ink-800: #1e221b;
+  --color-ink-700: #2c3127;
+  --color-mist: #edefe8;
+  --color-fog: #a3a99d;
+  --color-signal: #c8f03c;
+  --color-ember: #ff7a3d;
 }
 
 @media (prefers-color-scheme: dark) {
