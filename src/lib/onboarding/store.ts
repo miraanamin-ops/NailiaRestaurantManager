@@ -111,24 +111,20 @@ export async function createRestaurantFromSignup(input: { ownerName: string; ema
   return restaurant;
 }
 
-// The same person signing up again before finishing: carry on with that restaurant.
-// (Also stops one email making lots of restaurants: after 5 unfinished in a day,
-// they all go to the newest one.)
-export async function recentUnfinishedSignup(email: string, restaurantName: string) {
-  const since = new Date(Date.now() - 86_400_000).toISOString();
-  const rows =
+// Every restaurant with this owner email (any case), for the sign-up form to decide
+// whether to log in, carry on or start again (lib/billing/signup-plan.ts).
+export async function restaurantsForEmail(email: string) {
+  const exact = email.trim().replace(/[\\%_]/g, (c) => `\\${c}`);
+  return (
     check(
       await getSupabase()
         .from("restaurants")
         .select("*")
-        .eq("owner_email", email)
-        .eq("active", false)
-        .gte("created_at", since)
+        .ilike("owner_email", exact)
         .order("created_at", { ascending: false })
-        .returns<Restaurant[]>(),
-    ) ?? [];
-  const sameName = rows.find((r) => r.name.trim().toLowerCase() === restaurantName.trim().toLowerCase());
-  return sameName ?? (rows.length >= 5 ? rows[0] : null);
+        .returns<(Restaurant & { created_at: string })[]>(),
+    ) ?? []
+  );
 }
 
 // A fresh link code (e.g. if the old one expired).

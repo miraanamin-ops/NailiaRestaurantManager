@@ -43,9 +43,10 @@ beforeAll(async () => {
 const photos = () => ["page1.jpg", "page2.jpg"].map((f) => ({ bytes: readFileSync(join(MENU_DIR, f)), contentType: "image/jpeg" as const }));
 
 async function signUp(name: string, number: string) {
-  const r = await store.createRestaurantFromSignup({ ownerName: "Test Owner", email: process.env.BUILDER_EMAIL ?? "test@example.com", restaurantName: name, whatsapp: number });
-  made.push(r.id);
-  return r;
+  const created = await store.createRestaurantFromSignup({ ownerName: "Test Owner", email: process.env.BUILDER_EMAIL ?? "test@example.com", restaurantName: name, whatsapp: number });
+  made.push(created.id);
+  // Billing isn't part of these runs: exempt, so finishing onboarding switches it on.
+  return store.updateRestaurantFields(created.id, { billing_exempt: true });
 }
 
 // One WhatsApp message from the owner; returns what Naila replied.

@@ -41,6 +41,7 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   agent_failed: { icon: "⚠️", label: "Agent job failed" },
   profile_changed: { icon: "🗂️", label: "Profile changed" },
   profile_reverted: { icon: "↩️", label: "Profile change reverted" },
+  billing: { icon: "💳", label: "Billing" },
 };
 
 const dayOf = (iso: string) =>

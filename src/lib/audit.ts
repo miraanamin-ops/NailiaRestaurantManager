@@ -10,7 +10,7 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | AgentActor;
+export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | "stripe" | AgentActor;
 // An agent acting on its own (e.g. the checker recording a verdict).
 export type AgentActor = "checker" | "reputation" | "growth" | "visibility" | "insights" | "gm" | "profile keeper";
 export type AuditAction =
@@ -34,7 +34,8 @@ export type AuditAction =
   | "answered" // the owner answered a question about a review (Reply publicly / Handle privately / Both)
   | "agent_failed" // an agent job failed (the builder was alerted)
   | "profile_changed" // a profile field changed (a new profile version)
-  | "profile_reverted"; // Revert on one profile change
+  | "profile_reverted" // Revert on one profile change
+  | "billing"; // a Stripe event (trial, subscription, payment), or billing switching the restaurant on or off
 
 export type AuditEntry = {
   id: string;
