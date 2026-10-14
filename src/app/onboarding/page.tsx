@@ -4,7 +4,9 @@ import Link from "next/link";
 import { qrPackUrl, summaryLines } from "@/lib/onboarding/engine";
 import { STEPS } from "@/lib/onboarding/steps";
 import { testToolsOn } from "@/lib/test-mode";
-import { resetSetup } from "./actions";
+import { billingStanding } from "@/lib/billing/access";
+import { PRICE_GBP, trialDays } from "@/lib/billing/config";
+import { resetSetup, startTrial } from "./actions";
 import { loadOnboarding } from "./load";
 import { button, Card, Frame, secondary } from "./ui";
 
@@ -21,14 +23,16 @@ export default function OnboardingPage({ searchParams }: PageProps<"/onboarding"
 }
 
 async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchParams">) {
-  const { s, restaurantId } = await loadOnboarding(searchParams, "/onboarding");
+  const { s, restaurantId, q } = await loadOnboarding(searchParams, "/onboarding");
   const r = s.restaurant;
+  const trial = billingStanding(r).ok ? null : <TrialCard restaurantId={restaurantId} problem={typeof q.billing === "string" ? q.billing : undefined} />;
 
   if (s.onboarding.completed_at) {
     return (
       <Frame>
         <h1 className="text-2xl font-bold tracking-tight">🎉 {r.name} is set up</h1>
         <p className="mt-1 text-stone-600">We&apos;ve sent this summary to your WhatsApp too.</p>
+        {trial}
         <div className="mt-5">
           <Card>
             <ul className="space-y-2 text-stone-800">
@@ -68,6 +72,7 @@ async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchPa
         {STEPS.length} short steps, under 10 minutes. We find what we can (Google, your menu, your website), so mostly you just check it. You can
         switch between here and WhatsApp at any point.
       </p>
+      {trial}
       <div className="mt-6 space-y-3">
         <Link href={`/onboarding/setup?r=${restaurantId}`} className={button}>
           {started ? `Carry on here (step ${Math.min(s.done + 1, s.total)} of ${s.total})` : "Set up here"}
@@ -78,5 +83,27 @@ async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchPa
       </div>
       <p className="mt-4 text-sm text-stone-500">Either way, Naila runs on your WhatsApp, so you&apos;ll link your number before you finish.</p>
     </Frame>
+  );
+}
+
+// Shown until the restaurant has a trial, a subscription or a pilot code: DinerAI
+// only starts working (scheduled jobs, drafts) once it has one.
+function TrialCard({ restaurantId, problem }: { restaurantId: string; problem?: string }) {
+  return (
+    <div className="mt-5 rounded-2xl bg-stone-900 p-5 text-white">
+      <p className="text-lg font-semibold">Start your free trial</p>
+      <p className="mt-1 text-sm text-stone-300">
+        {trialDays()} days free, then £{PRICE_GBP} a month. No contract. DinerAI starts working for you once your trial has started.
+      </p>
+      {problem && (
+        <p className="mt-2 text-sm text-amber-300">
+          {problem === "off" ? "Card payments aren't switched on yet. Please contact us." : "Couldn't open the card page. Please try again."}
+        </p>
+      )}
+      <form action={startTrial} className="mt-4">
+        <input type="hidden" name="r" value={restaurantId} />
+        <button className="w-full rounded-xl bg-[#c8f03c] px-4 py-3.5 text-base font-semibold text-stone-900">Add card and start trial</button>
+      </form>
+    </div>
   );
 }

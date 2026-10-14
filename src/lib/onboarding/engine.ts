@@ -6,6 +6,7 @@ import { placesAvailable, profileFromPlace, searchPlaces } from "./places";
 import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
 import { canFinish, mark, nextStep, STEP_LABELS, STEPS, stepsDone, type StepId } from "./steps";
 import { getOnboarding, getRestaurant, patchData, saveOnboarding, updateRestaurantFields, type Onboarding } from "./store";
+import { shouldBeActive } from "@/lib/billing/access";
 import { contrast } from "@/lib/email/brand";
 import { enqueueBackfill } from "@/lib/feeds/backfill";
 import { saveLogo } from "@/lib/photos";
@@ -262,7 +263,9 @@ export async function finish(restaurantId: string) {
     return { ok: false as const, needsWhatsapp: !s.whatsappLinked, missing };
   }
   const now = new Date().toISOString();
-  const restaurant = await updateRestaurantFields(restaurantId, { active: true });
+  // Active only with a trial, a subscription, a pilot code or an exemption too (lib/billing/access.ts).
+  const active = shouldBeActive(true, s.restaurant);
+  const restaurant = await updateRestaurantFields(restaurantId, { active });
   const onboarding = await saveOnboarding(restaurantId, { steps: mark(s.onboarding.steps, "finish", "done"), completed_at: now, wa_waiting: null });
   // A new restaurant: its outside data (weather, prayer times, calendar) for the history it will train on.
   try {
@@ -270,7 +273,7 @@ export async function finish(restaurantId: string) {
   } catch (err) {
     console.error("Couldn't queue the outside data backfill", err);
   }
-  return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant) };
+  return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant), needsTrial: !active };
 }
 
 export function menuSummaryText(menu: MenuCategory[], maxChars = 1200) {
@@ -293,6 +296,7 @@ export function finishMessage(r: Restaurant, summary: string[], qrPack: string) 
     "",
     `🖨️ Your QR codes to print (table cards and a counter sign): ${qrPack}`,
     "",
+    ...(r.active ? [] : [`One last step before I start: your free trial. ${appUrl()}/onboarding?r=${r.id}`, ""]),
     "From now on, just message me like you would a person. You can change anything any time, e.g. _change Friday hours to 11pm_ or _add lamb chops, £14_. Send *HELP* for the commands.",
   ].join("\n");
 }

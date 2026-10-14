@@ -50,6 +50,7 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   job_retried: { icon: "🔁", label: "Job retried" },
   builder_command: { icon: "🛠️", label: "Builder command" },
   outside_data: { icon: "🛰️", label: "Outside data" },
+  billing: { icon: "💳", label: "Billing" },
 };
 
 const dayOf = (iso: string) =>

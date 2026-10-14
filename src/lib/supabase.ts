@@ -64,6 +64,19 @@ export type Restaurant = {
   is_demo: boolean;
   // Scheduled jobs only run for active restaurants (step 11).
   active: boolean;
+  // Billing (025_billing.sql, lib/billing/). Optional so older rows and test fixtures still fit.
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status?: string | null;
+  trial_ends_at?: string | null;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean;
+  payment_failed_at?: string | null;
+  billing_event_at?: string | null;
+  billing_exempt?: boolean;
+  pilot_invite_code?: string | null;
+  terms_accepted_at?: string | null;
+  terms_version?: string | null;
   // Found or chosen during onboarding (step 12).
   owner_name: string | null;
   website: string | null;

@@ -34,7 +34,7 @@ function loadScript() {
   });
 }
 
-export function Turnstile({ siteKey }: { siteKey: string }) {
+export function Turnstile({ siteKey, theme = "light" }: { siteKey: string; theme?: "light" | "dark" }) {
   const box = useRef<HTMLDivElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   useEffect(() => {
@@ -45,7 +45,7 @@ export function Turnstile({ siteKey }: { siteKey: string }) {
         if (cancelled || !box.current) return;
         id = t.render(box.current, {
           sitekey: siteKey,
-          theme: "light",
+          theme,
           size: "flexible",
           "error-callback": (code: string) => {
             console.error("Turnstile error", code);
@@ -62,7 +62,7 @@ export function Turnstile({ siteKey }: { siteKey: string }) {
       cancelled = true;
       if (id && window.turnstile) window.turnstile.remove(id);
     };
-  }, [siteKey]);
+  }, [siteKey, theme]);
   return (
     <div>
       <div ref={box} className="min-h-[65px]" />

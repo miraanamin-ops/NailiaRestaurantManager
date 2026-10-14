@@ -10,7 +10,7 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | AgentActor;
+export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | "stripe" | AgentActor;
 // An agent acting on its own (e.g. the checker recording a verdict).
 export type AgentActor = "checker" | "reputation" | "growth" | "visibility" | "insights" | "gm" | "profile keeper";
 export type AuditAction =
@@ -37,7 +37,8 @@ export type AuditAction =
   | "profile_reverted" // Revert on one profile change
   | "job_retried" // the builder retried a dead job from /log
   | "builder_command" // a BUILDER ... WhatsApp command from BUILDER_WHATSAPP
-  | "outside_data"; // the builder changed outside data on /feeds (a confirmed date, term dates, a timetable...)
+  | "outside_data" // the builder changed outside data on /feeds (a confirmed date, term dates, a timetable...)
+  | "billing"; // a Stripe event (trial, subscription, payment), or billing switching the restaurant on or off
 
 export type AuditEntry = {
   id: string;

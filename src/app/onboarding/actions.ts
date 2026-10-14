@@ -5,7 +5,12 @@ import * as engine from "@/lib/onboarding/engine";
 import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
 
 import { STEPS, type StepId } from "@/lib/onboarding/steps";
-import { getOnboarding } from "@/lib/onboarding/store";
+import { getOnboarding, getRestaurant } from "@/lib/onboarding/store";
+import { headers } from "next/headers";
+import { billingStanding } from "@/lib/billing/access";
+import { createTrialCheckout } from "@/lib/billing/checkout";
+import { stripeConfigured } from "@/lib/billing/config";
+import { baseUrlFrom } from "@/lib/supabase";
 import { ownRestaurant } from "./load";
 
 // Every button in the web wizard. Each checks the person owns the restaurant,
@@ -131,6 +136,22 @@ export async function finishSetup(form: FormData) {
     redirect(`/onboarding?r=${r}`);
   }
   back(r);
+}
+
+// ---------- Free trial (if they didn't finish Stripe Checkout when signing up) ----------
+
+export async function startTrial(form: FormData) {
+  const r = await rid(form);
+  const restaurant = await getRestaurant(r);
+  if (billingStanding(restaurant).ok) redirect(`/onboarding?r=${r}`);
+  if (!stripeConfigured()) redirect(`/onboarding?r=${r}&billing=off`);
+  let url: string | null = null;
+  try {
+    url = await createTrialCheckout(restaurant, baseUrlFrom(await headers()));
+  } catch (err) {
+    console.error("Couldn't start Stripe Checkout", err);
+  }
+  redirect(url ?? `/onboarding?r=${r}&billing=error`);
 }
 
 // TEST_TOOLS only, demo restaurants only.
