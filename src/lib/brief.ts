@@ -23,7 +23,7 @@ export const BRIEF_MAX_ITEMS = 10;
 const FREE_MESSAGING_HOURS = 24;
 
 // Every draft still waiting for an Approve / Edit / Skip, oldest first.
-async function waitingDrafts(restaurantId: string) {
+export async function waitingDrafts(restaurantId: string) {
   const res = await getSupabase()
     .from("drafts")
     .select("*")
