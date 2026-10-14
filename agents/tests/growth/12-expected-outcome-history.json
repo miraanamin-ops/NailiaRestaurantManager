@@ -1,0 +1,374 @@
+{
+  "name": "a comparable past campaign: expected_outcome quotes its results",
+  "source": "written for phase 3c from the demo restaurant's profile and campaigns",
+  "task": "owner_request",
+  "request": "Tuesday's quiet again, run the grill deal",
+  "today": "2026-10-12",
+  "today_words": "Monday 12 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "address": "214 Whitechapel Road, London E1 1BJ",
+      "cuisine": "Halal charcoal grill",
+      "links": null,
+      "tone_notes": "Warm, friendly and family-run. We talk to customers like regulars, even on their first visit. Short, upbeat sentences with a little East London charm. Use the customer's first name. One or two emojis at most (ðŸ”¥ ðŸ˜‹ ðŸ™), never a wall of them. Never pushy or salesy. Always say thank you. On bad reviews: apologise sincerely, never argue, and invite them back to make it right.",
+      "greeting": "Hey",
+      "words_to_avoid": [],
+      "emoji_allowed": {
+        "posts": 2,
+        "campaigns": 2,
+        "review_replies": 1
+      },
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {},
+      "halal_statement": "All our meat is halal.",
+      "allergen_statement": "Please ask our staff about allergens before you order.",
+      "signup_offer": "a free Mango Lassi",
+      "approved_offer_types": [
+        "percent_off",
+        "money_off",
+        "free_item",
+        "kids_eat_free"
+      ],
+      "birthday_offer": "Free Kunafa with any main in your birthday week",
+      "photo_library": [],
+      "discount_cap": 20
+    }
+  },
+  "segments": {
+    "everyone": 18,
+    "birthdays_7d": 3,
+    "unredeemed_signups": 5
+  },
+  "history": [
+    {
+      "id": "cmp_1",
+      "name": "Quiet Tuesday grill deal (15% off all grills, sent 2026-09-29, valid 2026-09-29 to 2026-10-02, to everyone)",
+      "emailed": 26,
+      "simulated": 0,
+      "opened": 11,
+      "clicked": 5,
+      "redeemed": 3
+    },
+    {
+      "id": "cmp_2",
+      "name": "Weekend mixed grill for two (Free Mango Lassi with every Mixed Grill Platter, sent 2026-10-06, valid 2026-10-06 to 2026-10-09, to everyone)",
+      "emailed": 37,
+      "simulated": 0,
+      "opened": 17,
+      "clicked": 9,
+      "redeemed": 6
+    }
+  ],
+  "calendar": [],
+  "quiet_times": "Quietest days over the last 8 weeks (average net sales): Monday £1,422, Tuesday £1,466, Wednesday £1,671. Busiest: Saturday £2,957. Quietest hours: 15:00 to 17:00.",
+  "send_window": {
+    "start": "09:00:00",
+    "end": "21:00:00"
+  },
+  "expect": {
+    "outcome": "draft",
+    "types": [
+      "campaign"
+    ],
+    "expected_outcome": "history",
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": {
+    "outcomes": [
+      {
+        "outcome": "reply",
+        "question_by": null,
+        "question": null,
+        "output": {
+          "type": "campaign",
+          "channel": "email",
+          "name": "Quiet Tuesday grill deal",
+          "segment": "everyone",
+          "audience_size": 18,
+          "send_at": "2026-10-13T10:00",
+          "template": "offer",
+          "photo_id": null,
+          "content": {
+            "subject": "Quiet Tuesday grill deal: 15% off",
+            "headline": "15% off all grills, Tuesday",
+            "body": "Hey! Join us this Tuesday 13 October, from 12pm to 11pm, for 15% off all our grills. Think Mixed Grill Platter, Lamb Chops and Chicken Tikka, all halal. Thank you for supporting our family-run grill. Please ask our staff about allergens before you order.",
+            "cta": "Show this at the till"
+          },
+          "offer": {
+            "type": "percent_off",
+            "description": "15% off all grills on Tuesday 13 October",
+            "items": [
+              "Mixed Grill Platter",
+              "Lamb Chops (4 pcs)",
+              "Chicken Tikka",
+              "Seekh Kebab (2 pcs)",
+              "Peri Peri Wings (8)"
+            ],
+            "applies_to": null,
+            "discount_percent": 15,
+            "discount_value_gbp": null,
+            "valid_from": "2026-10-13T12:00",
+            "valid_to": "2026-10-13T23:00",
+            "conditions": "Tuesday 13 October only, 12pm to 11pm. Applies to dishes in the Grills section of the menu. Cannot be combined with other offers."
+          },
+          "idea": null,
+          "expected_outcome": "Last Quiet Tuesday grill deal: emailed 26, opened 11, clicked 5, redeemed 3.",
+          "needs_owner_input": null,
+          "sources_used": [
+            "profile:discount_cap",
+            "profile:approved_offer_types",
+            "profile:menu",
+            "profile:halal_statement",
+            "profile:allergen_statement",
+            "profile:hours",
+            "segment:everyone",
+            "history:cmp_1",
+            "calendar:2026-10-13"
+          ]
+        },
+        "checker": {
+          "verdict": "pass",
+          "checks": [
+            {
+              "id": "T1",
+              "result": "pass",
+              "reason": "Warm, short, upbeat and says thank you, with the profile greeting 'Hey'.",
+              "fix": null
+            },
+            {
+              "id": "T2",
+              "result": "pass",
+              "reason": "Names real grill dishes and the family-run angle.",
+              "fix": null
+            },
+            {
+              "id": "T3",
+              "result": "pass",
+              "reason": "Plain English, matches the audience.",
+              "fix": null
+            },
+            {
+              "id": "T4",
+              "result": "pass",
+              "reason": "No previous outputs to repeat.",
+              "fix": null
+            },
+            {
+              "id": "T5",
+              "result": "pass",
+              "reason": "No em-dashes or emojis. The profile has no banned words.",
+              "fix": null
+            },
+            {
+              "id": "F1",
+              "result": "pass",
+              "reason": "Dishes, halal and allergen wording, hours, audience size and last-campaign figures all trace to resolved sources. 'Family-run' comes from the profile tone notes.",
+              "fix": null
+            },
+            {
+              "id": "F2",
+              "result": "pass",
+              "reason": "15% is under the 20% cap. The audience of 18 matches the segment. Emailed 26, opened 11, clicked 5 and redeemed 3 match cmp_1.",
+              "fix": null
+            },
+            {
+              "id": "F3",
+              "result": "pass",
+              "reason": "Tuesday 13 October 2026 is a Tuesday and in the future. 12pm to 11pm matches Tuesday opening hours. Send at 10am on the day is before the offer starts.",
+              "fix": null
+            },
+            {
+              "id": "F4",
+              "result": "pass",
+              "reason": "Dish names match the menu exactly.",
+              "fix": null
+            },
+            {
+              "id": "F5",
+              "result": "pass",
+              "reason": "No causal claims. The previous results are given as plain history.",
+              "fix": null
+            },
+            {
+              "id": "C1",
+              "result": "pass",
+              "reason": "'All halal' matches 'All our meat is halal'. The allergen line matches the profile word for word.",
+              "fix": null
+            },
+            {
+              "id": "C2",
+              "result": "pass",
+              "reason": "The offer has clear terms: what, when, the Grills section only, and it can't be combined. No fake urgency.",
+              "fix": null
+            },
+            {
+              "id": "C3",
+              "result": "pass",
+              "reason": "Sent to everyone on the list. No targeting by personal traits.",
+              "fix": null
+            },
+            {
+              "id": "C4",
+              "result": "pass",
+              "reason": "Nothing is offered for reviews.",
+              "fix": null
+            },
+            {
+              "id": "C5",
+              "result": "pass",
+              "reason": "No personal data of other customers.",
+              "fix": null
+            },
+            {
+              "id": "C6",
+              "result": "pass",
+              "reason": "No financial, legal or staffing advice.",
+              "fix": null
+            },
+            {
+              "id": "C7",
+              "result": "pass",
+              "reason": "Fine for email. The template supplies the unsubscribe and data links.",
+              "fix": null
+            },
+            {
+              "id": "C8",
+              "result": "pass",
+              "reason": "Subject is 33 characters, headline is 5 words and body is about 44 words. Offer type and discount are approved. Items are on the current menu. Halal and allergen claims come from the profile. There is no urgency claim or em-dash.",
+              "fix": null
+            },
+            {
+              "id": "B1",
+              "result": "pass",
+              "reason": "Ember & Spice Grill header and consistent colours and fonts in the preview.",
+              "fix": null
+            },
+            {
+              "id": "B2",
+              "result": "pass",
+              "reason": "No photo is used, so the template's no-photo version applies, which the maker rules allow.",
+              "fix": null
+            },
+            {
+              "id": "B3",
+              "result": "pass",
+              "reason": "Everything fits on mobile with nothing cut off or crowded.",
+              "fix": null
+            },
+            {
+              "id": "B4",
+              "result": "pass",
+              "reason": "No empty slots or placeholders. The offer box and button are present.",
+              "fix": null
+            }
+          ],
+          "minor_fixes": [],
+          "owner_question": null
+        },
+        "revisions": 1
+      }
+    ],
+    "agent_version": "0.2",
+    "checker_version": "0.3",
+    "recorded_at": "2026-10-12T21:15:34.114Z"
+  }
+}

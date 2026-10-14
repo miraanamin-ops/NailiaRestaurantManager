@@ -101,7 +101,8 @@ export async function reputationLoop(input: ReputationInput, deps: CheckerDeps, 
 // a reply written after "Both" looks like it breaks Reputation's own rule to ask first.
 const OWNER_DECISION = "decision:owner_choice";
 
-async function checkerInput(output: ReputationReplyOutput, input: ReputationInput, deps: CheckerDeps): Promise<CheckerInput> {
+// (Exported for the model comparison: tests/agents-live/checker-haiku.eval.ts.)
+export async function checkerInput(output: ReputationReplyOutput, input: ReputationInput, deps: CheckerDeps): Promise<CheckerInput> {
   const sourcesUsed = input.owner_choice && !output.sources_used.includes(OWNER_DECISION) ? [...output.sources_used, OWNER_DECISION] : output.sources_used;
   const resolved = await deps.resolve(sourcesUsed.filter((s) => s !== OWNER_DECISION));
   const decision = input.owner_choice

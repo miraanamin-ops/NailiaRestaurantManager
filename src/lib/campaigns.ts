@@ -6,6 +6,7 @@ import { sendCampaignEmail } from "@/lib/email";
 import { isDummyAddress } from "@/lib/email/route";
 import { CAMPAIGN_GAP_DAYS, weeklyLimit } from "@/lib/gate-rules";
 import { newToken } from "@/lib/signups";
+import type { StructuredOffer } from "@/lib/offers";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
 // Email campaigns. Everything here is plain code: who is in a segment, who
@@ -39,6 +40,8 @@ export type Campaign = CampaignFields & {
   eligible_count: number | null;
   excluded_count: number | null;
   created_at: string;
+  // The offer as structured fields (Growth's campaigns, 023); the gate checks the cap from these.
+  offer_details?: StructuredOffer | null;
 };
 
 export type CampaignSend = {
@@ -251,6 +254,10 @@ export async function createCampaignDraft(input: {
   now: Date;
   isBirthday?: boolean;
   mode?: "present" | "hold";
+  // Growth's campaigns: the offer as fields (the gate checks the cap from them), who wrote it, and the checker's live pass.
+  offerDetails?: StructuredOffer | null;
+  actor?: Parameters<typeof createDraft>[0]["actor"];
+  agentCheck?: Parameters<typeof createDraft>[0]["agentCheck"];
 }) {
   const { eligible } = await recipientsFor(input.restaurant, input.fields.segment, input.now, { isBirthday: input.isBirthday });
   const draft = await createDraft({
@@ -261,11 +268,13 @@ export async function createCampaignDraft(input: {
     request: input.request,
     checks: input.checks,
     mode: input.mode,
+    actor: input.actor,
+    agentCheck: input.agentCheck,
   });
   const campaign = checkRow(
     await getSupabase()
       .from("campaigns")
-      .insert({ restaurant_id: input.restaurant.id, draft_id: draft.id, is_birthday: input.isBirthday ?? false, ...input.fields })
+      .insert({ restaurant_id: input.restaurant.id, draft_id: draft.id, is_birthday: input.isBirthday ?? false, ...input.fields, ...(input.offerDetails ? { offer_details: input.offerDetails } : {}) })
       .select("*")
       .single<Campaign>(),
   );

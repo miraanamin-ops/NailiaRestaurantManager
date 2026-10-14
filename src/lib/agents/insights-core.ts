@@ -129,47 +129,53 @@ export type InsightsDeps = {
 
 export type InsightsOutcome = LoopOutcome<InsightsOutput> & { queries: MetricResult[]; queryInputs: MetricQueryInput[] };
 
+// What the checker is given for an Insights answer: the figures' query results, the
+// weekly themes and profile fields behind sources_used. (Exported for the model
+// comparison: tests/agents-live/checker-haiku.eval.ts.)
+export async function insightsCheckerInput(out: InsightsOutput, input: InsightsInput, results: Map<string, MetricResult>, deps: InsightsDeps): Promise<CheckerInput> {
+  const refs = out.sources_used;
+  const metrics = refs.filter((r) => r.startsWith("metrics:"));
+  const themes = refs.filter((r) => r.startsWith("themes:"));
+  const rest = refs.filter((r) => !metrics.includes(r) && !themes.includes(r));
+  const sources: Resolved[] = [
+    ...metrics.map((ref): Resolved => {
+      const r = results.get(ref.slice("metrics:".length));
+      return r ? { ref, found: true, data: resultForAgent(r) } : { ref, found: false, reason: "no such query_metrics result in this job" };
+    }),
+    ...themes.map((ref): Resolved => (input.themes && ref === `themes:${input.themes.week}` ? { ref, found: true, data: input.themes } : { ref, found: false, reason: "no such weekly themes" })),
+    ...(rest.length ? await deps.resolve(rest) : []),
+  ];
+  return {
+    draft: {
+      type: out.type,
+      channel: "owner",
+      audience: "the owner",
+      content: { ...out.content, figures: out.figures, confidence: out.confidence },
+      needs_owner_input: null,
+      sources_used: out.sources_used,
+    },
+    text: insightsText(out),
+    sources,
+    profile: deps.checkerProfile,
+    // Owner-only output: the tone checks (and so repetition) don't apply.
+    recent: [],
+    maker: "insights",
+    makerRules: loadAgent("insights").rules,
+    preview: null,
+    today: input.today,
+  };
+}
+
 export async function insightsLoop(input: InsightsInput, deps: InsightsDeps, label: string): Promise<InsightsOutcome> {
   const session = new MetricsSession(input.data);
   const prepared = input.prepared.map((q) => session.run(q));
-  const resolveAll = async (refs: string[]): Promise<Resolved[]> => {
-    const metrics = refs.filter((r) => r.startsWith("metrics:"));
-    const themes = refs.filter((r) => r.startsWith("themes:"));
-    const rest = refs.filter((r) => !metrics.includes(r) && !themes.includes(r));
-    return [
-      ...metrics.map((ref): Resolved => {
-        const r = session.results.get(ref.slice("metrics:".length));
-        return r ? { ref, found: true, data: resultForAgent(r) } : { ref, found: false, reason: "no such query_metrics result in this job" };
-      }),
-      ...themes.map((ref): Resolved => (input.themes && ref === `themes:${input.themes.week}` ? { ref, found: true, data: input.themes } : { ref, found: false, reason: "no such weekly themes" })),
-      ...(rest.length ? await deps.resolve(rest) : []),
-    ];
-  };
 
   const outcome = await makerCheckerLoop<InsightsOutput>({
     maker: "insights",
     label,
     make: (revision, l) => runInsights(input, session, prepared, l, revision),
     question: (out) => out.needs_owner_input,
-    checkerInput: async (out): Promise<CheckerInput> => ({
-      draft: {
-        type: out.type,
-        channel: "owner",
-        audience: "the owner",
-        content: { ...out.content, figures: out.figures, confidence: out.confidence },
-        needs_owner_input: null,
-        sources_used: out.sources_used,
-      },
-      text: insightsText(out),
-      sources: await resolveAll(out.sources_used),
-      profile: deps.checkerProfile,
-      // Owner-only output: the tone checks (and so repetition) don't apply.
-      recent: [],
-      maker: "insights",
-      makerRules: loadAgent("insights").rules,
-      preview: null,
-      today: input.today,
-    }),
+    checkerInput: (out) => insightsCheckerInput(out, input, session.results, deps),
     applyFixes: (out, fixes) => {
       const fix = (t: string) => applyMinorFixes(t, fixes);
       const candidate: InsightsOutput = {

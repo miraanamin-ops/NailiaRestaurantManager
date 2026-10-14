@@ -64,7 +64,7 @@ const NOT_HALAL = /\b(?:beer|wine|lager|cider|cocktails?|gin|rum|vodka|whisk(?:e
 export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 const emojiCount = (text: string) => (text.match(EMOJI) ?? []).length;
 
-function textRules(text: string, profile: VisibilityProfile, where: string, maxEmoji: number): Problems {
+export function textRules(text: string, profile: VisibilityProfile, where: string, maxEmoji: number): Problems {
   const problems: Problems = [];
   if (EM_DASH.test(text)) problems.push(`${where} has an em-dash`);
   if (LINK.test(text.replace(/\S+@\S+\.\w+/g, ""))) problems.push(`no links or web addresses in ${where}`);

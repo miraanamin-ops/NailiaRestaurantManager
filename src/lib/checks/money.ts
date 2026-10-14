@@ -3,6 +3,7 @@
 // right before anything goes out, and records the result.
 import { formatLondon, formatWindow, isInSendWindow, nextWindowStart } from "@/lib/clock";
 import { overCap } from "@/lib/discounts";
+import { offerCap, type OwnerOffers, type StructuredOffer } from "@/lib/offers";
 import { gateApproval, type GateDraft } from "@/lib/trust";
 
 export type RuleDraft = {
@@ -15,6 +16,8 @@ export type RuleDraft = {
   kind?: string;
   version?: number;
   agent_check?: GateDraft["agent_check"];
+  // A campaign's offer as structured fields (Growth's campaigns): the cap is checked from these.
+  offer_details?: StructuredOffer | null;
 };
 export type RuleRestaurant = {
   paused: boolean;
@@ -23,6 +26,11 @@ export type RuleRestaurant = {
   send_window_end: string;
   // Per-task trust levels, set by the builder. Missing = Approve for everything.
   trust_levels?: Record<string, string> | null;
+  // The menu, so a free item or £ off can be measured against the dish it comes with.
+  menu?: unknown;
+  // The owner's own offers (settings): not capped when an offer is exactly one of them.
+  birthday_offer?: string | null;
+  signup_reward?: string | null;
 };
 // approve: the owner tapped Approve. queue: a held draft being retried. test: TEST SEND.
 export type SendSource = "approve" | "queue" | "test";
@@ -66,7 +74,12 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
     return { outcome: "blocked", reason: "not_approved", detail: `Draft hasn't been approved (status: ${draft.status}).` };
   }
 
-  // No discount above the restaurant's cap.
+  // No discount above the restaurant's cap: from the structured offer first (a free
+  // item or £ off as a % of the dish it comes with), then from the wording as a backstop.
+  if (draft.offer_details) {
+    const cap = offerCap(draft.offer_details, restaurant.menu, restaurant.discount_cap_percent, { birthday_offer: restaurant.birthday_offer, signup_reward: restaurant.signup_reward });
+    if (!cap.ok) return { outcome: "blocked", reason: "discount_cap", detail: `${cap.detail[0].toUpperCase()}${cap.detail.slice(1)}.` };
+  }
   const over = overCap(draft.content, restaurant.discount_cap_percent);
   if (over) {
     return {
@@ -95,7 +108,13 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
 }
 
 // At draft time, only the discount cap can be checked (the rest depends on when it's sent).
-export function moneyAtDraft(content: string, capPercent: number) {
+export function moneyAtDraft(content: string, capPercent: number, offer?: { details: StructuredOffer; menu: unknown; owner?: OwnerOffers } | null) {
+  const problems: string[] = [];
+  if (offer) {
+    const cap = offerCap(offer.details, offer.menu, capPercent, offer.owner);
+    if (!cap.ok) problems.push(`${cap.detail}, so it will be blocked if you approve it`);
+  }
   const over = overCap(content, capPercent);
-  return over ? [`${over.percent}% off is above your ${capPercent}% cap, so it will be blocked if you approve it`] : [];
+  if (over) problems.push(`${over.percent}% off is above your ${capPercent}% cap, so it will be blocked if you approve it`);
+  return problems;
 }

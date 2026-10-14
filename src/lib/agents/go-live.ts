@@ -46,6 +46,9 @@ export function goLivePromptText(restaurant: Restaurant, missing: ProfileFieldNa
     const photos = missing.includes("photo_library") ? " Send photos of your dishes here on WhatsApp any time and they go into your library." : "";
     return `📝 To keep your Google listing fresh for you, I need your ${joinLabels(labels)}. Add them here: ${appUrl()}/settings?r=${restaurant.id}.${photos}`;
   }
+  if (agent === "growth") {
+    return `📝 To draft offers and campaigns for you, I need your ${joinLabels(labels)}. Add them here: ${appUrl()}/settings?r=${restaurant.id} ("Details" and "How your emails look").`;
+  }
   return `📝 To reply to your Google reviews for you, I need your ${joinLabels(labels)}. It takes two minutes: ${appUrl()}/settings?r=${restaurant.id} ("How replies and messages sound").`;
 }
 

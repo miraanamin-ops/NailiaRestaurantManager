@@ -14,6 +14,8 @@ import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { MODES_AVAILABLE } from "@/lib/agents/modes";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
+import { entryProblems } from "@/lib/local-calendar-rules";
+import { OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { ALWAYS_APPROVE, NEVER_AUTO, TASKS, TRUST_LEVELS } from "@/lib/trust";
 
@@ -46,6 +48,7 @@ export async function saveDetails(form: FormData) {
   const cap = Number(get("cap"));
   if (!(cap >= 0 && cap <= 100)) back(r.id, `error=${encodeURIComponent("The discount cap needs to be between 0 and 100.")}`);
   const website = get("website");
+  const offerTypes = OFFER_TYPES.filter((t) => form.get(`offer_${t}`) === "yes");
   await saveProfileFields(
     r,
     {
@@ -55,6 +58,8 @@ export async function saveDetails(form: FormData) {
       website: website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : null,
       signup_reward: get("reward").slice(0, 100) || null,
       discount_cap_percent: Math.round(cap),
+      approved_offer_types: offerTypes,
+      birthday_offer: get("birthday_offer").slice(0, 100) || null,
     },
     "Changed in settings",
   );
@@ -226,4 +231,43 @@ export async function saveSettingsAllergens(restaurantId: string, menu: unknown)
   const confirmed = cleanMenu(menu).map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, allergens_confirmed: true })) }));
   await saveProfileFields(r, { menu: confirmed }, "Confirmed allergens in settings");
   back(r.id, "saved=allergens");
+}
+
+// Builder only: add a date to the local calendar (this restaurant, or every restaurant).
+// Logged as the builder, so the owner's UNDO never reverses it.
+export async function addCalendarEntry(form: FormData) {
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const owner = await currentOwner();
+  if (!owner?.isBuilder) throw new Error("Only the builder can change the calendar");
+  const r = await own(get("r"));
+  const entry = { day: get("day"), name: get("name").slice(0, 80), type: get("type") };
+  const problems = entryProblems(entry);
+  if (problems.length) back(r.id, `error=${encodeURIComponent(`The calendar date needs ${problems.join(", ")}.`)}`);
+  const shared = get("scope") === "all";
+  const { error } = await getSupabase()
+    .from("local_calendar")
+    .insert({ restaurant_id: shared ? null : r.id, ...entry, date_uncertain: form.get("uncertain") === "yes", source: "builder" });
+  if (error) back(r.id, `error=${encodeURIComponent(error.code === "23505" ? "That date is already in the calendar." : error.message)}`);
+  await logAction({ restaurantId: r.id, actor: "builder", action: "setting", detail: `Added ${entry.name} (${entry.day}) to the local calendar${shared ? " for every restaurant" : ""}`, data: { field: "local_calendar", after: entry } });
+  back(r.id, "saved=calendar");
+}
+
+// Builder only: remove a date the builder added (gov.uk bank holidays stay).
+export async function removeCalendarEntry(form: FormData) {
+  const get = (k: string) => String(form.get(k) ?? "").trim();
+  const owner = await currentOwner();
+  if (!owner?.isBuilder) throw new Error("Only the builder can change the calendar");
+  const r = await own(get("r"));
+  const removed = check(
+    await getSupabase()
+      .from("local_calendar")
+      .delete()
+      .eq("id", get("id"))
+      .or(`restaurant_id.eq.${r.id},restaurant_id.is.null`)
+      .eq("source", "builder")
+      .select("day, name")
+      .returns<{ day: string; name: string }[]>(),
+  );
+  if (removed?.length) await logAction({ restaurantId: r.id, actor: "builder", action: "setting", detail: `Removed ${removed[0].name} (${removed[0].day}) from the local calendar`, data: { field: "local_calendar", before: removed[0] } });
+  back(r.id, "saved=calendar");
 }

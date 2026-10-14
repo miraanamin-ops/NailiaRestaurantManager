@@ -59,6 +59,8 @@ export const PROFILE_FIELDS = {
   // Commercial
   recovery_offers: f("commercial", "confirm", ["reputation"], ["recovery_offers"], true, "recovery offers"),
   signup_offer: f("commercial", "confirm", ["growth"], ["signup_reward"], true, "sign-up reward"),
+  approved_offer_types: f("commercial", "confirm", ["growth"], ["approved_offer_types"], true, "kinds of offer you're happy to run"),
+  birthday_offer: f("commercial", "confirm", ["growth"], ["birthday_offer"], false, "birthday offer"),
   // Brand kit
   logo: f("brand_kit", "confirm", [], ["logo_url"], true, "logo"),
   colours: f("brand_kit", "confirm", [], ["brand_color", "brand_dark"], true, "colours"),
@@ -125,6 +127,7 @@ export function columnsFor(field: ProfileFieldName, value: unknown): Record<stri
 export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
   reputation: ["sign_off_name", "complaint_contact", "recovery_offers", "halal_statement", "allergen_statement"],
   visibility: ["logo", "colours", "hours", "emoji_allowed", "photo_library"],
+  growth: ["discount_cap", "approved_offer_types", "signup_offer", "logo", "colours"],
 };
 
 // The app's starting values: colours and the emoji setting always have one, so

@@ -9,6 +9,7 @@ import { check } from "@/lib/drafts";
 import { queueResultsMessage } from "@/lib/format";
 import { ownerChannel } from "@/lib/followups";
 import { runPostJob } from "@/lib/google-jobs";
+import { liveGrowthBirthdays, mondayGrowth } from "@/lib/agents/growth";
 import { mondayVisibility } from "@/lib/agents/visibility";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { createReport, reportPeriod } from "@/lib/report/build";
@@ -82,7 +83,8 @@ export async function runMorning(restaurant: Restaurant, now: Date) {
 
     // 2. Monday: this week's birthday email. Monday and Thursday: a Google post.
     if (weekday === 1 && r.last_birthday_campaign_on !== today) {
-      await proposeBirthdayCampaign(ctx, silent, "hold");
+      // Growth live (test mode) writes the birthday batch instead; otherwise today's email (Growth in shadow beside it).
+      if (!(await liveGrowthBirthdays(r, today))) await proposeBirthdayCampaign(ctx, silent, "hold");
       await setFields(r, { last_birthday_campaign_on: today });
       done.push("birthday email");
     }
@@ -106,6 +108,9 @@ export async function runMorning(restaurant: Restaurant, now: Date) {
     if (weekday === 1) {
       const asked = await mondayVisibility(r, today);
       if (asked.length) done.push(`hours questions: ${asked.join(", ")}`);
+      // Growth: this week's plan, calendar dates 2 to 3 weeks ahead, special ideas.
+      const growth = await mondayGrowth(r, today);
+      if (growth.length) done.push(`growth: ${growth.join(", ")}`);
     }
 
     // 4. The brief itself.

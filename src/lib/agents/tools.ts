@@ -1,5 +1,6 @@
 import "server-only";
-import { getCampaignForDraft, campaignStats, recipientsFor, type Campaign } from "@/lib/campaigns";
+import { getCampaignForDraft, campaignStats, recipientsFor, SEGMENTS, type Campaign } from "@/lib/campaigns";
+import { calendarFor } from "@/lib/local-calendar";
 import { check, type Draft } from "@/lib/drafts";
 import { emailPreviewImage } from "@/lib/email/preview-image";
 import { previewContent } from "@/lib/email/previews";
@@ -155,6 +156,44 @@ async function photoLibrary(restaurantId: string) {
   return r?.photo_library ?? [];
 }
 
+// get_segments: how many customers each segment can email right now (with consent,
+// confirmed, not unsubscribed, and not already sent an offer this week; birthdays excepted).
+async function segmentSizes(restaurantId: string, now: Date) {
+  const restaurant = check(await getSupabase().from("restaurants").select("*").eq("id", restaurantId).single<Restaurant>());
+  const out: Record<string, number> = {};
+  for (const s of SEGMENTS) out[s] = (await recipientsFor(restaurant!, s, now, { isBirthday: s === "birthdays_7d" })).eligible.length;
+  return out;
+}
+
+// get_campaign_history: this restaurant's sent campaigns (newest first) and their results.
+async function campaignHistory(restaurantId: string, limit = 10) {
+  const campaigns =
+    check(
+      await getSupabase()
+        .from("campaigns")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .not("sent_at", "is", null)
+        .order("sent_at", { ascending: false })
+        .limit(limit)
+        .returns<Campaign[]>(),
+    ) ?? [];
+  return Promise.all(
+    campaigns.map(async (c) => {
+      const s = await campaignStats(c);
+      return {
+        id: c.id,
+        name: `${c.name} (${c.offer}, sent ${c.sent_at!.slice(0, 10)}, valid ${c.valid_from} to ${c.valid_until}, to ${c.segment})`,
+        emailed: s.emailed,
+        simulated: s.simulated,
+        opened: s.opened,
+        clicked: s.clicked,
+        redeemed: s.redeemed,
+      };
+    }),
+  );
+}
+
 type ToolArgs = {
   get_profile: Record<string, never>;
   get_post_history: Record<string, never>;
@@ -166,6 +205,9 @@ type ToolArgs = {
   get_recent_outputs: { kind: string; excludeDraftId: string | null };
   get_maker_rules: { maker: AgentName };
   get_rendered_preview: { draftId: string };
+  get_segments: { now: Date };
+  get_campaign_history: Record<string, never>;
+  get_local_calendar: { from: string; to: string };
 };
 export type ToolName = keyof ToolArgs;
 type ToolResults = {
@@ -179,6 +221,9 @@ type ToolResults = {
   get_recent_outputs: string[];
   get_maker_rules: string;
   get_rendered_preview: Awaited<ReturnType<typeof renderedPreview>>;
+  get_segments: Record<string, number>;
+  get_campaign_history: Awaited<ReturnType<typeof campaignHistory>>;
+  get_local_calendar: Awaited<ReturnType<typeof calendarFor>>;
 };
 
 export async function callTool<N extends ToolName>(agent: AgentName, name: N, restaurantId: string, args: ToolArgs[N]): Promise<ToolResults[N]> {
@@ -211,6 +256,14 @@ async function runTool(name: ToolName, agent: AgentName, restaurantId: string, a
       return loadAgent((args as ToolArgs["get_maker_rules"]).maker).rules;
     case "get_rendered_preview":
       return renderedPreview(restaurantId, (args as ToolArgs["get_rendered_preview"]).draftId);
+    case "get_segments":
+      return segmentSizes(restaurantId, (args as ToolArgs["get_segments"]).now);
+    case "get_campaign_history":
+      return campaignHistory(restaurantId);
+    case "get_local_calendar": {
+      const a = args as ToolArgs["get_local_calendar"];
+      return calendarFor(restaurantId, a.from, a.to);
+    }
   }
   throw new Error(`Unknown tool ${name}`);
 }
