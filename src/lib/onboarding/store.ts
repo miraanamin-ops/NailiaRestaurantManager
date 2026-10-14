@@ -10,8 +10,10 @@ import { mark, newLinkCode, nextStep, slugFor, type Progress, type StepId, type 
 export type OnboardingData = {
   google?: { candidates?: GoogleCandidate[]; chosen?: string };
   menu?: { draft?: import("./profile-data").MenuCategory[] }; // the photos themselves are files in storage
-  voice?: { samples?: { tone: string; voice: string; sample: string }[]; captions?: string[] };
+  voice?: { samples?: { tone: string; voice: string; sample: string }[]; captions?: string[]; websiteAsked?: boolean };
   allergens?: { suggested?: boolean };
+  // "Reply to reviews": the example reviews and 3 replies each, until the owner picks.
+  replies?: { positive: import("./ai").ReplyChoice; negative: import("./ai").ReplyChoice };
 };
 export type GoogleCandidate = { id: string; name: string; address: string };
 

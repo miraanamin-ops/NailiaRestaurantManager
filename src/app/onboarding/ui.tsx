@@ -5,13 +5,13 @@ import { linkMessage, showNumber, STEP_LABELS, STEPS, whatsAppLink, type StepId 
 
 // Shared pieces of the onboarding pages: mobile first, one thing per screen, big buttons.
 
-export const button = "block w-full rounded-xl bg-stone-900 px-4 py-4 text-center text-base font-semibold text-white disabled:opacity-50";
-export const secondary = "block w-full rounded-xl bg-white px-4 py-4 text-center text-base font-semibold text-stone-900 ring-1 ring-stone-300";
+export const button = "block w-full rounded-full bg-[#c8f03c] px-4 py-4 text-center text-base font-semibold text-[#0b0c0a] transition hover:bg-[#d6f86a] disabled:opacity-50";
+export const secondary = "block w-full rounded-full bg-white px-4 py-4 text-center text-base font-semibold text-stone-900 ring-1 ring-stone-300 transition hover:ring-stone-500";
 export const input = "w-full rounded-xl border border-stone-300 px-4 py-3 text-base";
 
 export function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-stone-100 px-4 py-6 text-stone-900">
+    <div className="bg-stone-100 px-4 py-6 text-stone-900">
       <div className="mx-auto w-full max-w-md">{children}</div>
     </div>
   );
@@ -79,7 +79,7 @@ export async function LinkWhatsApp({ code, expected }: { code: string; expected:
         It sends <b>{linkMessage(code)}</b>
         {expected ? ` from ${showNumber(expected)}` : ""}. On a computer? Scan this with your phone:
       </p>
-      <div className="mx-auto w-44" dangerouslySetInnerHTML={{ __html: qr }} />
+      <div className="dai-qr mx-auto w-48" dangerouslySetInnerHTML={{ __html: qr }} />
     </div>
   );
 }

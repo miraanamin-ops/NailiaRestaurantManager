@@ -9,6 +9,9 @@ import { placesAvailable } from "./places";
 import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
 import { parseOnboardingReply, parseRewardReply, splitMessage, STEP_LABELS, STEPS, type StepId } from "./steps";
 import { getOnboarding, linkWhatsApp, saveOnboarding, type Onboarding } from "./store";
+import type { ReplyChoice } from "./ai";
+import { isSpreadsheetType, MAX_DIRECT_UPLOAD_BYTES } from "@/lib/sales/pos-file";
+import { receivePosFile } from "@/lib/sales/pos-import";
 
 // Onboarding on WhatsApp: the same steps (and the same saved progress) as the
 // web wizard, one message at a time. Most replies are a number, YES or SKIP;
@@ -112,6 +115,7 @@ async function handle(ctx: Ctx, body: string, media: Media[]) {
     return prompt(ctx);
   }
 
+  if (media.length && step === "sales") return salesFiles(ctx, media);
   if (media.length && step !== "menu") {
     await ctx.send("Thanks! I only use photos for the menu, and we're past that step.");
     return prompt(ctx);
@@ -134,6 +138,13 @@ async function handle(ctx: Ctx, body: string, media: Media[]) {
       }
       return prompt(ctx);
     case "voice": {
+      if (what === "website") {
+        if (reply.kind === "no") await engine.setWebsite(ctx.restaurantId, null);
+        else if (reply.kind === "text" && !(await engine.setWebsite(ctx.restaurantId, reply.text))) {
+          return ctx.send("That doesn't look like a website address. Send it like _emberandspice.co.uk_, or reply *NO* if you don't have one.");
+        }
+        return prompt(ctx);
+      }
       const samples = s.onboarding.data.voice?.samples ?? [];
       if (what === "pick" && reply.kind === "pick" && samples[reply.n - 1]) {
         await engine.chooseVoice(ctx.restaurantId, samples[reply.n - 1].voice);
@@ -148,6 +159,27 @@ async function handle(ctx: Ctx, body: string, media: Media[]) {
       }
       return prompt(ctx);
     }
+    case "replies": {
+      const side = what === "positive" || what === "negative" ? what : null;
+      const choices = s.onboarding.data.replies;
+      if (!side || !choices) return prompt(ctx);
+      const pick = reply.kind === "pick" && reply.n <= 3 ? { n: reply.n } : reply.kind === "text" && reply.text.length >= 15 ? { own: reply.text } : null;
+      if (!pick) return ctx.send(`Reply *1*, *2* or *3*, or write how you'd reply in your own words. (Or *SKIP*.)`);
+      await engine.chooseReplies(ctx.restaurantId, { [side]: pick });
+      if (side === "positive") {
+        await ctx.send("✅ Got it.");
+        await wait(ctx.restaurantId, "replies", "negative");
+        return ctx.send(replyOptions(choices.negative, "And an unhappy customer"));
+      }
+      await ctx.send("✅ Saved. Every reply I draft will follow your picks.");
+      return prompt(ctx);
+    }
+    case "sales":
+      if (reply.kind === "done") {
+        if (!(await engine.salesImported(ctx.restaurantId)).length) return ctx.send("I haven't had a sales file yet. Send one here, or reply *SKIP* to do it later.");
+        await engine.finishSalesStep(ctx.restaurantId);
+      }
+      return prompt(ctx);
     case "reward": {
       if (what !== "confirm") return prompt(ctx);
       const defaults = await engine.rewardDefaults(ctx.restaurantId);
@@ -183,7 +215,7 @@ async function prompt(ctx: Ctx, opts: { fromLink?: boolean } = {}) {
   const step = s.step;
   if (!step || s.onboarding.completed_at) return;
   const intro = opts.fromLink && s.done > 0 ? "Let's carry on from where you got to. (Reply *WEB* any time to switch back to the browser.)\n\n" : "";
-  const introFirst = opts.fromLink && s.done === 0 ? `Let's set up *${s.restaurant.name}*: 6 quick steps, mostly just checking what I find. Reply *SKIP* to skip a step, *WEB* to carry on in your browser instead.\n\n` : "";
+  const introFirst = opts.fromLink && s.done === 0 ? `Let's set up *${s.restaurant.name}*: ${STEPS.length} quick steps, mostly just checking what I find. Reply *SKIP* to skip a step, *WEB* to carry on in your browser instead.\n\n` : "";
 
   switch (step) {
     case "google": {
@@ -210,11 +242,26 @@ async function prompt(ctx: Ctx, opts: { fromLink?: boolean } = {}) {
       );
     }
     case "voice": {
-      await ctx.send(`${intro}${header("voice")}\nReading your website and writing three ways your messages could sound… ✍️`);
+      if (engine.needsWebsiteQuestion(s.restaurant, s.onboarding)) {
+        await wait(ctx.restaurantId, "voice", "website");
+        return ctx.send(`${intro}${header("voice")}\nDo you have a website? Send me the address (e.g. _emberandspice.co.uk_) and I'll learn how you talk about your food. Or reply *NO*.`);
+      }
+      await ctx.send(`${intro}${header("voice")}\n${s.restaurant.website ? "Reading your website and writing" : "Writing"} three ways your messages could sound… ✍️`);
       const { samples } = await engine.draftVoiceOptions(ctx.restaurantId);
       await wait(ctx.restaurantId, "voice", "pick");
       return ctx.send(voiceOptions(samples));
     }
+    case "replies": {
+      await ctx.send(`${intro}${header("replies")}\nWriting two example reviews and three ways to answer each… ✍️`);
+      const choices = await engine.replyChoices(ctx.restaurantId);
+      await wait(ctx.restaurantId, "replies", "positive");
+      return ctx.send(replyOptions(choices.positive, "A happy customer"));
+    }
+    case "sales":
+      await wait(ctx.restaurantId, "sales", "file");
+      return ctx.send(
+        `${intro}${header("sales")}\nSend me a sales export from your till here as a file (CSV or Excel), ideally the last 12 months, so your reports can compare like with like from day one. Send as many files as you need, then reply *DONE*. (Or *SKIP* to send them later.)`,
+      );
     case "reward": {
       const d = await engine.rewardDefaults(ctx.restaurantId);
       await wait(ctx.restaurantId, "reward", "confirm");
@@ -339,4 +386,36 @@ function allergenList(menu: MenuCategory[]) {
 function voiceOptions(samples: { tone: string; sample: string }[]) {
   const list = samples.map((v, i) => `*${i + 1}) ${v.tone}*\n"${v.sample}"`).join("\n\n");
   return `Which sounds most like you?\n\n${list}\n\nReply *1*, *2* or *3*. Or paste 2–3 of your Instagram captions and I'll try again in your style.`;
+}
+
+// "Reply to reviews": one example review and its 3 replies.
+function replyOptions(choice: ReplyChoice, title: string) {
+  const list = choice.replies.map((r, i) => `*${i + 1}) ${r.style}*\n${r.reply}`).join("\n\n");
+  return `*${title}* (a made-up example review):\n_"${choice.review}"_ (${choice.reviewer})\n\nWhich reply is closest to how you'd answer?\n\n${list}\n\nReply *1*, *2* or *3*, or write how you'd reply in your own words.`;
+}
+
+// "Last year's sales": till exports sent as files, read with the usual POS import.
+// A new file layout needs its columns checked once, on the web.
+async function salesFiles(ctx: Ctx, media: Media[]) {
+  for (const m of media) {
+    const type = m.contentType.toLowerCase().split(";")[0].trim();
+    if (type.startsWith("image/") || !isSpreadsheetType(type)) {
+      await ctx.send("That isn't a sales file I can read. Send a CSV or Excel (.xlsx) export from your till.");
+      continue;
+    }
+    const outcome = await receivePosFile({
+      restaurantId: ctx.restaurantId,
+      bytes: await downloadTwilioMedia(m.url),
+      contentType: type,
+      channel: "whatsapp",
+      sentBy: null,
+      actor: "owner",
+      maxBytes: MAX_DIRECT_UPLOAD_BYTES,
+    });
+    if (outcome.status === "needs_mapping") {
+      await ctx.send(`📊 That's a new file layout, so please check its columns once here (it takes a few seconds): ${appUrl()}/sales/import/${outcome.importId}?r=${ctx.restaurantId}&back=onboarding\n\nThen send any more files, or reply *DONE*.`);
+    } else {
+      await ctx.send(`${outcome.message}${outcome.status === "imported" ? "\n\nSend any more files, or reply *DONE*." : ""}`);
+    }
+  }
 }

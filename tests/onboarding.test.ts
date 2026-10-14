@@ -24,7 +24,8 @@ describe("the steps", () => {
     expect(nextStep(p)).toBe("menu");
     for (const s of STEPS) p = mark(p, s, "done");
     expect(nextStep(p)).toBeNull();
-    expect(stepsDone(p)).toBe(6);
+    expect(stepsDone(p)).toBe(8);
+    expect(STEPS).toEqual(["google", "menu", "allergens", "voice", "replies", "reward", "sales", "finish"]);
   });
   test("finishing needs WhatsApp linked, and every step done or skipped", () => {
     let p = {};

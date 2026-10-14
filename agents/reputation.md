@@ -3,7 +3,7 @@ name: reputation
 model: sonnet
 tools: [get_profile, get_new_reviews, get_review_history, create_draft]
 triggers: [hourly_review_check, owner_forwarded_review, weekly_themes_monday]
-version: 0.2
+version: 0.3
 ---
 
 # Role
@@ -35,6 +35,9 @@ Google reviews only for now. Tripadvisor and delivery apps come later as draft-a
 - Say what the restaurant will do, only if the profile supports it.
 - Invite them to get in touch directly using the contact details in the profile.
 - Offer a recovery gesture only from the profile's approved list, and only when the review describes a clear service failure.
+
+**The owner's own example**
+- If the profile's `examples.review_replies` has one for this kind of review (`positive` for 4 to 5 stars, `negative` for 1 to 3), the owner picked it during setup as the way they like to answer. Match its tone, length, warmth and structure; write fresh words for this review, never copy it. The rules above still win where they disagree.
 
 **No text, stars only**
 - One short line of thanks. Low star with no text: a neutral line inviting them to get in touch.
@@ -124,3 +127,4 @@ Why: defensive and argues with the customer.
 
 - 0.1 (11 Oct 2026): first draft.
 - 0.2 (11 Oct 2026): `content` is an object.
+- 0.3 (14 Oct 2026): follows the owner's own review reply examples from onboarding (profile `examples.review_replies`).

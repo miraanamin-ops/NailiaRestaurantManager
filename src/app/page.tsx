@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { logOut } from "@/app/login/actions";
+import { AppShell, PageSkeleton } from "@/components/app-shell";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
 import { google } from "@/lib/google";
@@ -14,18 +15,18 @@ import {
 } from "@/lib/supabase";
 
 // Owner page: needs a login (src/proxy.ts and lib/auth.ts). Never shown in search engines.
-export const metadata: Metadata = { title: "Naila – test data", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Dashboard · DinerAI", robots: { index: false, follow: false } };
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
-      <p className="text-sm font-medium uppercase tracking-wide text-orange-600">
-        Naila · test data
-      </p>
-      <Suspense fallback={<p className="mt-6 text-neutral-500">Loading data from Supabase…</p>}>
-        <Dashboard searchParams={searchParams} />
-      </Suspense>
-    </main>
+    <AppShell>
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-orange-600">Dashboard · test data</p>
+        <Suspense fallback={<PageSkeleton />}>
+          <Dashboard searchParams={searchParams} />
+        </Suspense>
+      </main>
+    </AppShell>
   );
 }
 

@@ -269,6 +269,8 @@ export const site = {
     },
     submit: "Continue to card details",
     submitInvite: "Start setting up",
+    pendingCheckout: "Opening secure checkout…",
+    pendingInvite: "Setting you up…",
     after: "Next, Stripe asks for your card. You won't be charged until your {days} day free trial ends, and you can cancel before then.",
     steps: ["Your details", "Card on Stripe, {days} days free", "Login link by email", "Set up in about 20 minutes"],
     stepsLabel: "What happens next",

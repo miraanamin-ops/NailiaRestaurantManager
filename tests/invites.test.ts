@@ -3,6 +3,7 @@
 // live site stays invite-only until PUBLIC_SIGNUP=true.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { planSignup } from "@/lib/billing/signup-plan";
+import { fakeAfter, flushAfter } from "./support/after";
 import { memoryDb } from "./support/memory-db";
 
 const ACTIVE_ID = "33333333-3333-4333-8333-333333333333";
@@ -51,6 +52,7 @@ beforeEach(() => {
   vi.doMock("@/lib/billing/checkout", () => ({ createTrialCheckout }));
   vi.doMock("@/lib/audit", () => ({ logAction }));
   vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => false }));
+  vi.doMock("next/server", async (orig) => ({ ...(await orig<object>()), after: fakeAfter }));
   vi.doMock("next/headers", () => ({ headers: async () => new Headers({ host: "app.test", "x-forwarded-for": "203.0.113.9" }) }));
   vi.doMock("next/navigation", () => ({
     redirect: (to: string) => {
@@ -59,7 +61,7 @@ beforeEach(() => {
   }));
 });
 afterEach(() => {
-  for (const m of ["@/lib/supabase", "@/lib/auth", "@/lib/billing/checkout", "@/lib/audit", "@/lib/rate-limit", "next/headers", "next/navigation"]) vi.doUnmock(m);
+  for (const m of ["@/lib/supabase", "@/lib/auth", "@/lib/billing/checkout", "@/lib/audit", "@/lib/rate-limit", "next/server", "next/headers", "next/navigation"]) vi.doUnmock(m);
   delete process.env.VERCEL_ENV;
   vi.resetModules();
 });
@@ -78,6 +80,7 @@ async function submit(fields: Record<string, string>) {
   try {
     await startSignup(form);
   } catch (e) {
+    await flushAfter();
     if (e instanceof Redirect) return e.to;
     throw e;
   }

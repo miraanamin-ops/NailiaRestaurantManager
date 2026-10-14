@@ -22,6 +22,7 @@ import {
   type Segment,
 } from "@/lib/campaigns";
 import { DRAFT_KINDS, KIND_LABELS, type Draft, type DraftKind, type getLearningContext } from "@/lib/drafts";
+import { exampleFor, examplePrompt } from "@/lib/onboarding/reply-examples";
 
 // Drafts must fit in a WhatsApp button message (1024 chars) with a header.
 const DRAFT_MAX_CHARS = 700;
@@ -649,10 +650,12 @@ export function writeReviewReply(ctx: RestaurantContext, learning: Learning, rev
     review.rating !== null && review.rating <= 3
       ? `\n\nThis is a ${review.rating}-star review, so be careful: thank them, apologise sincerely for the specific problem without making excuses or arguing, don't promise refunds or freebies, and invite them to contact the restaurant directly (phone ${ctx.data.restaurant.phone}) so the owner can put it right. Keep it short, warm and public-facing.`
       : "";
+  // The reply the owner picked for a review like this during onboarding.
+  const example = examplePrompt(exampleFor(ctx.restaurant.profile_examples, review.rating));
   return writeOnly(
     ctx,
     learning,
-    `A ${review.rating ? `${review.rating}-star ` : ""}Google review from ${review.author_name}:\n"""${review.text ?? "(no text, just a rating)"}"""\n\nWrite the restaurant's public reply to this review.${careful}`,
+    `A ${review.rating ? `${review.rating}-star ` : ""}Google review from ${review.author_name}:\n"""${review.text ?? "(no text, just a rating)"}"""\n\nWrite the restaurant's public reply to this review.${careful}${example}`,
   );
 }
 

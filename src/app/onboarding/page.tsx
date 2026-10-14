@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: "Set up Naila", robots: { index: fals
 // Once finished, the same address shows the summary and the QR pack.
 export default function OnboardingPage({ searchParams }: PageProps<"/onboarding">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Choice searchParams={searchParams} />
     </Suspense>
   );
@@ -69,7 +70,7 @@ async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchPa
         Hi{r.owner_name ? ` ${r.owner_name.split(" ")[0]}` : ""}! Let&apos;s set up {r.name}
       </h1>
       <p className="mt-1 text-stone-600">
-        {STEPS.length} short steps, under 10 minutes. We find what we can (Google, your menu, your website), so mostly you just check it. You can
+        {STEPS.length} short steps, about 20 minutes. We find what we can (Google, your menu, your website), so mostly you just check it. You can
         switch between here and WhatsApp at any point.
       </p>
       {trial}

@@ -6,6 +6,8 @@ import { parseCsv, toTable, type Cell, type Table } from "./pos-table";
 // (most tills can export CSV instead).
 
 export const MAX_FILE_BYTES = 4 * 1024 * 1024;
+// Onboarding uploads straight to storage from the browser (no 4 MB request limit), for a year of sales.
+export const MAX_DIRECT_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 export type FileKind = "csv" | "xlsx" | "xls" | "unknown";
 

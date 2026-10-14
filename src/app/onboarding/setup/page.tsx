@@ -1,10 +1,12 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import * as engine from "@/lib/onboarding/engine";
 import { placesAvailable } from "@/lib/onboarding/places";
 import { formatPrice, menuItemCount } from "@/lib/onboarding/profile-data";
-import { finishSetup, pickGoogle, pickVoice, redraftVoices, saveAllergens, saveMenu, saveReward, searchGoogle, skipStep, startMenuAgain } from "../actions";
+import { finishSales, finishSetup, noWebsite, pickGoogle, pickVoice, redraftVoices, saveAllergens, saveMenu, saveReplies, saveReward, saveWebsite, searchGoogle, skipStep, startMenuAgain } from "../actions";
+import { SalesUpload } from "./sales-upload";
 import { linkCodeFor, loadOnboarding } from "../load";
 import { button, Card, Frame, input, LinkWhatsApp, Progress, secondary, SwitchToWhatsApp } from "../ui";
 import { AllergenEditor, MenuEditor, MenuPhotos } from "./editors";
@@ -20,26 +22,29 @@ type S = Awaited<ReturnType<typeof loadOnboarding>>["s"];
 // Everything is saved as it goes, so the owner can leave, come back, or switch to WhatsApp.
 export default function SetupPage({ searchParams }: PageProps<"/onboarding/setup">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Setup searchParams={searchParams} />
     </Suspense>
   );
 }
 
 async function Setup({ searchParams }: Pick<PageProps<"/onboarding/setup">, "searchParams">) {
-  const { s, restaurantId } = await loadOnboarding(searchParams, "/onboarding/setup");
+  const { s, restaurantId, q } = await loadOnboarding(searchParams, "/onboarding/setup");
   if (s.onboarding.completed_at || !s.step) redirect(`/onboarding?r=${restaurantId}`);
 
   return (
     <Frame>
       <Progress step={s.step} done={s.done} total={s.total} />
-      <Step s={s} restaurantId={restaurantId} />
+      <Step s={s} restaurantId={restaurantId} q={q} />
       <SwitchToWhatsApp restaurantId={restaurantId} />
     </Frame>
   );
 }
 
-function Step({ s, restaurantId }: { s: S; restaurantId: string }) {
+type Q = Record<string, string | string[] | undefined>;
+const flag = (q: Q, k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]);
+
+function Step({ s, restaurantId, q }: { s: S; restaurantId: string; q: Q }) {
   switch (s.step!) {
     case "google":
       return (
@@ -56,11 +61,20 @@ function Step({ s, restaurantId }: { s: S; restaurantId: string }) {
         </Slow>
       );
     case "voice":
+      if (engine.needsWebsiteQuestion(s.restaurant, s.onboarding)) return <WebsiteQuestion restaurantId={restaurantId} error={Boolean(flag(q, "website_error"))} />;
       return (
-        <Slow message="Reading your website and writing three ways you could sound… ✍️ (up to a minute)">
+        <Slow message={s.restaurant.website ? "Reading your website and writing three ways you could sound… ✍️ (up to a minute)" : "Writing three ways you could sound… ✍️ (up to a minute)"}>
           <VoiceStep s={s} restaurantId={restaurantId} />
         </Slow>
       );
+    case "replies":
+      return (
+        <Slow message="Writing two example reviews and three replies to each… ✍️ (up to a minute)">
+          <RepliesStep s={s} restaurantId={restaurantId} error={Boolean(flag(q, "replies_error"))} />
+        </Slow>
+      );
+    case "sales":
+      return <SalesStep restaurantId={restaurantId} msg={flag(q, "sales_msg")} error={flag(q, "sales_error")} />;
     case "reward":
       return <RewardStep restaurantId={restaurantId} />;
     case "finish":
@@ -221,7 +235,112 @@ async function VoiceStep({ s, restaurantId }: { s: S; restaurantId: string }) {
   );
 }
 
-// ---------- 5. Reward ----------
+// ---------- 4b. The website (only asked when Google didn't find one) ----------
+
+function WebsiteQuestion({ restaurantId, error }: { restaurantId: string; error: boolean }) {
+  return (
+    <Card>
+      <h1 className="text-xl font-bold">Do you have a website?</h1>
+      <p className="text-stone-600">If you do, we&apos;ll read it to learn how you talk about your food, and pick up your logo and colours for your emails.</p>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">That doesn&apos;t look like a website address. Try something like emberandspice.co.uk.</p>}
+      <form action={saveWebsite} className="space-y-3">
+        <Hidden restaurantId={restaurantId} />
+        <input name="website" required inputMode="url" autoComplete="url" placeholder="e.g. emberandspice.co.uk" className={input} />
+        <button className={button}>Use my website</button>
+      </form>
+      <form action={noWebsite}>
+        <Hidden restaurantId={restaurantId} />
+        <button className={secondary}>We don&apos;t have one</button>
+      </form>
+    </Card>
+  );
+}
+
+// ---------- 5. Replying to reviews ----------
+
+async function RepliesStep({ s, restaurantId, error }: { s: S; restaurantId: string; error: boolean }) {
+  const choices = s.onboarding.data.replies ?? (await engine.replyChoices(restaurantId));
+  const sides = [
+    { key: "positive" as const, title: "A happy customer", stars: 5, choice: choices.positive },
+    { key: "negative" as const, title: "An unhappy customer", stars: 2, choice: choices.negative },
+  ];
+  return (
+    <Card>
+      <h1 className="text-xl font-bold">How do you like to reply to reviews?</h1>
+      <p className="text-stone-600">
+        Two made-up example reviews for {s.restaurant.name}, with three ways to answer each. Pick the one closest to how you&apos;d reply, or write your own. Every
+        reply we draft for you will follow your picks.
+      </p>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">Pick a reply for at least one of the reviews (or write your own).</p>}
+      <form action={saveReplies} className="space-y-6">
+        <Hidden restaurantId={restaurantId} />
+        {sides.map(({ key, title, stars, choice }) => (
+          <fieldset key={key} className="space-y-2">
+            <legend className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-stone-500">{title} · example</legend>
+            <div className="rounded-xl bg-stone-50 p-3">
+              <p className="text-sm">
+                <span className={stars >= 4 ? "text-amber-500" : "text-orange-600"} aria-label={`${stars} stars`}>
+                  {"★".repeat(stars)}
+                  <span className="text-stone-400">{"★".repeat(5 - stars)}</span>
+                </span>{" "}
+                <span className="text-stone-500">{choice.reviewer}</span>
+              </p>
+              <p className="mt-1 italic text-stone-700">&ldquo;{choice.review}&rdquo;</p>
+            </div>
+            {choice.replies.map((r, i) => (
+              <label key={i} className="flex cursor-pointer gap-3 rounded-xl p-3 ring-1 ring-stone-300 has-[:checked]:ring-2 has-[:checked]:ring-emerald-600">
+                <input type="radio" name={key} value={i + 1} defaultChecked={i === 0} className="mt-1 h-4 w-4 shrink-0 accent-[#c8f03c]" />
+                <span>
+                  <span className="block text-sm font-semibold">{r.style}</span>
+                  <span className="mt-1 block text-stone-700">{r.reply}</span>
+                </span>
+              </label>
+            ))}
+            <details className="rounded-xl bg-stone-50 p-3">
+              <summary className="cursor-pointer text-sm font-medium">None of these? Write how you&apos;d reply</summary>
+              <textarea name={`${key}_own`} rows={4} className={`mt-2 ${input}`} placeholder="Your reply (used instead of the pick above)" />
+            </details>
+          </fieldset>
+        ))}
+        <button className={button}>Save my picks</button>
+      </form>
+      <Skip restaurantId={restaurantId} step="replies" />
+    </Card>
+  );
+}
+
+// ---------- 7. Last year's sales ----------
+
+async function SalesStep({ restaurantId, msg, error }: { restaurantId: string; msg?: string; error?: string }) {
+  const imported = await engine.salesImported(restaurantId);
+  return (
+    <Card>
+      <h1 className="text-xl font-bold">Last year&apos;s sales</h1>
+      <p className="text-stone-600">
+        Upload a sales export from your till system (CSV or Excel), ideally the last 12 months. Your Monday report can then compare like with like from day one and
+        spot your quiet nights. You can upload several files, or skip this and send them later.
+      </p>
+      <p className="text-sm text-stone-500">Most tills (Square, SumUp, Lightspeed, Toast, Epos Now) have an Export or Reports page. An item-level export works best.</p>
+      {msg && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">✅ {msg}</p>}
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+      <SalesUpload restaurantId={restaurantId} />
+      {imported.length > 0 && (
+        <>
+          <p className="text-sm text-stone-600">
+            {imported.length} file{imported.length === 1 ? "" : "s"} imported so far.
+          </p>
+          <form action={finishSales}>
+            <Hidden restaurantId={restaurantId} />
+            <button className={button}>That&apos;s everything, carry on</button>
+          </form>
+        </>
+      )}
+      <Skip restaurantId={restaurantId} step="sales" />
+    </Card>
+  );
+}
+
+// ---------- 6. Reward ----------
 
 async function RewardStep({ restaurantId }: { restaurantId: string }) {
   const d = await engine.rewardDefaults(restaurantId);

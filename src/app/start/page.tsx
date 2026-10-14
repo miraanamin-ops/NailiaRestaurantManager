@@ -142,6 +142,7 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
           {siteKey && <Turnstile siteKey={siteKey} theme="dark" />}
           <button
             type="submit"
+            data-pending-text={inviteFirst ? s.pendingInvite : s.pendingCheckout}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-signal px-6 py-4 text-[16px] font-semibold text-ink-950 transition hover:bg-[#d6f86a] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-signal"
           >
             {inviteFirst ? s.submitInvite : s.submit}
