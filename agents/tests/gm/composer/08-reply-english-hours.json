@@ -1,0 +1,26 @@
+{
+  "name": "a profile question in English",
+  "kind": "reply",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "owner_message": "what time do we close on friday?",
+  "profile": {
+    "hours": {
+      "Friday": "14:00 – 00:00",
+      "Saturday": "12:00 – 00:00"
+    }
+  },
+  "expect": {
+    "mention_any": [
+      "midnight",
+      "12am",
+      "00:00",
+      "24:00"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": null
+}

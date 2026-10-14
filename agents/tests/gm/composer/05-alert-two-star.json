@@ -1,0 +1,22 @@
+{
+  "name": "an alert for a 2-star review, arriving with the fix ready",
+  "kind": "alert",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "draft": {
+    "kind": "review_reply",
+    "audience": "Google review by Sara K (2 stars): \"Food arrived cold on our delivery order.\"",
+    "content": "Sara, we're so sorry your food arrived cold. That's not how it should be. We'd love to make it right: a free dessert on your next visit. Bilal and the team",
+    "expected_outcome": null
+  },
+  "expect": {
+    "mention_any": [
+      "Sara"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": null
+}

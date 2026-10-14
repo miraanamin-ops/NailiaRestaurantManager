@@ -1,0 +1,21 @@
+{
+  "name": "a profile question in Urdu: answered in Urdu",
+  "kind": "reply",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "owner_message": "اتوار کو ہم کب کھلتے ہیں؟",
+  "profile": {
+    "hours": {
+      "Sunday": "12:00 – 22:00",
+      "Monday": "Closed"
+    }
+  },
+  "expect": {
+    "language": "Urdu"
+  },
+  "source": "written for phase 4",
+  "recorded": null
+}

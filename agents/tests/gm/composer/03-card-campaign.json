@@ -1,0 +1,22 @@
+{
+  "name": "a campaign card: what, who, when and the expected outcome, under 40 words",
+  "kind": "card",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "draft": {
+    "kind": "email_campaign",
+    "audience": "everyone (18 customers)",
+    "content": "Subject: A Thursday treat at Ember & Spice\nFree Mango Lassi this Thursday. Come in from 6pm and get a free Mango Lassi with any Mixed Grill Platter.\nOffer: Free Mango Lassi with any Mixed Grill Platter. Dine-in only, one per table. Valid Thu 15 Oct, 6 to 9pm.",
+    "expected_outcome": "Last similar offer: 6 redemptions from 37 sent"
+  },
+  "expect": {
+    "mention_any": [
+      "18"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": null
+}

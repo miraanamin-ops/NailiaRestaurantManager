@@ -1,0 +1,24 @@
+{
+  "name": "the brief for an owner whose language is Urdu",
+  "kind": "brief",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "Urdu",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "receipts": [
+    "replied to 3 reviews",
+    "5 new sign-ups"
+  ],
+  "cards": [
+    {
+      "what": "Reply to Imran's 4-star review",
+      "audience": "Google"
+    }
+  ],
+  "expect": {
+    "language": "Urdu"
+  },
+  "source": "written for phase 4",
+  "recorded": null
+}
