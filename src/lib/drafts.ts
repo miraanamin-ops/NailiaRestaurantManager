@@ -5,9 +5,11 @@ import { queueDraftCheck } from "@/lib/agents/enqueue";
 import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question"] as const;
-// Questions for the owner: answered with their own buttons, never approved or sent.
-export const QUESTION_KINDS: ReadonlySet<string> = new Set(["review_question", "hours_question"]);
+export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question", "profile_change", "agent_question", "special_idea", "choice"] as const;
+// Questions for the owner: answered with their own buttons (or words), never approved or sent.
+export const QUESTION_KINDS: ReadonlySet<string> = new Set(["review_question", "hours_question", "agent_question", "choice"]);
+// Cards for the owner only (GM, 024): approved or skipped, but never sent to anyone.
+export const OWNER_ONLY_KINDS: ReadonlySet<string> = new Set(["profile_change", "special_idea"]);
 export const isQuestion = (kind: string | null | undefined) => QUESTION_KINDS.has(kind ?? "");
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
@@ -81,6 +83,10 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   hours_update: "Google hours update",
   menu_update: "Google menu update",
   hours_question: "Question about your hours",
+  profile_change: "Change to your details",
+  agent_question: "Question",
+  special_idea: "Special idea",
+  choice: "Which did you mean?",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {

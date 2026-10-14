@@ -131,6 +131,7 @@ function jobKey(job: VisibilityJob) {
 }
 
 const TRIGGERS: Record<VisibilityTask, string> = {
+  one_off: "owner_request",
   google_post: "weekly_plan_monday",
   photo: "staff_photo_received",
   profile_changed: "profile_changed",
@@ -155,7 +156,7 @@ export function visibilityOutcomeLine(outcome: VisibilityOutcome) {
   return `would ask the owner${outcome.by === "checker" ? ` (the checker escalated${rev})` : ""}: ${outcome.question}`;
 }
 
-const TASK_WORDS: Record<VisibilityTask, string> = { google_post: "the Google post", photo: "a photo", profile_changed: "a profile change", content_brief: "the weekly content brief" };
+const TASK_WORDS: Record<VisibilityTask, string> = { one_off: "one-off writing", google_post: "the Google post", photo: "a photo", profile_changed: "a profile change", content_brief: "the weekly content brief" };
 
 export async function runVisibilityShadow(job: AgentJob): Promise<JobOutcome> {
   const input = job.input as unknown as VisibilityJob;

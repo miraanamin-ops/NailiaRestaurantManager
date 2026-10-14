@@ -59,7 +59,7 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
   }
 
   // A question for the owner (e.g. about a review alleging food poisoning) is never sent to anyone.
-  if (draft.kind === "review_question" || draft.kind === "hours_question") {
+  if (["review_question", "hours_question", "agent_question", "choice", "profile_change", "special_idea"].includes(draft.kind ?? "")) {
     return { outcome: "blocked", reason: "not_approved", detail: "This is a question for you, not a message, so it's never sent." };
   }
 
