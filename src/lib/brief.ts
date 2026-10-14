@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { approveDraft, check, isQuestion, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
+import { approveDraft, check, isQuestion, KIND_LABELS, OWNER_ONLY_KINDS, updateDraft, type Draft } from "@/lib/drafts";
 import { feedbackForBrief, markFeedbackReported } from "@/lib/feedback";
 import { approveAllMessage, draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -9,6 +9,7 @@ import { draftPreviewUrl } from "@/lib/email/previews";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { zNudgeFor } from "@/lib/sales/z-reports";
 import { attemptSend, type SendResult } from "@/lib/send";
+import { queueGmBriefShadow } from "@/lib/agents/gm";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural, shorten } from "@/lib/text";
 
@@ -22,7 +23,7 @@ export const BRIEF_MAX_ITEMS = 10;
 const FREE_MESSAGING_HOURS = 24;
 
 // Every draft still waiting for an Approve / Edit / Skip, oldest first.
-async function waitingDrafts(restaurantId: string) {
+export async function waitingDrafts(restaurantId: string) {
   const res = await getSupabase()
     .from("drafts")
     .select("*")
@@ -158,6 +159,8 @@ export async function sendBrief(
 
   await send(brief.summary);
   await markFeedbackReported(restaurant.id, feedback.ids);
+  // The GM in shadow: its own brief (summary and up to 5 cards) for the same items, next to this one on /log.
+  await queueGmBriefShadow(restaurant, { legacy_text: brief.summary, draft_ids: all.map((d) => d.id), receipts: tally, extra, today: now.toISOString().slice(0, 10) });
   for (const [i, d] of items.entries()) {
     await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1, buttons: d.kind === "review_question" ? "question" : d.kind === "hours_question" ? "hours" : "approval" }, draftPreviewUrl(d));
   }
@@ -264,7 +267,8 @@ export function remainingNote(left: Draft[]) {
 export async function approveAll(restaurant: Restaurant, now: Date) {
   // Questions about a review need the owner's own answer, so APPROVE ALL leaves them.
   const remaining = await remainingInBrief(restaurant);
-  const left = remaining.filter((d) => !isQuestion(d.kind));
+  // Facts to confirm and special ideas need their own tap too.
+  const left = remaining.filter((d) => !isQuestion(d.kind) && !OWNER_ONLY_KINDS.has(d.kind));
   const questions = remaining.length - left.length;
   if (!left.length) {
     if (questions) return `Only ${questions === 1 ? "a question is" : `${questions} questions are`} left, and ${questions === 1 ? "it needs" : "they need"} your answer: tap one of its buttons.`;

@@ -1,0 +1,29 @@
+{
+  "name": "nothing to approve: receipts only",
+  "kind": "brief",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "receipts": [
+    "published 1 Google post",
+    "3 new sign-ups"
+  ],
+  "cards": [],
+  "expect": {
+    "must_not_contain": [
+      "need your",
+      "needs your",
+      "approve"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "Morning Bilal. Since yesterday: 1 Google post published, 3 new sign-ups. Nothing needs a yes today."
+    },
+    "recorded_at": "2026-10-14T11:02:52.591Z"
+  }
+}

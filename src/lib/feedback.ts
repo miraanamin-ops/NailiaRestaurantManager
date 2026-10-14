@@ -155,8 +155,14 @@ export async function submitFeedback(token: string, rating: number, comment: str
         : null,
     ]);
     const channel = restaurant ? ownerChannel(restaurant) : null;
-    if (channel) {
-      await messageOwner(channel, negativeAlert({ rating, comment, name: customer?.name ?? "A customer", email: customer?.email ?? null }));
+    if (channel && restaurant) {
+      const text = negativeAlert({ rating, comment, name: customer?.name ?? "A customer", email: customer?.email ?? null });
+      // The GM live (test mode): at most one alert an hour, held in quiet hours.
+      const { gmMode } = await import("@/lib/agents/gm");
+      if ((await gmMode(restaurant)) === "live") {
+        const { gmAlert } = await import("@/lib/agents/gm-brief");
+        await gmAlert(restaurant, (t, b) => messageOwner(channel, t, b), new Date(), { detail: text });
+      } else await messageOwner(channel, text);
       check(await supabase.from("feedback").update({ alerted_at: new Date().toISOString() }).eq("restaurant_id", req.restaurant_id).eq("id", data!.id));
     }
   }

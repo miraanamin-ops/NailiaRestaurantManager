@@ -16,11 +16,11 @@ import { isTestMode } from "@/lib/test-mode";
 //   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
 
 export type { SendSource };
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit" | "scheduled";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
-  | { outcome: "queued"; reason: "paused" | "outside_window"; scheduledFor: Date | null; detail: string; draft: Draft }
+  | { outcome: "queued"; reason: "paused" | "outside_window" | "scheduled"; scheduledFor: Date | null; detail: string; draft: Draft }
   | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit"; detail: string; draft: Draft };
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
@@ -60,8 +60,8 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   }
 
   // 1. Money and risk (a campaign's structured offer, if it has one, is checked against the cap).
-  const offerDetails = draft.kind === "email_campaign" ? ((await getCampaignForDraft(draft.id))?.offer_details ?? null) : null;
-  const rules = moneyAndRisk({ ...draft, offer_details: offerDetails }, restaurant, now, source);
+  const campaignRow = draft.kind === "email_campaign" ? await getCampaignForDraft(draft.id) : null;
+  const rules = moneyAndRisk({ ...draft, offer_details: campaignRow?.offer_details ?? null, send_at: campaignRow?.send_at ?? null }, restaurant, now, source);
   if (rules.outcome === "blocked") {
     await logBlock(draft, rules.reason, rules.detail);
     // A duplicate attempt leaves the draft as it was; anything else is marked blocked.

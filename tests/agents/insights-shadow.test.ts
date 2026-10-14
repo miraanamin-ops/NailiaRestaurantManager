@@ -219,14 +219,17 @@ describe("on WhatsApp", () => {
   test("a number question gets today's answer, and Insights is queued in the background with it", async () => {
     db.tables.messages = [];
     expect(await ask("how was last week?")).toEqual(["Today's answer"]);
-    expect(db.tables.agent_jobs).toHaveLength(1);
-    expect(db.tables.agent_jobs[0]).toMatchObject({ kind: "insights_shadow", trigger: "owner_question", input: { task: "answer", question: "how was last week?", today: "2026-10-05", legacy_text: "Today's answer" } });
+    const insightsJobs = db.tables.agent_jobs.filter((j) => j.kind === "insights_shadow");
+    expect(insightsJobs).toHaveLength(1);
+    expect(insightsJobs[0]).toMatchObject({ kind: "insights_shadow", trigger: "owner_question", input: { task: "answer", question: "how was last week?", today: "2026-10-05", legacy_text: "Today's answer" } });
   });
 
   test("anything else isn't sent to Insights", async () => {
     db.tables.messages = [];
     expect(await ask("Thursday is quiet")).toEqual(["Today's answer"]);
-    expect(db.tables.agent_jobs).toEqual([]);
+    expect(db.tables.agent_jobs.filter((j) => j.kind === "insights_shadow")).toEqual([]);
+    // The GM (shadow) logs its route for every message.
+    expect(db.tables.agent_jobs.map((j) => j.kind)).toEqual(["gm_shadow"]);
   });
 
   test("live (test mode): Insights answers instead of today's assistant", async () => {

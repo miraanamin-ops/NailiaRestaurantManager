@@ -1,0 +1,30 @@
+{
+  "name": "the brief for an owner whose language is Urdu",
+  "kind": "brief",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "Urdu",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "receipts": [
+    "replied to 3 reviews",
+    "5 new sign-ups"
+  ],
+  "cards": [
+    {
+      "what": "Reply to Imran's 4-star review",
+      "audience": "Google"
+    }
+  ],
+  "expect": {
+    "language": "Urdu"
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "صبح بخیر بلال۔ کل سے اب تک: 3 ریویوز کے جواب دیے گئے، 5 نئے سائن اپ ہوئے۔ آج 1 چیز پر آپ کی منظوری چاہیے۔"
+    },
+    "recorded_at": "2026-10-14T11:03:14.252Z"
+  }
+}

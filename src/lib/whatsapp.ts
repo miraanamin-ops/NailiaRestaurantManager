@@ -18,9 +18,17 @@ const TARGETED_TEMPLATE_NAME = "naila_draft_buttons_targeted_v1";
 // about a review (ids "public:<id>", "private:<id>", "both:<id>").
 // buttons "hours": Same hours / Closed / Different hours, for a question about a
 // bank holiday's hours (ids "same:<id>", "closed:<id>", "different:<id>").
-export type ButtonTarget = { draftId: string; briefNumber?: number; buttons?: "approval" | "question" | "hours" };
+// buttons "choice": 2 or 3 options for an unclear message (ids "choose:<id>:<n>", titles from options).
+// buttons "idea": Like it / Skip, for a special idea (Draft only). buttons "reasons": one-tap skip reasons.
+export type ButtonTarget = { draftId: string; briefNumber?: number; buttons?: "approval" | "question" | "hours" | "choice" | "idea" | "reasons"; options?: string[] };
 const QUESTION_TEMPLATE_NAME = "naila_review_question_v1";
 const HOURS_TEMPLATE_NAME = "naila_hours_question_v1";
+const CHOICE2_TEMPLATE_NAME = "naila_choice_two_v1";
+const CHOICE3_TEMPLATE_NAME = "naila_choice_three_v1";
+const IDEA_TEMPLATE_NAME = "naila_special_idea_v1";
+const REASONS_TEMPLATE_NAME = "naila_skip_reasons_v1";
+// The one-tap skip reasons (lib/agents/gm-rules.ts SKIP_REASONS), in order.
+const SKIP_REASON_TITLES = ["Wrong tone", "Wrong offer", "Not now"];
 
 export function getTwilio() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -31,18 +39,26 @@ export function getTwilio() {
 
 const templateSids = new Map<string, Promise<string>>();
 
-type TemplateKind = "approval" | "approval_targeted" | "question" | "hours";
+type TemplateKind = "approval" | "approval_targeted" | "question" | "hours" | "choice2" | "choice3" | "idea" | "reasons";
 const TEMPLATE_NAMES: Record<TemplateKind, string> = {
   approval: TEMPLATE_NAME,
   approval_targeted: TARGETED_TEMPLATE_NAME,
   question: QUESTION_TEMPLATE_NAME,
   hours: HOURS_TEMPLATE_NAME,
+  choice2: CHOICE2_TEMPLATE_NAME,
+  choice3: CHOICE3_TEMPLATE_NAME,
+  idea: IDEA_TEMPLATE_NAME,
+  reasons: REASONS_TEMPLATE_NAME,
 };
 const FALLBACKS: Record<TemplateKind, string> = {
   approval: "Reply 1 = Approve, 2 = Edit, 3 = Skip",
   approval_targeted: "Reply 1 = Approve, 2 = Edit, 3 = Skip",
   question: "Reply PUBLIC, PRIVATE or BOTH",
   hours: "Reply SAME, CLOSED or DIFFERENT",
+  choice2: "Reply 1 or 2",
+  choice3: "Reply 1, 2 or 3",
+  idea: "Reply LIKE or SKIP",
+  reasons: "Reply with a reason, or ignore this",
 };
 
 async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
@@ -54,7 +70,16 @@ async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
   const targeted = kind !== "approval";
   const id = (action: string) => (targeted ? `${action}:{{2}}` : action);
   const buttons =
-    kind === "hours"
+    kind === "choice2" || kind === "choice3"
+      ? Array.from({ length: kind === "choice2" ? 2 : 3 }, (_, i) => ({ title: `{{${i + 3}}}`, id: `choose:{{2}}:${i + 1}` }))
+      : kind === "idea"
+      ? [
+          { title: "Like it", id: "like:{{2}}" },
+          { title: "Skip", id: "skipidea:{{2}}" },
+        ]
+      : kind === "reasons"
+      ? SKIP_REASON_TITLES.map((title, i) => ({ title, id: `reason:{{2}}:${i + 1}` }))
+      : kind === "hours"
       ? [
           { title: "Same hours", id: id(HOURS_IDS.same) },
           { title: "Closed", id: id(HOURS_IDS.closed) },
@@ -76,7 +101,9 @@ async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
   const created = await client.content.v1.contents.create({
     friendly_name: name,
     language: "en",
-    variables: targeted ? { 1: "Draft text goes here", 2: "00000000-0000-0000-0000-000000000000" } : { 1: "Draft text goes here" },
+    variables: targeted
+      ? { 1: "Draft text goes here", 2: "00000000-0000-0000-0000-000000000000", ...(kind === "choice2" || kind === "choice3" ? { 3: "Option one", 4: "Option two", 5: "Option three" } : {}) }
+      : { 1: "Draft text goes here" },
     types: {
       "twilio/quick-reply": { body: "{{1}}", actions: buttons },
       "twilio/text": { body: `{{1}}
@@ -117,12 +144,23 @@ export async function sendText(from: string, to: string, body: string) {
 export async function sendWithApprovalButtons(from: string, to: string, body: string, target?: ButtonTarget) {
   if (body.length <= BUTTON_BODY_MAX) {
     try {
-      const contentSid = await templateSid(target?.buttons === "question" || target?.buttons === "hours" ? target.buttons : target ? "approval_targeted" : "approval");
+      const kind: TemplateKind =
+        target?.buttons === "choice"
+          ? (target.options ?? []).length >= 3
+            ? "choice3"
+            : "choice2"
+          : target?.buttons === "question" || target?.buttons === "hours" || target?.buttons === "idea" || target?.buttons === "reasons"
+            ? target.buttons
+            : target
+              ? "approval_targeted"
+              : "approval";
+      const contentSid = await templateSid(kind);
+      const options = Object.fromEntries((target?.options ?? []).slice(0, 3).map((o, i) => [i + 3, o]));
       const msg = await getTwilio().messages.create({
         from,
         to,
         contentSid,
-        contentVariables: JSON.stringify(target ? { 1: body, 2: target.draftId } : { 1: body }),
+        contentVariables: JSON.stringify(target ? { 1: body, 2: target.draftId, ...options } : { 1: body }),
       });
       return { sid: msg.sid, body, usedButtons: true };
     } catch (err) {
@@ -130,7 +168,19 @@ export async function sendWithApprovalButtons(from: string, to: string, body: st
     }
   }
   const n = target?.briefNumber;
-  const text = target?.buttons === "hours"
+  const text = target?.buttons === "choice"
+    ? `${clip(body, TEXT_MAX - 120)}
+
+${(target.options ?? []).map((o, i) => `*${i + 1}* ${o}`).join(" · ")}`
+    : target?.buttons === "idea"
+    ? `${clip(body, TEXT_MAX - 40)}
+
+Reply *LIKE* or *SKIP*`
+    : target?.buttons === "reasons"
+    ? `${clip(body, TEXT_MAX - 80)}
+
+(Optional) ${SKIP_REASON_TITLES.join(" · ")}`
+    : target?.buttons === "hours"
     ? `${clip(body, TEXT_MAX - 70)}\n\nReply *SAME*${n ? ` ${n}` : ""} · *CLOSED*${n ? ` ${n}` : ""} · *DIFFERENT*${n ? ` ${n}` : ""}`
     : target?.buttons === "question"
     ? `${clip(body, TEXT_MAX - 70)}

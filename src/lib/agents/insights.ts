@@ -11,6 +11,7 @@ import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome 
 import type { MetricsData } from "./insights-metrics";
 import { insightsText, type InsightsOutput } from "./insights-rules";
 import { enqueueAgentJob, recordAgentRun, type AgentJob, type JobOutcome } from "./jobs";
+import { gmIsLive, holdAgentQuestion } from "./gm-held";
 import { agentMode } from "./modes";
 import { callTool } from "./tools";
 
@@ -269,6 +270,8 @@ export async function reportWordsFromInsights(restaurant: Restaurant, reportMond
       verdict: outcome.kind === "reply" ? outcome.checker.verdict : "question",
       usage: outcome.usage,
     });
+    // With the GM live, a question (e.g. missing till reports) goes in the brief; the owner's answer comes back here.
+    if (outcome.kind === "question" && (await gmIsLive(restaurant))) await holdAgentQuestion(restaurant, "insights", outcome.question, { task: "report", today: reportMonday });
     return outcome.kind === "reply" ? outcome.output : null;
   } catch (err) {
     console.error("Insights couldn't write the report words; keeping today's", err);

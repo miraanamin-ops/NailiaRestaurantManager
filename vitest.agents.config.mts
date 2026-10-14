@@ -3,8 +3,8 @@ import { defineConfig } from "vitest/config";
 
 // Live agent tests: the real agents (real Claude) against the saved cases in
 // agents/tests/. Costs a little each run, so they run on demand
-// (npm run test:agents) and on pull requests that change the agents or the
-// pipeline (.github/workflows/agent-evals.yml). npm test runs the offline ones.
+// (npm run test:agents, or by hand on GitHub: Actions > Agent tests). npm test
+// runs the offline ones.
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url)).replaceAll("\\", "/");
 
 export default defineConfig({

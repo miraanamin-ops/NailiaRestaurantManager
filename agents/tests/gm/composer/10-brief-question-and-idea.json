@@ -1,0 +1,35 @@
+{
+  "name": "a brief with a question from Growth and a special idea (draft only)",
+  "kind": "brief",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "receipts": [
+    "replied to 2 reviews"
+  ],
+  "cards": [
+    {
+      "what": "Question from Growth: Eid al-Fitr may fall on 9 or 10 March. Which day should I plan for?",
+      "audience": "you"
+    },
+    {
+      "what": "Special idea (draft only): Lamb kofta wrap, from the Seekh Kebab and the Chicken Tikka Wrap",
+      "audience": "the kitchen"
+    }
+  ],
+  "expect": {
+    "mention_any": [
+      "2"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "Morning Bilal. Since yesterday: replied to 2 reviews. 2 things need a yes today."
+    },
+    "recorded_at": "2026-10-14T11:03:12.558Z"
+  }
+}

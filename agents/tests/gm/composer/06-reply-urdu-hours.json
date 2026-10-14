@@ -1,0 +1,27 @@
+{
+  "name": "a profile question in Urdu: answered in Urdu",
+  "kind": "reply",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "owner_message": "اتوار کو ہم کب کھلتے ہیں؟",
+  "profile": {
+    "hours": {
+      "Sunday": "12:00 – 22:00",
+      "Monday": "Closed"
+    }
+  },
+  "expect": {
+    "language": "Urdu"
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "reply",
+      "message": "اتوار کو ہم دوپہر 12 بجے کھلتے ہیں اور رات 10 بجے بند ہوتے ہیں۔"
+    },
+    "recorded_at": "2026-10-14T11:03:04.980Z"
+  }
+}

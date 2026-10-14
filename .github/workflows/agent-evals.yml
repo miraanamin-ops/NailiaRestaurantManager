@@ -1,25 +1,13 @@
 # Live agent tests: the real agents (real Claude) against the saved cases in
-# agents/tests/. They cost a little each run, so they only run:
-#   - on pull requests that change the agents or the agent pipeline
-#   - when started by hand (Actions > Agent tests > Run workflow)
-# The offline agent tests run on every push with the other tests (ci.yml).
+# agents/tests/. They cost money each run (roughly $5 to $7 for every agent), so
+# they only run when started by hand: GitHub > Actions > Agent tests > Run workflow.
+# Pull requests and pushes never start them. The offline agent tests run on every
+# push with the other tests (ci.yml).
 # Needs the ANTHROPIC_API_KEY repository secret (with a spend limit on the key).
 name: Agent tests
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "agents/**"
-      - "src/lib/agents/**"
-      - "src/lib/checks/**"
-      - "src/lib/profile/**"
-      - "src/lib/send.ts"
-      - "src/lib/trust.ts"
-      - "src/lib/gate-rules.ts"
-      - "src/lib/claude.ts"
-      - "tests/agents/**"
-      - "tests/agents-live/**"
 
 jobs:
   live:

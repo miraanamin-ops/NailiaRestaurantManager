@@ -1,0 +1,28 @@
+{
+  "name": "a review reply card",
+  "kind": "card",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "draft": {
+    "kind": "review_reply",
+    "audience": "Google review by Aisha (5 stars)",
+    "content": "Thank you so much, Aisha! So glad the lamb chops hit the spot. See you again soon. Bilal and the team",
+    "expected_outcome": null
+  },
+  "expect": {
+    "mention_any": [
+      "Aisha"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "card",
+      "message": "Reply to Aisha's 5-star Google review, posted publicly under the review. It thanks her for the lamb chops and invites her back. No expected outcome given."
+    },
+    "recorded_at": "2026-10-14T11:02:55.661Z"
+  }
+}

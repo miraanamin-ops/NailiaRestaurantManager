@@ -1,4 +1,5 @@
 import { after, type NextRequest } from "next/server";
+import { processQueue } from "@/lib/send";
 import { loadRestaurantContext } from "@/lib/assistant";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { londonParts, londonYmd } from "@/lib/clock";
@@ -14,6 +15,8 @@ import { runWeather } from "@/lib/sales/weather";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { runQueuedAgentJobs } from "@/lib/agents/handlers";
+import { gmMode } from "@/lib/agents/gm";
+import { releaseAlerts } from "@/lib/agents/gm-brief";
 
 // The morning job writes drafts and the weekly report with Claude, which takes a while.
 export const maxDuration = 300;
@@ -85,6 +88,13 @@ async function runJob(job: Job) {
         console.error("Review check failed", err);
         entry.reviews = { error: err instanceof Error ? err.message : String(err) };
       }
+      // The GM live (test mode): an alert held for quiet hours or the one-an-hour limit, if one is due.
+      try {
+        if (channel && (await gmMode(r)) === "live") entry.alert = await releaseAlerts(r, (text, withButtons) => messageOwner(channel, text, withButtons), now);
+      } catch (err) {
+        console.error("Releasing held alerts failed", err);
+        entry.alert = { error: err instanceof Error ? err.message : String(err) };
+      }
       // "How was your visit?" emails that are due (about 3 hours after a redemption).
       try {
         const feedback = await runFeedbackJob(r, now);
@@ -93,6 +103,14 @@ async function runJob(job: Job) {
       } catch (err) {
         console.error("Feedback emails failed", err);
         entry.feedback = { error: err instanceof Error ? err.message : String(err) };
+      }
+      // Approved campaigns whose send time has come (and anything else held that's now due).
+      // Quiet: the results are in the activity log and the next brief.
+      try {
+        entry.released = (await processQueue(r, now)).map((x) => x.outcome);
+      } catch (err) {
+        console.error("Releasing held sends failed", err);
+        entry.released = { error: err instanceof Error ? err.message : String(err) };
       }
       // Today's weather (once a day; the first time, the last 12 months too).
       try {

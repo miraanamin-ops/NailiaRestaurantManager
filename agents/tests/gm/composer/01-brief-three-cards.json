@@ -1,0 +1,41 @@
+{
+  "name": "the morning brief: receipts, then how many need a yes",
+  "kind": "brief",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "receipts": [
+    "replied to 4 reviews",
+    "published 2 Google posts",
+    "11 new sign-ups"
+  ],
+  "cards": [
+    {
+      "what": "Reply to Aisha's 5-star review",
+      "audience": "Google"
+    },
+    {
+      "what": "Email: Quiet Thursday mango treat",
+      "audience": "18 customers"
+    },
+    {
+      "what": "Google post: Lamb Chops",
+      "audience": "Google listing"
+    }
+  ],
+  "expect": {
+    "mention_any": [
+      "3"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "Morning Bilal. Since yesterday: 4 reviews answered, 2 Google posts live, 11 new sign-ups. 3 things need a yes today."
+    },
+    "recorded_at": "2026-10-14T11:02:50.723Z"
+  }
+}

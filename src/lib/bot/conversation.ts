@@ -1,9 +1,11 @@
 import "server-only";
 import { growthMode, liveGrowthRequest, queueGrowthShadow } from "@/lib/agents/growth";
+import { gmMode, legacyRoute, queueGmShadow } from "@/lib/agents/gm";
+import { answerAgentQuestion, answerChoice, correctFact, decideIdea, gmLive, saveReasonTap } from "@/lib/agents/gm-live";
 import { answerWithInsights, insightsMode, queueInsightsShadow } from "@/lib/agents/insights";
 import { chat, rewriteDraft, type ChatResult, type StoredMessage } from "@/lib/assistant";
 import { londonYmd } from "@/lib/clock";
-import { getActiveDraft, getLearningContext, saveSkipReason } from "@/lib/drafts";
+import { check, getActiveDraft, getLearningContext, saveSkipReason, type Draft } from "@/lib/drafts";
 import { presentNext } from "@/lib/google-jobs";
 import { getRestaurant } from "@/lib/onboarding/store";
 import { applyProfileChanges } from "@/lib/profile-edits";
@@ -11,7 +13,7 @@ import { getSupabase } from "@/lib/supabase";
 import { decideOnScreen, decideTargeted } from "./decisions";
 import { campaignCreateAndSend, checkCreateAndSend, pastedReviewReply, reviseAndSend, reviseCampaignAndSend } from "./flows";
 import { answerHoursQuestion, hoursForQuestion } from "./hours-questions";
-import { looksLikeNumbersQuestion, parseAction, parseHoursAnswer, parseQuestionAnswer, parseTargetedAction } from "./parse";
+import { looksLikeNumbersQuestion, parseAction, parseGmTap, parseHoursAnswer, parseQuestionAnswer, parseTargetedAction } from "./parse";
 import { answerQuestion } from "./questions";
 import type { Turn } from "./turn";
 
@@ -33,6 +35,28 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   if (hoursAnswer) return answerHoursQuestion(turn, hoursAnswer, hoursOnScreen ? active : null);
   if (active?.kind === "hours_question" && active.waiting_for === "edit_instructions") return hoursForQuestion(turn, active, body);
 
+  // The GM's own cards: "which did you mean?", a special idea, a one-tap skip reason.
+  let message = body;
+  const tap = parseGmTap(buttonPayload, body, active?.waiting_for === "decision" ? active.kind : null);
+  if (tap) {
+    const draft = tap.draftId
+      ? check(await getSupabase().from("drafts").select("*").eq("restaurant_id", ctx.restaurantId).eq("id", tap.draftId).maybeSingle<Draft>())
+      : active;
+    if (!draft) return send("That isn't waiting for an answer any more.");
+    if (tap.kind === "reason") {
+      const reason = await saveReasonTap(draft, tap.n);
+      return send(reason ? "Thanks, noted. 🙏" : "Thanks.");
+    }
+    if (tap.kind === "idea") return decideIdea(turn, draft, tap.like);
+    const chosen = await answerChoice(turn, draft, tap.n);
+    if (chosen.handled) return;
+    // Not handled live: today's assistant answers the original message.
+    message = chosen.message;
+  }
+  const gmOn = (await gmMode(ctx.restaurant)) === "live";
+  // A question from scheduled work (Growth, Insights), answered in words while it's on screen.
+  if (gmOn && !buttonPayload && active?.kind === "agent_question" && active.waiting_for === "decision") return answerAgentQuestion(turn, active, body);
+
   const targeted = parseTargetedAction(buttonPayload, body);
   if (targeted) return decideTargeted(turn, targeted);
 
@@ -41,6 +65,7 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
 
   // The owner is telling us what to change.
   if (active?.waiting_for === "edit_instructions") {
+    if (active.kind === "profile_change") return correctFact(turn, active, body);
     if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, body, send);
     const rewritten = await rewriteDraft(ctx, learning, active, body);
     return reviseAndSend(ctx, active, body, rewritten, send);
@@ -57,8 +82,19 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   // A question about the numbers: Insights answers it when it's live (today's
   // assistant answers if Insights can't). In shadow mode it answers in the
   // background, next to today's answer, for the /log comparison.
-  const numbers = !buttonPayload && looksLikeNumbersQuestion(body) ? await insightsMode(ctx.restaurant) : "off";
-  if (numbers === "live" && (await answerWithInsights(ctx.restaurant, body, ctx.now, send))) return;
+  // The GM live: it routes the message and answers it if a live part of the system
+  // can; otherwise (chat, look-ups, a specialist in shadow) today's assistant does.
+  if (gmOn && !buttonPayload && message === body && (await gmLive(turn, body, active))) return;
+
+  const started = Date.now();
+  const onScreen = active?.waiting_for === "decision" ? `${active.kind.replace(/_/g, " ")} for ${active.audience ?? "the owner"}` : null;
+  // (With the GM live, its router spots number questions instead of this word list.)
+  const numbers = !gmOn && !buttonPayload && looksLikeNumbersQuestion(body) ? await insightsMode(ctx.restaurant) : "off";
+  if (numbers === "live" && (await answerWithInsights(ctx.restaurant, body, ctx.now, send))) {
+    // The GM in shadow: its route for the same message, next to today's.
+    await queueGmShadow(ctx.restaurant, { message: body, owner, legacy_route: "insights", legacy_text: "(Insights answered)", legacy_ms: Date.now() - started, on_screen: onScreen });
+    return;
+  }
 
   // Anything else: a normal chat, which may produce a new or revised draft.
   const { data: rows, error } = await getSupabase()
@@ -73,8 +109,13 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
     .returns<StoredMessage[]>();
   if (error) throw new Error(error.message);
 
-  const result = await chat(ctx, learning, active, (rows ?? []).reverse());
-  await respond(turn, body, result, active);
+  const history = (rows ?? []).reverse();
+  // After "which did you mean?", today's assistant answers the original message.
+  if (message !== body) history.push({ direction: "inbound", body: message, status: "received" });
+  const result = await chat(ctx, learning, active, history);
+  await respond(turn, message, result, active);
+  // The GM in shadow: its route for the same message, next to what today's code did (and how long it took).
+  if (!buttonPayload) await queueGmShadow(ctx.restaurant, { message: body, owner, legacy_route: legacyRoute(result), legacy_text: legacyAnswer(result), legacy_ms: Date.now() - started, on_screen: onScreen });
   if (numbers === "shadow") {
     await queueInsightsShadow(ctx.restaurant, { task: "answer", question: body, today: londonYmd(ctx.now), legacy_text: legacyAnswer(result) }, `insights:question:${ctx.restaurantId}:${Date.now()}`);
   }

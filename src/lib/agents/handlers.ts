@@ -1,5 +1,6 @@
 import "server-only";
 import { runCheckerShadow } from "./checker";
+import { runGmBriefShadow, runGmShadow } from "./gm";
 import { runGrowthShadow } from "./growth";
 import { runInsightsShadow } from "./insights";
 import { runAgentJobs, type JobHandler } from "./jobs";
@@ -14,6 +15,8 @@ export const AGENT_HANDLERS: Record<string, JobHandler> = {
   visibility_live: runVisibilityLive,
   insights_shadow: runInsightsShadow,
   growth_shadow: runGrowthShadow,
+  gm_shadow: runGmShadow,
+  gm_brief_shadow: runGmBriefShadow,
 };
 
 // Runs this restaurant's queued agent jobs. Called once the owner's reply has

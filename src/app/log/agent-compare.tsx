@@ -1,13 +1,14 @@
 import { check, type Draft } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 import { PHOTO_TIPS, type PhotoReason } from "@/lib/agents/visibility-rules";
+import { ROUTE_WORDS, type Route } from "@/lib/agents/gm-rules";
 
 // The shadow comparison (builder only), for any agent: for each piece of work,
 // what today's code produced, what the agent would have produced, and the
 // checker's verdict, side by side. This is what decides when a restaurant
 // switches an agent to live.
 
-export type CompareAgent = "reputation" | "visibility" | "insights" | "growth";
+export type CompareAgent = "reputation" | "visibility" | "insights" | "growth" | "gm";
 
 type ShadowRow = {
   id: string;
@@ -15,7 +16,7 @@ type ShadowRow = {
   source: string;
   task: string | null;
   review: { author_name: string; rating: number | null; text: string | null } | null;
-  subject: { entry?: { day: string; name: string; date_uncertain: boolean } | null; option?: number | null; question?: string | null; today?: string | null; ms?: number | null; queries?: { id: string; metric: string; available: boolean }[] | null; slot?: string | null; request?: string | null; photo_url?: string | null; sender?: string | null; event?: { field: string; from: string; to: string } | null; holiday?: { date: string; title: string } | null } | null;
+  subject: { message?: string | null; legacy_route?: string | null; legacy_ms?: number | null; router_ms?: number | null; compose_ms?: number | null; items?: number | null; entry?: { day: string; name: string; date_uncertain: boolean } | null; option?: number | null; question?: string | null; today?: string | null; ms?: number | null; queries?: { id: string; metric: string; available: boolean }[] | null; slot?: string | null; request?: string | null; photo_url?: string | null; sender?: string | null; event?: { field: string; from: string; to: string } | null; holiday?: { date: string; title: string } | null } | null;
   legacy_draft_id: string | null;
   legacy_text: string | null;
   outcome: "reply" | "question" | "unusable" | "none";
@@ -38,6 +39,13 @@ type ShadowRow = {
     offer?: { type: string; description: string; conditions: string; valid_from: string; valid_to: string; applies_to: string | null } | null;
     idea?: { name: string; uses_dishes: string[]; ingredients: string[]; steps: string[]; why_now: string } | null;
     expected_outcome?: string;
+    // The GM: its route (and reply, question or brief).
+    route?: string;
+    reply?: string | null;
+    options?: { label: string; route: string }[];
+    summary?: string;
+    cards?: { draft_id: string; card: string }[];
+    rolled?: string[];
   };
   question: string | null;
   checker: { verdict: string; checks: { id: string; result: string; reason: string | null }[]; minor_fixes: { find: string; replace: string }[] } | null;
@@ -51,7 +59,7 @@ type ShadowRow = {
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const VERDICT_STYLE: Record<string, string> = { pass: "bg-emerald-100 text-emerald-900", fail: "bg-red-100 text-red-900", escalate: "bg-amber-100 text-amber-900" };
-const NAMES: Record<CompareAgent, string> = { reputation: "Reputation", visibility: "Visibility", insights: "Insights", growth: "Growth" };
+const NAMES: Record<CompareAgent, string> = { reputation: "Reputation", visibility: "Visibility", insights: "Insights", growth: "Growth", gm: "GM" };
 
 // What the owner did with today's draft (the real one).
 function ownerDid(d: Pick<Draft, "status" | "version"> | undefined) {
@@ -82,6 +90,8 @@ function Subject({ r }: { r: ShadowRow }) {
     content_brief: "Weekly content brief",
     bank_holiday: `Bank holiday ahead: ${s.holiday?.title ?? ""} (${s.holiday?.date ?? ""}), no special hours set`,
     owner_question: "The owner asked",
+    owner_message: "The owner wrote",
+    brief: `The morning brief (${s.items ?? 0} item${s.items === 1 ? "" : "s"} waiting)`,
     owner_request: "The owner asked for an offer",
     weekly_plan: `The Monday plan${s.option ? ` (option ${s.option})` : ""}`,
     calendar: `Calendar: ${s.entry?.name ?? ""} (${s.entry?.day ?? ""}${s.entry?.date_uncertain ? ", date uncertain" : ""})`,
@@ -94,6 +104,7 @@ function Subject({ r }: { r: ShadowRow }) {
       <p className="font-semibold">{title[r.source] ?? r.source}</p>
       {s.request && <p className="mt-1 italic text-stone-700">&ldquo;{s.request}&rdquo;</p>}
       {s.question && <p className="mt-1 italic text-stone-700">&ldquo;{s.question}&rdquo;</p>}
+      {s.message && <p className="mt-1 italic text-stone-700">&ldquo;{s.message}&rdquo;</p>}
       {r.agent === "growth" && (s as { request?: string | null }).request && <p className="mt-1 italic text-stone-700">&ldquo;{(s as { request?: string }).request}&rdquo;</p>}
       {s.event && (
         <p className="mt-1 text-stone-700">
@@ -186,6 +197,46 @@ function GrowthOutput({ r }: { r: ShadowRow }) {
   );
 }
 
+// The GM: where it would route the message (and what it would reply or ask), with
+// how long it took; or its version of the morning brief.
+function GmOutput({ r }: { r: ShadowRow }) {
+  const o = r.output;
+  const s = r.subject ?? {};
+  if (r.source === "brief") {
+    return (
+      <>
+        <p className="whitespace-pre-line">{o.summary}</p>
+        {o.cards?.map((c, i) => (
+          <p key={c.draft_id} className="mt-2 rounded-lg bg-white px-2 py-1 text-xs">
+            <b>{i + 1}.</b> {c.card}
+          </p>
+        ))}
+        {o.rolled && o.rolled.length > 0 && <p className="mt-1 text-xs text-stone-600">{o.rolled.length} more rolled to tomorrow (at most 5 cards).</p>}
+        {typeof s.ms === "number" && <p className="mt-1 text-xs text-stone-500">Took {Math.round(s.ms / 1000)}s</p>}
+      </>
+    );
+  }
+  const same = s.legacy_route === o.route;
+  return (
+    <>
+      <p>
+        <b>Route: {ROUTE_WORDS[o.route as Route] ?? o.route}</b>
+        {same ? " (same as today)" : <span className="text-amber-800"> (today: {ROUTE_WORDS[s.legacy_route as Route] ?? s.legacy_route})</span>}
+      </p>
+      {r.question && (
+        <p className="mt-1">
+          ❓ {r.question} {o.options?.map((x) => `[${x.label}]`).join(" ")}
+        </p>
+      )}
+      {o.reply && <p className="mt-1 whitespace-pre-line">{o.reply}</p>}
+      <p className="mt-1 text-xs text-stone-500">
+        Routing {s.router_ms ? `${(s.router_ms / 1000).toFixed(1)}s` : "?"}
+        {s.compose_ms ? ` + reply ${(s.compose_ms / 1000).toFixed(1)}s` : ""} · today&apos;s reply took {s.legacy_ms ? `${(s.legacy_ms / 1000).toFixed(1)}s` : "?"}
+      </p>
+    </>
+  );
+}
+
 // What the agent would have produced.
 function AgentOutput({ r }: { r: ShadowRow }) {
   if (r.outcome === "question") return <p className="whitespace-pre-line">❓ Would ask the owner: {r.question}</p>;
@@ -201,6 +252,7 @@ function AgentOutput({ r }: { r: ShadowRow }) {
   }
   if (r.agent === "insights") return <InsightsOutput r={r} />;
   if (r.agent === "growth") return <GrowthOutput r={r} />;
+  if (r.agent === "gm") return <GmOutput r={r} />;
   return (
     <>
       {o.change && (
@@ -282,7 +334,9 @@ export async function AgentCompare({ restaurantId, agent }: { restaurantId: stri
             ? "Send NEW REVIEW (test mode) or wait for the hourly review check."
             : agent === "insights"
               ? "Ask a question about the numbers on WhatsApp (e.g. how was last week?), or send RUN REPORT (test mode)."
-              : agent === "growth"
+              : agent === "gm"
+                ? "Send any message on WhatsApp (the GM logs where it would route it), or wait for the morning brief."
+                : agent === "growth"
                 ? "Ask for an offer on WhatsApp (e.g. Thursday is quiet), send BIRTHDAY CAMPAIGN, or wait for Monday."
                 : "Send RUN POSTS (test mode) or a photo on WhatsApp, or wait for Monday."}
         </p>

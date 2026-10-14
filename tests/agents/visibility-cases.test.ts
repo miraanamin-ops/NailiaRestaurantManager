@@ -39,7 +39,8 @@ const base = (extra: Partial<VisibilityOutput> = {}): VisibilityOutput => ({
   sources_used: ["profile:menu"],
   ...extra,
 });
-const profile = { halal_statement: "All our meat is halal.", words_to_avoid: ["cheap"], emoji_allowed: { posts: 2 } };
+const MENU = [{ category: "Grills", items: [{ name: "Lamb Chops (4 pcs)", price: 13.95 }] }];
+const profile = { halal_statement: "All our meat is halal.", words_to_avoid: ["cheap"], emoji_allowed: { posts: 2 }, menu: MENU };
 const p = (out: VisibilityOutput, task: "google_post" | "photo" | "profile_changed" | "content_brief" = "google_post", event = null as never) =>
   visibilityProblems(out, { task, profile, event }).join(" | ");
 
@@ -98,4 +99,8 @@ describe.each(cases.filter((c) => c.case.recorded))("recorded answer: $file", ({
     const r = c.recorded!;
     expect(judgeVisibility(c, { outcome: r.outcome, by: r.question_by, question: r.question, output: r.output, checker: r.checker })).toEqual([]);
   });
+});
+
+test("a price that isn't on the menu fails before the checker sees it", () => {
+  expect(p(base({ content: { ...base().content, text: base().content.text.replace("£13.95", "£12.95") } }))).toMatch(/£12.95 in the post isn't a price on the menu/);
 });

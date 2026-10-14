@@ -1,0 +1,27 @@
+{
+  "name": "a profile question in Roman Urdu: answered in Roman Urdu",
+  "kind": "reply",
+  "owner": {
+    "owner_name": "Bilal",
+    "language": "English",
+    "restaurant": "Ember & Spice Grill"
+  },
+  "owner_message": "abhi sign up offer kya hai?",
+  "profile": {
+    "signup_offer": "a free Mango Lassi"
+  },
+  "expect": {
+    "language": "Roman Urdu",
+    "mention_any": [
+      "lassi"
+    ]
+  },
+  "source": "written for phase 4",
+  "recorded": {
+    "output": {
+      "type": "reply",
+      "message": "Bilal, abhi sign up offer ye hai: a free Mango Lassi. Naye sign up karne walon ko milti hai."
+    },
+    "recorded_at": "2026-10-14T11:03:07.027Z"
+  }
+}

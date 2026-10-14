@@ -58,9 +58,9 @@ export const PROFILE_FIELDS = {
   complaint_contact: f("facts", "confirm", ["reputation"], ["complaint_contact"], true, "contact for complaints"),
   // Commercial
   recovery_offers: f("commercial", "confirm", ["reputation"], ["recovery_offers"], true, "recovery offers"),
-  signup_offer: f("commercial", "confirm", ["growth"], ["signup_reward"], true, "sign-up reward"),
+  signup_offer: f("commercial", "confirm", ["gm", "growth"], ["signup_reward"], true, "sign-up reward"),
   approved_offer_types: f("commercial", "confirm", ["growth"], ["approved_offer_types"], true, "kinds of offer you're happy to run"),
-  birthday_offer: f("commercial", "confirm", ["growth"], ["birthday_offer"], false, "birthday offer"),
+  birthday_offer: f("commercial", "confirm", ["gm", "growth"], ["birthday_offer"], false, "birthday offer"),
   // Brand kit
   logo: f("brand_kit", "confirm", [], ["logo_url"], true, "logo"),
   colours: f("brand_kit", "confirm", [], ["brand_color", "brand_dark"], true, "colours"),
@@ -128,6 +128,8 @@ export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
   reputation: ["sign_off_name", "complaint_contact", "recovery_offers", "halal_statement", "allergen_statement"],
   visibility: ["logo", "colours", "hours", "emoji_allowed", "photo_library"],
   growth: ["discount_cap", "approved_offer_types", "signup_offer", "logo", "colours"],
+  // The GM also needs at least one specialist live (lib/agents/gm.ts gmChecklist).
+  gm: ["owner_name", "language", "quiet_hours"],
 };
 
 // The app's starting values: colours and the emoji setting always have one, so

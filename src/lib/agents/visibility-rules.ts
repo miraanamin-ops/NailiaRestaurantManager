@@ -2,6 +2,7 @@
 // (on top of the shared draft rules). Used to check each answer (one retry if it
 // fails) and by the agent tests. Zod and pure code only, so it's unit-tested.
 import { z } from "zod";
+import { priceProblems } from "@/lib/prices";
 import { draftProblems, type Problems } from "./schema";
 
 export const VISIBILITY_TYPES = ["google_post", "google_photo", "hours_update", "menu_update", "content_brief", "one_off"] as const;
@@ -44,7 +45,7 @@ export const VisibilityDraft = z.object({
 });
 export type VisibilityOutput = z.infer<typeof VisibilityDraft>;
 
-export type VisibilityTask = "google_post" | "photo" | "profile_changed" | "content_brief";
+export type VisibilityTask = "google_post" | "photo" | "profile_changed" | "content_brief" | "one_off";
 export type VisibilityProfile = {
   halal_statement?: string | null;
   words_to_avoid?: string[] | null;
@@ -107,6 +108,7 @@ export function visibilityProblems(out: VisibilityOutput, input: { task: Visibil
     if (PHONE.test(text)) problems.push("no phone numbers in Google text (Google rejects them): use the Call button");
     if (out.content.hashtags.length || /(^|\s)#[A-Za-z]/.test(text)) problems.push("no hashtags on Google");
     problems.push(...textRules(text, profile, "the post", maxEmoji));
+    problems.push(...priceProblems(text, { menu: profile.menu }, "the post"));
   }
 
   if (task === "profile_changed") {
@@ -115,6 +117,13 @@ export function visibilityProblems(out: VisibilityOutput, input: { task: Visibil
     if (!out.change) problems.push("a profile change shows the field, the current value and the new one (change)");
     else if (input.event && out.change.field !== input.event.field) problems.push(`change.field must be ${input.event.field}`);
     else if (!out.change.from.trim() || !out.change.to.trim()) problems.push("show both the current value (from) and the new one (to)");
+  }
+
+  // One-off writing (job 6): the owner sends it themselves (a job ad, a supplier email, a notice).
+  if (task === "one_off") {
+    if (out.type !== "one_off" || out.channel !== "owner") problems.push("one-off writing has type one_off and channel owner");
+    if (out.content.hashtags.length) problems.push("no hashtags in one-off writing");
+    problems.push(...textRules(text, profile, "the writing", maxEmoji));
   }
 
   if (task === "content_brief") {

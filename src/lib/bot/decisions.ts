@@ -4,6 +4,8 @@ import { approveDraft, check, getLastApprovedDraft, isQuestion, skipDraft, start
 import { sendResultMessage } from "@/lib/format";
 import { presentNext } from "@/lib/google-jobs";
 import { attemptSend } from "@/lib/send";
+import { gmMode } from "@/lib/agents/gm";
+import { approveFact, decideIdea, offerSkipReasons } from "@/lib/agents/gm-live";
 import { getSupabase } from "@/lib/supabase";
 import type { Action, TargetedAction } from "./parse";
 import type { Turn } from "./turn";
@@ -32,6 +34,9 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
   }
   const label = draft.brief_number ? `item ${draft.brief_number}` : "that draft";
   if (isQuestion(draft.kind)) return send(QUESTION_HINT(draft.brief_number, draft.kind));
+  // The GM's cards: a fact is saved on Approve; a special idea is liked or skipped (never sent).
+  if (draft.status === "pending" && draft.kind === "profile_change" && t.action === "approve") return approveFact(turn, draft);
+  if (draft.status === "pending" && draft.kind === "special_idea" && t.action !== "edit") return decideIdea(turn, draft, t.action === "approve");
 
   if (draft.status !== "pending") {
     // A second Approve on something already approved: the rules decide (and log) it.
@@ -54,6 +59,7 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
     return send(`✏️ What would you like me to change in ${label}?`);
   }
   await skipDraft(draft);
+  if ((await gmMode(r)) === "live") return offerSkipReasons(send, draft.id);
   return send(`👍 Skipped ${label}. Quick question so I can learn: why didn't this one work? A few words is fine.`);
 }
 
@@ -69,6 +75,14 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     return true;
   }
 
+  if (decisionDraft?.kind === "profile_change" && action === "approve") {
+    await approveFact(turn, decisionDraft);
+    return true;
+  }
+  if (decisionDraft?.kind === "special_idea" && action !== "edit") {
+    await decideIdea(turn, decisionDraft, action === "approve");
+    return true;
+  }
   if (action === "approve") {
     if (decisionDraft) {
       const approved = await approveDraft(decisionDraft);
@@ -88,7 +102,8 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     return true;
   } else if (decisionDraft && action === "skip") {
     await skipDraft(decisionDraft);
-    await send("👍 Skipped. Quick question so I can learn: why didn't this one work? A few words is fine.");
+    if ((await gmMode(r)) === "live") await offerSkipReasons(send, decisionDraft.id);
+    else await send("👍 Skipped. Quick question so I can learn: why didn't this one work? A few words is fine.");
     return true;
   }
   if (fromButton) {

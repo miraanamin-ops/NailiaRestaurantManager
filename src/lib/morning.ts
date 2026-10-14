@@ -9,12 +9,15 @@ import { check } from "@/lib/drafts";
 import { queueResultsMessage } from "@/lib/format";
 import { ownerChannel } from "@/lib/followups";
 import { runPostJob } from "@/lib/google-jobs";
+import { gmMode } from "@/lib/agents/gm";
+import { gmBrief, gmReportMessage } from "@/lib/agents/gm-brief";
 import { liveGrowthBirthdays, mondayGrowth } from "@/lib/agents/growth";
 import { mondayVisibility } from "@/lib/agents/visibility";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { createReport, reportPeriod } from "@/lib/report/build";
 import { processQueue } from "@/lib/send";
-import { getSupabase, type Restaurant } from "@/lib/supabase";
+import type { ReportData } from "@/lib/report/types";
+import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
 // The morning job: everything that happens once a day at 9am UK time, ending
 // in one brief to the owner (plus the report link on Mondays).
@@ -45,20 +48,28 @@ async function takeLock(r: Restaurant, now: Date) {
 }
 
 // This Monday's report, if the morning job has made it (it covers last Monday to Sunday,
-// so a report asked for with RUN REPORT never matches).
+// so a report asked for with RUN REPORT never matches). With the GM live, the composer
+// writes the 2 lines (today's headline if it can't).
 async function mondayReportHeadline(r: Restaurant, due: Date) {
   if (r.last_report_on !== londonYmd(due)) return null;
   const row = check(
     await getSupabase()
       .from("reports")
-      .select("headline")
+      .select("headline, token, data")
       .eq("restaurant_id", r.id)
       .eq("period_end", reportPeriod(due, true).end.toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
-      .maybeSingle<{ headline: string }>(),
+      .maybeSingle<{ headline: string; token: string; data: ReportData }>(),
   );
-  return row?.headline ?? null;
+  if (!row) return null;
+  if ((await gmMode(r)) === "live") return (await gmReportMessage(r, { url: `${appUrl()}/report/${row.token}`, data: row.data })) ?? row.headline;
+  return row.headline;
+}
+
+// The brief: the GM's when it's live (test mode only), today's otherwise.
+async function briefFor(r: Restaurant, channel: OwnerChannel, now: Date, opts: { extra?: string[]; note?: string }) {
+  return (await gmMode(r)) === "live" ? gmBrief(r, channel, now, opts) : sendBrief(r, channel, now, opts);
 }
 
 export async function runMorning(restaurant: Restaurant, now: Date) {
@@ -120,7 +131,7 @@ export async function runMorning(restaurant: Restaurant, now: Date) {
       await markBriefWaiting(r, now);
       brief = "waiting for the owner to message (24h rule)";
     } else if (channel) {
-      brief = await sendBrief(r, channel, now, { extra: released.length ? [queueResultsMessage(released)] : [] });
+      brief = await briefFor(r, channel, now, { extra: released.length ? [queueResultsMessage(released)] : [] });
       const headline = await mondayReportHeadline(r, now);
       if (headline) await messageOwner(channel, headline);
     }
@@ -155,7 +166,7 @@ async function tellBuilder(r: Restaurant, now: Date, failures: number, error: st
 export async function deliverWaitingBrief(r: Restaurant, channel: OwnerChannel, now: Date) {
   if (!r.brief_waiting_since) return;
   const note = "_This morning's brief, held until you messaged (WhatsApp only lets me message you within 24 hours of your last message)._";
-  const outcome = await sendBrief(r, channel, now, { note });
+  const outcome = await briefFor(r, channel, now, { note });
   if (!outcome.sent) check(await getSupabase().from("restaurants").update({ brief_waiting_since: null }).eq("id", r.id));
   const headline = await mondayReportHeadline(r, new Date(r.brief_waiting_since));
   if (headline) await messageOwner(channel, headline);
