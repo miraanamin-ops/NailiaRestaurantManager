@@ -94,6 +94,10 @@ export function looksLikeEmail(email: string) {
 // it works in whichever browser opens it (no email template changes needed).
 // /auth/confirm picks it up. Returns "wait" (too many emails just now), "send" or null.
 export async function emailLoginLink(email: string, next: string, base: string) {
+  if (!authConfigured()) {
+    console.error("Can't send a login link: SUPABASE_PUBLISHABLE_KEY isn't set here");
+    return "send" as const;
+  }
   const sender = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
