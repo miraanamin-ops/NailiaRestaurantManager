@@ -9,6 +9,7 @@ import { draftPreviewUrl } from "@/lib/email/previews";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { zNudgeFor } from "@/lib/sales/z-reports";
 import { attemptSend, type SendResult } from "@/lib/send";
+import { queueGmBriefShadow } from "@/lib/agents/gm";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural, shorten } from "@/lib/text";
 
@@ -158,6 +159,8 @@ export async function sendBrief(
 
   await send(brief.summary);
   await markFeedbackReported(restaurant.id, feedback.ids);
+  // The GM in shadow: its own brief (summary and up to 5 cards) for the same items, next to this one on /log.
+  await queueGmBriefShadow(restaurant, { legacy_text: brief.summary, draft_ids: all.map((d) => d.id), receipts: tally, extra, today: now.toISOString().slice(0, 10) });
   for (const [i, d] of items.entries()) {
     await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1, buttons: d.kind === "review_question" ? "question" : d.kind === "hours_question" ? "hours" : "approval" }, draftPreviewUrl(d));
   }

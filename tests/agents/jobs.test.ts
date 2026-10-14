@@ -92,6 +92,8 @@ describe("agent modes", () => {
     expect(agentMode({ agent_modes: { checker: "live" } }, "checker")).toBe("shadow");
     expect(agentMode({ agent_modes: { reputation: "live" } }, "reputation")).toBe("live");
     expect(agentMode({ agent_modes: {} }, "reputation")).toBe("shadow");
-    expect(agentMode({ agent_modes: { gm: "live" } }, "gm")).toBe("off");
+    // An agent that isn't built yet stays off, whatever is stored (the GM has its own checklist in gmMode).
+    expect(agentMode({ agent_modes: { "profile-keeper": "live" } }, "profile-keeper")).toBe("off");
+    expect(agentMode({ agent_modes: {} }, "gm")).toBe("shadow");
   });
 });

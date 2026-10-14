@@ -1,5 +1,6 @@
 import "server-only";
 import { growthMode, liveGrowthRequest, queueGrowthShadow } from "@/lib/agents/growth";
+import { legacyRoute, queueGmShadow } from "@/lib/agents/gm";
 import { answerWithInsights, insightsMode, queueInsightsShadow } from "@/lib/agents/insights";
 import { chat, rewriteDraft, type ChatResult, type StoredMessage } from "@/lib/assistant";
 import { londonYmd } from "@/lib/clock";
@@ -57,8 +58,14 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   // A question about the numbers: Insights answers it when it's live (today's
   // assistant answers if Insights can't). In shadow mode it answers in the
   // background, next to today's answer, for the /log comparison.
+  const started = Date.now();
+  const onScreen = active?.waiting_for === "decision" ? `${active.kind.replace(/_/g, " ")} for ${active.audience ?? "the owner"}` : null;
   const numbers = !buttonPayload && looksLikeNumbersQuestion(body) ? await insightsMode(ctx.restaurant) : "off";
-  if (numbers === "live" && (await answerWithInsights(ctx.restaurant, body, ctx.now, send))) return;
+  if (numbers === "live" && (await answerWithInsights(ctx.restaurant, body, ctx.now, send))) {
+    // The GM in shadow: its route for the same message, next to today's.
+    await queueGmShadow(ctx.restaurant, { message: body, owner, legacy_route: "insights", legacy_text: "(Insights answered)", legacy_ms: Date.now() - started, on_screen: onScreen });
+    return;
+  }
 
   // Anything else: a normal chat, which may produce a new or revised draft.
   const { data: rows, error } = await getSupabase()
@@ -75,6 +82,8 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
 
   const result = await chat(ctx, learning, active, (rows ?? []).reverse());
   await respond(turn, body, result, active);
+  // The GM in shadow: its route for the same message, next to what today's code did (and how long it took).
+  if (!buttonPayload) await queueGmShadow(ctx.restaurant, { message: body, owner, legacy_route: legacyRoute(result), legacy_text: legacyAnswer(result), legacy_ms: Date.now() - started, on_screen: onScreen });
   if (numbers === "shadow") {
     await queueInsightsShadow(ctx.restaurant, { task: "answer", question: body, today: londonYmd(ctx.now), legacy_text: legacyAnswer(result) }, `insights:question:${ctx.restaurantId}:${Date.now()}`);
   }

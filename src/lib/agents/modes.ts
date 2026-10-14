@@ -18,6 +18,8 @@ export const MODES_AVAILABLE: Partial<Record<AgentName, { allowed: AgentMode[]; 
   insights: { allowed: ["off", "shadow", "live"], default: "shadow" },
   // Live only once its go-live checklist passes (lib/agents/growth.ts growthMode).
   growth: { allowed: ["off", "shadow", "live"], default: "shadow" },
+  // Live only once its go-live checklist passes (lib/agents/gm.ts gmMode).
+  gm: { allowed: ["off", "shadow", "live"], default: "shadow" },
 };
 
 export function agentMode(restaurant: { agent_modes?: Record<string, string> | null }, agent: AgentName): AgentMode {

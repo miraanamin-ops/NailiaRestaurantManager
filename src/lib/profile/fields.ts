@@ -128,6 +128,8 @@ export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
   reputation: ["sign_off_name", "complaint_contact", "recovery_offers", "halal_statement", "allergen_statement"],
   visibility: ["logo", "colours", "hours", "emoji_allowed", "photo_library"],
   growth: ["discount_cap", "approved_offer_types", "signup_offer", "logo", "colours"],
+  // The GM also needs at least one specialist live (lib/agents/gm.ts gmChecklist).
+  gm: ["owner_name", "language", "quiet_hours"],
 };
 
 // The app's starting values: colours and the emoji setting always have one, so
