@@ -23,3 +23,10 @@ jobs:
         run: npm run lint
       - name: Tests
         run: npm test
+      # Vercel's build runs the tests with TEST_MODE=true (its environment setting),
+      # so run them that way here too: a test that only passes with it off can't
+      # pass on GitHub and then stop the deploy.
+      - name: Tests (with TEST_MODE on, as on Vercel)
+        run: npm test
+        env:
+          TEST_MODE: "true"

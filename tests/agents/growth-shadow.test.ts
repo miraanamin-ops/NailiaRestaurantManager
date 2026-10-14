@@ -128,6 +128,8 @@ describe("shadow mode", () => {
 
 describe("the switch and its checklist", () => {
   test("live needs the checklist (cap, offer types, sign-up offer, logo, colours) and test mode", async () => {
+    // Starts with test mode off, whatever the machine running the tests has (Vercel has it on).
+    vi.stubEnv("TEST_MODE", "false");
     db.tables.restaurants[0].agent_modes = { growth: "live" };
     const { growthMode } = await import("@/lib/agents/growth");
     expect(await growthMode(restaurant())).toBe("shadow");
