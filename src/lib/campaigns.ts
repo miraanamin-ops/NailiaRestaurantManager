@@ -42,6 +42,8 @@ export type Campaign = CampaignFields & {
   created_at: string;
   // The offer as structured fields (Growth's campaigns, 023); the gate checks the cap from these.
   offer_details?: StructuredOffer | null;
+  // Growth's send time (024): approved, it waits until then. Null = send at approval.
+  send_at?: string | null;
 };
 
 export type CampaignSend = {
@@ -91,6 +93,14 @@ export function formatDay(ymd: string) {
 
 export function formatValidity(from: string, until: string) {
   return from === until ? `${formatDay(from)} only` : `${formatDay(from)} – ${formatDay(until)}`;
+}
+
+// "2026-10-15T10:00" (London) as a moment in time (ISO), or null if it isn't one.
+export function londonSendAt(local: string | null | undefined) {
+  const m = local?.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  return londonTime(y, mo, d, h, mi).toISOString();
 }
 
 // Makes the AI's dates safe: real dates, not in the past, at most 31 days long.
@@ -256,6 +266,7 @@ export async function createCampaignDraft(input: {
   mode?: "present" | "hold";
   // Growth's campaigns: the offer as fields (the gate checks the cap from them), who wrote it, and the checker's live pass.
   offerDetails?: StructuredOffer | null;
+  sendAt?: string | null;
   actor?: Parameters<typeof createDraft>[0]["actor"];
   agentCheck?: Parameters<typeof createDraft>[0]["agentCheck"];
 }) {
@@ -274,7 +285,7 @@ export async function createCampaignDraft(input: {
   const campaign = checkRow(
     await getSupabase()
       .from("campaigns")
-      .insert({ restaurant_id: input.restaurant.id, draft_id: draft.id, is_birthday: input.isBirthday ?? false, ...input.fields, ...(input.offerDetails ? { offer_details: input.offerDetails } : {}) })
+      .insert({ restaurant_id: input.restaurant.id, draft_id: draft.id, is_birthday: input.isBirthday ?? false, ...input.fields, ...(input.offerDetails ? { offer_details: input.offerDetails } : {}), ...(input.sendAt ? { send_at: input.sendAt } : {}) })
       .select("*")
       .single<Campaign>(),
   );

@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { logAction } from "@/lib/audit";
-import { createCampaignDraft, recipientsFor } from "@/lib/campaigns";
+import { createCampaignDraft, londonSendAt, recipientsFor } from "@/lib/campaigns";
 import { checkResult, type DraftChecks } from "@/lib/checks/types";
 import { misleadingClaims } from "@/lib/checks/compliance";
 import { moneyAtDraft } from "@/lib/checks/money";
@@ -229,6 +229,7 @@ async function saveLiveDraft(restaurant: Restaurant, d: LoopOutcome<GrowthDraftO
     restaurant,
     fields: campaignFieldsFrom(out),
     offerDetails: out.offer,
+    sendAt: londonSendAt(out.send_at),
     request,
     checks: growthChecks(out, d.checker, restaurant),
     now: new Date(),

@@ -1,4 +1,5 @@
 import { after, type NextRequest } from "next/server";
+import { processQueue } from "@/lib/send";
 import { loadRestaurantContext } from "@/lib/assistant";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { londonParts, londonYmd } from "@/lib/clock";
@@ -93,6 +94,14 @@ async function runJob(job: Job) {
       } catch (err) {
         console.error("Feedback emails failed", err);
         entry.feedback = { error: err instanceof Error ? err.message : String(err) };
+      }
+      // Approved campaigns whose send time has come (and anything else held that's now due).
+      // Quiet: the results are in the activity log and the next brief.
+      try {
+        entry.released = (await processQueue(r, now)).map((x) => x.outcome);
+      } catch (err) {
+        console.error("Releasing held sends failed", err);
+        entry.released = { error: err instanceof Error ? err.message : String(err) };
       }
       // Today's weather (once a day; the first time, the last 12 months too).
       try {

@@ -18,6 +18,8 @@ export type RuleDraft = {
   agent_check?: GateDraft["agent_check"];
   // A campaign's offer as structured fields (Growth's campaigns): the cap is checked from these.
   offer_details?: StructuredOffer | null;
+  // A campaign's send time (Growth's send_at): it waits until then.
+  send_at?: string | null;
 };
 export type RuleRestaurant = {
   paused: boolean;
@@ -38,7 +40,7 @@ export type SendSource = "approve" | "queue" | "test";
 export type RuleDecision =
   | { outcome: "ok"; approvedBy?: "auto" }
   | { outcome: "blocked"; reason: "duplicate" | "not_approved" | "discount_cap" | "trust_level"; detail: string }
-  | { outcome: "queued"; reason: "paused" | "outside_window"; detail: string; scheduledFor: Date | null };
+  | { outcome: "queued"; reason: "paused" | "outside_window" | "scheduled"; detail: string; scheduledFor: Date | null };
 
 const SENDABLE = ["approved", "queued", "blocked"];
 
@@ -87,6 +89,12 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
       reason: "discount_cap",
       detail: `Offers ${over.percent}% off ("${over.phrase}"), above the ${restaurant.discount_cap_percent}% cap.`,
     };
+  }
+
+  // A campaign with a send time still ahead waits for it (and comes back through every rule then).
+  if (draft.send_at && new Date(draft.send_at) > now) {
+    const at = new Date(draft.send_at);
+    return { outcome: "queued", reason: "scheduled", detail: `Scheduled for its send time, ${formatLondon(at)}.`, scheduledFor: at };
   }
 
   // Nothing sends while PAUSED: held until RESUME.
