@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { approveDraft, check, isQuestion, KIND_LABELS, updateDraft, type Draft } from "@/lib/drafts";
+import { approveDraft, check, isQuestion, KIND_LABELS, OWNER_ONLY_KINDS, updateDraft, type Draft } from "@/lib/drafts";
 import { feedbackForBrief, markFeedbackReported } from "@/lib/feedback";
 import { approveAllMessage, draftMessage } from "@/lib/format";
 import { google } from "@/lib/google";
@@ -267,7 +267,8 @@ export function remainingNote(left: Draft[]) {
 export async function approveAll(restaurant: Restaurant, now: Date) {
   // Questions about a review need the owner's own answer, so APPROVE ALL leaves them.
   const remaining = await remainingInBrief(restaurant);
-  const left = remaining.filter((d) => !isQuestion(d.kind));
+  // Facts to confirm and special ideas need their own tap too.
+  const left = remaining.filter((d) => !isQuestion(d.kind) && !OWNER_ONLY_KINDS.has(d.kind));
   const questions = remaining.length - left.length;
   if (!left.length) {
     if (questions) return `Only ${questions === 1 ? "a question is" : `${questions} questions are`} left, and ${questions === 1 ? "it needs" : "they need"} your answer: tap one of its buttons.`;

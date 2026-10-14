@@ -76,3 +76,15 @@ test("number questions go to Insights (shadow); requests to write something don'
     assert.equal(looksLikeNumbersQuestion(q), false, q);
   }
 });
+
+test("the GM's cards: choices, special ideas and skip reasons", async () => {
+  const { parseGmTap } = await import("../src/lib/bot/parse.ts");
+  const id = "11111111-2222-3333-4444-555555555555";
+  assert.deepEqual(parseGmTap(`choose:${id}:2`, "An offer", null), { kind: "choose", draftId: id, n: 2 });
+  assert.deepEqual(parseGmTap(`like:${id}`, "Like it", null), { kind: "idea", draftId: id, like: true });
+  assert.deepEqual(parseGmTap(`reason:${id}:3`, "Not now", null), { kind: "reason", draftId: id, n: 3 });
+  assert.deepEqual(parseGmTap(undefined, "2", "choice"), { kind: "choose", n: 2 });
+  assert.deepEqual(parseGmTap(undefined, "skip", "special_idea"), { kind: "idea", like: false });
+  assert.equal(parseGmTap(undefined, "2", null), null);
+  assert.equal(parseGmTap("approve", "Approve", "choice"), null);
+});

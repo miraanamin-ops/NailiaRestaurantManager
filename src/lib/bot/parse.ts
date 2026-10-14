@@ -200,3 +200,25 @@ export function looksLikeNumbersQuestion(text: string) {
   if (WRITING.test(t) || NOT_NUMBERS.test(t) || (QUIET_REQUEST.test(t) && !/\?/.test(t))) return false;
   return NUMBER_WORDS.test(t) && ASKING.test(t);
 }
+
+// The GM's own cards: "which did you mean?" (choose:<id>:<n>, or a typed 1 to 3
+// while it's on screen), a special idea (like:<id> / skipidea:<id>, or a typed
+// LIKE / SKIP), and one-tap skip reasons (reason:<id>:<n>).
+export type GmTap =
+  | { kind: "choose"; draftId?: string; n: number }
+  | { kind: "idea"; draftId?: string; like: boolean }
+  | { kind: "reason"; draftId: string; n: number };
+
+export function parseGmTap(payload: string | undefined, body: string, onScreen: string | null): GmTap | null {
+  const choose = payload?.match(/^choose:([0-9a-f-]{36}):([1-3])$/);
+  if (choose) return { kind: "choose", draftId: choose[1], n: Number(choose[2]) };
+  const idea = payload?.match(/^(like|skipidea):([0-9a-f-]{36})$/);
+  if (idea) return { kind: "idea", draftId: idea[2], like: idea[1] === "like" };
+  const reason = payload?.match(/^reason:([0-9a-f-]{36}):([1-3])$/);
+  if (reason) return { kind: "reason", draftId: reason[1], n: Number(reason[2]) };
+  if (payload) return null;
+  const t = body.trim().toLowerCase().replace(/[.!]$/, "");
+  if (onScreen === "choice" && /^[1-3]$/.test(t)) return { kind: "choose", n: Number(t) };
+  if (onScreen === "special_idea" && /^(like|like it|skip)$/.test(t)) return { kind: "idea", like: t !== "skip" };
+  return null;
+}
