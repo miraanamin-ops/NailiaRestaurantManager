@@ -19,5 +19,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "Morning Bilal. Since yesterday: 1 Google post published, 3 new sign-ups. Nothing needs a yes today."
+    },
+    "recorded_at": "2026-10-14T11:02:52.591Z"
+  }
 }

@@ -25,5 +25,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "Morning Bilal. Since yesterday: replied to 2 reviews. 2 things need a yes today."
+    },
+    "recorded_at": "2026-10-14T11:03:12.558Z"
+  }
 }

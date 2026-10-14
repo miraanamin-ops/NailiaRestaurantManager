@@ -20,5 +20,11 @@
     "language": "Urdu"
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "صبح بخیر بلال۔ کل سے اب تک: 3 ریویوز کے جواب دیے گئے، 5 نئے سائن اپ ہوئے۔ آج 1 چیز پر آپ کی منظوری چاہیے۔"
+    },
+    "recorded_at": "2026-10-14T11:03:14.252Z"
+  }
 }

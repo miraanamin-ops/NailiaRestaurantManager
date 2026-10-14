@@ -31,7 +31,7 @@ export function routerProblems(out: RouterOutputType): Problems {
     if (!out.question?.trim()) problems.push("ambiguous: ask one short question");
     if (out.options.length < 2 || out.options.length > 3) problems.push(`ambiguous: 2 or 3 options (this has ${out.options.length})`);
     for (const o of out.options) {
-      if (o.label.length > 20) problems.push(`option "${o.label}" is over 20 characters (a WhatsApp button)`);
+      if (!o.label.trim()) problems.push("every option needs a label");
       if (o.route === "ambiguous") problems.push("an option can't be ambiguous itself");
     }
   } else {
@@ -40,6 +40,14 @@ export function routerProblems(out: RouterOutputType): Problems {
     if (!out.request.trim()) problems.push("restate the owner's ask in one line (request)");
   }
   return problems;
+}
+
+// WhatsApp buttons take 20 characters: a longer label is shortened at a word ("Google or social posts" -> "Google or social").
+export function buttonLabel(label: string, max = 20) {
+  const t = label.trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max + 1).replace(/\s+\S*$/, "").trim();
+  return cut.length >= 3 ? cut : t.slice(0, max).trim();
 }
 
 // Where each route goes, in words (logs and the comparison).

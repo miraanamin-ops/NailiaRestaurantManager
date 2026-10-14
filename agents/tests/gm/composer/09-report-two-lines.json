@@ -18,5 +18,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "report",
+      "message": "Net sales were £13,515 last week, down 2% on the week before (£13,745).\nThe one action that matters most: feature the Lamb Chops (216 sold) in Thursday's Google post."
+    },
+    "recorded_at": "2026-10-14T11:03:10.643Z"
+  }
 }

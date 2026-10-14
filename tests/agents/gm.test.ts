@@ -3,7 +3,7 @@
 // an hour), the saved cases, and every recorded answer. The live run is
 // tests/agents-live/gm.eval.ts.
 import { describe, expect, test } from "vitest";
-import { alertTime, BRIEF_MAX_CARDS, composerProblems, expectedLanguage, inQuietHours, languageOf, rankBriefItems, routerProblems, type RouterOutputType } from "@/lib/agents/gm-rules";
+import { alertTime, BRIEF_MAX_CARDS, buttonLabel, composerProblems, expectedLanguage, inQuietHours, languageOf, rankBriefItems, routerProblems, type RouterOutputType } from "@/lib/agents/gm-rules";
 import { composerContext, judgeComposer, loadComposerCases, loadRouting } from "./support/gm-cases";
 
 describe("the router's rules", () => {
@@ -15,7 +15,8 @@ describe("the router's rules", () => {
     const ask = route({ route: "ambiguous", request: "", question: "What should I do for Saturday?", options: [{ label: "An offer", route: "growth" }, { label: "The numbers", route: "insights" }] });
     expect(routerProblems(ask)).toEqual([]);
     expect(routerProblems({ ...ask, options: [ask.options[0]] }).join()).toMatch(/2 or 3 options/);
-    expect(routerProblems({ ...ask, options: [...ask.options, { label: "A Google post for Saturday night", route: "visibility" }] }).join()).toMatch(/over 20 characters/);
+    expect(buttonLabel("Google or social posts")).toBe("Google or social");
+    expect(buttonLabel("An offer")).toBe("An offer");
   });
 });
 

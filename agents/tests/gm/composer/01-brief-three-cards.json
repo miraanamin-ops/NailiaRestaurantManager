@@ -31,5 +31,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "brief",
+      "message": "Morning Bilal. Since yesterday: 4 reviews answered, 2 Google posts live, 11 new sign-ups. 3 things need a yes today."
+    },
+    "recorded_at": "2026-10-14T11:02:50.723Z"
+  }
 }

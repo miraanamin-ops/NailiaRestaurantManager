@@ -18,5 +18,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "card",
+      "message": "Reply to Aisha's 5-star Google review, posted publicly under the review. It thanks her for the lamb chops and invites her back. No expected outcome given."
+    },
+    "recorded_at": "2026-10-14T11:02:55.661Z"
+  }
 }

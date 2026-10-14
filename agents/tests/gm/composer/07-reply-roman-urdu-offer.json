@@ -17,5 +17,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "reply",
+      "message": "Bilal, abhi sign up offer ye hai: a free Mango Lassi. Naye sign up karne walon ko milti hai."
+    },
+    "recorded_at": "2026-10-14T11:03:07.027Z"
+  }
 }

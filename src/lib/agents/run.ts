@@ -35,12 +35,16 @@ export type AgentCall<T> = {
   effort?: "low" | "medium" | "high";
   // For the alert: what this call was about (e.g. a draft id).
   label: string;
+  // Use the agent's router model (its front matter's router_model, e.g. the GM's Haiku router).
+  router?: boolean;
 };
 
 export type AgentResult<T> = { output: T; attempts: number; agentVersion: string; houseRulesVersion: string; model: string; usage: Usage };
 
 export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> {
-  const agent = loadAgent(call.agent);
+  const loaded = loadAgent(call.agent);
+  if (call.router && !(loaded.routerModel && loaded.routerModelId)) throw new Error(`The ${call.agent} agent has no router_model`);
+  const agent = call.router ? { ...loaded, model: loaded.routerModel!, modelId: loaded.routerModelId! } : loaded;
   // The agent's instructions are the same on every call, so they're cached.
   const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: agent.systemPrompt, cache_control: { type: "ephemeral" } }];
 

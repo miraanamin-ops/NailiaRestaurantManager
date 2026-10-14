@@ -17,5 +17,11 @@
     "language": "Urdu"
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "reply",
+      "message": "اتوار کو ہم دوپہر 12 بجے کھلتے ہیں اور رات 10 بجے بند ہوتے ہیں۔"
+    },
+    "recorded_at": "2026-10-14T11:03:04.980Z"
+  }
 }

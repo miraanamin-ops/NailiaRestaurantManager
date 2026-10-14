@@ -22,5 +22,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "reply",
+      "message": "We close at midnight on Friday, Bilal. Doors open at 2pm."
+    },
+    "recorded_at": "2026-10-14T11:03:08.973Z"
+  }
 }

@@ -64,8 +64,8 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 | `discount_cap` | 20% (percentage only for now) | Settings | Gro (and the gate) | Yes |
 | `approved_offer_types` | free add-on, % off, kids eat free | Confirm | Gro | Yes |
 | `recovery_offers` | free dessert next visit | Confirm | Rep | Yes |
-| `signup_offer` | free dessert on joining | Confirm | Gro | Yes |
-| `birthday_offer` | free dessert in birthday week | Confirm | Gro | No |
+| `signup_offer` | free dessert on joining | Confirm | GM, Gro | Yes |
+| `birthday_offer` | free dessert in birthday week | Confirm | GM, Gro | No |
 
 ## 6. Brand kit
 

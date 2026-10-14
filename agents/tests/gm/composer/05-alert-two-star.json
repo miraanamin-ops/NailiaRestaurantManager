@@ -18,5 +18,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "alert",
+      "message": "Bilal, new 2-star Google review from Sara K: her delivery food arrived cold. I've drafted an apology offering a free dessert on her next visit. Reply is ready below for your yes."
+    },
+    "recorded_at": "2026-10-14T11:02:57.453Z"
+  }
 }

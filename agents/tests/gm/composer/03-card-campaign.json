@@ -18,5 +18,11 @@
     ]
   },
   "source": "written for phase 4",
-  "recorded": null
+  "recorded": {
+    "output": {
+      "type": "card",
+      "message": "Email to all 18 customers: free Mango Lassi with any Mixed Grill Platter, dine-in, Thursday 15 October, 6 to 9pm. Last similar offer: 6 redemptions from 37 sent."
+    },
+    "recorded_at": "2026-10-14T11:02:54.228Z"
+  }
 }
