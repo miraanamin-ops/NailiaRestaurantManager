@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -22,7 +23,7 @@ const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "�
 // "change Friday hours to 11pm", "add lamb chops, £14".)
 export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Settings searchParams={searchParams} />
     </Suspense>
   );

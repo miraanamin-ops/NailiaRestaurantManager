@@ -162,3 +162,39 @@ export function suggestReward(menu: MenuCategory[]) {
 }
 
 export const DEFAULT_DISCOUNT_CAP = 15;
+
+const ReplyOptionsSchema = z.object({
+  review: z.string().describe("A realistic example Google review, 1 to 3 sentences, naming a real dish where it fits"),
+  reviewer: z.string().describe("A first name and initial, e.g. 'Sarah M.'"),
+  replies: z
+    .array(
+      z.object({
+        style: z.string().describe("2 to 4 words, e.g. 'Warm and personal'"),
+        reply: z.string().describe("The restaurant's public reply"),
+      }),
+    )
+    .describe("Exactly 3 clearly different replies"),
+});
+const ReplyChoicesSchema = z.object({ positive: ReplyOptionsSchema, negative: ReplyOptionsSchema });
+
+export type ReplyChoice = z.infer<typeof ReplyOptionsSchema>;
+
+// For the "Reply to reviews" step: an example 5-star review and an example 2-star
+// review for this restaurant, each with 3 replies in clearly different styles.
+// The owner picks the closest (or writes their own); that becomes the example
+// every future reply follows. The reviews are made up and shown as examples.
+export async function draftReplyChoices(input: { name: string; cuisine: string | null; voice: string | null; dishes: string[]; signOff: string | null; phone: string | null }) {
+  const out = await parse(
+    ReplyChoicesSchema,
+    `You help a restaurant owner decide how their public replies to Google reviews should sound. Invent one realistic 5-star review and one realistic 2-star review (a fixable complaint, e.g. a slow evening or a cold dish; never food poisoning, allergies, staff names or anything legal). For each, write 3 replies in clearly different styles (for example warm and personal, short and professional, upbeat and chatty). Every reply: British English, no emojis, no hashtags, no em-dashes, under 80 words, never offers money, refunds or free food, and the 2-star replies apologise for the specific problem without arguing and invite the reviewer to get in touch${input.phone ? ` (phone ${input.phone})` : ""}.${input.signOff ? ` Sign off as ${input.signOff}.` : ""}`,
+    `Restaurant: ${input.name}${input.cuisine ? ` (${input.cuisine})` : ""}
+How they like to sound: ${input.voice || "(not chosen yet)"}
+Some dishes: ${input.dishes.slice(0, 12).join(", ") || "(menu not added yet)"}`,
+  );
+  const tidy = (c: ReplyChoice): ReplyChoice => ({
+    review: c.review.trim(),
+    reviewer: c.reviewer.trim(),
+    replies: c.replies.slice(0, 3).map((r) => ({ style: r.style.trim(), reply: r.reply.trim().replace(/—|–/g, ",") })),
+  });
+  return { positive: tidy(out.positive), negative: tidy(out.negative) };
+}

@@ -1,6 +1,7 @@
 "use server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { logAction } from "@/lib/audit";
 import { emailLoginLink, looksLikeEmail } from "@/lib/auth";
 import { createTrialCheckout } from "@/lib/billing/checkout";
@@ -42,22 +43,23 @@ export async function startSignup(form: FormData) {
 
   const requestHeaders = await headers();
   const ip = clientIp(requestHeaders);
-  const human = await verifyTurnstile(get("cf-turnstile-response"), ip);
+  // These don't depend on each other, so they run at the same time.
+  const [human, limited, existing] = await Promise.all([
+    verifyTurnstile(get("cf-turnstile-response"), ip),
+    overLimit([
+      { key: limitKey("start-ip-hour", ip), max: 5, windowMs: 60 * MINUTE },
+      { key: limitKey("start-ip-day", ip), max: 20, windowMs: DAY },
+    ]),
+    restaurantsForEmail(email),
+  ]);
   if (!human.ok) {
     console.warn("Turnstile rejected a restaurant sign-up", human.error);
     redirect(`/start?error=captcha&why=${encodeURIComponent(human.error ?? "failed")}`);
   }
-  if (
-    await overLimit([
-      { key: limitKey("start-ip-hour", ip), max: 5, windowMs: 60 * MINUTE },
-      { key: limitKey("start-ip-day", ip), max: 20, windowMs: DAY },
-    ])
-  ) {
-    back("slow");
-  }
+  if (limited) back("slow");
   const base = baseUrlFrom(requestHeaders);
 
-  const plan = planSignup(await restaurantsForEmail(email), restaurantName);
+  const plan = planSignup(existing, restaurantName);
   if (plan.kind === "login") return sendLogin(email, plan.next, base);
   if (!invite && !publicSignupOpen()) back("invite_only");
   if (invite && !(await claimInvite(invite))) back("invite");
@@ -81,7 +83,8 @@ export async function startSignup(form: FormData) {
     console.error("Couldn't start Stripe Checkout", err);
   }
   if (!checkoutUrl) back("billing");
-  await logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: "Sent to Stripe Checkout for the free trial" });
+  // Logged after the owner is on their way to Stripe, so it doesn't slow them down.
+  after(() => logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: "Sent to Stripe Checkout for the free trial" }));
   redirect(checkoutUrl!);
 }
 

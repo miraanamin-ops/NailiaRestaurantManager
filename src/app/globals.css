@@ -63,3 +63,143 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); transform: scale(1); }
   50% { box-shadow: 0 0 0 24px rgba(255, 255, 255, 0); transform: scale(1.06); }
 }
+
+/* ---------------------------------------------------------------------------
+   The DinerAI app theme (owner pages: login, onboarding, dashboard, settings,
+   sales, log). Same near-black, chartreuse and ember as the public site.
+   The pages keep their ordinary Tailwind colour classes; inside .dai-app those
+   colours are re-pointed to the dark palette (light greys become dark, dark
+   greys become light, green becomes the signal colour), so every page matches
+   without rewriting each one. The QR code and customer-facing pages aren't
+   inside .dai-app and keep their own colours.
+   --------------------------------------------------------------------------- */
+.dai-app {
+  --color-white: #171a14;
+  --color-stone-50: #121410;
+  --color-stone-100: #0b0c0a;
+  --color-stone-200: #262a22;
+  --color-stone-300: #353a30;
+  --color-stone-400: #6e7468;
+  --color-stone-500: #9ca295;
+  --color-stone-600: #b3b8ab;
+  --color-stone-700: #cdd2c5;
+  --color-stone-800: #e0e4d8;
+  --color-stone-900: #edefe8;
+  --color-stone-950: #f7f8f3;
+  --color-neutral-50: #121410;
+  --color-neutral-100: #1e221b;
+  --color-neutral-200: #2c3127;
+  --color-neutral-300: #3a4034;
+  --color-neutral-400: #7d8377;
+  --color-neutral-500: #a3a99d;
+  --color-neutral-600: #b8bdb1;
+  --color-neutral-700: #d0d5c8;
+  --color-neutral-800: #e2e6dc;
+  --color-neutral-900: #edefe8;
+  --color-emerald-50: #1b220d;
+  --color-emerald-100: #222b10;
+  --color-emerald-600: #c8f03c;
+  --color-emerald-700: #c8f03c;
+  --color-emerald-800: #d6f86a;
+  --color-emerald-900: #e4f9a8;
+  --color-green-50: #1b220d;
+  --color-green-100: #222b10;
+  --color-green-200: #3b4a17;
+  --color-green-900: #e4f9a8;
+  --color-green-950: #f0fcd0;
+  --color-red-50: #2a1410;
+  --color-red-100: #3a1a14;
+  --color-red-200: #5a261c;
+  --color-red-300: #ff9a85;
+  --color-red-600: #ff8a6e;
+  --color-red-700: #ff9a85;
+  --color-red-800: #ffb4a0;
+  --color-red-900: #ffc9ba;
+  --color-amber-50: #2a2110;
+  --color-amber-100: #3a2d12;
+  --color-amber-200: #5a4618;
+  --color-amber-300: #ffd27a;
+  --color-amber-500: #ffb23d;
+  --color-amber-800: #ffd58a;
+  --color-amber-900: #ffe2a8;
+  --color-amber-950: #fff0d0;
+  --color-orange-600: #ff7a3d;
+  --color-orange-700: #ff8f5c;
+  --color-sky-100: #10222a;
+  --color-sky-200: #1a3a48;
+  --color-sky-900: #bfe6ff;
+  --color-indigo-50: #161a2e;
+  --color-indigo-700: #b8c2ff;
+  background: #0b0c0a;
+  color: #edefe8;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  min-height: 100dvh;
+  color-scheme: dark;
+}
+.dai-app ::selection { background: #c8f03c; color: #0b0c0a; }
+.dai-app input:focus, .dai-app textarea:focus, .dai-app select:focus {
+  outline: none;
+  border-color: #c8f03c;
+  box-shadow: 0 0 0 3px rgb(200 240 60 / 0.25);
+}
+/* QR codes must stay dark on white to scan. */
+.dai-qr { background: #fff; border-radius: 12px; padding: 8px; }
+
+/* While a form is being sent: the button that sent it spins and can't be pressed again. */
+.dai-busy {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.85;
+  cursor: progress;
+}
+.dai-busy::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  vertical-align: -0.15em;
+  border: 2px solid var(--dai-fg, currentColor);
+  border-right-color: transparent;
+  border-radius: 9999px;
+  animation: dai-spin 0.7s linear infinite;
+}
+@keyframes dai-spin { to { transform: rotate(360deg); } }
+/* A button with its own waiting words: hide its label, show the words over it. */
+.dai-busy[data-pending-text] { color: transparent !important; }
+.dai-busy[data-pending-text] svg { visibility: hidden; }
+.dai-busy[data-pending-text]::before { position: absolute; left: 1.25rem; top: calc(50% - 0.5em); margin: 0; }
+.dai-busy[data-pending-text]::after {
+  content: attr(data-pending-text);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dai-fg);
+}
+
+/* The thin bar across the top while the next page loads. */
+.dai-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 100;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, #c8f03c 30%, #c8f03c 70%, transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: dai-progress 1.1s ease-in-out infinite;
+}
+@keyframes dai-progress {
+  from { background-position: -50% 0; }
+  to { background-position: 150% 0; }
+}
+
+/* Loading outlines. */
+.dai-skeleton { background: linear-gradient(90deg, #171a14 0%, #1e221b 50%, #171a14 100%); background-size: 200% 100%; animation: dai-shimmer 1.4s ease-in-out infinite; border-radius: 16px; }
+@keyframes dai-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dai-busy::before, .dai-progress, .dai-skeleton { animation-duration: 3s; }
+}

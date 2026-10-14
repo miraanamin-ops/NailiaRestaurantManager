@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
@@ -19,7 +20,7 @@ export const metadata: Metadata = { title: "Activity log", robots: { index: fals
 // Every action, newest first: who did what and when. Owner-only (see src/proxy.ts).
 export default function LogPage({ searchParams }: PageProps<"/log">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Log searchParams={searchParams} />
     </Suspense>
   );
@@ -94,7 +95,7 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   }
 
   return (
-    <div className="min-h-dvh bg-stone-100 text-stone-900">
+    <div className="bg-stone-100 text-stone-900">
       <header className="px-4 pb-6 pt-8 text-white" style={{ background: restaurant.brand_dark }}>
         <div className="mx-auto max-w-2xl">
           <p className="text-sm text-stone-300">{restaurant.name}</p>

@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Logging in…", robots: { index: fal
 // even if the email opens in a different browser app from the one you asked from.
 export default function ConfirmPage() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-stone-100 p-6 text-center text-stone-700">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-stone-100 p-6 text-center text-stone-700">
       <Confirm />
     </div>
   );

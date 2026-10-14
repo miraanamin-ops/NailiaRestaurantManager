@@ -65,6 +65,8 @@ export const PROFILE_FIELDS = {
   logo: f("brand_kit", "confirm", [], ["logo_url"], true, "logo"),
   colours: f("brand_kit", "confirm", [], ["brand_color", "brand_dark"], true, "colours"),
   photo_library: f("brand_kit", "confirm", ["growth", "visibility"], ["photo_library"], false, "photo library"),
+  // Learning: the replies the owner picked in onboarding's "Reply to reviews" (026)
+  examples: f("learning", "auto", ["reputation", "growth", "visibility", "gm"], ["profile_examples"], false, "examples you picked"),
   // Controls: settings only, never changed by an agent
   discount_cap: f("controls", "settings", ["growth"], ["discount_cap_percent"], true, "discount cap"),
   send_window: f("controls", "settings", [], ["send_window_start", "send_window_end"], true, "sending hours"),

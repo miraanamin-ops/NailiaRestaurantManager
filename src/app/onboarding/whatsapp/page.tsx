@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "Set up on WhatsApp", robots: { index
 // whichever step the owner is on.
 export default function WhatsAppSetupPage({ searchParams }: PageProps<"/onboarding/whatsapp">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <WhatsAppSetup searchParams={searchParams} />
     </Suspense>
   );

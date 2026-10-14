@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { sendLoginLink } from "./actions";
@@ -14,7 +15,7 @@ const MESSAGES: Record<string, string> = {
 // Owner login: enter your email, tap the link we send. No password.
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Login searchParams={searchParams} />
     </Suspense>
   );
@@ -27,7 +28,7 @@ async function Login({ searchParams }: Pick<PageProps<"/login">, "searchParams">
   const error = one("error");
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-stone-100 px-4 text-stone-900">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-stone-100 px-4 text-stone-900">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-200/70">
         <h1 className="text-xl font-bold">Log in</h1>
         {one("sent") ? (
@@ -54,7 +55,7 @@ async function Login({ searchParams }: Pick<PageProps<"/login">, "searchParams">
                 inputMode="email"
                 className="w-full rounded-lg border border-stone-300 px-3 py-2.5 text-base"
               />
-              <button type="submit" className="w-full rounded-lg bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white">
+              <button type="submit" data-pending-text="Sending your link…" className="w-full rounded-full bg-[#c8f03c] px-4 py-3 text-sm font-semibold text-[#0b0c0a] hover:bg-[#d6f86a]">
                 Email me a login link
               </button>
             </form>
