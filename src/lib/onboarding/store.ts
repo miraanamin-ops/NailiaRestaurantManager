@@ -1,7 +1,7 @@
 import "server-only";
 import { check, checkRow } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { testToolsEnabled, testToolsOn } from "@/lib/test-mode";
 import { mark, newLinkCode, nextStep, slugFor, type Progress, type StepId, type StepStatus } from "./steps";
 
 // Onboarding progress, saved in one row per restaurant. The web wizard and the
@@ -76,7 +76,7 @@ async function uniqueSlug(name: string) {
 }
 
 // The sign-up form: a new restaurant, not active until onboarding finishes, with a
-// one-time code to link the owner's WhatsApp. In test mode it's a demo restaurant
+// one-time code to link the owner's WhatsApp. With TEST_TOOLS on it's a demo restaurant
 // (its data can be cleared and its onboarding reset).
 export async function createRestaurantFromSignup(input: { ownerName: string; email: string; restaurantName: string; whatsapp: string | null }) {
   const supabase = getSupabase();
@@ -89,7 +89,8 @@ export async function createRestaurantFromSignup(input: { ownerName: string; ema
         owner_email: input.email,
         slug: await uniqueSlug(input.restaurantName),
         active: false,
-        is_demo: isTestMode(),
+        // With TEST_TOOLS on, every new sign-up is a demo restaurant.
+        is_demo: testToolsEnabled(),
         discount_cap_percent: 15,
         email_test_mode: false,
       })
@@ -144,8 +145,9 @@ export type LinkResult =
   | { ok: false; reason: "no_code" | "expired" | "number_taken" };
 
 // Someone sent a link code from WhatsApp: that number becomes the restaurant's owner number.
-// A number can only belong to one restaurant. In test mode, a number that belongs
-// to a demo restaurant is moved (so one test phone can onboard several test restaurants).
+// A number can only belong to one restaurant. With TEST_TOOLS on, a number moves
+// from one demo restaurant to another (so one test phone can onboard several test
+// restaurants). A real restaurant's number is never moved, and never moved onto one.
 export async function linkWhatsApp(code: string, number: string, ourNumber: string): Promise<LinkResult> {
   const supabase = getSupabase();
   const o = check(await supabase.from("onboarding").select("*").eq("link_code", code).maybeSingle<Onboarding>());
@@ -154,7 +156,8 @@ export async function linkWhatsApp(code: string, number: string, ourNumber: stri
 
   const current = check(await supabase.from("restaurants").select("id, is_demo").eq("owner_whatsapp", number).maybeSingle<{ id: string; is_demo: boolean }>());
   if (current && current.id !== o.restaurant_id) {
-    if (!(isTestMode() && current.is_demo)) return { ok: false, reason: "number_taken" };
+    const target = check(await supabase.from("restaurants").select("id, is_demo").eq("id", o.restaurant_id).maybeSingle<{ id: string; is_demo: boolean }>());
+    if (!(testToolsOn(current) && target && testToolsOn(target))) return { ok: false, reason: "number_taken" };
     check(await supabase.from("restaurants").update({ owner_whatsapp: null }).eq("id", current.id));
   }
   const restaurant = await updateRestaurantFields(o.restaurant_id, { owner_whatsapp: number, whatsapp_from: ourNumber });

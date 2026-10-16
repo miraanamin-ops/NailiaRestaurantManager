@@ -1,6 +1,7 @@
 import "server-only";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { getSupabase } from "@/lib/supabase";
+import { allSwitches, describeSwitches, switchesRecord } from "@/lib/switches";
 import { hourlyIsLate, runFailed, stuckRuns, unalertedFailures, type RunRow } from "./job-health";
 
 // Every scheduled job run is recorded with its real outcome (job_runs), and the
@@ -8,10 +9,29 @@ import { hourlyIsLate, runFailed, stuckRuns, unalertedFailures, type RunRow } fr
 
 export type Job = "hourly" | "daily";
 
+// Each run records the switches it ran with (once per run), so /log shows them
+// and any change between runs. Before supabase/025_job_switches.sql has been run
+// there's no switches column: the run is recorded without them.
 export async function startRun(job: Job) {
-  const { data, error } = await getSupabase().from("job_runs").insert({ job, status: "running" }).select("id").single<{ id: string }>();
-  if (error) console.error("Couldn't record the job start", error);
-  return data?.id ?? null;
+  const switches = allSwitches(process.env);
+  console.log(`[${job} job] switches: ${describeSwitches(switches).map((s) => `${s.name}=${s.value}`).join(", ")}`);
+  const supabase = getSupabase();
+  let res = await supabase.from("job_runs").insert({ job, status: "running", switches: switchesRecord(switches) }).select("id").single<{ id: string }>();
+  if (res.error) res = await supabase.from("job_runs").insert({ job, status: "running" }).select("id").single<{ id: string }>();
+  if (res.error) console.error("Couldn't record the job start", res.error);
+  return res.data?.id ?? null;
+}
+
+export type JobRunRow = { id: string; job: string; status: string; started_at: string; finished_at: string | null; error: string | null; switches?: Record<string, unknown> | null };
+
+// The latest runs for /log (with their switches once the column exists).
+export async function recentRuns(limit: number) {
+  const supabase = getSupabase();
+  const cols = "id, job, status, started_at, finished_at, error";
+  const withSwitches = await supabase.from("job_runs").select(`${cols}, switches`).order("started_at", { ascending: false }).limit(limit).returns<JobRunRow[]>();
+  if (!withSwitches.error) return withSwitches.data ?? [];
+  const plain = await supabase.from("job_runs").select(cols).order("started_at", { ascending: false }).limit(limit).returns<JobRunRow[]>();
+  return plain.data ?? [];
 }
 
 export async function finishRun(id: string | null, job: Job, summary: Record<string, unknown>[] | null, error: string | null) {

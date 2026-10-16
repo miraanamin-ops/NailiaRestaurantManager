@@ -333,7 +333,7 @@ export type DeliverySummary = { emailed: number; simulated: number; failed: numb
 
 // Called by the send pipeline once every safety rule has passed. Dummy customers
 // (seed data, example.com addresses) are "simulated"; everyone else gets a real
-// email (redirected to the builder when TEST_MODE is on: see lib/email/route.ts).
+// email (redirected to the builder when EMAIL_REDIRECT is on: see lib/email/route.ts).
 export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now: Date): Promise<DeliverySummary> {
   const supabase = getSupabase();
   const campaign = await getCampaignForDraft(draft.id);

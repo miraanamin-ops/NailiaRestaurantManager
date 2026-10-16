@@ -2,7 +2,7 @@ import "server-only";
 import type { ChatResult } from "@/lib/assistant";
 import { check, type Draft } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { runChecker } from "./checker-core";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
@@ -45,11 +45,12 @@ export async function gmChecklist(r: Restaurant) {
   return { ready: fields.ready && live.length > 0, labels, live };
 }
 
-// Live only once the checklist passes, and for now only with TEST_MODE on.
+// Live only when AGENTS_LIVE_ALLOWED lets it (lib/switches.ts) and the checklist passes.
 export async function gmMode(r: Restaurant) {
   const mode = agentMode(r, "gm");
-  if (mode === "live" && (!isTestMode() || !(await gmChecklist(r)).ready)) return "shadow";
-  return mode;
+  if (mode !== "live") return mode;
+  const liveAllowed = agentLiveAllowed(process.env, "gm");
+  return effectiveAgentMode(mode, { liveAllowed, ready: liveAllowed && (await gmChecklist(r)).ready });
 }
 
 // ---------- Routing ----------

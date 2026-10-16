@@ -16,6 +16,8 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.{ts,mts}"],
     environment: "node",
+    // Clears the switches Vercel's build would otherwise pass in (see the file).
+    setupFiles: ["tests/support/switch-env.ts"],
     // The first test in a file also loads the app's code, which can take a few
     // seconds on a cold start (e.g. on GitHub); don't fail on that.
     testTimeout: 30_000,

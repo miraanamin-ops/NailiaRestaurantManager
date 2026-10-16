@@ -149,7 +149,7 @@ async function respond(turn: Turn, body: string, result: ChatResult, active: Awa
     );
   }
   if (result.type === "campaign") {
-    // Growth live (test mode): it drafts the campaign instead (today's flow if it can't).
+    // Growth live: it drafts the campaign instead (today's flow if it can't).
     const growth = await growthMode(ctx.restaurant);
     if (growth === "live" && (await liveGrowthRequest(ctx.restaurant, body, ctx.now, send))) return;
     const draft = await campaignCreateAndSend(ctx, result.fields, body, send);

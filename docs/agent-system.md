@@ -52,7 +52,7 @@ The gate is the last step before anything leaves the system. It checks:
 - Unsubscribe link present in every campaign email
 - Not a duplicate of something already sent
 - PAUSE is off
-- TEST_MODE, as a gate step: in test mode nothing reaches a real customer, owner or platform
+- Simulation, as a gate step (the switches in `src/lib/switches.ts`): with EMAIL_REDIRECT on (always in preview and development) no email reaches a real customer, GOOGLE_MODE=simulated posts nothing to Google, and no agent is live unless AGENTS_LIVE_ALLOWED allows it (false is a kill switch)
 
 These rules live only in code. Never move them into a prompt, and never let a prompt or the profile keeper loosen them.
 
@@ -74,7 +74,7 @@ These rules live only in code. Never move them into a prompt, and never let a pr
 - Agent tests run on every push, alongside the existing tests.
 - New agent tools must be added to that agent's front matter and the allow-list together.
 - Never give an agent a tool that sends, publishes or spends. Only the release gate does that.
-- In TEST_MODE, nothing reaches a real customer, owner or platform.
+- With EMAIL_REDIRECT on and GOOGLE_MODE dummy or simulated, nothing reaches a real customer or platform. TEST_MODE is deprecated: it only fills in a switch that is not set.
 
 ## Build order
 

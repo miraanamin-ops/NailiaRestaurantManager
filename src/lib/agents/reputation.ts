@@ -11,6 +11,7 @@ import type { AgentJob, JobOutcome } from "./jobs";
 import { enqueueAgentJob, recordAgentRun } from "./jobs";
 import { missingForGoLive } from "@/lib/profile/fields";
 import { agentMode } from "./modes";
+import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { reputationLoop, type CheckerDeps, type OwnerChoice, type ReputationInput, type ReputationOutcome } from "./reputation-core";
 import type { ReviewInput } from "./reputation-rules";
 import { runWeeklyThemes, type ThemeCount, type ThemeReview } from "./reputation-themes";
@@ -28,11 +29,13 @@ function ok<T>(res: { data: T; error: { message: string } | null }): T {
 }
 
 // Live only once the go-live checklist passes (decision 14): until the fields
-// Reputation needs are filled, a restaurant set to live stays in shadow mode.
+// Reputation needs are filled, a restaurant set to live stays in shadow mode. The
+// kill switch (AGENTS_LIVE_ALLOWED=false, lib/switches.ts) also keeps it in shadow.
 export function reputationMode(restaurant: Pick<Restaurant, "agent_modes">) {
   const mode = agentMode(restaurant, "reputation");
-  if (mode === "live" && missingForGoLive(restaurant as unknown as Record<string, unknown>, "reputation").length) return "shadow";
-  return mode;
+  if (mode !== "live") return mode;
+  const liveAllowed = agentLiveAllowed(process.env, "reputation");
+  return effectiveAgentMode(mode, { liveAllowed, ready: !missingForGoLive(restaurant as unknown as Record<string, unknown>, "reputation").length });
 }
 
 export async function reputationInput(restaurantId: string, review: ReviewInput, ownerChoice: OwnerChoice | null = null): Promise<ReputationInput> {

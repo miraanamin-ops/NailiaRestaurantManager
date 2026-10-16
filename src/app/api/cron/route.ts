@@ -88,7 +88,7 @@ async function runJob(job: Job) {
         console.error("Review check failed", err);
         entry.reviews = { error: err instanceof Error ? err.message : String(err) };
       }
-      // The GM live (test mode): an alert held for quiet hours or the one-an-hour limit, if one is due.
+      // The GM live: an alert held for quiet hours or the one-an-hour limit, if one is due.
       try {
         if (channel && (await gmMode(r)) === "live") entry.alert = await releaseAlerts(r, (text, withButtons) => messageOwner(channel, text, withButtons), now);
       } catch (err) {

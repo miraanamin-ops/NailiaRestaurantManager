@@ -2,7 +2,7 @@ import "server-only";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { downloadTwilioMedia, isSupportedImage } from "@/lib/photos";
 import { appUrl, getSupabase } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { testToolsOn } from "@/lib/test-mode";
 import { replyUnregistered } from "@/lib/unregistered";
 import * as engine from "./engine";
 import { placesAvailable } from "./places";
@@ -100,7 +100,7 @@ async function handle(ctx: Ctx, body: string, media: Media[]) {
   if (s.onboarding.completed_at || !s.step) return;
   const step = s.step;
   const reply = parseOnboardingReply(body);
-  if (isTestMode() && /^reset (onboarding|setup)$/i.test(body.trim())) return ctx.send(await resetOnboardingText(s.restaurant));
+  if (testToolsOn(s.restaurant) && /^reset (onboarding|setup)$/i.test(body.trim())) return ctx.send(await resetOnboardingText(s.restaurant));
 
   if (!media.length && reply.kind === "web") {
     return ctx.send(`Carry on in your browser here (it picks up where we are): ${setupUrl(ctx.restaurantId)}`);
@@ -166,9 +166,10 @@ async function handle(ctx: Ctx, body: string, media: Media[]) {
   }
 }
 
-// RESET ONBOARDING (test mode, demo restaurants only): back to just signed up.
+// RESET ONBOARDING (TEST_TOOLS, demo restaurants only): back to just signed up.
 export async function resetOnboardingText(r: { id: string; is_demo: boolean; name: string }) {
   if (!r.is_demo) return "🧪 Only demo (test) restaurants can be reset, so nothing changed.";
+  if (!testToolsOn(r)) return "🧪 Test tools are off, so nothing changed.";
   await engine.resetOnboarding(r.id);
   return `🧪 Reset: ${r.name} is back to just signed up (menu, hours, voice and reward cleared; WhatsApp still linked). Reply *START* to set up again here, or carry on in the browser: ${setupUrl(r.id)}`;
 }

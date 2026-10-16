@@ -182,7 +182,7 @@ Email campaigns (how customers hear about offers; customers are reached by email
 - segment: "everyone", "birthdays_7d" (birthdays in the next 7 days) or "unredeemed_signups" (new sign-ups who haven't used their welcome reward). Use "everyone" unless the owner's request points to one of the others.
 - Approved campaigns go through the safety rules, and only customers with email consent receive them.
 
-Campaign results: when the owner asks how a campaign did (e.g. "how did Thursday do?"), answer briefly from the campaign results you're given: sent, opened, clicked, redeemed. Be honest that simulated sends (test mode) can't be opened or redeemed.
+Campaign results: when the owner asks how a campaign did (e.g. "how did Thursday do?"), answer briefly from the campaign results you're given: sent, opened, clicked, redeemed. Be honest that simulated sends (dummy customers) can't be opened or redeemed.
 
 Restaurant data (JSON):
 ${JSON.stringify(ctx.data, null, 2)}`;
@@ -293,7 +293,7 @@ export async function campaignContext(ctx: RestaurantContext) {
     ? stats
         .map(
           (s) =>
-            `- "${s.campaign.name}" (offer: ${s.campaign.offer}; valid ${formatValidity(s.campaign.valid_from, s.campaign.valid_until)}; to ${SEGMENT_LABELS[s.campaign.segment]}; sent ${s.campaign.sent_at?.slice(0, 10)}): ${s.emailed} real emails, ${s.simulated} simulated (test mode), ${s.excluded} left out for no consent; opened ${s.opened}, clicked ${s.clicked}, redeemed ${s.redeemed}`,
+            `- "${s.campaign.name}" (offer: ${s.campaign.offer}; valid ${formatValidity(s.campaign.valid_from, s.campaign.valid_until)}; to ${SEGMENT_LABELS[s.campaign.segment]}; sent ${s.campaign.sent_at?.slice(0, 10)}): ${s.emailed} real emails, ${s.simulated} simulated (dummy customers), ${s.excluded} left out for no consent; opened ${s.opened}, clicked ${s.clicked}, redeemed ${s.redeemed}`,
         )
         .join("\n")
     : "No campaigns sent yet.";

@@ -14,7 +14,7 @@ import { ownerChannel } from "@/lib/followups";
 import { messageOwner } from "@/lib/notify";
 import { addDays } from "@/lib/sales/format";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
 import { gmIsLive, holdAgentQuestion, holdSpecialIdea } from "./gm-held";
@@ -33,7 +33,7 @@ import type { CheckerVerdictOutput } from "./schema";
 // the local calendar, quiet times from sales), the checker's data (with a picture
 // of each email), shadow mode (owner requests, the weekly birthday batch, the
 // Monday plan, calendar dates, special ideas; saved in shadow_drafts for /log), and
-// live mode (TEST_MODE only): owner requests answered by Growth, Monday drafts
+// live mode (see growthMode): owner requests answered by Growth, Monday drafts
 // held for the brief. Special ideas stay draft only (shadow) for now.
 
 function ok<T>(res: { data: T; error: { message: string } | null }): T {
@@ -41,12 +41,13 @@ function ok<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-// Live only once the go-live checklist passes (discount cap, offer types, sign-up
-// offer, logo, colours), and for now only with TEST_MODE on.
+// Live only when AGENTS_LIVE_ALLOWED lets it (lib/switches.ts) and the go-live
+// checklist passes (discount cap, offer types, sign-up offer, logo, colours).
 export async function growthMode(restaurant: Restaurant) {
   const mode = agentMode(restaurant, "growth");
-  if (mode === "live" && (!isTestMode() || !goLiveChecklist(restaurant, "growth", await confirmedFields(restaurant.id)).ready)) return "shadow";
-  return mode;
+  if (mode !== "live") return mode;
+  const liveAllowed = agentLiveAllowed(process.env, "growth");
+  return effectiveAgentMode(mode, { liveAllowed, ready: liveAllowed && goLiveChecklist(restaurant, "growth", await confirmedFields(restaurant.id)).ready });
 }
 
 export type GrowthJob = {
@@ -212,7 +213,7 @@ export async function birthdayGrowth(restaurant: Restaurant, today: string, lega
   return null;
 }
 
-// ---------- Live mode (TEST_MODE only) ----------
+// ---------- Live mode (see growthMode) ----------
 
 // The draft's checks for the approval card: the checker's minor fixes, and the code
 // checks (misleading claims; the cap from the offer's fields and the wording).

@@ -6,9 +6,9 @@ import { checkResult, type CheckResult, type DraftChecks } from "@/lib/checks/ty
 import { google, type GooglePost } from "@/lib/google";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { channelFor, testModeStep } from "@/lib/gate-rules";
+import { channelFor, simulationStep } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { emailRedirectSwitch, googleSwitch } from "@/lib/switches";
 
 // Sending. Every send goes through attemptSend, which runs the two code checks
 // right before anything goes out and records the result on the draft:
@@ -112,9 +112,10 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     }
   }
 
-  // 3. TEST_MODE, as a gate step: in test mode nothing reaches a real customer,
-  //    owner or platform. (WhatsApp to customers stays off until Meta verification.)
-  const testStep = testModeStep({ testMode: isTestMode(), channel: channelFor(draft.kind), googleMode: google().mode });
+  // 3. Simulation, as a gate step: GOOGLE_MODE=simulated posts nothing to Google,
+  //    EMAIL_REDIRECT keeps emails away from customers (lib/switches.ts).
+  //    (WhatsApp to customers stays off until Meta verification.)
+  const testStep = simulationStep({ channel: channelFor(draft.kind), google: googleSwitch(process.env).mode, emailRedirect: emailRedirectSwitch(process.env).on });
   const testCheck = checkResult(testStep.outcome === "simulate" ? [testStep.detail] : [], [], "pass");
   const reachesPlatform = testStep.outcome === "ok";
 
@@ -155,7 +156,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     });
   }
 
-  // Email campaigns really go out (to the owner only, in test mode).
+  // Email campaigns really go out (to the builder and owner only, with EMAIL_REDIRECT on).
   // Everything else is still a simulated send: logged only.
   let note: string | undefined;
   let simulated = true;
@@ -164,7 +165,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     note = deliveryNote(summary);
     simulated = summary.emailed === 0;
   } else if (!reachesPlatform) {
-    // Test mode (or customer WhatsApp): nothing goes out; it is logged as simulated.
+    // Simulated Google (or customer WhatsApp): nothing goes out; it is logged as simulated.
     note = `🧪 ${testStep.detail}`;
   } else if (claimed.kind === "review_reply" && claimed.review_id) {
     // Posted under the review (in dummy mode: saved against it).

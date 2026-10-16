@@ -31,7 +31,7 @@ const made: string[] = [];
 const timings: Record<string, number> = {};
 
 beforeAll(async () => {
-  expect(process.env.TEST_MODE).toBe("true");
+  expect(process.env.TEST_TOOLS === "true" || process.env.TEST_MODE === "true").toBe(true);
   engine = await import("@/lib/onboarding/engine");
   flow = await import("@/lib/onboarding/whatsapp-flow");
   store = await import("@/lib/onboarding/store");

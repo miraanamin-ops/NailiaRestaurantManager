@@ -276,7 +276,7 @@ function Customers({ s, ctx }: { s: CustomersSection; ctx: Ctx }) {
       )}
       {s.simulated > 0 && (
         <p className="mt-3 text-xs text-stone-500">
-          Test mode: {s.simulated} of last week&apos;s emails were simulated (only your copy is really sent).
+          Simulated: {s.simulated} of last week&apos;s emails were simulated (only your copy is really sent).
         </p>
       )}
     </Card>

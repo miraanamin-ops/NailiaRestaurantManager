@@ -14,7 +14,8 @@ import { undoLast } from "@/lib/undo";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
 import { resetOnboardingText } from "@/lib/onboarding/whatsapp-flow";
 import { checkCreateAndSend, heldNote, newReview, proposeBirthdayCampaign } from "./flows";
-import { isTestCommand, isTestMode, TEST_MODE_OFF_MESSAGE } from "@/lib/test-mode";
+import { isTestCommand, testToolsEnabled, testToolsOn, TEST_TOOLS_OFF_MESSAGE, TEST_TOOLS_REAL_RESTAURANT_MESSAGE } from "@/lib/test-mode";
+import { allSwitches } from "@/lib/switches";
 import { emailPreviewsCommand, exportCustomersCommand, runFeedbackCommand } from "./email-commands";
 import { addStaff, removeStaff, staffText } from "@/lib/sales/staff";
 import { runWeatherCommand, salesCommand, sampleZCommand, testZCommand } from "./sales-commands";
@@ -44,8 +45,8 @@ const HELP_TEXT = `🛠️ *Commands*
 - *SALES*: last 7 days' sales and the sales page link
 - *ADD STAFF +447700900123*: let a staff phone send till reports and sales files (nothing else) · *REMOVE STAFF* · *STAFF* to list them`;
 
-// Only listed (and only working) when TEST_MODE is on.
-const TEST_HELP_TEXT = `🧪 *Test commands* (test mode is on)
+// Only listed (and only working) with TEST_TOOLS on, for a demo restaurant.
+const TEST_HELP_TEXT = `🧪 *Test commands* (test tools are on)
 - *RUN BRIEF*: the 9am morning brief, now
 - *RUN REPORT*: the Monday weekly report (last 7 days), now
 - *NEW REVIEW*: a random new review appears on (dummy) Google; *NEW REVIEW 2* / *NEW REVIEW 5* pick the stars. 1-3 stars alert you at once; 4-5 stars wait for the brief
@@ -80,8 +81,9 @@ async function statusText(restaurant: Restaurant) {
   return [
     "⚙️ *Status*",
     `- Sending: ${restaurant.paused ? "⏸️ *PAUSED*" : "▶️ on"}`,
-    `- Clock: ${formatLondon(now)}${restaurant.fake_now && isTestMode() ? " _(test time; TIME OFF to reset)_" : ""}`,
-    `- Test mode: ${isTestMode() ? "on" : "off"}`,
+    `- Clock: ${formatLondon(now)}${restaurant.fake_now && testToolsOn(restaurant) ? " _(test time; TIME OFF to reset)_" : ""}`,
+    `- Test tools: ${testToolsOn(restaurant) ? "on" : testToolsEnabled() ? "off (not a demo restaurant)" : "off"}`,
+    `- Customer emails: ${allSwitches(process.env).emailRedirect.on ? "redirected to the builder" : "go to customers"}`,
     `- Sending hours: ${formatWindow(restaurant.send_window_start, restaurant.send_window_end)} (${inWindow ? "open now" : "closed now"})`,
     `- Discount cap: ${restaurant.discount_cap_percent}%`,
     `- Queued drafts: ${count ?? 0}`,
@@ -91,11 +93,12 @@ async function statusText(restaurant: Restaurant) {
 export async function runCommand(command: Command, turn: Turn) {
   const { ctx, channel, send } = turn;
   const r = ctx.restaurant;
-  // Test commands do nothing unless TEST_MODE is on (it's off in production by default).
-  if (isTestCommand(command.name) && !isTestMode()) return send(TEST_MODE_OFF_MESSAGE);
+  // Test commands do nothing unless TEST_TOOLS is on (off unless set), and never
+  // for a real (non-demo) restaurant.
+  if (isTestCommand(command.name) && !testToolsOn(r)) return send(testToolsEnabled() ? TEST_TOOLS_REAL_RESTAURANT_MESSAGE : TEST_TOOLS_OFF_MESSAGE);
   switch (command.name) {
     case "help":
-      return send(isTestMode() ? `${HELP_TEXT}\n\n${TEST_HELP_TEXT}` : HELP_TEXT);
+      return send(testToolsOn(r) ? `${HELP_TEXT}\n\n${TEST_HELP_TEXT}` : HELP_TEXT);
     case "status":
       return send(await statusText(r));
     case "pause":
@@ -169,7 +172,7 @@ export async function runCommand(command: Command, turn: Turn) {
       await updateRestaurant(r.id, { owner_email: command.email });
       await logSetting(r.id, "owner_email", r.owner_email, command.email, `Changed your email to ${command.email}`);
       return send(
-        `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${isTestMode() ? "\n_Test mode is on: customers' emails are redirected to the builder._" : ""}`,
+        `📧 Got it. Your copy of every campaign email goes to *${command.email}*.${allSwitches(process.env).emailRedirect.on ? "\n_Customers' emails are redirected to the builder for now._" : ""}`,
       );
     case "export_customers":
       return exportCustomersCommand(turn);

@@ -44,7 +44,7 @@ export async function emailPreviewsCommand({ ctx, send }: Turn) {
   return send("🎨 They use your logo, colours and voice from set-up. Change the logo and colours on your settings page; campaign emails get a preview like this before you approve them.");
 }
 
-// RUN FEEDBACK (test mode): send any "How was your visit?" emails now, without waiting 3 hours.
+// RUN FEEDBACK (test tools): send any "How was your visit?" emails now, without waiting 3 hours.
 export async function runFeedbackCommand({ ctx, send }: Turn) {
   const s = await runFeedbackJob(ctx.restaurant, ctx.now, { ignoreDelay: true });
   if (!s.sent && !s.skipped && !s.waiting && !s.failed) {

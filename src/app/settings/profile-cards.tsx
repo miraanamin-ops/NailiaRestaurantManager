@@ -6,7 +6,8 @@ import type { AgentName } from "@/lib/agents/definition";
 import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
 import { ALWAYS_APPROVE, NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel, type TrustLevel } from "@/lib/trust";
 import { costsFor } from "@/lib/agents/costs";
-import { confirmedFields, goLiveChecklist } from "@/lib/agents/go-live";
+import { agentStatus, confirmedFields, goLiveChecklist } from "@/lib/agents/go-live";
+import { allSwitches, describeSwitches } from "@/lib/switches";
 import { gmChecklist } from "@/lib/agents/gm";
 import { insightsChecklist } from "@/lib/agents/insights";
 import { dollars } from "@/lib/agents/usage";
@@ -174,6 +175,7 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
   const confirmed = await confirmedFields(r.id);
   const insights = await insightsChecklist(r);
   const gm = await gmChecklist(r);
+  const status = await agentStatus(r);
   const levelNames: Record<TrustLevel, string> = { draft_only: "Draft only", approve: "Approve", auto: "Auto" };
   return (
     <Card>
@@ -181,6 +183,17 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
       <p className="text-sm text-stone-600">
         Only you can see this. Every task starts on Approve. Auto sends without a tap, but only once the checker agent is live and has passed that exact draft. Campaigns, offers, hours, menu and profile changes can never be Auto.
       </p>
+      <div className="rounded-xl bg-stone-50 p-3 text-xs text-stone-700 ring-1 ring-stone-200">
+        <p className="font-semibold">Switches (set in Vercel, the same for every restaurant)</p>
+        <ul className="mt-1 space-y-0.5">
+          {describeSwitches(allSwitches(process.env)).map((s) => (
+            <li key={s.name}>
+              <span className="font-mono">{s.name}</span>: {s.value}
+              {s.note && <span className="text-amber-800"> ({s.note})</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
       <form action={saveBuilderControls} className="space-y-4">
         <input type="hidden" name="r" value={r.id} />
         <fieldset className="space-y-2">
@@ -215,6 +228,11 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
                     ))}
                   </select>
                 </label>
+                {status[agent as AgentName]?.reason && (
+                  <p className="text-xs font-medium text-amber-800">
+                    Set to live, running in shadow: {status[agent as AgentName]?.reason}.
+                  </p>
+                )}
                 {fields && (
                   <p className="text-xs text-stone-600">
                     Go-live checklist:{" "}
@@ -229,13 +247,13 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
                 )}
                 {agent === "gm" && (
                   <p className="text-xs text-stone-600">
-                    {gm.live.length ? `✅ Specialists live: ${gm.live.join(", ")}` : "❌ At least one specialist live"}. Live replies and the GM&apos;s brief only reach the owner in test mode for now.
+                    {gm.live.length ? `✅ Specialists live: ${gm.live.join(", ")}` : "❌ At least one specialist live"}.
                   </p>
                 )}
                 {agent === "insights" && (
                   <p className="text-xs text-stone-600">
                     Go-live checklist: {insights.ready ? "✅" : "❌"} {insights.label}
-                    {!insights.ready && " (stays in shadow until then)"}. Live answers only reach the owner in test mode for now.
+                    {!insights.ready && " (stays in shadow until then)"}.
                   </p>
                 )}
               </div>

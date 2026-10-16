@@ -102,6 +102,16 @@ describe("the go-live checklist", () => {
     expect(reputationMode(restaurantRow({ recovery_offers: [] }) as never)).toBe("shadow");
     expect(reputationMode(restaurantRow({ agent_modes: {} }) as never)).toBe("shadow");
   });
+
+  test("the kill switch (AGENTS_LIVE_ALLOWED=false) keeps a ready Reputation in shadow, TEST_MODE or not", async () => {
+    const { reputationMode } = await import("@/lib/agents/reputation");
+    vi.stubEnv("AGENTS_LIVE_ALLOWED", "false");
+    vi.stubEnv("TEST_MODE", "true");
+    expect(reputationMode(restaurantRow() as never)).toBe("shadow");
+    vi.stubEnv("AGENTS_LIVE_ALLOWED", "true");
+    expect(reputationMode(restaurantRow() as never)).toBe("live");
+    vi.unstubAllEnvs();
+  });
 });
 
 describe("live replies", () => {

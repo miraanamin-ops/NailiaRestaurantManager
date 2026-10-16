@@ -7,7 +7,7 @@ import { draftMessage } from "@/lib/format";
 import { postPreviewPng } from "@/lib/google/post-preview";
 import { messageOwner } from "@/lib/notify";
 import { getSupabase, type PhotoItem, type Restaurant } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
 import { enqueueAgentJob, recordAgentRun, type AgentJob, type JobOutcome } from "./jobs";
@@ -29,13 +29,14 @@ function ok<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-// Live only once the go-live checklist passes (logo, colours, hours, emoji setting,
-// 5+ photos), and for now only with TEST_MODE on: Visibility's new messages (staff
-// tips, questions, hours updates) mustn't reach real people or Google before then.
+// Live only when AGENTS_LIVE_ALLOWED lets it (lib/switches.ts) and the go-live
+// checklist passes (logo, colours, hours, emoji setting, 5+ photos): Visibility's
+// new messages (staff tips, questions, hours updates) reach real people and Google.
 export async function visibilityMode(restaurant: Restaurant) {
   const mode = agentMode(restaurant, "visibility");
-  if (mode === "live" && (!isTestMode() || !goLiveChecklist(restaurant, "visibility", await confirmedFields(restaurant.id)).ready)) return "shadow";
-  return mode;
+  if (mode !== "live") return mode;
+  const liveAllowed = agentLiveAllowed(process.env, "visibility");
+  return effectiveAgentMode(mode, { liveAllowed, ready: liveAllowed && goLiveChecklist(restaurant, "visibility", await confirmedFields(restaurant.id)).ready });
 }
 
 // ---------- Inputs ----------
@@ -259,7 +260,7 @@ export function contentBriefText(out: VisibilityOutput) {
   return `📸 *This week's content brief* (forward this to the team)\n\n${out.content.text.trim()}\n\n${shoots.join("\n\n")}`;
 }
 
-// Runs Visibility for real (TEST_MODE only, see visibilityMode): Google posts and
+// Runs Visibility for real (only when live, see visibilityMode): Google posts and
 // photo captions become drafts for the owner; hours and menu updates are drafts that
 // always need Approve; an unusable staff photo gets a fixed tip; questions go to the owner.
 export async function runVisibilityLive(job: AgentJob): Promise<JobOutcome> {

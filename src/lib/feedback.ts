@@ -157,7 +157,7 @@ export async function submitFeedback(token: string, rating: number, comment: str
     const channel = restaurant ? ownerChannel(restaurant) : null;
     if (channel && restaurant) {
       const text = negativeAlert({ rating, comment, name: customer?.name ?? "A customer", email: customer?.email ?? null });
-      // The GM live (test mode): at most one alert an hour, held in quiet hours.
+      // The GM live: at most one alert an hour, held in quiet hours.
       const { gmMode } = await import("@/lib/agents/gm");
       if ((await gmMode(restaurant)) === "live") {
         const { gmAlert } = await import("@/lib/agents/gm-brief");

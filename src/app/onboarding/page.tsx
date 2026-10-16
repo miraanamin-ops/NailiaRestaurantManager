@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { qrPackUrl, summaryLines } from "@/lib/onboarding/engine";
 import { STEPS } from "@/lib/onboarding/steps";
-import { isTestMode } from "@/lib/test-mode";
+import { testToolsOn } from "@/lib/test-mode";
 import { resetSetup } from "./actions";
 import { loadOnboarding } from "./load";
 import { button, Card, Frame, secondary } from "./ui";
@@ -48,10 +48,10 @@ async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchPa
             </Link>
           </Card>
         </div>
-        {isTestMode() && r.is_demo && (
+        {testToolsOn(r) && (
           <form action={resetSetup} className="mt-8 text-center">
             <input type="hidden" name="r" value={restaurantId} />
-            <button className="text-sm text-stone-500 underline">🧪 Test mode: reset and set up again</button>
+            <button className="text-sm text-stone-500 underline">🧪 Test tools: reset and set up again</button>
           </form>
         )}
       </Frame>

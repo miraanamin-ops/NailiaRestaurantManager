@@ -349,7 +349,7 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
   } catch (err) {
     console.error("Report insights failed; using plain summaries", err);
   }
-  // Insights live (test mode only): it writes the headline, the sales words and the
+  // Insights live (see insightsMode): it writes the headline, the sales words and the
   // 3 actions around the figures code prepared. If it can't, today's words stay.
   const reportDay = londonYmd(period.end);
   const fromInsights = (await insightsMode(restaurant)) === "live" ? await reportWordsFromInsights(restaurant, reportDay) : null;

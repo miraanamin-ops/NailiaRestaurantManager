@@ -16,7 +16,7 @@ import { runComposer } from "./gm-core";
 import { alertTime } from "./gm-rules";
 import { recordAgentRun } from "./jobs";
 
-// The GM live (test mode only): the morning brief, the Monday report message and
+// The GM live (see gmMode): the morning brief, the Monday report message and
 // alerts, written by the composer around what code decides: which cards (at most 5,
 // ranked), the receipts, when an alert may go (one an hour, never in quiet hours).
 // If the composer fails, today's brief goes instead.

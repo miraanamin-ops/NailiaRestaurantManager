@@ -1,9 +1,16 @@
-// TEST_MODE=true turns on the test commands (TIME, TEST SEND, NEW REVIEW, the
-// RUN commands...) and the TIME test clock. Off unless set, so it's off in
-// production by default. No imports, so it's unit-tested.
+// The test tools: test commands (TIME, TEST SEND, NEW REVIEW, the RUN commands...)
+// and the TIME test clock. They work only with TEST_TOOLS on (lib/switches.ts),
+// and only ever on a demo restaurant. No imports beyond lib/switches.ts, so it's unit-tested.
+import { testToolsFor, testToolsSwitch } from "./switches";
 
-export function isTestMode() {
-  return process.env.TEST_MODE === "true";
+// TEST_TOOLS is on for this deployment (it still acts only on demo restaurants: use testToolsOn).
+export function testToolsEnabled() {
+  return testToolsSwitch(process.env).on;
+}
+
+// Test tools may act on this restaurant: TEST_TOOLS is on and it's a demo restaurant.
+export function testToolsOn(restaurant: { is_demo?: boolean | null }) {
+  return testToolsFor(process.env, restaurant);
 }
 
 // The commands that only exist for testing (names from lib/bot/parse.ts).
@@ -28,5 +35,8 @@ export function isTestCommand(name: string) {
   return TEST_COMMANDS.has(name);
 }
 
-export const TEST_MODE_OFF_MESSAGE =
-  "🧪 That's a test command, and test mode is off, so nothing happened. (The builder can turn test mode on with the TEST_MODE setting.)";
+export const TEST_TOOLS_OFF_MESSAGE =
+  "🧪 That's a test command, and test tools are off, so nothing happened. (The builder can turn them on with the TEST_TOOLS setting.)";
+
+export const TEST_TOOLS_REAL_RESTAURANT_MESSAGE =
+  "🧪 That's a test command. Test commands only work for demo restaurants, so nothing happened.";
