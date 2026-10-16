@@ -13,6 +13,12 @@ const handleMessage = vi.fn(async () => {});
 const linkFromWhatsApp = vi.fn(async () => {});
 const handleOnboardingMessage = vi.fn(async () => {});
 let settingUp = false;
+// The job queue: what the webhook queued, and whether queuing works.
+let queued: { type: string; restaurantId: string | null; key: string; priority?: number; concurrencyKey?: string | null; payload?: Record<string, unknown> }[] = [];
+let queueBroken = false;
+let kicks = 0;
+const alerts: string[] = [];
+const sentToOwner: string[] = [];
 let insertError: { message: string; code?: string } | null = null;
 let db: ReturnType<typeof fakeSupabase>;
 
@@ -24,6 +30,21 @@ beforeEach(() => {
   linkFromWhatsApp.mockClear();
   handleOnboardingMessage.mockClear();
   settingUp = false;
+  queued = [];
+  queueBroken = false;
+  kicks = 0;
+  alerts.length = 0;
+  sentToOwner.length = 0;
+  vi.doMock("@/lib/queue/store", () => ({
+    enqueue: async (job: (typeof queued)[number]) => {
+      if (queueBroken) throw new Error("enqueue_job: relation \"jobs\" does not exist");
+      queued.push(job);
+      return { id: `job${queued.length}` };
+    },
+  }));
+  vi.doMock("@/lib/queue/kick", () => ({ kickWorkers: async () => ++kicks }));
+  vi.doMock("@/lib/builder-alerts", () => ({ alertBuilder: async (_k: string, m: string) => (alerts.push(m), "ok") }));
+  vi.doMock("@/lib/notify", () => ({ messageOwner: async (_c: unknown, text: string) => void sentToOwner.push(text) }));
   db = fakeSupabase((call: Call) => {
     if (call.table === "restaurants") {
       const isOwner = call.filters.some((f) => f[0] === "eq" && f[1] === "owner_whatsapp" && f[2] === OWNER);
@@ -43,6 +64,10 @@ afterEach(() => {
   vi.doUnmock("@/lib/bot");
   vi.doUnmock("@/lib/onboarding/whatsapp-flow");
   vi.doUnmock("next/server");
+  vi.doUnmock("@/lib/queue/store");
+  vi.doUnmock("@/lib/queue/kick");
+  vi.doUnmock("@/lib/builder-alerts");
+  vi.doUnmock("@/lib/notify");
   vi.resetModules();
 });
 
@@ -53,6 +78,11 @@ async function post(params: Record<string, string>, signature: string | null) {
   if (signature !== null) headers["x-twilio-signature"] = signature;
   const res = await POST(new NextRequest(URL_, { method: "POST", body: new URLSearchParams(params), headers }));
   await flushAfter();
+  // A worker answers what was queued (the real handler for WhatsApp messages).
+  const { HANDLERS } = await import("@/lib/queue/handlers");
+  for (const job of queued.splice(0)) {
+    await HANDLERS.owner_message.run({ type: job.type, restaurant_id: job.restaurantId, payload: job.payload ?? {} } as never);
+  }
   return res;
 }
 const message = (from = OWNER, sid = "SM1") => ({ From: from, To: "whatsapp:+14155238886", Body: "APPROVE ALL", MessageSid: sid });
@@ -105,6 +135,45 @@ describe("the WhatsApp webhook", () => {
     await post(m, sign(m));
     expect(linkFromWhatsApp).not.toHaveBeenCalled();
     expect(handleMessage).toHaveBeenCalledTimes(1);
+  });
+  test("a message goes on the queue (owner replies first, one at a time per restaurant) and a worker starts", async () => {
+    const m = message(OWNER, "SMq1");
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("@/app/api/whatsapp/route");
+    const body = new URLSearchParams(m);
+    await POST(new NextRequest(URL_, { method: "POST", body, headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": sign(m) } }));
+    await flushAfter();
+    expect(queued).toEqual([
+      {
+        type: "owner_message",
+        restaurantId: "r1",
+        key: "owner_message:SMq1",
+        priority: 0,
+        concurrencyKey: "whatsapp:r1",
+        payload: { kind: "owner", owner: OWNER, sandbox: "whatsapp:+14155238886", body: "APPROVE ALL", buttonPayload: undefined, media: [] },
+      },
+    ]);
+    expect(kicks).toBe(1);
+    expect(handleMessage).not.toHaveBeenCalled(); // not in the webhook: a worker answers it
+  });
+  test("if the queue can't take it, the message is answered here instead", async () => {
+    queueBroken = true;
+    const m = message(OWNER, "SMq2");
+    await post(m, sign(m));
+    expect(handleMessage).toHaveBeenCalledTimes(1);
+    expect(kicks).toBe(0);
+  });
+  test("if answering it here fails too, the owner gets Sorry once and the builder is alerted", async () => {
+    queueBroken = true;
+    handleMessage.mockImplementationOnce(async () => {
+      throw new Error("Supabase down");
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const m = message(OWNER, "SMq3");
+    await post(m, sign(m));
+    const { SORRY } = await import("@/lib/sorry");
+    expect(sentToOwner).toEqual([SORRY]);
+    expect(alerts[0]).toMatch(/couldn't be answered: Supabase down/);
   });
   test("an owner whose restaurant is still being set up gets onboarding, with every photo", async () => {
     settingUp = true;

@@ -58,9 +58,12 @@ describe("agent jobs", () => {
     const failing = async () => {
       throw new Error("API down");
     };
-    for (let i = 1; i < MAX_ATTEMPTS; i++) expect(await runAgentJobs(A, { test_kind: failing })).toEqual([{ key: "k", status: "retry" }]);
+    // Each retry waits (1, then 5 minutes): run the queue two hours apart.
+    const later = (i: number) => new Date(Date.now() + i * 2 * 3600_000);
+    for (let i = 1; i < MAX_ATTEMPTS; i++) expect(await runAgentJobs(A, { test_kind: failing }, { now: later(i - 1) })).toEqual([{ key: "k", status: "retry" }]);
+    expect(await runAgentJobs(A, { test_kind: failing }, { now: new Date() })).toEqual([]); // not due yet
     expect(alerts).toEqual([]);
-    expect(await runAgentJobs(A, { test_kind: failing })).toEqual([{ key: "k", status: "failed" }]);
+    expect(await runAgentJobs(A, { test_kind: failing }, { now: later(MAX_ATTEMPTS) })).toEqual([{ key: "k", status: "failed" }]);
     expect(alerts[0]).toMatch(/checker agent job k failed after 3 tries/);
     expect(db.tables.audit_log.at(-1)).toMatchObject({ action: "agent_failed", actor: "system", agent: "checker" });
   });
@@ -78,9 +81,14 @@ describe("agent jobs", () => {
 
   test("a job whose run crashed (lock passed) is picked up again", async () => {
     const { enqueueAgentJob, runAgentJobs } = await import("@/lib/agents/jobs");
+    const { claim } = await import("@/lib/queue/store");
     await enqueueAgentJob(job(A, "k"));
-    Object.assign(db.tables.agent_jobs[0], { status: "running", attempts: 1, locked_until: "2020-01-01T00:00:00Z" });
-    expect(await runAgentJobs(A, { test_kind: ok })).toEqual([{ key: "k", status: "done" }]);
+    // A worker takes it and then disappears without finishing.
+    expect(await claim({ worker: "crashed", types: ["agent"] })).toHaveLength(1);
+    expect(await runAgentJobs(A, { test_kind: ok })).toEqual([]); // still locked
+    // Ten minutes later its 5-minute lock has passed.
+    expect(await runAgentJobs(A, { test_kind: ok }, { now: new Date(Date.now() + 10 * 60_000) })).toEqual([{ key: "k", status: "done" }]);
+    expect(alerts[0]).toMatch(/got stuck/); // the builder hears about the stuck job
   });
 });
 

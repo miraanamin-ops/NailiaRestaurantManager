@@ -5,7 +5,7 @@ import { readdirSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
 // Files that must wait until the matching code is live on Vercel.
-const AFTER_DEPLOY = { "010_drop_unused.sql": "run after the step 9 code is live" };
+const AFTER_DEPLOY = { "010_drop_unused.sql": "run after the step 9 code is live", "028_queue_schedule.sql": "run after the job queue code is live" };
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const files = readdirSync(new URL("../supabase/", import.meta.url))

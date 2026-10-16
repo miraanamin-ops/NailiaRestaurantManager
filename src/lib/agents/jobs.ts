@@ -1,15 +1,22 @@
 import "server-only";
 import { logAction, type AgentActor, type AuditAction } from "@/lib/audit";
 import { alertBuilder } from "@/lib/builder-alerts";
+import { PermanentJobError, type JobHandler as QueueHandler } from "@/lib/queue/registry";
+import { keys } from "@/lib/queue/rules";
+import { enqueue, type QueueJob } from "@/lib/queue/store";
 // (Its own small check helper: lib/drafts.ts queues jobs, so this file mustn't import it.)
 import { getSupabase } from "@/lib/supabase";
 import { AgentOutputError } from "./run";
 import { addUsage, totals, type Usage } from "./usage";
 
 // Agent jobs: every piece of agent work has a unique key (job_key), so a
-// repeat or retry never does the same work twice. Jobs are queued when
-// something happens (e.g. a draft is created) and run straight after the
-// owner's reply has gone, or by the hourly job if that didn't finish.
+// repeat or retry never does the same work twice.
+//
+// Since the job queue (lib/queue), agent_jobs is the RECORD of each agent job
+// (its input, output, verdict, version and cost; the audit log points at it,
+// and live runs that happen straight away are recorded here too), while the
+// queue's `jobs` table does the waiting, claiming, retrying and dead-lettering:
+// queuing an agent job writes its record here and an `agent` job on the queue.
 // Every finished job is written to the audit log with its id, agent, version
 // and verdict. A job that keeps failing alerts the builder, never the owner.
 
@@ -55,7 +62,7 @@ export type JobOutcome = {
 };
 export type JobHandler = (job: AgentJob) => Promise<JobOutcome>;
 
-const LOCK_MINUTES = 5;
+// Tries per agent job (the `agent` row in job_types says the same).
 export const MAX_ATTEMPTS = 3;
 
 // Adds a job unless one with the same key already exists. Returns the new job, or null if it was already there.
@@ -68,7 +75,8 @@ export async function enqueueAgentJob(input: {
   draftId?: string | null;
   input?: Record<string, unknown>;
 }) {
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase();
+  const { data, error } = await supabase
     .from("agent_jobs")
     .insert({
       restaurant_id: input.restaurantId,
@@ -86,127 +94,135 @@ export async function enqueueAgentJob(input: {
   // 23505 = the unique key: this exact job was queued before.
   if (error?.code === "23505") return null;
   if (error) throw new Error(error.message);
+  if (!data) return null;
+  try {
+    await enqueue({
+      type: "agent",
+      restaurantId: input.restaurantId,
+      key: keys.agent(input.key),
+      payload: { agent_job_id: data.id, job_key: input.key, kind: input.kind },
+      maxAttempts: MAX_ATTEMPTS,
+    });
+  } catch (err) {
+    // Not on the queue: remove the record, so the same key can be queued again later.
+    check(await supabase.from("agent_jobs").delete().eq("restaurant_id", input.restaurantId).eq("id", data.id));
+    throw err;
+  }
   return data;
 }
 
-// Takes one queued job for this restaurant, so no other run picks it up too.
-async function claim(job: AgentJob) {
-  const now = new Date();
-  return check(
-    await getSupabase()
-      .from("agent_jobs")
-      .update({
-        status: "running",
-        attempts: job.attempts + 1,
-        started_at: now.toISOString(),
-        locked_until: new Date(now.getTime() + LOCK_MINUTES * 60_000).toISOString(),
-      })
-      .eq("restaurant_id", job.restaurant_id)
-      .eq("id", job.id)
-      .eq("status", "queued")
-      .select("*")
-      .maybeSingle<AgentJob>(),
-  );
-}
-
-async function finish(job: AgentJob, fields: Partial<AgentJob> & { finished_at?: string | null }) {
+async function finish(job: AgentJob, fields: Partial<AgentJob> & { finished_at?: string | null; started_at?: string | null }) {
   check(await getSupabase().from("agent_jobs").update(fields).eq("restaurant_id", job.restaurant_id).eq("id", job.id));
 }
 
-// Runs this restaurant's queued jobs, oldest first. Never throws: a failing
-// job is recorded and the builder alerted, and the next job still runs.
-export async function runAgentJobs(restaurantId: string, handlers: Record<string, JobHandler>, opts: { limit?: number } = {}) {
-  const supabase = getSupabase();
-  const now = new Date().toISOString();
-  const results: { key: string; status: string }[] = [];
-  try {
-    // A job whose run crashed or timed out goes back in the queue.
-    check(
-      await supabase
-        .from("agent_jobs")
-        .update({ status: "queued", locked_until: null })
-        .eq("restaurant_id", restaurantId)
-        .eq("status", "running")
-        .lt("locked_until", now),
-    );
-    const queued =
-      check(
-        await supabase
-          .from("agent_jobs")
-          .select("*")
-          .eq("restaurant_id", restaurantId)
-          .eq("status", "queued")
-          .order("created_at")
-          .limit(opts.limit ?? 10)
-          .returns<AgentJob[]>(),
-      ) ?? [];
+async function recordFor(qjob: QueueJob) {
+  const id = String(qjob.payload?.agent_job_id ?? "");
+  if (!id || !qjob.restaurant_id) return null;
+  return check(
+    await getSupabase().from("agent_jobs").select("*").eq("restaurant_id", qjob.restaurant_id).eq("id", id).maybeSingle<AgentJob>(),
+  );
+}
 
-    for (const q of queued) {
-      const job = await claim(q);
-      if (!job) continue; // another run took it
-      results.push({ key: job.job_key, status: await runOne(job, handlers) });
-    }
+// The queue's handler for `agent` jobs: runs the agent job its record names.
+export function agentQueueHandler(handlers: Record<string, JobHandler>): QueueHandler {
+  return {
+    run: async (qjob) => {
+      const record = await recordFor(qjob);
+      // The draft it was about was deleted (its record went with it), or a repeat.
+      if (!record) return { skipped: "the agent job's record is gone" };
+      if (record.status === "done") return { skipped: "already done" };
+      const job: AgentJob = { ...record, status: "running", attempts: qjob.attempts };
+      await finish(job, { status: "running", attempts: qjob.attempts, started_at: new Date().toISOString(), locked_until: qjob.locked_until });
+
+      const handler = handlers[job.kind];
+      try {
+        if (!handler) throw new PermanentJobError(`No handler for agent job kind "${job.kind}"`);
+        const out = await handler(job);
+        await finish(job, {
+          status: "done",
+          ...usageFields(out.usage),
+          output: out.output,
+          agent_version: out.agentVersion,
+          verdict: out.verdict ?? null,
+          error: null,
+          locked_until: null,
+          finished_at: new Date().toISOString(),
+        });
+        await logAction({
+          restaurantId: job.restaurant_id,
+          draftId: job.draft_id,
+          actor: out.actor,
+          action: out.action ?? "checked",
+          detail: out.detail,
+          data: { job_key: job.job_key, kind: job.kind },
+          job: { jobId: job.id, agent: job.agent, agentVersion: out.agentVersion, verdict: out.verdict ?? null },
+        });
+        return { agent_job: job.job_key, verdict: out.verdict ?? null };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        // Invalid output twice is final (the builder was already alerted). Anything
+        // else (the API down, a timeout) is tried again by the queue.
+        const final = err instanceof AgentOutputError || err instanceof PermanentJobError || qjob.attempts >= qjob.max_attempts;
+        await finish(job, {
+          status: final ? "failed" : "queued",
+          error: message.slice(0, 1000),
+          locked_until: null,
+          finished_at: final ? new Date().toISOString() : null,
+          // What the failed attempts used still counts.
+          ...(err instanceof AgentOutputError ? usageFields(addUsage(job.usage ?? {}, err.usage)) : {}),
+        });
+        if (err instanceof AgentOutputError) throw new PermanentJobError(message, { cause: err });
+        throw err;
+      }
+    },
+    // Once, when the job has used its tries (or its worker crashed on the last one).
+    alertOnDead: false,
+    onDead: async (qjob, err) => {
+      const record = await recordFor(qjob);
+      if (!record) return;
+      const message = err instanceof Error ? err.message : String(err);
+      if (record.status !== "failed") await finish(record, { status: "failed", error: message.slice(0, 1000), locked_until: null, finished_at: new Date().toISOString() });
+      // Invalid output twice: callAgent has already told the builder.
+      const alreadyAlerted = err instanceof PermanentJobError && err.cause instanceof AgentOutputError;
+      if (!alreadyAlerted) {
+        await alertBuilder(`agent-job-failed:${record.agent}`, `The ${record.agent} agent job ${record.job_key} failed after ${qjob.attempts} tries.\n${message.slice(0, 400)}`);
+      }
+      await logAction({
+        restaurantId: record.restaurant_id,
+        draftId: record.draft_id,
+        actor: "system",
+        action: "agent_failed",
+        detail: `The ${record.agent} agent couldn't finish its job (the builder has been told)`,
+        data: { job_key: record.job_key, error: message.slice(0, 300) },
+        job: { jobId: record.id, agent: record.agent, agentVersion: null, verdict: null },
+      });
+    },
+  };
+}
+
+// Runs this restaurant's queued agent jobs now, oldest first, one at a time (the
+// Monday post step needs Visibility's post before the brief; tests). Never
+// throws: a failing job is recorded, retried later by the queue or, after its
+// last try, the builder alerted; the next job still runs.
+// Statuses: done, retry (it failed and waits for its next try), failed (dead).
+export async function runAgentJobs(restaurantId: string, handlers: Record<string, JobHandler>, opts: { limit?: number; now?: Date } = {}) {
+  const { runWorker } = await import("@/lib/queue/worker");
+  try {
+    const results = await runWorker({
+      types: ["agent"],
+      restaurantId,
+      limit: opts.limit ?? 10,
+      lanes: 1,
+      now: () => opts.now,
+      handlers: { agent: agentQueueHandler(handlers) },
+    });
+    return results
+      .filter((r) => r.status !== "lost")
+      .map((r) => ({ key: r.key.replace(/^agent:/, ""), status: r.status === "dead" ? "failed" : r.status }));
   } catch (err) {
     console.error("Agent jobs couldn't run", err);
     await alertBuilder(`agent-jobs:${restaurantId}`, `Agent jobs for restaurant ${restaurantId} couldn't run: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  return results;
-}
-
-async function runOne(job: AgentJob, handlers: Record<string, JobHandler>) {
-  const handler = handlers[job.kind];
-  try {
-    if (!handler) throw new Error(`No handler for agent job kind "${job.kind}"`);
-    const out = await handler(job);
-    await finish(job, {
-      status: "done",
-      ...usageFields(out.usage),
-      output: out.output,
-      agent_version: out.agentVersion,
-      verdict: out.verdict ?? null,
-      error: null,
-      locked_until: null,
-      finished_at: new Date().toISOString(),
-    });
-    await logAction({
-      restaurantId: job.restaurant_id,
-      draftId: job.draft_id,
-      actor: out.actor,
-      action: out.action ?? "checked",
-      detail: out.detail,
-      data: { job_key: job.job_key, kind: job.kind },
-      job: { jobId: job.id, agent: job.agent, agentVersion: out.agentVersion, verdict: out.verdict ?? null },
-    });
-    return "done";
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`Agent job ${job.job_key} failed`, err);
-    // Invalid output twice is final (the builder was already alerted). Anything
-    // else (the API down, a timeout) is tried again, up to MAX_ATTEMPTS.
-    const final = err instanceof AgentOutputError || job.attempts >= MAX_ATTEMPTS;
-    await finish(job, {
-      status: final ? "failed" : "queued",
-      error: message.slice(0, 1000),
-      locked_until: null,
-      finished_at: final ? new Date().toISOString() : null,
-      // What the failed attempts used still counts.
-      ...(err instanceof AgentOutputError ? usageFields(addUsage(job.usage ?? {}, err.usage)) : {}),
-    });
-    if (final) {
-      if (!(err instanceof AgentOutputError)) {
-        await alertBuilder(`agent-job-failed:${job.agent}`, `The ${job.agent} agent job ${job.job_key} failed after ${job.attempts} tries.\n${message.slice(0, 400)}`);
-      }
-      await logAction({
-        restaurantId: job.restaurant_id,
-        draftId: job.draft_id,
-        actor: "system",
-        action: "agent_failed",
-        detail: `The ${job.agent} agent couldn't finish its job (the builder has been told)`,
-        data: { job_key: job.job_key, error: message.slice(0, 300) },
-        job: { jobId: job.id, agent: job.agent, agentVersion: null, verdict: null },
-      });
-    }
-    return final ? "failed" : "retry";
+    return [];
   }
 }
 

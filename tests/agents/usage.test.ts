@@ -43,6 +43,7 @@ test("costs per London month, split by agent", () => {
   expect(months[0].byAgent.checker).toBeCloseTo(0.08, 10);
 });
 
+const R1 = "aaaaaaaa-0000-0000-0000-000000000001";
 let db: ReturnType<typeof memoryDb>;
 beforeEach(() => {
   vi.resetModules();
@@ -57,9 +58,9 @@ afterEach(() => {
 
 test("each finished job saves its usage and cost", async () => {
   const { enqueueAgentJob, runAgentJobs } = await import("@/lib/agents/jobs");
-  await enqueueAgentJob({ restaurantId: "r1", key: "k", agent: "reputation", kind: "x", trigger: "t" });
+  await enqueueAgentJob({ restaurantId: R1, key: "k", agent: "reputation", kind: "x", trigger: "t" });
   const usage = { reputation: tokensFrom("claude-sonnet-5-5", { input_tokens: 2000, output_tokens: 300 }), checker: tokensFrom("claude-sonnet-5-5", { input_tokens: 3000, output_tokens: 200 }) };
-  await runAgentJobs("r1", { x: async () => ({ output: {}, agentVersion: "0.2", detail: "done", actor: "reputation", usage }) });
+  await runAgentJobs(R1, { x: async () => ({ output: {}, agentVersion: "0.2", detail: "done", actor: "reputation", usage }) });
   expect(db.tables.agent_jobs[0].usage).toEqual(usage);
   expect(db.tables.agent_jobs[0].cost_usd).toBeCloseTo((5000 * 2 + 500 * 10) / 1e6, 6);
 });

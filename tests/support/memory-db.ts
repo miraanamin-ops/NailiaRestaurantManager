@@ -183,5 +183,18 @@ export function memoryDb(seed: Record<string, Row[]>) {
     }),
   };
 
-  return { client: { from, storage }, tables, files };
+  // The job queue's database functions (supabase.rpc) run on the real SQL in
+  // PGlite (support/queue-pg.ts), emptied the first time this stand-in uses it.
+  let queueReady: Promise<(fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>> | null = null;
+  const rpc = async (fn: string, args?: Record<string, unknown>) => {
+    queueReady ??= (async () => {
+      const { rpcOn, sharedQueueDb } = await import("./queue-pg");
+      const pg = await sharedQueueDb();
+      await pg.exec("truncate jobs");
+      return rpcOn(pg);
+    })();
+    return (await queueReady)(fn, args);
+  };
+
+  return { client: { from, storage, rpc }, tables, files };
 }
