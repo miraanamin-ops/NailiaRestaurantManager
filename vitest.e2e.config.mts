@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 // End-to-end onboarding runs against the REAL database, Claude and Google
 // (they cost a little and make test restaurants). Not part of npm test. Run with:
 //   node --env-file=.env.local node_modules/vitest/vitest.mjs run --config vitest.e2e.config.mts
-// Needs TEST_MODE=true (new restaurants are demo ones) and E2E_MENU_DIR (folder with page1.jpg, page2.jpg).
+// Needs TEST_TOOLS=true (new restaurants are demo ones; TEST_MODE=true still works) and E2E_MENU_DIR (folder with page1.jpg, page2.jpg).
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url)).replaceAll("\\", "/");
 
 export default defineConfig({

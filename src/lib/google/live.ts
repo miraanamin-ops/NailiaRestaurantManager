@@ -16,7 +16,7 @@ import type { GoogleConnector } from "./types";
 // It needs Google API access approval, an OAuth login per restaurant, and
 // the restaurant's account and location IDs.
 function notYet(): never {
-  throw new Error("Live Google mode isn't set up yet. Set GOOGLE_MODE=dummy (the default).");
+  throw new Error("Live Google mode isn't set up yet. Set GOOGLE_MODE=dummy (the default), or remove it.");
 }
 
 export const liveGoogle: GoogleConnector = {

@@ -42,7 +42,7 @@ export type CustomersSection = {
   id: "customers";
   signups: Compare;
   emailsSent: Compare;
-  simulated: number; // last week's sends that were test-mode only
+  simulated: number; // last week's sends that were simulated (dummy customers, dummy or simulated Google)
   opens: Compare;
   clicks: Compare;
   redemptions: Compare; // campaign offers + welcome rewards

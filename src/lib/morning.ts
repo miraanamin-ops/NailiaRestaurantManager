@@ -67,7 +67,7 @@ async function mondayReportHeadline(r: Restaurant, due: Date) {
   return row.headline;
 }
 
-// The brief: the GM's when it's live (test mode only), today's otherwise.
+// The brief: the GM's when it's live (see gmMode), today's otherwise.
 async function briefFor(r: Restaurant, channel: OwnerChannel, now: Date, opts: { extra?: string[]; note?: string }) {
   return (await gmMode(r)) === "live" ? gmBrief(r, channel, now, opts) : sendBrief(r, channel, now, opts);
 }
@@ -94,7 +94,7 @@ export async function runMorning(restaurant: Restaurant, now: Date) {
 
     // 2. Monday: this week's birthday email. Monday and Thursday: a Google post.
     if (weekday === 1 && r.last_birthday_campaign_on !== today) {
-      // Growth live (test mode) writes the birthday batch instead; otherwise today's email (Growth in shadow beside it).
+      // Growth live writes the birthday batch instead; otherwise today's email (Growth in shadow beside it).
       if (!(await liveGrowthBirthdays(r, today))) await proposeBirthdayCampaign(ctx, silent, "hold");
       await setFields(r, { last_birthday_campaign_on: today });
       done.push("birthday email");

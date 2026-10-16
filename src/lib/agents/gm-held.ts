@@ -2,7 +2,7 @@ import "server-only";
 import { createDraft } from "@/lib/drafts";
 import type { Restaurant } from "@/lib/supabase";
 
-// The GM live (test mode only): what scheduled work wants from the owner goes in the
+// The GM live (see gmMode): what scheduled work wants from the owner goes in the
 // morning brief instead of being messaged on its own. A question from an agent
 // (answered in words, back to that agent) and a special idea (Like it / Skip;
 // Draft only, nothing is ever sent).

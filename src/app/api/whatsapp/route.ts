@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
 
-  // A link code: the only thing an unregistered number can do. (In test mode a
+  // A link code: the only thing an unregistered number can do. (With TEST_TOOLS on a
   // test phone can also move itself between demo restaurants this way.)
   if (linkCode) {
     after(() => linkFromWhatsApp(linkCode, owner, sandbox));

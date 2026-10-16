@@ -11,13 +11,13 @@ import { revertProfileChange, saveProfileFields } from "@/lib/profile-edits";
 import type { AgentName } from "@/lib/agents/definition";
 import { goLiveChecklistFor, promptOwnerForGoLive } from "@/lib/agents/go-live";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
-import { MODES_AVAILABLE } from "@/lib/agents/modes";
+import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
 import { entryProblems } from "@/lib/local-calendar-rules";
 import { OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
-import { ALWAYS_APPROVE, NEVER_AUTO, TASKS, TRUST_LEVELS } from "@/lib/trust";
+import { ALWAYS_APPROVE, NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel } from "@/lib/trust";
 
 // The settings page's save buttons. Every change is logged (UNDO on WhatsApp puts it back).
 
@@ -186,11 +186,18 @@ export async function saveBuilderControls(form: FormData) {
     modes[agent] = mode;
   }
   check(await getSupabase().from("restaurants").update({ trust_levels: trust, agent_modes: modes }).eq("id", r.id));
+  // Each change named in the log line ("growth: shadow → live").
+  const changes = [
+    ...Object.keys(MODES_AVAILABLE)
+      .filter((a) => agentMode({ agent_modes: modes }, a as AgentName) !== agentMode(r, a as AgentName))
+      .map((a) => `${a}: ${agentMode(r, a as AgentName)} → ${agentMode({ agent_modes: modes }, a as AgentName)}`),
+    ...TASKS.filter((t) => trustLevel(trust, t) !== trustLevel(r.trust_levels, t)).map((t) => `${TASK_LABELS[t]}: ${trustLevel(r.trust_levels, t)} → ${trustLevel(trust, t)}`),
+  ];
   await logAction({
     restaurantId: r.id,
     actor: "builder",
     action: "setting",
-    detail: "Changed trust levels and agent modes (builder controls)",
+    detail: `Changed trust levels and agent modes (builder controls)${changes.length ? `: ${changes.join("; ")}` : ", nothing different"}`,
     data: { field: "builder_controls", before: { trust_levels: r.trust_levels, agent_modes: r.agent_modes }, after: { trust_levels: trust, agent_modes: modes } },
   });
   if (blocked.length) back(r.id, `error=${encodeURIComponent(`Saved, but ${blocked.join("; ")}.`)}`);

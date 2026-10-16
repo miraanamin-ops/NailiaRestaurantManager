@@ -4,7 +4,9 @@ import { ownerChannel } from "@/lib/followups";
 import { messageOwner } from "@/lib/notify";
 import { MIN_LIBRARY_PHOTOS, missingForGoLive, PROFILE_FIELDS, type ProfileFieldName } from "@/lib/profile/fields";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
+import { agentModeReason, type LiveAgent } from "@/lib/switches";
 import type { AgentName } from "./definition";
+import { agentMode, MODES_AVAILABLE } from "./modes";
 
 // The go-live checklist (decision 14): an agent can't leave shadow mode until
 // the profile fields it needs are filled. The owner gets one short WhatsApp
@@ -74,4 +76,31 @@ export async function promptOwnerForGoLive(restaurant: Restaurant, agent: AgentN
   if (error) console.error("Couldn't record the go-live prompt", error);
   await logAction({ restaurantId: restaurant.id, actor: "system", action: "setting", detail: `Asked the owner for the ${agent} go-live details: ${missing.join(", ")}`, data: { field: "pilot_prompted_at" } });
   return true;
+}
+
+// For the builder: each agent's set mode, what it really runs as right now (after
+// AGENTS_LIVE_ALLOWED and its readiness check), and why, if those differ.
+export async function agentStatus(r: Restaurant) {
+  const [{ reputationMode }, { visibilityMode }, { insightsMode }, { growthMode }, { gmMode }] = await Promise.all([
+    import("./reputation"),
+    import("./visibility"),
+    import("./insights"),
+    import("./growth"),
+    import("./gm"),
+  ]);
+  const running: Record<LiveAgent, string> = {
+    reputation: reputationMode(r),
+    visibility: await visibilityMode(r),
+    insights: await insightsMode(r),
+    growth: await growthMode(r),
+    gm: await gmMode(r),
+  };
+  const out: Partial<Record<AgentName, { set: string; running: string; reason: string | null }>> = {};
+  for (const agent of Object.keys(MODES_AVAILABLE) as AgentName[]) {
+    const set = agentMode(r, agent);
+    const now = agent in running ? running[agent as LiveAgent] : set;
+    const reason = now !== set ? agentModeReason(process.env, agent as LiveAgent, set, false) : null;
+    out[agent] = { set, running: now, reason };
+  }
+  return out;
 }

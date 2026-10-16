@@ -3,23 +3,24 @@
 
 export type SendChannel = "email" | "google" | "whatsapp";
 
-export type TestModeStep =
+export type SimulationStep =
   | { outcome: "ok"; detail: string }
   | { outcome: "simulate"; detail: string }; // goes through the motions, reaches nobody
 
-// TEST_MODE as a gate step: in test mode nothing reaches a real customer, owner
-// or platform. Emails are already routed (dummy addresses never emailed, everyone
-// else redirected to the builder: lib/email/route.ts); live Google is simulated.
-// WhatsApp to customers is off until Meta verification, test mode or not.
-export function testModeStep(input: { testMode: boolean; channel: SendChannel; googleMode: "dummy" | "live" }): TestModeStep {
+// The simulation gate step: what reaches the outside world, by the switches in
+// lib/switches.ts. Emails are routed per address (dummy addresses never emailed;
+// with EMAIL_REDIRECT on, everyone else goes to the builder: lib/email/route.ts).
+// GOOGLE_MODE=simulated reads live Google but posts nothing. WhatsApp to
+// customers is off until Meta verification, whatever the switches say.
+export function simulationStep(input: { channel: SendChannel; google: "dummy" | "simulated" | "live"; emailRedirect: boolean }): SimulationStep {
   if (input.channel === "whatsapp") return { outcome: "simulate", detail: "WhatsApp to customers is off until Meta verification, so nothing was sent." };
-  if (!input.testMode) return { outcome: "ok", detail: "Test mode is off." };
   if (input.channel === "google") {
-    return input.googleMode === "live"
-      ? { outcome: "simulate", detail: "Test mode: not posted to the live Google listing." }
-      : { outcome: "ok", detail: "Test mode: dummy Google only." };
+    if (input.google === "simulated") return { outcome: "simulate", detail: "Google is simulated: not posted to the live Google listing." };
+    return { outcome: "ok", detail: input.google === "dummy" ? "Dummy Google only." : "Live Google." };
   }
-  return { outcome: "ok", detail: "Test mode: emails go only to the builder and owner (everyone else is redirected)." };
+  return input.emailRedirect
+    ? { outcome: "ok", detail: "Emails go only to the builder and owner (everyone else is redirected)." }
+    : { outcome: "ok", detail: "Emails go to the customers." };
 }
 
 export function channelFor(kind: string): SendChannel {

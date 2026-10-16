@@ -139,6 +139,32 @@ describe("the switch and its checklist", () => {
     expect(await growthMode(restaurant())).toBe("shadow");
   });
 
+  test("AGENTS_LIVE_ALLOWED=true lets a ready Growth go live without TEST_MODE, and with EMAIL_REDIRECT off", async () => {
+    const { emailRedirectSwitch } = await import("@/lib/switches");
+    vi.stubEnv("TEST_MODE", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("AGENTS_LIVE_ALLOWED", "true");
+    vi.stubEnv("EMAIL_REDIRECT", "false");
+    db.tables.restaurants[0].agent_modes = { growth: "live" };
+    const { growthMode } = await import("@/lib/agents/growth");
+    expect(await growthMode(restaurant())).toBe("live");
+    expect(emailRedirectSwitch(process.env).on).toBe(false);
+    // The readiness check still applies.
+    db.tables.restaurants[0].approved_offer_types = [];
+    expect(await growthMode(restaurant())).toBe("shadow");
+  });
+
+  test("the kill switch beats TEST_MODE and a ready, live restaurant", async () => {
+    vi.stubEnv("TEST_MODE", "true");
+    vi.stubEnv("AGENTS_LIVE_ALLOWED", "false");
+    db.tables.restaurants[0].agent_modes = { growth: "live" };
+    const { growthMode } = await import("@/lib/agents/growth");
+    expect(await growthMode(restaurant())).toBe("shadow");
+    // Off and shadow are left as they are.
+    db.tables.restaurants[0].agent_modes = { growth: "off" };
+    expect(await growthMode(restaurant())).toBe("off");
+  });
+
   test("the owner is asked for what's missing in Growth's own words", async () => {
     const { goLivePromptText } = await import("@/lib/agents/go-live");
     expect(goLivePromptText(restaurant(), ["approved_offer_types"], "growth")).toMatch(/To draft offers and campaigns for you, I need your kinds of offer you're happy to run/);

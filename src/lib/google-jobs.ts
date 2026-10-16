@@ -94,7 +94,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
     if (urgent) {
       alerts++;
       const quote = `${review.author_name} ${stars(review.rating)}\n_"${review.text ?? "(rating only)"}"_`;
-      // The GM live (test mode): at most one alert an hour, held in quiet hours.
+      // The GM live: at most one alert an hour, held in quiet hours.
       const { gmMode } = await import("@/lib/agents/gm");
       if ((await gmMode(ctx.restaurant)) === "live") {
         const { gmAlert } = await import("@/lib/agents/gm-brief");

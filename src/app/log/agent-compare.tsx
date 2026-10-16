@@ -331,14 +331,14 @@ export async function AgentCompare({ restaurantId, agent }: { restaurantId: stri
         <p className="text-sm text-stone-600">
           Nothing yet.{" "}
           {agent === "reputation"
-            ? "Send NEW REVIEW (test mode) or wait for the hourly review check."
+            ? "Send NEW REVIEW (test tools) or wait for the hourly review check."
             : agent === "insights"
-              ? "Ask a question about the numbers on WhatsApp (e.g. how was last week?), or send RUN REPORT (test mode)."
+              ? "Ask a question about the numbers on WhatsApp (e.g. how was last week?), or send RUN REPORT (test tools)."
               : agent === "gm"
                 ? "Send any message on WhatsApp (the GM logs where it would route it), or wait for the morning brief."
                 : agent === "growth"
                 ? "Ask for an offer on WhatsApp (e.g. Thursday is quiet), send BIRTHDAY CAMPAIGN, or wait for Monday."
-                : "Send RUN POSTS (test mode) or a photo on WhatsApp, or wait for Monday."}
+                : "Send RUN POSTS (test tools) or a photo on WhatsApp, or wait for Monday."}
         </p>
       )}
       {rows.map((r) => {

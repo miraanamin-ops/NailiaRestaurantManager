@@ -106,34 +106,34 @@ describe("who can set trust levels", () => {
   });
 });
 
-describe("TEST_MODE as a gate step", () => {
-  test("in test mode nothing is posted to live Google", async () => {
-    const { testModeStep } = await import("@/lib/gate-rules");
-    expect(testModeStep({ testMode: true, channel: "google", googleMode: "live" })).toMatchObject({ outcome: "simulate" });
-    expect(testModeStep({ testMode: true, channel: "google", googleMode: "dummy" })).toMatchObject({ outcome: "ok" });
-    expect(testModeStep({ testMode: false, channel: "google", googleMode: "live" })).toMatchObject({ outcome: "ok" });
+describe("the simulation gate step", () => {
+  test("simulated Google posts nothing to live Google", async () => {
+    const { simulationStep } = await import("@/lib/gate-rules");
+    expect(simulationStep({ google: "simulated", channel: "google", emailRedirect: true })).toMatchObject({ outcome: "simulate" });
+    expect(simulationStep({ google: "dummy", channel: "google", emailRedirect: true })).toMatchObject({ outcome: "ok" });
+    expect(simulationStep({ google: "live", channel: "google", emailRedirect: false })).toMatchObject({ outcome: "ok" });
   });
 
-  test("emails go through the existing test routing (builder and owner only)", async () => {
-    const { testModeStep } = await import("@/lib/gate-rules");
+  test("emails go through the redirect routing (builder and owner only)", async () => {
+    const { simulationStep } = await import("@/lib/gate-rules");
     const { routeEmail } = await import("@/lib/email/route");
-    expect(testModeStep({ testMode: true, channel: "email", googleMode: "dummy" })).toMatchObject({ outcome: "ok" });
-    expect(routeEmail("real.customer@gmail.com", { testMode: true, allowed: ["owner@x.co.uk"], builder: "builder@x.co.uk" })).toEqual({
+    expect(simulationStep({ google: "dummy", channel: "email", emailRedirect: true })).toMatchObject({ outcome: "ok" });
+    expect(routeEmail("real.customer@gmail.com", { redirect: true, allowed: ["owner@x.co.uk"], builder: "builder@x.co.uk" })).toEqual({
       kind: "send",
       to: "builder@x.co.uk",
       redirectedFrom: "real.customer@gmail.com",
     });
   });
 
-  test("WhatsApp to customers is off until Meta verification, test mode or not", async () => {
-    const { channelFor, testModeStep } = await import("@/lib/gate-rules");
+  test("WhatsApp to customers is off until Meta verification, whatever the switches", async () => {
+    const { channelFor, simulationStep } = await import("@/lib/gate-rules");
     expect(channelFor("promotion")).toBe("whatsapp");
-    expect(testModeStep({ testMode: false, channel: "whatsapp", googleMode: "dummy" })).toMatchObject({ outcome: "simulate" });
+    expect(simulationStep({ google: "live", channel: "whatsapp", emailRedirect: false })).toMatchObject({ outcome: "simulate" });
   });
 });
 
-describe("TEST_MODE inside attemptSend", () => {
-  test("with live Google in test mode, an approved reply is logged as simulated and never posted", async () => {
+describe("Google simulation inside attemptSend", () => {
+  test("with GOOGLE_MODE=live and TEST_MODE (simulated), an approved reply is logged as simulated and never posted", async () => {
     const { vi } = await import("vitest");
     const { memoryDb } = await import("./support/memory-db");
     vi.resetModules();
@@ -154,6 +154,8 @@ describe("TEST_MODE inside attemptSend", () => {
     vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
     vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
     vi.stubEnv("TEST_MODE", "true");
+    vi.stubEnv("GOOGLE_MODE", "live");
+    vi.stubEnv("VERCEL_ENV", "production");
     const { attemptSend } = await import("@/lib/send");
     const result = await attemptSend("d1", db.tables.restaurants[0] as never, noonUk, "approve");
     expect(result.outcome).toBe("sent");
@@ -163,6 +165,50 @@ describe("TEST_MODE inside attemptSend", () => {
     vi.unstubAllEnvs();
     vi.doUnmock("@/lib/supabase");
     vi.doUnmock("@/lib/google");
+  });
+});
+
+describe("GOOGLE_MODE=live by environment", () => {
+  async function approvedReply(env: Record<string, string>) {
+    const { vi } = await import("vitest");
+    const { memoryDb } = await import("./support/memory-db");
+    vi.resetModules();
+    const A = "aaaaaaaa-0000-0000-0000-000000000001";
+    const db = memoryDb({
+      restaurants: [{ id: A, ...restaurant, trust_levels: {} }],
+      drafts: [
+        {
+          id: "d1", restaurant_id: A, kind: "review_reply", review_id: "rv1", content: "Thank you, Aisha!", audience: "Google review by Aisha",
+          status: "approved", approved_at: "2026-10-09T10:00:00Z", sent_at: null, scheduled_for: null, version: 1, checks: {}, customer_id: null,
+        },
+      ],
+      sent_log: [],
+      audit_log: [],
+      blocked_sends: [],
+    });
+    const replyToReview = vi.fn();
+    vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
+    vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
+    vi.stubEnv("TEST_MODE", "");
+    for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
+    const { attemptSend } = await import("@/lib/send");
+    await attemptSend("d1", db.tables.restaurants[0] as never, noonUk, "approve");
+    vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/supabase");
+    vi.doUnmock("@/lib/google");
+    return { replyToReview, log: db.tables.sent_log[0] };
+  }
+
+  test("in production without TEST_MODE, the approved reply is posted", async () => {
+    const { replyToReview, log } = await approvedReply({ GOOGLE_MODE: "live", VERCEL_ENV: "production" });
+    expect(replyToReview).toHaveBeenCalledOnce();
+    expect(log).toMatchObject({ simulated: false });
+  });
+
+  test("on a preview it never is", async () => {
+    const { replyToReview, log } = await approvedReply({ GOOGLE_MODE: "live", VERCEL_ENV: "preview" });
+    expect(replyToReview).not.toHaveBeenCalled();
+    expect(log).toMatchObject({ simulated: true });
   });
 });
 

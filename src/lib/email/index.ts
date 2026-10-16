@@ -1,7 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { builderEmails } from "@/lib/builder-emails";
-import { isTestMode } from "@/lib/test-mode";
+import { emailRedirectSwitch } from "@/lib/switches";
 import type { Restaurant } from "@/lib/supabase";
 import { brandFor } from "./brand";
 import { campaignContent, confirmContent, feedbackContent, welcomeContent, type EmailContent, type Links } from "./content";
@@ -14,7 +14,7 @@ import { renderEmail } from "./templates";
 //   - has an unsubscribe and a delete-my-data link in the footer, plus the
 //     one-click unsubscribe headers Gmail, Outlook and Apple Mail use
 //   - goes through routeEmail (./route.ts): dummy addresses are never emailed,
-//     and with TEST_MODE on, nothing reaches anyone but the builder and the owner.
+//     and with EMAIL_REDIRECT on, nothing reaches anyone but the builder and the owner.
 
 export type Delivery = { delivery: "email" | "simulated"; id: string | null; to: string | null; redirectedFrom: string | null; reason?: string };
 
@@ -41,7 +41,7 @@ export async function sendCustomerEmail(input: {
 }): Promise<Delivery> {
   const { restaurant, content } = input;
   const route = routeEmail(input.to, {
-    testMode: isTestMode(),
+    redirect: emailRedirectSwitch(process.env).on,
     allowed: [...builderEmails(), restaurant.owner_email ?? "", ...(process.env.TEST_EMAIL_ALLOW ?? "").split(",")].filter(Boolean),
     builder: builderEmails()[0] ?? null,
     seed: input.seed,

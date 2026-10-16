@@ -6,7 +6,6 @@ import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
 
 import { STEPS, type StepId } from "@/lib/onboarding/steps";
 import { getOnboarding } from "@/lib/onboarding/store";
-import { isTestMode } from "@/lib/test-mode";
 import { ownRestaurant } from "./load";
 
 // Every button in the web wizard. Each checks the person owns the restaurant,
@@ -134,10 +133,9 @@ export async function finishSetup(form: FormData) {
   back(r);
 }
 
-// TEST MODE only, demo restaurants only.
+// TEST_TOOLS only, demo restaurants only.
 export async function resetSetup(form: FormData) {
   const r = await rid(form);
-  if (!isTestMode()) throw new Error("Test mode is off");
   await engine.resetOnboarding(r);
   redirect(`/onboarding?r=${r}`);
 }

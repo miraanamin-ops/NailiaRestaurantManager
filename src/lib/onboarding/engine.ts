@@ -8,6 +8,7 @@ import { canFinish, mark, nextStep, STEP_LABELS, STEPS, stepsDone, type StepId }
 import { getOnboarding, getRestaurant, patchData, saveOnboarding, updateRestaurantFields, type Onboarding } from "./store";
 import { contrast } from "@/lib/email/brand";
 import { saveLogo } from "@/lib/photos";
+import { testToolsOn } from "@/lib/test-mode";
 import { brandFromHtml, isPublicWebAddress, readWebsitePage } from "./website";
 
 // The onboarding engine: every step's actions, used by BOTH the web wizard and
@@ -296,11 +297,12 @@ export async function sendFinishSummary(r: Restaurant, summary: string[], qrPack
   await messageOwner({ restaurantId: r.id, from: r.whatsapp_from ?? from, to: r.owner_whatsapp }, finishMessage(r, summary, qrPack));
 }
 
-// TEST MODE only, demo restaurants only: back to a just-signed-up restaurant so
+// TEST_TOOLS only, demo restaurants only: back to a just-signed-up restaurant so
 // onboarding can be tried again. Keeps the name, owner, email and WhatsApp link.
 export async function resetOnboarding(restaurantId: string) {
   const r = await getRestaurant(restaurantId);
-  if (!r.is_demo) throw new Error("Only demo restaurants can be reset");
+  // Test tools only, and never a real restaurant (whatever TEST_TOOLS says).
+  if (!testToolsOn(r)) throw new Error(r.is_demo ? "Test tools are off" : "Only demo restaurants can be reset");
   await clearMenuPhotos(restaurantId).catch(() => undefined);
   await updateRestaurantFields(restaurantId, {
     active: false,

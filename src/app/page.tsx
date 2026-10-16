@@ -5,6 +5,8 @@ import { logOut } from "@/app/login/actions";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { formatValidity, recentCampaignStats, SEGMENT_LABELS } from "@/lib/campaigns";
 import { google } from "@/lib/google";
+import { emailRedirectSwitch } from "@/lib/switches";
+import { testToolsOn } from "@/lib/test-mode";
 import {
   getSupabase,
   type Customer,
@@ -311,7 +313,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
           <>
             <p className="mt-2 text-sm text-neutral-500">
               Every customer with confirmed consent gets a real email. Dummy customers are logged as simulated
-              {process.env.TEST_MODE === "true" ? ", and test mode redirects real customers' emails to the builder." : "."}
+              {emailRedirectSwitch(process.env).on ? ", and EMAIL_REDIRECT sends real customers' emails to the builder." : "."}
             </p>
             {campaigns.length === 0 ? (
               <p className="mt-2 text-neutral-500">No campaigns sent yet. Text “Thursday is quiet” to the sandbox.</p>
@@ -424,7 +426,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
               <Stat label="Discount cap" value={`${restaurant.discount_cap_percent}%`} />
               <Stat
                 label="Clock"
-                value={restaurant.fake_now ? `Test: ${new Date(restaurant.fake_now).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "short", timeStyle: "short" })}` : "Real time"}
+                value={restaurant.fake_now && testToolsOn(restaurant) ? `Test: ${new Date(restaurant.fake_now).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "short", timeStyle: "short" })}` : "Real time"}
               />
             </div>
             <h3 className="mt-6 text-lg font-semibold">Blocked or held sends (latest 20)</h3>

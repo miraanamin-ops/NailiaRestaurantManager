@@ -20,7 +20,7 @@ const brand = brandFor(restaurant);
 const links = { unsubscribe: "https://site/unsubscribe/tok", deleteData: "https://site/delete/tok" };
 
 describe("where an email goes", () => {
-  const opts = { testMode: false, allowed: ["me@gmail.com"], builder: "me@gmail.com" };
+  const opts = { redirect: false, allowed: ["me@gmail.com"], builder: "me@gmail.com" };
 
   test("live: straight to the customer", () => {
     expect(routeEmail("Ayesha@Gmail.com", opts)).toEqual({ kind: "send", to: "ayesha@gmail.com", redirectedFrom: null });
@@ -32,8 +32,8 @@ describe("where an email goes", () => {
     expect(isDummyAddress("x@example.org")).toBe(true);
     expect(isDummyAddress("x@examplefoods.co.uk")).toBe(false);
   });
-  test("TEST_MODE: the builder and owner get their own; everyone else is redirected to the builder", () => {
-    const t = { ...opts, testMode: true, allowed: ["me@gmail.com", "owner@grill.co.uk"] };
+  test("EMAIL_REDIRECT: the builder and owner get their own; everyone else is redirected to the builder", () => {
+    const t = { ...opts, redirect: true, allowed: ["me@gmail.com", "owner@grill.co.uk"] };
     expect(routeEmail("owner@grill.co.uk", t)).toEqual({ kind: "send", to: "owner@grill.co.uk", redirectedFrom: null });
     expect(routeEmail("stranger@gmail.com", t)).toEqual({ kind: "send", to: "me@gmail.com", redirectedFrom: "stranger@gmail.com" });
     expect(routeEmail("stranger@gmail.com", { ...t, builder: null }).kind).toBe("simulate");

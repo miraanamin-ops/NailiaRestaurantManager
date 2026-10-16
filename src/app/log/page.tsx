@@ -5,7 +5,9 @@ import { logOut } from "@/app/login/actions";
 import { recentLog, type AuditEntry } from "@/lib/audit";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { check } from "@/lib/drafts";
+import { recentRuns } from "@/lib/job-runs";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { allSwitches, describeSwitches, switchChanges } from "@/lib/switches";
 import { AgentCompare, type CompareAgent } from "./agent-compare";
 
 export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
@@ -47,7 +49,6 @@ const dayOf = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long" });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
 
-type JobRun = { id: string; job: string; status: string; started_at: string; finished_at: string | null; error: string | null };
 type Alert = { id: string; message: string; channels: string | null; created_at: string };
 
 async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
@@ -68,7 +69,7 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   // Scheduled jobs and builder alerts: for the builder only.
   const [runs, alerts] = owner.isBuilder
     ? await Promise.all([
-        supabase.from("job_runs").select("id, job, status, started_at, finished_at, error").order("started_at", { ascending: false }).limit(24).returns<JobRun[]>(),
+        recentRuns(24).then((data) => ({ data })),
         supabase.from("builder_alerts").select("id, message, channels, created_at").order("created_at", { ascending: false }).limit(10).returns<Alert[]>(),
       ])
     : [null, null];
@@ -147,17 +148,42 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
           </section>
         ))}
 
+        {owner.isBuilder && (
+          <section>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500">Switches now (builder only)</h2>
+            <ul className="divide-y divide-stone-100 rounded-2xl bg-white text-sm shadow-sm ring-1 ring-stone-200/70">
+              {describeSwitches(allSwitches(process.env)).map((s) => (
+                <li key={s.name} className="px-4 py-2.5">
+                  <span className="font-mono text-xs">{s.name}</span> · {s.value}
+                  {s.note && <span className="block text-xs text-amber-800">{s.note}</span>}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-xs text-stone-500">Set in Vercel (Settings, Environment Variables). TEST_MODE is deprecated: it only fills in a switch that isn&apos;t set.</p>
+          </section>
+        )}
+
         {runs?.data && (
           <section>
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500">Scheduled jobs (builder only)</h2>
             <ul className="divide-y divide-stone-100 rounded-2xl bg-white text-sm shadow-sm ring-1 ring-stone-200/70">
-              {runs.data.map((r) => (
-                <li key={r.id} className="px-4 py-2.5">
-                  <span aria-hidden>{r.status === "ok" ? "✅" : r.status === "failed" ? "❌" : "⏳"} </span>
-                  {r.job} · {dayOf(r.started_at).split(" ").slice(0, 3).join(" ")} {timeOf(r.started_at)} · {r.status}
-                  {r.error && <span className="block text-xs text-red-700">{r.error}</span>}
-                </li>
-              ))}
+              {runs.data.map((r, i) => {
+                // Runs are newest first: compare with the run before this one.
+                const changed = switchChanges(runs.data[i + 1]?.switches, r.switches);
+                return (
+                  <li key={r.id} className="px-4 py-2.5">
+                    <span aria-hidden>{r.status === "ok" ? "✅" : r.status === "failed" ? "❌" : "⏳"} </span>
+                    {r.job} · {dayOf(r.started_at).split(" ").slice(0, 3).join(" ")} {timeOf(r.started_at)} · {r.status}
+                    {r.error && <span className="block text-xs text-red-700">{r.error}</span>}
+                    {r.switches && (
+                      <span className="block text-xs text-stone-500">
+                        Switches: email redirect {r.switches.email_redirect ? "on" : "off"}, test tools {r.switches.test_tools ? "on" : "off"}, Google {String(r.switches.google)}, agents live {String(r.switches.agents_live)}
+                      </span>
+                    )}
+                    {changed.length > 0 && <span className="block text-xs font-medium text-amber-800">Switches changed: {changed.join("; ")}</span>}
+                  </li>
+                );
+              })}
               {!runs.data.length && <li className="px-4 py-2.5 text-stone-500">No runs recorded yet.</li>}
             </ul>
           </section>

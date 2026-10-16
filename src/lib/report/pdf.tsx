@@ -255,7 +255,7 @@ function Customers({ x, brand }: { x: CustomersSection; brand: string }) {
       )}
       {x.simulated > 0 && (
         <Text style={[s.item, { fontSize: 8, color: FAINT, marginTop: 4 }]}>
-          Test mode: {x.simulated} of last week&apos;s emails were simulated (only your copy is really sent).
+          Simulated: {x.simulated} of last week&apos;s emails were simulated (only your copy is really sent).
         </Text>
       )}
     </View>

@@ -5,7 +5,8 @@ import { google } from "@/lib/google";
 import { addDays } from "@/lib/sales/format";
 import { selectAll } from "@/lib/sales/store";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { isTestMode } from "@/lib/test-mode";
+import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
+import { testToolsOn } from "@/lib/test-mode";
 import { londonToday } from "./checker-core";
 import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome } from "./insights-core";
 import type { MetricsData } from "./insights-metrics";
@@ -19,7 +20,7 @@ import { callTool } from "./tools";
 // query_metrics, shadow mode (owner number questions and the Monday report's
 // words, saved next to what today's assistant wrote for the /log comparison),
 // and live mode (Insights answers the owner's number questions and writes the
-// report's words; TEST_MODE only for now).
+// report's words; see insightsMode).
 
 function ok<T>(res: { data: T; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
@@ -31,25 +32,26 @@ function ok<T>(res: { data: T; error: { message: string } | null }): T {
 export const MIN_SALES_DAYS = 14;
 
 // Days of real sales figures (till reports or POS files). A demo restaurant's
-// dummy data counts too, but only in test mode (so the switch can be tried).
+// dummy data counts too, but only with TEST_TOOLS on (so the switch can be tried).
 export async function salesDaysFor(restaurant: Pick<Restaurant, "id" | "is_demo">) {
-  const sources = restaurant.is_demo && isTestMode() ? ["z_report", "pos", "seed"] : ["z_report", "pos"];
+  const sources = testToolsOn(restaurant) ? ["z_report", "pos", "seed"] : ["z_report", "pos"];
   const { count, error } = await getSupabase().from("sales_days").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurant.id).in("source", sources);
   return error ? 0 : (count ?? 0);
 }
 
 export async function insightsChecklist(restaurant: Pick<Restaurant, "id" | "is_demo">) {
   const days = await salesDaysFor(restaurant);
-  const label = `2+ weeks of sales data from till reports or POS files (${days} day${days === 1 ? "" : "s"} so far${restaurant.is_demo && isTestMode() ? ", dummy data counts in test mode" : ""})`;
+  const label = `2+ weeks of sales data from till reports or POS files (${days} day${days === 1 ? "" : "s"} so far${testToolsOn(restaurant) ? ", dummy data counts with test tools on" : ""})`;
   return { ready: days >= MIN_SALES_DAYS, days, labels: days >= MIN_SALES_DAYS ? [] : [label], label };
 }
 
-// Live only once the checklist passes, and for now only with TEST_MODE on:
-// live answers reach the owner, which mustn't happen outside test mode yet.
+// Live only when AGENTS_LIVE_ALLOWED lets it (lib/switches.ts) and the checklist
+// passes: live answers reach the owner.
 export async function insightsMode(restaurant: Restaurant) {
   const mode = agentMode(restaurant, "insights");
-  if (mode === "live" && (!isTestMode() || !(await insightsChecklist(restaurant)).ready)) return "shadow";
-  return mode;
+  if (mode !== "live") return mode;
+  const liveAllowed = agentLiveAllowed(process.env, "insights");
+  return effectiveAgentMode(mode, { liveAllowed, ready: liveAllowed && (await insightsChecklist(restaurant)).ready });
 }
 
 // ---------- The numbers ----------
@@ -211,7 +213,7 @@ export function answerText(outcome: InsightsOutcome) {
   return outcome.kind === "question" ? `❓ ${outcome.question}` : `📊 ${outcome.output.content.body.trim()}`;
 }
 
-// Live (TEST_MODE only): Insights answers the owner's number question straight
+// Live (see insightsMode): Insights answers the owner's number question straight
 // away. Returns false if it couldn't (today's assistant answers instead).
 export async function answerWithInsights(restaurant: Restaurant, question: string, now: Date, send: (text: string) => Promise<unknown>) {
   const job: InsightsJob = { task: "answer", question, today: londonYmd(now) };
@@ -252,7 +254,7 @@ export function legacyReportText(sentence: string, actions: { title: string; why
   return [sentence, ...actions.map((a, i) => `${i + 1}. ${a.title}: ${a.why}`)].join("\n");
 }
 
-// Live (TEST_MODE only): Insights writes the headline, the sales words and the
+// Live (see insightsMode): Insights writes the headline, the sales words and the
 // 3 actions around the figures code prepared. Null if it couldn't (the report
 // keeps today's words); a question for the owner is recorded, not sent.
 export async function reportWordsFromInsights(restaurant: Restaurant, reportMonday: string): Promise<InsightsOutput | null> {

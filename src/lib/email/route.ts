@@ -4,7 +4,8 @@
 //   - Dummy addresses (example.com and other reserved test domains, or seeded
 //     dummy customers) are never emailed: they'd bounce and hurt the domain's
 //     reputation. They're logged as "simulated".
-//   - TEST_MODE=true: nothing reaches a stranger. Builder and owner addresses get
+//   - EMAIL_REDIRECT on (lib/switches.ts; always on in preview and development):
+//     nothing reaches a stranger. Builder, owner and TEST_EMAIL_ALLOW addresses get
 //     their own email; every other address is redirected to the builder.
 //   - Otherwise the email goes to the customer.
 
@@ -21,14 +22,14 @@ export function isDummyAddress(email: string) {
 
 export function routeEmail(
   to: string,
-  opts: { testMode: boolean; allowed: string[]; builder: string | null; seed?: boolean },
+  opts: { redirect: boolean; allowed: string[]; builder: string | null; seed?: boolean },
 ): EmailRoute {
   const address = to.trim().toLowerCase();
   if (opts.seed || isDummyAddress(address)) return { kind: "simulate", reason: "dummy customer" };
-  if (!opts.testMode) return { kind: "send", to: address, redirectedFrom: null };
+  if (!opts.redirect) return { kind: "send", to: address, redirectedFrom: null };
   if (opts.allowed.map((a) => a.trim().toLowerCase()).includes(address)) return { kind: "send", to: address, redirectedFrom: null };
   if (opts.builder) return { kind: "send", to: opts.builder.trim().toLowerCase(), redirectedFrom: address };
-  return { kind: "simulate", reason: "test mode, and no BUILDER_EMAIL to redirect to" };
+  return { kind: "simulate", reason: "emails are redirected, and there's no BUILDER_EMAIL to redirect to" };
 }
 
 // "Ember & Spice Grill <hello@mail.dinerai.co.uk>". The name is quoted, without

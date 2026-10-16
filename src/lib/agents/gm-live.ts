@@ -12,7 +12,7 @@ import { composeChecked, gmProfile, routeMessage } from "./gm";
 import { buttonLabel, expectedLanguage, ON_IT_AFTER_MS, ON_IT_LINES, ROUTE_WORDS, SKIP_REASONS, type LanguageSeen, type Route } from "./gm-rules";
 import { recordAgentRun } from "./jobs";
 
-// The GM live (test mode only, once its checklist passes): it routes each owner
+// The GM live (see gmMode: allowed by AGENTS_LIVE_ALLOWED, once its checklist passes): it routes each owner
 // message to the specialist (by that specialist's own mode: live = it answers;
 // shadow = today's code answers, as before), answers simple profile questions
 // itself, turns a fact about the restaurant into a confirm card, asks one question
