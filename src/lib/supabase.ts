@@ -17,8 +17,9 @@ export function getSupabase() {
 }
 
 // allergens are only shown to customers (or used in their messages) once confirmed.
-export type MenuItem = { name: string; price: number; description: string | null; allergens?: string[]; allergens_confirmed?: boolean };
-export type MenuCategory = { category: string; items: MenuItem[] };
+// id: the dish's id (ops/menu.ts menuWithIds), only while the settings page edits the menu; never in restaurants.menu.
+export type MenuItem = { name: string; price: number; description: string | null; allergens?: string[]; allergens_confirmed?: boolean; id?: string };
+export type MenuCategory = { category: string; items: MenuItem[]; id?: string };
 
 export type Restaurant = {
   id: string;

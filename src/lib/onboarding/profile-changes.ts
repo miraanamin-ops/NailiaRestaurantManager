@@ -5,7 +5,7 @@
 import { addOrUpdateItem, DAYS, findItem, formatPrice, removeItem, type Day, type Hours, type MenuCategory } from "./profile-data";
 
 export type ProfileChange = {
-  change: "hours" | "add_dish" | "dish_price" | "remove_dish" | "reward" | "discount_cap" | "phone" | "address" | "website";
+  change: "hours" | "add_dish" | "dish_price" | "rename_dish" | "remove_dish" | "reward" | "discount_cap" | "phone" | "address" | "website";
   day?: string; // "Friday", "every day", "weekdays", "weekend"
   open?: string; // "12:00"
   close?: string; // "23:00"
@@ -13,7 +13,7 @@ export type ProfileChange = {
   name?: string;
   price?: number;
   category?: string;
-  value?: string;
+  value?: string; // reward, phone, address, website; for rename_dish the new name (name = the old one)
   percent?: number;
 };
 
@@ -61,6 +61,8 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
   const note = (line: string, changed: boolean) => (changed ? lines.push(line) : unchanged++);
   let hours: Hours = { ...(current.opening_hours ?? {}) };
   let menu = current.menu ?? [];
+  // Dishes renamed by name, so saveMenu keeps the same dish (its prices, recipe and till matches).
+  const renames: { from: string; to: string }[] = [];
 
   for (const c of changes) {
     switch (c.change) {
@@ -111,6 +113,25 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
         fields.menu = menu;
         break;
       }
+      case "rename_dish": {
+        const found = c.name ? findItem(menu, c.name) : null;
+        const to = c.value?.trim().slice(0, 100);
+        if (!found || !to) {
+          problems.push(found ? `What should ${found.item.name} be called?` : `I couldn't find "${c.name ?? ""}" on your menu.`);
+          break;
+        }
+        const clash = findItem(menu, to);
+        if (clash && clash.item !== found.item) {
+          problems.push(`There's already a ${clash.item.name} on your menu.`);
+          break;
+        }
+        const from = found.item.name;
+        menu = menu.map((cat) => ({ ...cat, items: cat.items.map((i) => (i === found.item ? { ...i, name: to } : i)) }));
+        renames.push({ from, to });
+        note(`Renamed ${from} to ${to}`, from !== to);
+        fields.menu = menu;
+        break;
+      }
       case "remove_dish": {
         const found = c.name ? findItem(menu, c.name) : null;
         if (!found) {
@@ -154,5 +175,5 @@ export function planProfileChanges(current: ProfileFields, changes: ProfileChang
       }
     }
   }
-  return { fields, lines, problems, unchanged };
+  return { fields, lines, problems, unchanged, renames };
 }

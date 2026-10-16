@@ -7,6 +7,7 @@ import { getRestaurant } from "@/lib/onboarding/store";
 import { validHex } from "@/lib/email/brand";
 import { isEmail } from "@/lib/email/route";
 import { isSupportedImage, saveLogo } from "@/lib/photos";
+import { menuWithIds } from "@/lib/ops/menu";
 import { revertProfileChange, saveProfileFields } from "@/lib/profile-edits";
 import type { AgentName } from "@/lib/agents/definition";
 import { goLiveChecklistFor, promptOwnerForGoLive } from "@/lib/agents/go-live";
@@ -228,8 +229,9 @@ export async function revertProfile(form: FormData) {
 
 export async function saveSettingsMenu(restaurantId: string, menu: unknown) {
   const r = await own(restaurantId);
-  // Dishes keep their confirmed allergens unless something about them changed.
-  await saveProfileFields(r, { menu: cleanMenu(menu, r.menu ?? []) }, "Changed the menu in settings");
+  // Dishes keep their confirmed allergens unless something about them changed. The
+  // editor sends each dish's id, so a renamed dish stays the same dish.
+  await saveProfileFields(r, { menu: cleanMenu(menu, await menuWithIds(r.id)) }, "Changed the menu in settings");
   back(r.id, "saved=menu");
 }
 

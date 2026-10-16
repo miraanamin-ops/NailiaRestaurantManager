@@ -3,7 +3,7 @@ import { londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { addDays, dayLabel } from "./format";
-import { archiveUrl, postcodeOf, recentUrl, townOf, weatherRows, type WeatherRow } from "./weather-data";
+import { archiveUrl, forecastRows, forecastUrl, postcodeOf, recentUrl, townOf, weatherRows, type WeatherRow } from "./weather-data";
 
 // Each restaurant's daily weather (Open-Meteo, free, no key), stored for
 // forecasting later. Once: the last 12 months. Then every day: the last week
@@ -75,8 +75,31 @@ export async function runWeather(r: WeatherRestaurant, now: Date, { force = fals
   }
   const recent = weatherRows(await getJson(recentUrl(where.lat, where.lon)), "recent", today);
   await store(r.id, recent);
+  const forecast = await storeForecast(r.id, where, new Date());
   check(await supabase.from("restaurants").update({ last_weather_on: today }).eq("id", r.id));
-  return { stored: recent.length, backfilled };
+  return { stored: recent.length, backfilled, forecast };
+}
+
+// The forecast exactly as issued (never changed: each fetch adds rows with its
+// issued_at, so back-tests only see what was known at the time; see
+// src/lib/ops/known-at.ts), and the last two days' hourly weather.
+async function storeForecast(restaurantId: string, where: { lat: number; lon: number }, issuedAt: Date) {
+  const { days, hours, past } = forecastRows(await getJson(forecastUrl(where.lat, where.lon)), issuedAt);
+  const supabase = getSupabase();
+  const issued_at = issuedAt.toISOString();
+  const rows = [
+    ...days.map((d) => ({ restaurant_id: restaurantId, issued_at, ...d })),
+    ...hours.map((h) => ({ restaurant_id: restaurantId, issued_at, ...h })),
+  ];
+  for (let i = 0; i < rows.length; i += 500) check(await supabase.from("weather_forecasts").insert(rows.slice(i, i + 500)));
+  if (past.length) {
+    check(
+      await supabase
+        .from("weather_hours")
+        .upsert(past.map((h) => ({ restaurant_id: restaurantId, ...h, fetched_at: issued_at })), { onConflict: "restaurant_id,hour_start" }),
+    );
+  }
+  return { days: days.length, hours: hours.length, past_hours: past.length };
 }
 
 // RUN WEATHER: do it now and say what's stored.

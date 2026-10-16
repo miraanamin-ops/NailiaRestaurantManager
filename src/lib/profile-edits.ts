@@ -1,11 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { logAction } from "@/lib/audit";
-import { check } from "@/lib/drafts";
 import { planProfileChanges, type ProfileChange, type ProfileFields } from "@/lib/onboarding/profile-changes";
 import { PROFILE_FIELDS } from "@/lib/profile/fields";
 import { markReverted, planRevert } from "@/lib/profile/versions";
-import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { updateRestaurantColumns, type MenuRename } from "@/lib/ops/menu";
+import { stripMenuIds } from "@/lib/ops/menu-ids";
+import type { OpsSource } from "@/lib/ops/types";
+import type { Restaurant } from "@/lib/supabase";
 
 // Saves changes to the restaurant's details (from a WhatsApp message or the
 // settings page). Each changed field is logged with its old value, all under one
@@ -73,11 +75,22 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   birthday_offer: "birthday offer",
 };
 
-export async function saveProfileFields(restaurant: Restaurant, fields: Partial<EditableFields>, detail: string) {
-  const keys = (Object.keys(fields) as (keyof EditableFields)[]).filter((k) => JSON.stringify(fields[k]) !== JSON.stringify(restaurant[k]));
+// The menu goes through saveMenu (src/lib/ops/menu.ts): sent with the settings
+// page's dish ids, or with `renames` from a rename message, it keeps the same
+// dishes. It's compared and logged without the ids.
+export async function saveProfileFields(
+  restaurant: Restaurant,
+  fields: Partial<EditableFields>,
+  detail: string,
+  opts: { source?: OpsSource; renames?: MenuRename[] } = {},
+) {
+  const plain: Partial<EditableFields> = fields.menu ? { ...fields, menu: stripMenuIds(fields.menu) } : fields;
+  const keys = (Object.keys(plain) as (keyof EditableFields)[]).filter((k) => JSON.stringify(plain[k]) !== JSON.stringify(restaurant[k]));
   if (!keys.length) return [];
   const update = Object.fromEntries(keys.map((k) => [k, fields[k]]));
-  check(await getSupabase().from("restaurants").update(update).eq("id", restaurant.id));
+  // The values before the change, taken before anything is written (for the log and UNDO).
+  const before = Object.fromEntries(keys.map((k) => [k, structuredClone(restaurant[k] ?? null)]));
+  await updateRestaurantColumns(restaurant.id, update, { source: opts.source ?? "manual", renames: opts.renames });
   const batchId = keys.length > 1 ? randomUUID() : null;
   for (const k of keys) {
     await logAction({
@@ -86,7 +99,7 @@ export async function saveProfileFields(restaurant: Restaurant, fields: Partial<
       actor: "owner",
       action: "setting",
       detail: `${detail} (${FIELD_NAMES[k]})`,
-      data: { field: k, before: restaurant[k] ?? null, after: fields[k] ?? null },
+      data: { field: k, before: before[k], after: plain[k] ?? null, ...(k === "menu" && opts.renames?.length ? { renames: opts.renames } : {}) },
     });
   }
   return keys.map((k) => FIELD_NAMES[k]);
@@ -95,7 +108,9 @@ export async function saveProfileFields(restaurant: Restaurant, fields: Partial<
 // A WhatsApp message like "change Friday hours to 11pm": what was changed, or what's unclear.
 export async function applyProfileChanges(restaurant: Restaurant, changes: ProfileChange[]) {
   const plan = planProfileChanges(restaurant, changes);
-  const saved = plan.lines.length ? await saveProfileFields(restaurant, plan.fields, "Changed by message") : [];
+  const saved = plan.lines.length
+    ? await saveProfileFields(restaurant, plan.fields, "Changed by message", { source: "owner_message", renames: plan.renames })
+    : [];
   const parts: string[] = [];
   if (saved.length) parts.push(`✅ Done:\n${plan.lines.map((l) => `- ${l}`).join("\n")}\n\nReply *UNDO* to change it back.`);
   else if (plan.unchanged && !plan.problems.length) parts.push("That's already how it is, so nothing changed.");
@@ -110,7 +125,7 @@ export async function revertProfileChange(restaurant: Restaurant, versionId: str
   const plan = await planRevert(restaurant.id, versionId);
   if (!plan.ok) return plan;
   const row = restaurant as unknown as Record<string, unknown>;
-  check(await getSupabase().from("restaurants").update(plan.columns).eq("id", restaurant.id));
+  await updateRestaurantColumns(restaurant.id, plan.columns);
   for (const [column, value] of Object.entries(plan.columns)) {
     await logAction({
       restaurantId: restaurant.id,

@@ -1,5 +1,6 @@
 import "server-only";
 import { check, checkRow } from "@/lib/drafts";
+import { saveMenu } from "@/lib/ops/menu";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { testToolsEnabled, testToolsOn } from "@/lib/test-mode";
 import { mark, newLinkCode, nextStep, slugFor, type Progress, type StepId, type StepStatus } from "./steps";
@@ -49,8 +50,12 @@ export async function patchData(restaurantId: string, patch: Partial<OnboardingD
   return saveOnboarding(restaurantId, { data: { ...o.data, ...patch } });
 }
 
+// The menu goes through saveMenu (it lives in dishes; restaurants.menu is a copy).
 export async function updateRestaurantFields(restaurantId: string, fields: Partial<Restaurant>) {
-  return checkRow(await getSupabase().from("restaurants").update(fields).eq("id", restaurantId).select("*").single<Restaurant>());
+  const { menu, ...rest } = fields;
+  if (menu !== undefined) await saveMenu(restaurantId, menu, { source: "photo" });
+  if (!Object.keys(rest).length) return getRestaurant(restaurantId);
+  return checkRow(await getSupabase().from("restaurants").update(rest).eq("id", restaurantId).select("*").single<Restaurant>());
 }
 
 export async function getRestaurant(restaurantId: string) {
