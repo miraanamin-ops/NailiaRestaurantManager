@@ -1,37 +1,25 @@
-import { after, type NextRequest } from "next/server";
-import { processQueue } from "@/lib/send";
-import { loadRestaurantContext } from "@/lib/assistant";
-import { alertBuilder } from "@/lib/builder-alerts";
-import { londonParts, londonYmd } from "@/lib/clock";
-import { check, checkRow } from "@/lib/drafts";
-import { ownerChannel } from "@/lib/followups";
-import { runReviewCheck } from "@/lib/google-jobs";
-import { briefIsLate } from "@/lib/job-health";
+import type { NextRequest } from "next/server";
 import { checkJobHealth, finishRun, startRun, type Job } from "@/lib/job-runs";
-import { runFeedbackJob } from "@/lib/feedback";
-import { runMorning } from "@/lib/morning";
 import { clearOldRateLimits } from "@/lib/rate-limit";
-import { runWeather } from "@/lib/sales/weather";
-import { messageOwner } from "@/lib/notify";
-import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { runQueuedAgentJobs } from "@/lib/agents/handlers";
-import { gmMode } from "@/lib/agents/gm";
-import { releaseAlerts } from "@/lib/agents/gm-brief";
+import { dispatch } from "@/lib/queue/dispatch";
+import { checkLateBriefs, checkQueueHealth } from "@/lib/queue/health";
 
-// The morning job writes drafts and the weekly report with Claude, which takes a while.
-export const maxDuration = 300;
+// Only queues work now (seconds), but give it room on a slow day.
+export const maxDuration = 60;
 
 // Scheduled jobs. All need the CRON_SECRET password.
-//   ?job=hourly  (Supabase pg_cron, 5 past every hour): check for new Google reviews,
-//                send "How was your visit?" emails that are due, store today's weather;
-//                from 9am UK time, also the morning job (once a day)
-//   ?job=daily   (Vercel cron, 09:00 UTC = 9am or 10am UK): a backup for the
-//                morning job, and a check that the hourly job is still running
-// The morning job: release held sends, Monday birthday email, Monday/Thursday
-// Google post, Monday report, then the morning brief. See lib/morning.ts.
-// Every run is recorded in job_runs with its real outcome; failures, stuck runs
-// and late jobs alert the builder (never a restaurant owner). Scheduled jobs
-// always use the real time, never the TIME test clock.
+//   ?job=hourly  (Supabase pg_cron, 5 past every hour): queues, for every active
+//                restaurant, the review check, held GM alerts, "How was your
+//                visit?" emails, sends that are due and the day's weather; from
+//                9am UK time the morning job's first step (once a day); and the
+//                9:31 brief check and the daily clean-up. Then it starts workers.
+//   ?job=daily   (Vercel cron, 09:00 UTC = 9am or 10am UK): a backup that queues
+//                the morning job, and checks the hourly job is still running.
+// The work itself runs on the job queue (lib/queue, /api/jobs/work), one job per
+// restaurant per task, so one slow or failing restaurant never delays another.
+// Every run is recorded in job_runs with its real outcome; failures, stuck runs,
+// a backed-up queue and late briefs alert the builder (never a restaurant owner).
+// Scheduled jobs always use the real time, never the TIME test clock.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return new Response("CRON_SECRET not configured", { status: 500 });
@@ -39,22 +27,25 @@ export async function GET(req: NextRequest) {
 
   const job = req.nextUrl.searchParams.get("job");
   if (job !== "hourly" && job !== "daily") return new Response("Unknown job", { status: 400 });
-
-  // Supabase's scheduler only waits a few seconds for an answer, and drafting
-  // replies takes longer, so the hourly job answers at once and works in the background.
-  // Its real outcome is still recorded when it finishes.
-  if (job === "hourly") {
-    after(() => recordedRun(job));
-    return Response.json({ job, started: true });
-  }
   return Response.json({ job, ...(await recordedRun(job)) });
 }
 
 async function recordedRun(job: Job) {
   const id = await startRun(job);
   try {
-    await checkJobHealth(job, new Date());
-    const summary = await runJob(job);
+    const now = new Date();
+    await checkJobHealth(job, now);
+    const summary = await dispatch(job, now);
+    if (job === "hourly") await clearOldRateLimits(now);
+    // The queue's own health, and (after 9:30) any brief that still hasn't gone.
+    // Never stops the run.
+    try {
+      await checkQueueHealth(now);
+      await checkLateBriefs(now);
+    } catch (err) {
+      console.error("Queue health check failed", err);
+    }
+    console.log(`Cron ${job}`, JSON.stringify(summary));
     const failed = await finishRun(id, job, summary, null);
     return { ok: !failed, summary };
   } catch (err) {
@@ -63,90 +54,4 @@ async function recordedRun(job: Job) {
     await finishRun(id, job, null, message);
     return { ok: false, error: message };
   }
-}
-
-async function runJob(job: Job) {
-  // Every active restaurant, one at a time. Each one's steps are wrapped so that
-  // one restaurant failing never stops the others.
-  const restaurants = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
-  const now = new Date();
-  const summary: Record<string, unknown>[] = [];
-
-  for (const r of restaurants) {
-    const channel = ownerChannel(r);
-    const entry: Record<string, unknown> = { restaurant: r.id };
-    if (job === "hourly") {
-      try {
-        if (channel) {
-          const ctx = await loadRestaurantContext(r.id, { realTime: true });
-          // Only 1-3 star alerts are messaged now; 4-5 star replies wait for the brief.
-          entry.reviews = await runReviewCheck(ctx, (text, withButtons) => messageOwner(channel, text, withButtons));
-        } else {
-          entry.reviews = { skipped: "no owner WhatsApp yet" };
-        }
-      } catch (err) {
-        console.error("Review check failed", err);
-        entry.reviews = { error: err instanceof Error ? err.message : String(err) };
-      }
-      // The GM live: an alert held for quiet hours or the one-an-hour limit, if one is due.
-      try {
-        if (channel && (await gmMode(r)) === "live") entry.alert = await releaseAlerts(r, (text, withButtons) => messageOwner(channel, text, withButtons), now);
-      } catch (err) {
-        console.error("Releasing held alerts failed", err);
-        entry.alert = { error: err instanceof Error ? err.message : String(err) };
-      }
-      // "How was your visit?" emails that are due (about 3 hours after a redemption).
-      try {
-        const feedback = await runFeedbackJob(r, now);
-        // Failed sends count as a job failure, so the builder hears about them.
-        entry.feedback = feedback.failed ? { ...feedback, error: `${feedback.failed} feedback email(s) failed to send` } : feedback;
-      } catch (err) {
-        console.error("Feedback emails failed", err);
-        entry.feedback = { error: err instanceof Error ? err.message : String(err) };
-      }
-      // Approved campaigns whose send time has come (and anything else held that's now due).
-      // Quiet: the results are in the activity log and the next brief.
-      try {
-        entry.released = (await processQueue(r, now)).map((x) => x.outcome);
-      } catch (err) {
-        console.error("Releasing held sends failed", err);
-        entry.released = { error: err instanceof Error ? err.message : String(err) };
-      }
-      // Today's weather (once a day; the first time, the last 12 months too).
-      try {
-        entry.weather = await runWeather(r, now);
-      } catch (err) {
-        console.error("Weather failed", err);
-        entry.weather = { error: err instanceof Error ? err.message : String(err) };
-      }
-    }
-    try {
-      entry.morning = await runMorning(r, now);
-    } catch (err) {
-      console.error("Morning job failed", err);
-      entry.morning = { error: err instanceof Error ? err.message : String(err) };
-    }
-    // Agent work the job queued (the shadow checker), plus anything left over from
-    // earlier runs. Never throws; a failing job alerts the builder on its own.
-    entry.agents = await runQueuedAgentJobs(r.id, 4);
-
-    // The brief should be out by 11am. If it isn't (and the job hasn't already
-    // reported giving up), tell the builder.
-    const fresh = checkRow(await getSupabase().from("restaurants").select("*").eq("id", r.id).single<Restaurant>());
-    const today = londonYmd(now);
-    if (
-      briefIsLate({
-        londonHour: londonParts(now).hour,
-        today,
-        lastBriefOn: fresh.last_brief_on,
-        failuresToday: fresh.morning_failed_on === today ? fresh.morning_failures : 0,
-      })
-    ) {
-      await alertBuilder(`brief-late:${r.id}:${today}`, `${r.name}'s morning brief still hasn't gone out (it's after 11am).`);
-    }
-    summary.push(entry);
-  }
-  if (job === "hourly") await clearOldRateLimits(now);
-  console.log(`Cron ${job}`, JSON.stringify(summary));
-  return summary;
 }

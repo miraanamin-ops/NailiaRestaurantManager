@@ -5,6 +5,7 @@ import { check } from "@/lib/drafts";
 import { ownerChannel } from "@/lib/followups";
 import { messageOwner } from "@/lib/notify";
 import { downloadTwilioMedia } from "@/lib/photos";
+import { OwnerToldError, SORRY } from "@/lib/sorry";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import type { ZImage } from "./ai";
 import { isSpreadsheetType } from "./pos-file";
@@ -127,6 +128,7 @@ export async function handleStaffMessage(input: {
     await reply(staffHelp(r.name));
   } catch (err) {
     console.error("Failed to handle a staff message", err);
-    await reply("Sorry, something went wrong on my side. Please try again in a minute. 🙏");
+    await reply(SORRY);
+    throw new OwnerToldError(err);
   }
 }

@@ -12,6 +12,7 @@ import { parseCommand } from "./parse";
 import { salesFromMedia, salesReply } from "@/lib/sales/whatsapp";
 import { ownerSender } from "./sales-commands";
 import { updateRestaurant, type Turn } from "./turn";
+import { OwnerToldError, SORRY } from "@/lib/sorry";
 
 // One WhatsApp message from the owner, start to finish. The webhook
 // (app/api/whatsapp) has already checked it's from Twilio and from the owner.
@@ -71,6 +72,8 @@ export async function handleMessage(input: {
     if (command?.name !== "time" && command?.name !== "resume") await releaseQueue(fresh.restaurant, fresh.now);
   } catch (err) {
     console.error("Failed to handle message", err);
-    await send("Sorry, something went wrong on my side. Please try again in a minute. 🙏");
+    await send(SORRY);
+    // The owner has their reply; the queue still records the failure and tells the builder.
+    throw new OwnerToldError(err);
   }
 }

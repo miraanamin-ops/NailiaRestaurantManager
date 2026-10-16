@@ -7,10 +7,18 @@ import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
 import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
-import { runQueuedAgentJobs } from "@/lib/agents/handlers";
+import { alertBuilder } from "@/lib/builder-alerts";
+import { messageOwner } from "@/lib/notify";
+import { kickWorkers } from "@/lib/queue/kick";
+import type { OwnerMessagePayload } from "@/lib/queue/handlers";
+import { concurrencyKeys, keys } from "@/lib/queue/rules";
+import { PRIORITY } from "@/lib/queue/config";
+import { enqueue } from "@/lib/queue/store";
+import { OwnerToldError, SORRY } from "@/lib/sorry";
 
-// The reply goes at once; the work after it (Claude, and then any agent jobs
-// such as the shadow checker) can take a few minutes.
+// The message goes on the job queue and a worker answers it (its own function
+// call, with its own time budget). Only if queuing fails is it answered here,
+// in the background, as before the queue.
 export const maxDuration = 300;
 
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -92,11 +100,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (staff) {
-    after(async () => {
-      await handleStaffMessage({ restaurantId: staff.restaurant_id, staffNumber: owner, sandbox, body, media });
-      // A staff photo for Visibility (if it took one) is looked at straight away.
-      await runQueuedAgentJobs(staff.restaurant_id);
-    });
+    await queueMessage({ kind: "staff", owner, sandbox, body, media: allMedia }, staff.restaurant_id, params.MessageSid, () =>
+      handleStaffMessage({ restaurantId: staff.restaurant_id, staffNumber: owner, sandbox, body, media }),
+    );
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
@@ -108,19 +114,45 @@ export async function POST(req: NextRequest) {
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
-  // Reply to Twilio straight away (it gives up after 15 seconds), then do the
-  // slow work and send answers as separate WhatsApp messages. Everything from
+  // Reply to Twilio straight away (it gives up after 15 seconds); a worker does the
+  // slow work and sends answers as separate WhatsApp messages. Everything from
   // here on works with this one restaurant only. A restaurant still being set up
-  // gets the onboarding conversation instead.
-  after(async () => {
+  // gets the onboarding conversation instead (decided by the worker).
+  await queueMessage({ kind: "owner", owner, sandbox, body, buttonPayload: params.ButtonPayload, media: allMedia }, restaurant.id, params.MessageSid, async () => {
     if (await onboardingInProgress(restaurant.id)) {
       return handleOnboardingMessage({ restaurantId: restaurant.id, owner, sandbox, body, media: allMedia });
     }
     await handleMessage({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, media });
-    // Then, with the owner's reply already sent, any agent work the message
-    // queued (the checker in shadow mode). Never delays or changes the reply.
-    await runQueuedAgentJobs(restaurant.id);
   });
 
   return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+}
+
+// Puts a message on the queue (owner replies first, one message at a time per
+// restaurant, so two quick messages are answered in order) and starts a worker.
+// A Twilio retry of the same message is stopped earlier (the message id is
+// logged once), and its job key is the message id too.
+async function queueMessage(payload: OwnerMessagePayload, restaurantId: string, messageSid: string | undefined, inline: () => Promise<void>) {
+  try {
+    await enqueue({
+      type: "owner_message",
+      restaurantId,
+      key: keys.ownerMessage(messageSid || `${restaurantId}:${Date.now()}`),
+      priority: PRIORITY.owner,
+      concurrencyKey: concurrencyKeys.whatsapp(restaurantId),
+      payload,
+    });
+    after(() => kickWorkers(1));
+  } catch (err) {
+    console.error("Couldn't queue the WhatsApp message; answering it here", err);
+    after(async () => {
+      try {
+        await inline();
+      } catch (e) {
+        // The person hears "Sorry" once (the handler sends it itself unless it never got that far).
+        if (!(e instanceof OwnerToldError)) await messageOwner({ restaurantId, from: payload.sandbox, to: payload.owner }, SORRY).catch(() => {});
+        await alertBuilder(`owner-message-failed:${restaurantId}`, `A WhatsApp message couldn't be answered: ${e instanceof Error ? e.message : String(e)}. The person got the "Sorry" reply.`);
+      }
+    });
+  }
 }

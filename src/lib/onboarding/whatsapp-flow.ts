@@ -4,6 +4,7 @@ import { downloadTwilioMedia, isSupportedImage } from "@/lib/photos";
 import { appUrl, getSupabase } from "@/lib/supabase";
 import { testToolsOn } from "@/lib/test-mode";
 import { replyUnregistered } from "@/lib/unregistered";
+import { OwnerToldError } from "@/lib/sorry";
 import * as engine from "./engine";
 import { placesAvailable } from "./places";
 import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
@@ -86,6 +87,7 @@ export async function handleOnboardingMessage(input: { restaurantId: string; own
   } catch (err) {
     console.error("Onboarding message failed", err);
     await ctx.send("Sorry, something went wrong on my side. Please try again in a minute (or send HELP to see where we were). 🙏");
+    throw new OwnerToldError(err);
   }
 }
 

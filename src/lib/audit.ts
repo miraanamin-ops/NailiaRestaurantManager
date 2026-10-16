@@ -34,7 +34,8 @@ export type AuditAction =
   | "answered" // the owner answered a question about a review (Reply publicly / Handle privately / Both)
   | "agent_failed" // an agent job failed (the builder was alerted)
   | "profile_changed" // a profile field changed (a new profile version)
-  | "profile_reverted"; // Revert on one profile change
+  | "profile_reverted" // Revert on one profile change
+  | "job_retried"; // the builder retried a dead job from /log
 
 export type AuditEntry = {
   id: string;
@@ -59,7 +60,8 @@ export const UNDOABLE: AuditAction[] = ["approved", "skipped", "edited", "settin
 
 // Never throws: a failed log line mustn't stop the action itself.
 export async function logAction(entry: {
-  restaurantId: string;
+  // null: a system job (the health check, the clean-up), not one restaurant's.
+  restaurantId: string | null;
   draftId?: string | null;
   batchId?: string | null;
   actor: Actor;
@@ -85,7 +87,7 @@ export async function logAction(entry: {
 
   // A profile field changed (from settings, a message, a command, onboarding,
   // UNDO or Revert): record it as a new profile version too.
-  if ((entry.action === "setting" || entry.action === "profile_reverted") && typeof entry.data?.field === "string") {
+  if (entry.restaurantId && (entry.action === "setting" || entry.action === "profile_reverted") && typeof entry.data?.field === "string") {
     await recordColumnChange({
       restaurantId: entry.restaurantId,
       column: entry.data.field,
