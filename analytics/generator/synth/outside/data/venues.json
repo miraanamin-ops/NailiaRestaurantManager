@@ -1,0 +1,25 @@
+{
+  "_note": "Real venues and real events at them. Event times are the published gate-to-close hours. Sources checked 2026-10-17.",
+  "venues": [
+    {"key": "london_stadium", "name": "London Stadium", "kind": "stadium", "latitude": 51.53833, "longitude": -0.01658, "capacity": 62500, "teams": ["West Ham"]},
+    {"key": "excel", "name": "ExCeL London", "kind": "other", "latitude": 51.50850, "longitude": 0.02950, "capacity": 100000, "teams": []}
+  ],
+  "events": [
+    {"venue": "london_stadium", "name": "Sam Fender concert", "day": "2025-06-06", "starts": "16:00", "ends": "23:00", "size": 60000, "source": "https://www.london-stadium.com/assets/documents/resident-letter-regarding-summer-2025-events-pdf.pdf"},
+    {"venue": "london_stadium", "name": "Iron Maiden concert", "day": "2025-06-28", "starts": "16:00", "ends": "23:00", "size": 60000, "source": "same letter"},
+    {"venue": "london_stadium", "name": "London Athletics Meet", "day": "2025-07-19", "starts": "12:00", "ends": "21:00", "size": 50000, "source": "same letter"},
+    {"venue": "london_stadium", "name": "Wingfest London", "day": "2025-07-25", "end_day": "2025-07-27", "starts": "12:00", "ends": "22:00", "size": 15000, "source": "same letter"},
+    {"venue": "london_stadium", "name": "Soccer Aid", "day": "2026-05-31", "starts": "16:00", "ends": "22:00", "size": 60000, "source": "https://www.london-stadium.com/news/2026/may/summer-2026-events-residents-information.html"},
+    {"venue": "london_stadium", "name": "Take That concert", "day": "2026-06-25", "starts": "16:00", "ends": "23:00", "size": 60000, "source": "same page"},
+    {"venue": "london_stadium", "name": "Take That concert", "day": "2026-06-26", "starts": "16:00", "ends": "23:00", "size": 60000, "source": "same page"},
+    {"venue": "london_stadium", "name": "Take That concert", "day": "2026-06-27", "starts": "16:00", "ends": "23:00", "size": 60000, "source": "same page"},
+    {"venue": "london_stadium", "name": "Metallica concert", "day": "2026-07-03", "starts": "14:00", "ends": "23:00", "size": 65000, "source": "same page"},
+    {"venue": "london_stadium", "name": "Metallica concert", "day": "2026-07-05", "starts": "14:00", "ends": "22:30", "size": 65000, "source": "same page"},
+    {"venue": "london_stadium", "name": "London Athletics Meet", "day": "2026-07-18", "starts": "12:00", "ends": "21:00", "size": 50000, "source": "same page"},
+    {"venue": "london_stadium", "name": "Wingfest London", "day": "2026-07-24", "end_day": "2026-07-26", "starts": "12:00", "ends": "22:00", "size": 15000, "source": "same page"},
+    {"venue": "excel", "name": "MCM Comic Con London", "day": "2024-10-25", "end_day": "2024-10-27", "starts": "09:00", "ends": "19:00", "size": 40000, "source": "https://www.thepopverse.com/live-mcm-october-2025-dates-london-excel/ (October 2024 show 25 to 27 October)"},
+    {"venue": "excel", "name": "MCM Comic Con London", "day": "2025-05-23", "end_day": "2025-05-25", "starts": "09:00", "ends": "19:00", "size": 40000, "source": "https://www.mcmcomiccon.com/london/en-us.html"},
+    {"venue": "excel", "name": "MCM Comic Con London", "day": "2025-10-24", "end_day": "2025-10-26", "starts": "09:00", "ends": "19:00", "size": 40000, "source": "https://www.thepopverse.com/live-mcm-october-2025-dates-london-excel/"},
+    {"venue": "excel", "name": "MCM Comic Con London", "day": "2026-05-22", "end_day": "2026-05-24", "starts": "09:00", "ends": "19:00", "size": 40000, "source": "https://www.mcmcomiccon.com/london/en-us.html"}
+  ]
+}

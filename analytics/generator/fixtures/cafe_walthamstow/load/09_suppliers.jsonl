@@ -1,0 +1,4 @@
+{"category": "coffee", "id": "1e7e993c-bbcf-5003-9ba9-761a69e14e12", "name": "Lea Valley Roasters (demo)", "notes": "Delivers on Mondays", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic"}
+{"category": "dairy and eggs", "id": "0f9a9e81-b49b-54c1-82f1-40f4dcd8bdcf", "name": "Forest Dairy Co (demo)", "notes": "Delivers on Tuesdays", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic"}
+{"category": "veg and bakery", "id": "b67d6fa2-f737-533d-8d8a-eac1160685d9", "name": "Walthamstow Fresh Produce (demo)", "notes": "Delivers on Tuesdays", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic"}
+{"category": "cash and carry", "id": "a23c63f2-9089-5682-9443-ae74abbcd5ac", "name": "Northside Cash and Carry (demo)", "notes": "Delivers on Thursdays", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic"}

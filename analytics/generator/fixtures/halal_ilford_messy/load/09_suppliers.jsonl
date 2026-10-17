@@ -1,0 +1,4 @@
+{"category": "meat", "id": "3b1eaadc-4c7d-513d-b01c-cae1119048d7", "name": "Ilford Halal Meats (demo)", "notes": "Delivers on Tuesdays", "restaurant_id": "66666666-6666-6666-6666-666666666666", "source": "synthetic"}
+{"category": "veg and dairy", "id": "e5713bf8-e70b-5ebd-a07a-60101b5899f9", "name": "East London Fresh (demo)", "notes": "Delivers on Tuesdays", "restaurant_id": "66666666-6666-6666-6666-666666666666", "source": "synthetic"}
+{"category": "cash and carry", "id": "8083100a-5310-5c5a-97a3-455e2be49bd7", "name": "Northside Cash and Carry (demo)", "notes": "Delivers on Thursdays", "restaurant_id": "66666666-6666-6666-6666-666666666666", "source": "synthetic"}
+{"category": "packaging", "id": "cf442c98-fa74-57f8-93c5-61b4b31d659e", "name": "Lea Bridge Packaging (demo)", "notes": "Delivers on Mondays", "restaurant_id": "66666666-6666-6666-6666-666666666666", "source": "synthetic"}

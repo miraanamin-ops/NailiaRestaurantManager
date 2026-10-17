@@ -1,5 +1,5 @@
 -- =====================================================================
--- DinerAI: undo the operations data (030 to 037)
+-- DinerAI: undo the operations data (030 to 038)
 -- Paste this into Supabase > SQL Editor and click "Run" ONLY if you are going
 -- back to code from before the ops-schema step (redeploy that code first).
 --
@@ -20,6 +20,8 @@ drop function if exists ops_menu_after_insert();
 -- 2. Views, functions and roles' grants.
 drop schema if exists analytics cascade;
 drop function if exists clear_ops_dummy_data(boolean);
+drop function if exists clear_ops_dummy_data(boolean, uuid);
+drop function if exists trading_hour_date(date, int, time);
 drop function if exists london_hour_start(date, int);
 drop function if exists london_hour_minutes(date, int);
 drop function if exists finish_model_run(uuid, text, jsonb, numeric, boolean);
@@ -41,6 +43,7 @@ drop table if exists deal_outcomes cascade;
 drop table if exists model_runs cascade;
 drop table if exists restaurant_events, prayer_times, calendar_relevance, restaurant_teams, football_fixtures cascade;
 drop table if exists weather_forecasts, weather_hours cascade;
+drop table if exists channel_fees cascade;
 drop table if exists targets, fixed_costs, ingredient_prices, invoice_lines, invoices, suppliers cascade;
 drop table if exists shift_actuals, rota_shifts, rota_weeks, cover_rules, staff_time_off, staff_availability, staff_pay_rates, staff cascade;
 drop table if exists sales_channel_splits cascade;
@@ -75,6 +78,9 @@ drop index if exists sales_items_key_idx;
 drop index if exists staff_numbers_id_restaurant_idx;
 drop index if exists campaigns_id_restaurant_idx;
 alter table restaurants drop constraint if exists restaurants_nation_check;
+alter table restaurants drop constraint if exists restaurants_trading_day_cutoff_check;
+alter table restaurants drop column if exists trading_day_cutoff;
+alter table weather_days drop column if exists sunshine_hours;
 alter table restaurants drop column if exists council_name, drop column if exists council_code,
   drop column if exists nation, drop column if exists prayer_method;
 
@@ -106,6 +112,7 @@ end $$;
 drop domain if exists ops_source;
 
 delete from schema_migrations where name in ('030_ops_foundation.sql', '031_ops_menu.sql', '032_ops_sales_staff_rota.sql',
-  '033_ops_costs_deals.sql', '034_ops_outside.sql', '035_ops_models.sql', '036_ops_analytics.sql', '037_ops_menu_guard.sql');
+  '033_ops_costs_deals.sql', '034_ops_outside.sql', '035_ops_models.sql', '036_ops_analytics.sql', '037_ops_menu_guard.sql',
+  '038_ops_data_gaps.sql');
 
 commit;

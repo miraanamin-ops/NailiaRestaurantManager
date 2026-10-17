@@ -1,0 +1,2 @@
+{"capacity": 62500, "id": "32d97c4d-1b5b-5a57-86ec-1e13307f2a98", "kind": "stadium", "latitude": 51.53833, "longitude": -0.01658, "name": "London Stadium", "source": "synthetic", "teams": ["West Ham"]}
+{"capacity": 100000, "id": "060774a8-9c1a-5ee3-a320-f4ab4ee76e56", "kind": "other", "latitude": 51.5085, "longitude": 0.0295, "name": "ExCeL London", "source": "synthetic", "teams": []}

@@ -1,0 +1,45 @@
+{"category": "coffee", "id": "24459f72-19ad-5f2b-8e53-9bdd2aa73b7a", "name": "Coffee beans", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "abbd2b71-45c7-575a-bf0a-316b51380142", "name": "Whole milk", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "ml"}
+{"category": "dairy", "id": "dcb0b4d1-dd25-597d-86f4-8ded1706fa45", "name": "Oat milk", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "ml"}
+{"category": "dairy", "id": "b3e34d4f-8078-5404-b334-81f36dc0f212", "name": "Eggs", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "dairy", "id": "3a4ff3bc-cb5c-5bf2-acfa-bab8e917eaa5", "name": "Butter", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "876a7511-a7e3-52fa-bbc6-12ff446d814c", "name": "Cheddar", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "30c4dce9-dc29-579a-bc80-7a3fe8adc116", "name": "Halloumi", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "9a4dad35-8a0e-5e4d-b217-04eb8fcf4d40", "name": "Greek yoghurt", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "1ee3427c-79c6-554b-908d-332c48aba925", "name": "Parmesan", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "bakery", "id": "2c3ad416-992c-5356-86ac-81a54a9a888e", "name": "Sourdough loaf", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "bakery", "id": "bc18730e-3513-5970-86a2-332806db1f9a", "name": "Croissant (bake-off)", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "bakery", "id": "ae2dbd2c-f1d8-5685-89e6-c06c526eefe6", "name": "Pain au chocolat (bake-off)", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "bakery", "id": "7b1b688d-f3e2-5dbf-b455-25dac3c5b9f1", "name": "Carrot cake slices", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "bakery", "id": "24d12475-b547-5d40-a1d2-73773bf5e5b1", "name": "Brownies", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "bakery", "id": "0707ea79-6899-53b3-9b1d-c3bb2bfc9f1e", "name": "Cinnamon buns", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "veg", "id": "dd0335fb-c2c0-5739-84af-2dc86dd404fb", "name": "Bananas", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "meat", "id": "2cb98b1e-e02e-53d6-8b0a-1a34439179b7", "name": "Back bacon", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "meat", "id": "b12f6c63-2e9f-5b7a-8dab-d61f0957a7d5", "name": "Sausages", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "fish", "id": "2119a89e-7e1d-5102-86ba-9f9dbf83b554", "name": "Smoked salmon", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "meat", "id": "d843bff1-8c66-518d-ba9c-88479826cf24", "name": "Ham", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "poultry", "id": "f2821183-9e80-5543-876f-f0a809778142", "name": "Chicken breast", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "309ad297-2f41-59a2-a9c4-ce4982bd5c24", "name": "Mushrooms", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "c5803411-c009-565c-90d2-2bc649cf5c70", "name": "Tomatoes", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "60531350-ce07-5aa5-bafc-dc20a4cf68e6", "name": "Avocados", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "veg", "id": "d503d5af-15ad-57b2-927d-edfd9f31b221", "name": "Lettuce", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "veg", "id": "7c869dd3-90db-5d35-855c-9e8a159dfd86", "name": "Spinach", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "4acdc2b6-9100-5620-901a-3c25e037f3b7", "name": "Baked beans", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "06c1d4f3-ede8-5c50-bdec-c4cad9e814de", "name": "Chopped tomatoes", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "fedacee1-6676-5774-9c4a-973356c76c89", "name": "Plain flour", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "bed76c64-4c29-5fe1-8da9-ae997d395717", "name": "Sugar", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "frozen", "id": "9af185f4-5a5a-5b4d-bb14-51231a468d84", "name": "Mixed berries", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "b93b22f2-346a-576c-b669-e44bc860095a", "name": "Maple syrup", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "ml"}
+{"category": "dry", "id": "7ea574fe-f5f3-55dd-a3c6-245f97df6481", "name": "Granola", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "bakery", "id": "0363c67d-5d90-5464-9745-eb994f3cbc6e", "name": "Tortilla wraps", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "frozen", "id": "23fdd681-2df6-5c75-bd7e-a45a20733bec", "name": "Falafel", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "dry", "id": "8c5e5e5a-d72b-5438-a827-26f0e48068c2", "name": "Chickpeas", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "91db8c18-e681-562b-bb8c-7f504dbf6227", "name": "Soup vegetables", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "frozen", "id": "92f119fe-07ea-5cda-aad0-7c8ac4d58308", "name": "Frozen chips", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "oil", "id": "5c43f1df-9ebc-55e0-aaef-b5730cb1568f", "name": "Rapeseed oil", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "ml"}
+{"category": "dry", "id": "78b114d2-5d7c-5e28-84c5-117a6d6e789a", "name": "Cocoa powder", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "2db7cdc3-fdfc-51bf-89cb-0ac0006e145d", "name": "Chai syrup", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "ml"}
+{"category": "dry", "id": "6b8decfd-3992-5879-9eaf-fbf56882c8c3", "name": "Tea bags", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "veg", "id": "db8c2bac-b6c8-54cb-a6de-6c10e70963ca", "name": "Oranges", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "veg", "id": "fad7f57b-c250-505e-ba5d-188ef2fd8b85", "name": "Lemons", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
+{"category": "packaging", "id": "9c288266-fdda-5792-99f5-e374734b3525", "name": "Takeaway cups and lids", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "unit": "each"}
