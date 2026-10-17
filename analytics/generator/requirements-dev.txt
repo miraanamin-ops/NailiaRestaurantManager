@@ -1,0 +1,3 @@
+# Tests only: pytest, and a throwaway local Postgres for the loader's end-to-end test.
+pytest==9.1.1
+pgserver==0.1.4

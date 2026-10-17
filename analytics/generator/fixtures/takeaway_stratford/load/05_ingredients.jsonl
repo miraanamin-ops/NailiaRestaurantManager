@@ -1,0 +1,34 @@
+{"category": "poultry", "id": "b43d3f44-13c0-506a-97e4-41172c415d34", "name": "Chicken, whole", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "poultry", "id": "0130da05-8786-52ea-9009-f7cb9efcce71", "name": "Chicken wings", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "poultry", "id": "e4f4bf8c-348b-54d2-bdb5-cf6949efde45", "name": "Chicken breast fillet", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "meat", "id": "03431a09-c3dd-50d3-8b74-5ac83c1bdecb", "name": "Beef mince", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "meat", "id": "6b639880-c800-51cf-a146-490c5ba8c3f9", "name": "Beef pepperoni", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "bakery", "id": "799cd31c-da5d-5bab-b093-c36dba8c1835", "name": "Brioche buns", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "bakery", "id": "c441df5a-eddf-5606-856d-bc6fb06e49b6", "name": "Tortilla wraps", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "dry", "id": "7ac075b8-ec13-5367-b364-f61a94c4ab4d", "name": "Pizza flour", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "ca02be1b-9952-5b79-936a-b8f9e8a65d66", "name": "Mozzarella", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "64ba9f59-007b-5055-bf9f-f2c46f7ec84d", "name": "Cheese slices", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "dry", "id": "efc9cb87-f2e2-5276-bba3-e15b43bfe063", "name": "Pizza sauce", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "frozen", "id": "9fdfd271-c785-521e-a393-6e1f2308c3e7", "name": "Frozen fries", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "frozen", "id": "7102f554-4ec5-5f88-8f96-4cc0b3bce301", "name": "Onion rings", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "frozen", "id": "444ac53f-9368-58b2-be03-d13d6172e95b", "name": "Mozzarella sticks", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "frozen", "id": "bc16fa66-3b79-50a6-baad-3aa50e011d05", "name": "Corn on the cob", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "dairy", "id": "19d4d589-0c04-545c-8291-d7ace8dc5279", "name": "Coleslaw", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "3b3b92fd-e15f-59e7-a870-3f0102985300", "name": "Lettuce and tomato", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "5377584a-75e0-5682-985f-e299ad2dd992", "name": "Onions", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "46c9333b-3a42-532d-869d-bb96596b1cdf", "name": "Peri-peri sauce", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "ml"}
+{"category": "dry", "id": "c1acce69-aca2-50c1-8929-78d214266d2b", "name": "Mayonnaise", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "ml"}
+{"category": "oil", "id": "98e0ed99-c973-50ca-a9ae-23482f7025d2", "name": "Frying oil", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "ml"}
+{"category": "dairy", "id": "a2404ce9-5f39-54dd-8e45-9794c8d8eec0", "name": "Garlic butter", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "bakery", "id": "605e4799-0158-5500-ab1a-922e896d0439", "name": "Garlic baguettes", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "frozen", "id": "f505cba5-d4c7-511b-87c2-40f8fb6c8f11", "name": "Ice cream", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "ml"}
+{"category": "frozen", "id": "ae9d1181-0f4a-5874-99fb-e0d11f04664e", "name": "Cookie dough pots", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "frozen", "id": "169ca9d6-0c72-5ec1-b7b2-2c771533f6c8", "name": "Fudge cake", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "dry", "id": "4c7f7adf-6164-5e68-823b-1fd51bba32a2", "name": "Biscuit crumb", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "a4180369-d091-59b9-9969-2d069fb0b08a", "name": "Milk", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "ml"}
+{"category": "drinks", "id": "b44d646b-a952-5b46-874f-0c92949e1d98", "name": "Soft drink cans", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "drinks", "id": "0e6d15c3-3fb6-534a-9217-0783c0b101a1", "name": "Soft drink 1.5L", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "drinks", "id": "12eebbe0-132f-53a8-9acd-ae1fcce8031d", "name": "Bottled water", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "packaging", "id": "e86e72a3-03e2-53c1-a05a-8b175b1131b3", "name": "Food boxes", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "packaging", "id": "3d2a6382-68ef-5917-ad4c-5bd7009af3b7", "name": "Pizza boxes", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}
+{"category": "packaging", "id": "56b49b79-cd3e-53a9-bd82-53b26763d5a2", "name": "Delivery bags", "restaurant_id": "55555555-5555-5555-5555-555555555555", "source": "synthetic", "unit": "each"}

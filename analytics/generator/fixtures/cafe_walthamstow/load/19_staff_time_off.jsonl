@@ -1,0 +1,2 @@
+{"ends_at": "2026-03-18T00:00:00Z", "id": "4d2e3b96-7a17-5521-a535-5b94491c5bed", "kind": "holiday", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "staff_id": "bfe05b80-fe8d-5c5f-b696-f20bb1418f1c", "starts_at": "2026-03-11T00:00:00Z", "status": "approved"}
+{"ends_at": "2026-03-17T00:00:00Z", "id": "a7d57201-f2fd-547a-bb19-81cebbe8c976", "kind": "sick", "restaurant_id": "44444444-4444-4444-4444-444444444444", "source": "synthetic", "staff_id": "bb070ae8-5442-574e-9f6c-5529f46494e4", "starts_at": "2026-03-16T00:00:00Z", "status": "approved"}

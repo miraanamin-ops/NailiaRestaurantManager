@@ -4,7 +4,7 @@ The data behind forecasting, rotas, menu engineering, finance and deals
 (step 24). Schema only: tables, migrations, types, read/write helpers and tests.
 No screens, WhatsApp flows, data generator or models yet.
 
-- SQL: `supabase/030_ops_foundation.sql` to `supabase/037_ops_menu_guard.sql`, rollback `supabase/rollback/ops_rollback.sql`.
+- SQL: `supabase/030_ops_foundation.sql` to `supabase/037_ops_menu_guard.sql`, plus `038_ops_data_gaps.sql` (gaps found by the synthetic data generator: sunshine, the trading day cut-off, a per-restaurant clear-out, channel fees); rollback `supabase/rollback/ops_rollback.sql`.
 - Code: `src/lib/ops/` (types, helpers per group, plain-code rules).
 - Tests: `tests/ops-schema.test.ts` (the real SQL in PGlite), `tests/ops-helpers.test.ts`, `tests/ops-menu-app.test.ts`.
 
@@ -105,6 +105,7 @@ Name matching is only the fallback for menus sent without ids (onboarding, messa
 
 - **sales_days**, **sales_hours** (changed): `covers` and `covers_source`.
 - **sales_channel_splits**: sales (pence), orders and covers per channel (dine-in, takeaway, delivery), for a day or an hour, with or without VAT.
+- **The trading day** (038): `sales_days`, `sales_hours`, `z_reports` and shifts are kept by trading day. `restaurants.trading_day_cutoff` (whole hours, default 05:00) says when it ends: a till hour before the cut-off happened on the next calendar date (a takeaway's 00:30 sales stay on Saturday's report but happened on Sunday). `analytics.sales_hourly` uses it for `hour_start` and `minutes`, and adds a `calendar_day` column. SQL: `trading_hour_date(day, hour, cutoff)`.
 - Item sales link to dishes through `till_item_matches` (`analytics.sales_items`).
 
 ### 3. Staff (`032`)
@@ -129,6 +130,7 @@ Name matching is only the fallback for menus sent without ids (onboarding, messa
 - **ingredient_prices**: price history as pence for a pack size (1250p for 1000 g), so both stay whole numbers; may point at the invoice line it came from.
 - **fixed_costs**: rent, rates, utilities, insurance, loan, subscriptions, salaries, other: amount, frequency, span. `weeklyPence` in `ops/costs.ts`.
 - **targets**: labour %, food cost %, prime cost %, weekly or daily sales; history.
+- **channel_fees** (038): what a sales channel costs: % of the order value (including VAT) and a fixed fee per order, with spans like fixed_costs (`effective_from`, `effective_to`); several rows may be active for one channel (two delivery apps, named in `notes`). In `analytics.channel_fees`.
 
 ### 6. Deals (`033`)
 
@@ -146,7 +148,7 @@ Name matching is only the fallback for menus sent without ids (onboarding, messa
 ### 8. Outside factors (`034`)
 
 - **weather_days** (existing, unchanged): the daily actual weather.
-- **weather_hours**: hourly actual weather, keyed by the UTC hour.
+- **weather_hours**: hourly actual weather, keyed by the UTC hour. 038 adds `sunshine_min` (minutes of sun in the hour); `weather_days` gets `sunshine_hours`, and `weather_forecasts` both (hourly rows use `sunshine_min`, daily rows `sunshine_hours`).
 - **weather_forecasts**: forecasts exactly as issued, never changed: `issued_at`, plus a target day or hour. The daily weather job (`sales/weather.ts`) now saves every forecast it fetches (7 days, daily and hourly) and the last two days' hourly weather. A back-test uses `weather_known_at(restaurant, day, cut-off)` / `weather_hour_known_at` (code: `ops/known-at.ts`, `ops/outside.ts`), which never return a forecast issued after the cut-off. `eveningBefore(day)` is the usual cut-off (18:00 London the day before).
 - **local_calendar** (changed): one calendar of events. New: end day, start and end times, scope (national, regional, council, local, restaurant; empty on old rows = national or restaurant), region, council code, location, venue, expected size, the feed and its id (unique, so a feed never adds an event twice), notes. New types: cultural, inset day, football, disruption, payday, clock change (bank holiday, religious, school holiday, sport and local event stay). Existing readers keep working on `day` (the first day).
 - **venues** (shared): stadiums, arenas, halls, with location, capacity and home teams.
@@ -184,8 +186,10 @@ Staff data is employee personal data. Proposed retention (to check with an accou
 
 ## Demo and synthetic data
 
-`clear_ops_dummy_data(dry_run)` (called by `scripts/clear-dummy-data.mjs`) removes every row marked `synthetic` anywhere (shared tables included), synthetic covers on real sales days, and everything in the operations tables for demo restaurants except their menu, weather and prayer times. Real restaurants' real rows are never touched (tested). A future data generator must mark its rows `source = 'synthetic'`.
+`clear_ops_dummy_data(dry_run)` (called by `scripts/clear-dummy-data.mjs`) removes every row marked `synthetic` anywhere (shared tables included), synthetic covers on real sales days, and everything in the operations tables for demo restaurants except their menu, weather and prayer times. Real restaurants' real rows are never touched (tested). Since 038 it takes an optional restaurant, `clear_ops_dummy_data(dry_run, restaurant_id)`: the same rule for that restaurant only, and a shared synthetic venue goes only when nothing else uses it.
+
+The synthetic data generator (`analytics/generator/`, see its README) marks its rows `source = 'synthetic'` (the older sales tables, which can't, use `is_dummy = true`) and loads only into demo restaurants, through `load.py`.
 
 ## Deploy and roll back
 
-Run in Supabase > SQL Editor, in order: 030, 031, 032, 033, 034, 035, 036 (any time; the live site keeps working), deploy the code, then 037. Each file is safe to re-run and records itself in `schema_migrations`. To roll back: redeploy the old code, then run `supabase/rollback/ops_rollback.sql` (the menu stays as it is; it can optionally put back the menus from before the move).
+Run in Supabase > SQL Editor, in order: 030, 031, 032, 033, 034, 035, 036 (any time; the live site keeps working), deploy the code, then 037. 038 can run any time after 036. Each file is safe to re-run and records itself in `schema_migrations`. To roll back: redeploy the old code, then run `supabase/rollback/ops_rollback.sql` (the menu stays as it is; it can optionally put back the menus from before the move).

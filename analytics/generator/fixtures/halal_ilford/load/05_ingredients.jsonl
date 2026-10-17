@@ -1,0 +1,40 @@
+{"category": "poultry", "id": "b74764a1-3c43-5e94-8877-e3cdd687dafb", "name": "Chicken thigh, boneless", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "poultry", "id": "0423a440-5d9e-584f-bc22-3fa92e8af53a", "name": "Chicken, whole (tandoori cut)", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "meat", "id": "37e9981d-4c90-57c7-8b2c-2b82ca342338", "name": "Lamb leg, diced", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "meat", "id": "92110e88-7950-5cca-8cef-d3aa7c3c8fdd", "name": "Lamb chops", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "meat", "id": "458a540d-cde8-53a8-bcae-fa569e7a3bb7", "name": "Lamb mince", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "fish", "id": "37ed81d1-46c7-57b2-ad34-1b11e2011152", "name": "Cod fillet", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "fish", "id": "36eaaedf-c16b-56dc-a592-4b432219ce9a", "name": "King prawns", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "b9f127e4-8a57-57e5-be16-b9b027055b90", "name": "Onions", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "9a23057f-f523-5df0-80ea-863ed47d9fae", "name": "Chopped tomatoes", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "e809b3bb-09fa-579a-b877-0fb2616afa51", "name": "Garlic ginger paste", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "c62f8a51-ac7c-59ff-961d-c15fd132b65a", "name": "Yoghurt", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "a16a32bd-0589-5401-9794-b5f4a3b53701", "name": "Double cream", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "ml"}
+{"category": "dairy", "id": "7f78ea8f-6690-54e6-91d3-610b1d62fd20", "name": "Ghee", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "oil", "id": "c8ceb6e4-cca0-577c-a076-08c81e874e4e", "name": "Vegetable oil", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "ml"}
+{"category": "dry", "id": "ca80207b-00cd-57bd-bb65-d8339afc469b", "name": "Spice mix", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "9dd0e84b-ff0d-5ad4-a291-fa75a8dfcc8a", "name": "Basmati rice", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "1fb4c774-2ff0-5528-a36c-797c7001f894", "name": "Chapati flour", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "d887f8ec-88ac-5960-8e59-20dbe449238e", "name": "Plain flour", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "e071e8fa-f390-5531-944d-f6b5d0abba1b", "name": "Potatoes", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "d066e193-1144-55cd-9a21-6d0a04353cd4", "name": "Spinach", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "686af934-c995-57f2-8627-f43ed8d094d8", "name": "Paneer", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "ab9d9753-dfb4-5666-bc1d-8cde9473b98b", "name": "Chickpeas", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "5a0d40ef-1c9a-5310-aea9-7c3d82ffe8ef", "name": "Red lentils", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "c53f32c8-e805-5b23-90a4-1c1532575a05", "name": "Peppers", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "fc83c0fd-98c9-596f-8c28-78567f56a08d", "name": "Salad (lettuce, cucumber)", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "763b24ef-b932-51a5-8eed-a06eb38e0597", "name": "Coriander and chilli", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "veg", "id": "348b63ef-81b6-597a-8abf-bf70563864b8", "name": "Lemons", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "dry", "id": "7762adc2-354e-5f91-be6f-1ac4523855c7", "name": "Mango pulp", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "3223eca8-b249-5da6-9b50-a75dea965341", "name": "Milk", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "ml"}
+{"category": "dry", "id": "1816e1b4-a1dc-548d-b999-f2fdf4be1328", "name": "Sugar", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "9b03eeb7-e1f6-50ac-b315-96038ad915fa", "name": "Tea leaves", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dry", "id": "801a76dd-6746-5332-8eeb-7e410fb04497", "name": "Gulab jamun", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "dairy", "id": "854de731-1510-59c4-a1fb-5aec23bfa9ae", "name": "Kulfi", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "dry", "id": "6ce7552a-e4da-5201-9810-8cc9497af7eb", "name": "Pudding rice", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "dairy", "id": "81d5333e-f894-5b26-b2fc-d75944aa9881", "name": "Eggs", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "frozen", "id": "2e888356-bcb5-5f3e-9c65-68e299baf911", "name": "Frozen chips", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "g"}
+{"category": "drinks", "id": "d5427def-be0f-5e13-b2df-7cce70fa4c20", "name": "Soft drink cans", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "drinks", "id": "95607388-33b6-5554-b830-28f95eebaa59", "name": "Bottled water", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "packaging", "id": "76ac62f1-aad7-51ad-959b-36b100fd7cd5", "name": "Takeaway containers", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}
+{"category": "packaging", "id": "0ea95a6c-55c2-5a91-b263-1b5047393858", "name": "Carrier bags", "restaurant_id": "33333333-3333-3333-3333-333333333333", "source": "synthetic", "unit": "each"}

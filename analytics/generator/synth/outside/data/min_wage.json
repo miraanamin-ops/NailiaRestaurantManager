@@ -1,0 +1,8 @@
+{
+  "_note": "UK minimum wage per hour in pence, by the bands in staff.age_band. Source: https://www.gov.uk/national-minimum-wage-rates and https://www.gov.uk/national-minimum-wage-rates/previous-rates (checked 2026-10-17).",
+  "rates": [
+    {"from": "2024-04-01", "21_plus": 1144, "18_20": 860, "under_18": 640, "apprentice": 640},
+    {"from": "2025-04-01", "21_plus": 1221, "18_20": 1000, "under_18": 755, "apprentice": 755},
+    {"from": "2026-04-01", "21_plus": 1271, "18_20": 1085, "under_18": 800, "apprentice": 800}
+  ]
+}

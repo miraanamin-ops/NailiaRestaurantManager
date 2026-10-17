@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Python generator's local environment and generated files (not our code).
+    "analytics/generator/.venv/**",
+    "analytics/generator/output/**",
   ]),
 ]);
 

@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+.pytest_cache/
+# Generated datasets (remake with generate.py); the 3-week fixtures/ and the cache/ are committed.
+output/

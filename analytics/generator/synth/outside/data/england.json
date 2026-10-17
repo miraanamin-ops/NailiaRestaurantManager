@@ -1,0 +1,33 @@
+{
+  "_note": "England men's matches in the data window, kick-off as UTC. Source: https://en.wikipedia.org/wiki/England_national_football_team_results_(2020%E2%80%93present), read 2026-10-17 (local kick-off times converted with the offsets given there).",
+  "matches": [
+    {"date": "2024-11-14", "home": "Greece", "away": "England", "competition": "UEFA Nations League B", "venue": "Olympic Stadium, Athens", "kickoff_utc": "2024-11-14T19:45:00Z"},
+    {"date": "2024-11-17", "home": "England", "away": "Republic of Ireland", "competition": "UEFA Nations League B", "venue": "Wembley Stadium, London", "kickoff_utc": "2024-11-17T17:00:00Z"},
+    {"date": "2025-03-21", "home": "England", "away": "Albania", "competition": "World Cup qualifier", "venue": "Wembley Stadium, London", "kickoff_utc": "2025-03-21T19:45:00Z"},
+    {"date": "2025-03-24", "home": "England", "away": "Latvia", "competition": "World Cup qualifier", "venue": "Wembley Stadium, London", "kickoff_utc": "2025-03-24T19:45:00Z"},
+    {"date": "2025-06-07", "home": "Andorra", "away": "England", "competition": "World Cup qualifier", "venue": "RCDE Stadium, Barcelona", "kickoff_utc": "2025-06-07T16:00:00Z"},
+    {"date": "2025-06-10", "home": "England", "away": "Senegal", "competition": "Friendly", "venue": "City Ground, Nottingham", "kickoff_utc": "2025-06-10T18:45:00Z"},
+    {"date": "2025-09-06", "home": "England", "away": "Andorra", "competition": "World Cup qualifier", "venue": "Villa Park, Birmingham", "kickoff_utc": "2025-09-06T16:00:00Z"},
+    {"date": "2025-09-09", "home": "Serbia", "away": "England", "competition": "World Cup qualifier", "venue": "Red Star Stadium, Belgrade", "kickoff_utc": "2025-09-09T18:45:00Z"},
+    {"date": "2025-10-09", "home": "England", "away": "Wales", "competition": "Friendly", "venue": "Wembley Stadium, London", "kickoff_utc": "2025-10-09T18:45:00Z"},
+    {"date": "2025-10-14", "home": "Latvia", "away": "England", "competition": "World Cup qualifier", "venue": "Daugava Stadium, Riga", "kickoff_utc": "2025-10-14T18:45:00Z"},
+    {"date": "2025-11-13", "home": "England", "away": "Serbia", "competition": "World Cup qualifier", "venue": "Wembley Stadium, London", "kickoff_utc": "2025-11-13T19:45:00Z"},
+    {"date": "2025-11-16", "home": "Albania", "away": "England", "competition": "World Cup qualifier", "venue": "Arena Kombetare, Tirana", "kickoff_utc": "2025-11-16T17:00:00Z"},
+    {"date": "2026-03-27", "home": "England", "away": "Uruguay", "competition": "Friendly", "venue": "Wembley Stadium, London", "kickoff_utc": "2026-03-27T19:45:00Z"},
+    {"date": "2026-03-31", "home": "England", "away": "Japan", "competition": "Friendly", "venue": "Wembley Stadium, London", "kickoff_utc": "2026-03-31T18:45:00Z"},
+    {"date": "2026-06-06", "home": "England", "away": "New Zealand", "competition": "Friendly", "venue": "Raymond James Stadium, Tampa", "kickoff_utc": "2026-06-06T20:00:00Z"},
+    {"date": "2026-06-10", "home": "England", "away": "Costa Rica", "competition": "Friendly", "venue": "Inter&Co Stadium, Orlando", "kickoff_utc": "2026-06-10T21:00:00Z"},
+    {"date": "2026-06-17", "home": "England", "away": "Croatia", "competition": "World Cup group", "venue": "AT&T Stadium, Arlington", "kickoff_utc": "2026-06-17T20:00:00Z"},
+    {"date": "2026-06-23", "home": "England", "away": "Ghana", "competition": "World Cup group", "venue": "Gillette Stadium, Foxborough", "kickoff_utc": "2026-06-23T20:00:00Z"},
+    {"date": "2026-06-27", "home": "Panama", "away": "England", "competition": "World Cup group", "venue": "MetLife Stadium, East Rutherford", "kickoff_utc": "2026-06-27T21:00:00Z"},
+    {"date": "2026-07-01", "home": "England", "away": "DR Congo", "competition": "World Cup round of 32", "venue": "Mercedes-Benz Stadium, Atlanta", "kickoff_utc": "2026-07-01T16:00:00Z"},
+    {"date": "2026-07-05", "home": "Mexico", "away": "England", "competition": "World Cup round of 16", "venue": "Estadio Azteca, Mexico City", "kickoff_utc": "2026-07-06T01:00:00Z"},
+    {"date": "2026-07-11", "home": "England", "away": "Norway", "competition": "World Cup quarter-final", "venue": "Hard Rock Stadium, Miami Gardens", "kickoff_utc": "2026-07-11T21:00:00Z"},
+    {"date": "2026-07-15", "home": "England", "away": "Argentina", "competition": "World Cup semi-final", "venue": "Mercedes-Benz Stadium, Atlanta", "kickoff_utc": "2026-07-15T19:00:00Z"},
+    {"date": "2026-07-18", "home": "England", "away": "France", "competition": "World Cup third place", "venue": "Hard Rock Stadium, Miami Gardens", "kickoff_utc": "2026-07-18T21:00:00Z"},
+    {"date": "2026-09-26", "home": "England", "away": "Spain", "competition": "UEFA Nations League A", "venue": "Wembley Stadium, London", "kickoff_utc": "2026-09-26T18:45:00Z"},
+    {"date": "2026-09-29", "home": "Czech Republic", "away": "England", "competition": "UEFA Nations League A", "venue": "Fortuna Arena, Prague", "kickoff_utc": "2026-09-29T18:45:00Z"},
+    {"date": "2026-10-03", "home": "Croatia", "away": "England", "competition": "UEFA Nations League A", "venue": "Stadion Rujevica, Rijeka", "kickoff_utc": "2026-10-03T16:00:00Z"},
+    {"date": "2026-10-06", "home": "England", "away": "Czech Republic", "competition": "UEFA Nations League A", "venue": "Wembley Stadium, London", "kickoff_utc": "2026-10-06T18:45:00Z"}
+  ]
+}
