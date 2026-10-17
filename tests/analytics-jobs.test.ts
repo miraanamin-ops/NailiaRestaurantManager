@@ -18,36 +18,50 @@ describe("the nightly model jobs", () => {
   const modelJobs = (job: "hourly" | "daily", now: Date, models: readonly string[] = NIGHTLY_MODELS) =>
     plannedJobs(R, job, now, "not yet", models).filter((p) => (NIGHTLY_MODELS as readonly string[]).includes(p.type));
 
-  test("queued by the 03:05 UK hourly run, one per model, keyed by the UK day", () => {
-    const at305 = londonTime(2026, 10, 18, 3, 5);
-    expect(modelJobs("hourly", at305)).toEqual([
+  test("queued by the 05:05 UK hourly run to start at 05:35, one per model, keyed by the UK day", () => {
+    const at505 = londonTime(2026, 10, 18, 5, 5);
+    expect(modelJobs("hourly", at505)).toEqual([
       {
         type: "forecast_baseline",
         key: `forecast_baseline:${R.id}:2026-10-18`,
         priority: 50,
         concurrencyKey: `models:${R.id}`,
         payload: { day: "2026-10-18" },
+        runAt: londonTime(2026, 10, 18, 5, 35),
       },
     ]);
-    // Other hours queue nothing (also in winter time, when UK and UTC agree).
-    expect(modelJobs("hourly", londonTime(2026, 10, 18, 2, 5))).toEqual([]);
+    // Other hours queue nothing, in summer and in winter time (when UK and UTC agree).
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 3, 5))).toEqual([]);
     expect(modelJobs("hourly", londonTime(2026, 10, 18, 4, 5))).toEqual([]);
-    expect(modelJobs("hourly", londonTime(2026, 12, 1, 3, 5))).toHaveLength(1);
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 6, 5))).toEqual([]);
+    const winter = modelJobs("hourly", londonTime(2026, 12, 1, 5, 5));
+    expect(winter.map((p) => p.runAt?.toISOString())).toEqual(["2026-12-01T05:35:00.000Z"]);
+    expect(modelJobs("hourly", londonTime(2026, 7, 1, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-07-01T04:35:00.000Z"]);
   });
 
-  test("the daily backup queues the same job (same key), so a missed 03:05 is caught up and never doubled", () => {
-    const night = modelJobs("hourly", londonTime(2026, 10, 18, 3, 5));
+  test("on the clock-change nights 05:35 still means 05:35 UK", () => {
+    expect(modelJobs("hourly", londonTime(2026, 3, 29, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-03-29T04:35:00.000Z"]);
+    expect(modelJobs("hourly", londonTime(2026, 10, 25, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-10-25T05:35:00.000Z"]);
+  });
+
+  test("a late hourly run, or the daily backup, starts them at once", () => {
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 5, 50))[0].runAt).toBeUndefined();
+    expect(modelJobs("daily", londonTime(2026, 10, 18, 10, 0))[0].runAt).toBeUndefined();
+  });
+
+  test("the daily backup queues the same job (same key), so a missed 05:05 run is caught up and never doubled", () => {
+    const night = modelJobs("hourly", londonTime(2026, 10, 18, 5, 5));
     const backup = modelJobs("daily", londonTime(2026, 10, 18, 10, 0));
     expect(backup.map((p) => p.key)).toEqual(night.map((p) => p.key));
   });
 
   test("nothing is queued while ANALYTICS_JOBS is off (no models passed)", () => {
-    expect(modelJobs("hourly", londonTime(2026, 10, 18, 3, 5), [])).toEqual([]);
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 5, 5), [])).toEqual([]);
     expect(modelJobs("daily", londonTime(2026, 10, 18, 10, 0), [])).toEqual([]);
   });
 
   test("they come after the restaurant's other jobs", () => {
-    const all = plannedJobs(R, "hourly", londonTime(2026, 10, 18, 3, 5), null, NIGHTLY_MODELS);
+    const all = plannedJobs(R, "hourly", londonTime(2026, 10, 18, 5, 5), null, NIGHTLY_MODELS);
     expect(all.at(-1)?.type).toBe("forecast_baseline");
   });
 });

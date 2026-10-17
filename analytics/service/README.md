@@ -12,8 +12,10 @@ it is never shown to an owner.
 ## How it fits together
 
 ```
-03:05 UK  the app's hourly run queues one job per model per active restaurant
-          (only while ANALYTICS_JOBS=true in Vercel; the 09:00 backup catches a missed run)
+05:35 UK  each active restaurant's model jobs are due: the app's 05:05 hourly run
+          queues them to start at 05:35, after the 05:00 trading-day cut-off, so
+          yesterday counts (only while ANALYTICS_JOBS=true in Vercel; the 09:00
+          backup catches a missed run and starts it at once)
             |
             v
   jobs table (Supabase)  <-- ext_claim_jobs / ext_extend_job / ext_complete_job / ext_fail_job
@@ -53,7 +55,7 @@ src/dinerai_analytics/
   registry.py    ModelSpec, Registry
   runner.py      one job: model_runs row, run, outputs + finish in one transaction
   worker.py      claim loop, a process per job, heartbeats, time budget, clean shutdown
-  cutoff.py      issue time (03:05 UK) and which trading days are known by then
+  cutoff.py      issue time (05:35 UK) and which trading days are known by then
   backtest.py    the 12-week rolling back-test every forecast model uses
   logs.py        JSON lines (or --pretty)
   cli.py         worker | enqueue | run-one | status | check | models
@@ -119,7 +121,7 @@ data (`clear_ops_dummy_data`).
 4. For a nightly model, add its job type to `NIGHTLY_MODELS` in `src/lib/queue/config.ts`.
 
 A forecast model must score itself with `backtest.rolling_backtest`. That replays the
-last 12 weeks night by night at 03:05 UK, using only trading days that had ended by
+last 12 weeks night by night at 05:35 UK, using only trading days that had ended by
 then, so its numbers are directly comparable with the baseline's.
 
 ## The baseline (benchmark)
@@ -142,7 +144,7 @@ then, so its numbers are directly comparable with the baseline's.
 
 ## Deploying (Railway)
 
-Not deployed yet: wait for the builder's go-ahead. Then, in this order:
+Not deployed yet. The builder deploys it once the real forecast model passes its back-test. Then, in this order:
 
 1. **Supabase, production:** SQL Editor, paste `supabase/039_analytics_jobs.sql`, Run.
 2. **Give the worker a password.** On your computer run
@@ -166,7 +168,7 @@ Not deployed yet: wait for the builder's go-ahead. Then, in this order:
 5. **Check it from your computer:** make a file outside OneDrive with the same two
    settings and run `check --env <file> --allow-production`. Every line should say ok.
 6. **Vercel:** Settings > Environment Variables > add `ANALYTICS_JOBS` = `true`
-   (Production), then redeploy. From the next 03:05 UK, every active restaurant gets
+   (Production), then redeploy. From the next 05:35 UK, every active restaurant gets
    a nightly `forecast_baseline` job.
 
 **To stop it:** set `ANALYTICS_JOBS` to `false` in Vercel (no new jobs), and remove

@@ -39,7 +39,7 @@ export async function dispatch(job: "hourly" | "daily", now: Date) {
     try {
       const planned = plannedJobs({ id: r.id, hasOwnerChannel: Boolean(ownerChannel(r)) }, job, now, morningGate(r, now, MAX_FAILURES), models);
       for (const p of planned) {
-        const created = await enqueue({ type: p.type, restaurantId: r.id, key: p.key, priority: p.priority, concurrencyKey: p.concurrencyKey, payload: p.payload });
+        const created = await enqueue({ type: p.type, restaurantId: r.id, key: p.key, priority: p.priority, concurrencyKey: p.concurrencyKey, payload: p.payload, runAt: p.runAt });
         if (created) (entry.queued as string[]).push(p.type);
       }
     } catch (err) {

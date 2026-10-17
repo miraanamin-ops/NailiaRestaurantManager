@@ -1,6 +1,6 @@
 """Running one model job, the same way for every model.
 
-1. Find the restaurant's trading-day cut-off, the issue time (now, or 03:05 UK
+1. Find the restaurant's trading-day cut-off, the issue time (now, or 05:35 UK
    on the job's as_of day) and the last trading day known by then (cutoff.py).
 2. Create the model_runs row (status running, the model's role, the data window).
 3. Run the model.
@@ -38,7 +38,7 @@ def find_restaurant(conn: psycopg.Connection, ref: str) -> dict | None:
 
 
 def issue_time_from(payload: dict) -> dt.datetime:
-    """03:05 UK on payload['as_of'] (a replay, or a dev run on old data), else now."""
+    """05:35 UK on payload['as_of'] (a replay, or a dev run on old data), else now."""
     as_of = payload.get("as_of")
     if not as_of:
         return now_utc()

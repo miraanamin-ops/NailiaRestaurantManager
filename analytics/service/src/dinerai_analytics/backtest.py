@@ -1,7 +1,7 @@
 """The rolling back-test every forecast model scores itself with.
 
 It replays the last 12 weeks as if the model had run every night: for each past
-day it "issues" at 03:05 UK time using only the trading days that had ended by
+day it "issues" at 05:35 UK time using only the trading days that had ended by
 then (cutoff.py), forecasts that day and the 13 after it, and compares each
 forecast with what really happened. Only targets inside the 12-week window that
 were known by the real issue time are scored, and only days with trading data
@@ -118,7 +118,7 @@ def rolling_backtest(
             "targets_from": w.targets_from.isoformat(),
             "targets_to": w.targets_to.isoformat(),
             "origins": len(w.origins),
-            "issue_time": "03:05 Europe/London on each origin day",
+            "issue_time": "05:35 Europe/London on each origin day",
             "cutoff_rule": "a trading day is used once it has ended (next day at the restaurant's trading-day cut-off) before the issue time",
             "min_scored_days": MIN_SCORED_DAYS,
         },

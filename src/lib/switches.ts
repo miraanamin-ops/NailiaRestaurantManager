@@ -14,7 +14,7 @@
 //                        restaurant is set to. true = an agent the builder set to live
 //                        goes live once its readiness check passes.
 //   ANALYTICS_JOBS       true = the nightly jobs queue the analytics service's models
-//                        (03:05 UK, one job per model per active restaurant). Off
+//                        (due 05:35 UK, one job per model per active restaurant). Off
 //                        unless set; TEST_MODE never turns it on. Turn it on only
 //                        once the Python worker is deployed, or the jobs pile up.
 //   TEST_MODE            DEPRECATED. Only fills in a switch above that isn't set.

@@ -15,19 +15,24 @@ D = dt.date
 
 
 # --- the cut-off ---------------------------------------------------------------
-def test_issue_time_is_0305_london_in_summer_and_winter():
-    assert issue_time_for(D(2026, 7, 1)) == dt.datetime(2026, 7, 1, 2, 5, tzinfo=dt.timezone.utc)
-    assert issue_time_for(D(2026, 12, 1)) == dt.datetime(2026, 12, 1, 3, 5, tzinfo=dt.timezone.utc)
+def test_issue_time_is_0535_london_in_summer_and_winter():
+    assert issue_time_for(D(2026, 7, 1)) == dt.datetime(2026, 7, 1, 4, 35, tzinfo=dt.timezone.utc)
+    assert issue_time_for(D(2026, 12, 1)) == dt.datetime(2026, 12, 1, 5, 35, tzinfo=dt.timezone.utc)
+    # Clock-change days: still 05:35 on the UK clock.
+    assert issue_time_for(D(2026, 3, 29)) == dt.datetime(2026, 3, 29, 4, 35, tzinfo=dt.timezone.utc)
+    assert issue_time_for(D(2026, 10, 25)) == dt.datetime(2026, 10, 25, 5, 35, tzinfo=dt.timezone.utc)
 
 
 def test_a_trading_day_is_known_once_it_has_ended():
     t = issue_time_for(D(2026, 10, 18))
-    assert known_through(t, 5) == D(2026, 10, 16)  # the 17th ends at 05:00 on the 18th
-    assert known_through(t, 3) == D(2026, 10, 17)  # a cut-off at 03:00 has ended by 03:05
+    assert known_through(t, 5) == D(2026, 10, 17)  # the 17th ended at 05:00, before 05:35: yesterday counts
     assert known_through(t, 0) == D(2026, 10, 17)  # midnight
+    assert known_through(t, 6) == D(2026, 10, 16)  # a 06:00 cut-off hasn't passed yet at 05:35
     # Clock-change nights.
-    assert known_through(issue_time_for(D(2026, 3, 29)), 5) == D(2026, 3, 27)
-    assert known_through(issue_time_for(D(2026, 10, 25)), 5) == D(2026, 10, 23)
+    assert known_through(issue_time_for(D(2026, 3, 29)), 5) == D(2026, 3, 28)
+    assert known_through(issue_time_for(D(2026, 10, 25)), 5) == D(2026, 10, 24)
+    # Before the cut-off (a job started early by hand) the day before isn't known yet.
+    assert known_through(dt.datetime(2026, 10, 18, 3, 0, tzinfo=dt.timezone.utc), 5) == D(2026, 10, 16)
     # Later in the day the day before is known.
     assert known_through(dt.datetime(2026, 10, 18, 12, 0, tzinfo=dt.timezone.utc), 5) == D(2026, 10, 17)
 
@@ -97,8 +102,8 @@ def daily_series(start: D, days: int, value=lambda d: 10.0 + d.weekday()) -> dic
 
 def test_the_window_is_12_weeks_of_targets_known_at_issue():
     w = window(D(2026, 3, 2), 5)
-    assert (w.targets_from, w.targets_to) == (D(2025, 12, 8), D(2026, 2, 28))
-    assert w.origins[0] == D(2025, 11, 25) and w.origins[-1] == D(2026, 2, 28)
+    assert (w.targets_from, w.targets_to) == (D(2025, 12, 8), D(2026, 3, 1))
+    assert w.origins[0] == D(2025, 11, 25) and w.origins[-1] == D(2026, 3, 1)
 
 
 def test_the_backtest_never_shows_a_model_data_from_after_its_cutoff():
@@ -112,15 +117,15 @@ def test_the_backtest_never_shows_a_model_data_from_after_its_cutoff():
         return {("orders", "all"): {t: (9.0, 10.0, 11.0) for t in forecast_days(origin)}}
 
     rolling_backtest(actual, predict_origin, D(2026, 3, 2), 5)
-    assert all(kt == o - dt.timedelta(days=2) for o, kt in seen)
+    assert all(kt == o - dt.timedelta(days=1) for o, kt in seen)  # at 05:35 the day before has ended
 
 
 def test_scores():
     actual = {("orders", "all"): {d: 10.0 for d in daily_series(D(2025, 9, 1), 182)}}
     perfect = rolling_backtest(actual, lambda o, i, kt: {("orders", "all"): {t: (10.0, 10.0, 10.0) for t in forecast_days(o)}}, D(2026, 3, 2), 5)
     s = perfect["series"][("orders", "all")]
-    assert (s["wape"], s["coverage"], s["bias"], s["days"]) == (0.0, 1.0, 0.0, 83)
-    assert s["n"] == 83 * 14 and s["by_horizon"]["0-6"]["n"] == 83 * 7
+    assert (s["wape"], s["coverage"], s["bias"], s["days"]) == (0.0, 1.0, 0.0, 84)
+    assert s["n"] == 84 * 14 and s["by_horizon"]["0-6"]["n"] == 84 * 7
     high = rolling_backtest(actual, lambda o, i, kt: {("orders", "all"): {t: (11.0, 12.0, 13.0) for t in forecast_days(o)}}, D(2026, 3, 2), 5)
     s = high["series"][("orders", "all")]
     assert (s["wape"], s["coverage"], s["bias"]) == (0.2, 0.0, 0.2)

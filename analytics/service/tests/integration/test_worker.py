@@ -64,7 +64,8 @@ def test_end_to_end_enqueue_claim_write_pass_complete(env_file, admin, capsys):
     assert (role, status, passed, metric) == ("benchmark", "succeeded", True, "WAPE")
     assert float(score) == metrics["primary"]["wape"] and metrics["primary"]["metric"] == "orders"
     assert cutoff == issue_time_for(dt.date(2026, 3, 2))
-    assert metrics["backtest"]["targets_from"] == "2025-12-08" and metrics["backtest"]["targets_to"] == "2026-02-28"
+    assert metrics["backtest"]["targets_from"] == "2025-12-08" and metrics["backtest"]["targets_to"] == "2026-03-01"
+    assert metrics["backtest"]["issue_time"].startswith("05:35")
 
     rows = admin.execute("select metric, channel, count(*), min(target_day), max(target_day), bool_and(issued_at = %s) "
                          "from forecasts where model_run_id = %s group by 1, 2 order by 1, 2", (cutoff, run_id)).fetchall()
