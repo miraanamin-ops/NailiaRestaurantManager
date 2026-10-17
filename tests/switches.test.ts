@@ -7,6 +7,7 @@ import {
   agentModeReason,
   agentsLiveSwitch,
   allSwitches,
+  analyticsJobsSwitch,
   effectiveAgentMode,
   emailRedirectSwitch,
   environmentOf,
@@ -164,6 +165,18 @@ describe("an agent's effective mode", () => {
   });
 });
 
+describe("ANALYTICS_JOBS", () => {
+  test("off unless set to true, and TEST_MODE never turns it on", () => {
+    expect(analyticsJobsSwitch({}).on).toBe(false);
+    expect(analyticsJobsSwitch({ TEST_MODE: "true", VERCEL_ENV: "production" }).on).toBe(false);
+    expect(analyticsJobsSwitch({ ANALYTICS_JOBS: "true" })).toEqual({ on: true, source: "setting" });
+    expect(analyticsJobsSwitch({ ANALYTICS_JOBS: "off" }).on).toBe(false);
+    const odd = analyticsJobsSwitch({ ANALYTICS_JOBS: "soon" });
+    expect(odd.on).toBe(false);
+    expect(odd.note).toMatch(/isn't true or false/);
+  });
+});
+
 describe("the key combinations", () => {
   test("nothing set at all: every switch is on its safe side", () => {
     const s = allSwitches({});
@@ -205,7 +218,7 @@ describe("the key combinations", () => {
 describe("the record kept on each job run", () => {
   test("a compact record, and what changed between two runs", () => {
     const before = switchesRecord(allSwitches({ TEST_MODE: "true", VERCEL_ENV: "production" }));
-    expect(before).toEqual({ environment: "production", email_redirect: true, test_tools: true, google: "dummy", agents_live: "legacy" });
+    expect(before).toEqual({ environment: "production", email_redirect: true, test_tools: true, google: "dummy", agents_live: "legacy", analytics_jobs: false });
     const after = switchesRecord(allSwitches({ TEST_MODE: "true", VERCEL_ENV: "production", EMAIL_REDIRECT: "false", AGENTS_LIVE_ALLOWED: "true" }));
     expect(switchChanges(before, after)).toEqual(["email_redirect: true → false", "agents_live: legacy → all"]);
     expect(switchChanges(before, before)).toEqual([]);

@@ -431,6 +431,39 @@ describe("external workers (the Python service)", () => {
   });
 });
 
+describe("the analytics service's nightly jobs (dispatcher)", () => {
+  beforeAll(async () => {
+    await pg.exec("insert into job_types (type, runner, max_running, max_attempts) values ('forecast_baseline', 'external', 4, 3) on conflict do nothing");
+  });
+  afterEach(() => {
+    delete process.env.ANALYTICS_JOBS;
+  });
+  const at505 = new Date("2026-10-18T04:05:00Z"); // 05:05 UK (summer time)
+
+  test("with ANALYTICS_JOBS on, the 05:05 run queues one per active restaurant, due at 05:35 UK", async () => {
+    process.env.ANALYTICS_JOBS = "true";
+    const { dispatch } = await import("@/lib/queue/dispatch");
+    await dispatch("hourly", at505);
+    const rows = await sql<{ restaurant_id: string; run_at: Date; concurrency_key: string }>(
+      "select restaurant_id, run_at, concurrency_key from jobs where type = 'forecast_baseline' order by restaurant_id",
+    );
+    expect(rows.map((r) => [r.restaurant_id, new Date(r.run_at).toISOString(), r.concurrency_key])).toEqual([
+      [A, "2026-10-18T04:35:00.000Z", `models:${A}`],
+      [B, "2026-10-18T04:35:00.000Z", `models:${B}`],
+    ]);
+    // The daily backup the same day changes nothing (same key).
+    await dispatch("daily", new Date("2026-10-18T09:00:00Z"));
+    expect(await sql("select count(*)::int as n from jobs where type = 'forecast_baseline'")).toEqual([{ n: 2 }]);
+  });
+
+  test("with ANALYTICS_JOBS off (the default), nothing is queued for the service", async () => {
+    const { dispatch } = await import("@/lib/queue/dispatch");
+    await dispatch("hourly", at505);
+    await dispatch("daily", new Date("2026-10-18T09:00:00Z"));
+    expect(await sql("select count(*)::int as n from jobs where type = 'forecast_baseline'")).toEqual([{ n: 0 }]);
+  });
+});
+
 describe("workers wanted (the every-minute schedule)", () => {
   test("none when nothing is due; one per 3 due jobs, up to 10; one if a lock has run out", async () => {
     const { enqueue, claim, workersWanted } = await store();

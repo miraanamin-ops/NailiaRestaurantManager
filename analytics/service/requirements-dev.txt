@@ -1,0 +1,7 @@
+# Tests and lint only: pytest, ruff, a throwaway local Postgres (pgserver), and
+# what the integration tests borrow from analytics/generator (its migration runner
+# and fixture loader).
+pytest==9.1.1
+ruff==0.14.10
+pgserver==0.1.4
+-r ../generator/requirements.txt

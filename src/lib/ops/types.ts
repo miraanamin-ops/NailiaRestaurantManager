@@ -1,6 +1,9 @@
 // Row types for the operations tables (supabase/030 to 037; docs/data-model.md).
 // Money is whole pence; quantities are in the ingredient's unit; timestamps are
 // ISO strings in UTC; days are London "YYYY-MM-DD".
+import type { ModelRole } from "./model-roles";
+
+export type { ModelRole };
 
 // Where a row came from (the ops_source list in 030_ops_foundation.sql).
 export const OPS_SOURCES = ["photo", "export", "manual", "owner_message", "assumed", "feed", "synthetic", "model", "migrated"] as const;
@@ -230,6 +233,7 @@ export type ModelRunRow = Base & {
   model_name: string;
   model_version: string;
   kind: ModelKind;
+  role: ModelRole;
   status: "running" | "succeeded" | "failed" | "superseded";
   started_at: string;
   finished_at: string | null;

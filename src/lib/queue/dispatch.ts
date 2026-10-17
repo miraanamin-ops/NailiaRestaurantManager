@@ -5,6 +5,8 @@ import { ownerChannel } from "@/lib/followups";
 import { MAX_FAILURES, type MorningCarry } from "@/lib/morning";
 import { morningGate } from "@/lib/morning-gate";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { analyticsJobsSwitch } from "@/lib/switches";
+import { NIGHTLY_MODELS } from "./config";
 import { kickWorkers } from "./kick";
 import { briefCheckTime, concurrencyKeys, keys, plannedJobs, priorityFor, type MorningStep } from "./rules";
 import { enqueue, workersWanted } from "./store";
@@ -29,13 +31,15 @@ export async function enqueueMorningStep(restaurantId: string, day: string, step
 export async function dispatch(job: "hourly" | "daily", now: Date) {
   const restaurants = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
   const summary: Record<string, unknown>[] = [];
+  // The analytics service's models, only once its worker is deployed (ANALYTICS_JOBS).
+  const models = analyticsJobsSwitch(process.env).on ? NIGHTLY_MODELS : [];
 
   const queueFor = async (r: Restaurant) => {
     const entry: Record<string, unknown> = { restaurant: r.id, queued: [] as string[] };
     try {
-      const planned = plannedJobs({ id: r.id, hasOwnerChannel: Boolean(ownerChannel(r)) }, job, now, morningGate(r, now, MAX_FAILURES));
+      const planned = plannedJobs({ id: r.id, hasOwnerChannel: Boolean(ownerChannel(r)) }, job, now, morningGate(r, now, MAX_FAILURES), models);
       for (const p of planned) {
-        const created = await enqueue({ type: p.type, restaurantId: r.id, key: p.key, priority: p.priority, concurrencyKey: p.concurrencyKey, payload: p.payload });
+        const created = await enqueue({ type: p.type, restaurantId: r.id, key: p.key, priority: p.priority, concurrencyKey: p.concurrencyKey, payload: p.payload, runAt: p.runAt });
         if (created) (entry.queued as string[]).push(p.type);
       }
     } catch (err) {

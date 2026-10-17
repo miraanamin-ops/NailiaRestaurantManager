@@ -20,6 +20,17 @@ export const JOB_TYPES = [
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
+// Models the analytics service (analytics/service, Python) runs every night, one
+// job per model per active restaurant, due at 05:35 UK: after the 05:00
+// trading-day cut-off, so yesterday's trading counts. The 05:05 hourly run
+// queues them to start at 05:35; the 09:00 daily backup queues the same job
+// (same key, so never twice) if that run was missed, to start at once. Each
+// needs its row in job_types with runner 'external' (supabase/039_analytics_jobs.sql).
+// Only queued while ANALYTICS_JOBS is on. The Python side issues its forecasts
+// on the same clock (analytics/service/src/dinerai_analytics/cutoff.py).
+export const NIGHTLY_MODELS = ["forecast_baseline"] as const;
+export const NIGHTLY_MODELS_AT = { hour: 5, minute: 35 } as const; // UK time they're due
+
 // Lower runs first.
 export const PRIORITY = {
   owner: 0, // owner replies

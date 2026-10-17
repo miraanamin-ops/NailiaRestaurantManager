@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     // The Python generator's local environment and generated files (not our code).
     "analytics/generator/.venv/**",
     "analytics/generator/output/**",
+    "analytics/service/.venv/**",
   ]),
 ]);
 

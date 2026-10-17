@@ -1,7 +1,7 @@
 // The queue's rules in plain code (no database), unit-tested in tests/queue.test.ts:
 // priorities, the morning steps and their order, and job keys.
 import { londonMinutes, londonParts, londonTime, londonWeekday, londonYmd } from "@/lib/clock";
-import { BRIEF_DUE, PRIORITY } from "./config";
+import { BRIEF_DUE, NIGHTLY_MODELS_AT, PRIORITY } from "./config";
 
 export const briefDueMinutes = BRIEF_DUE.hour * 60 + BRIEF_DUE.minute;
 
@@ -55,6 +55,7 @@ export const keys = {
   agent: (jobKey: string) => `agent:${jobKey}`,
   health: (day: string) => `health_check:${day}:brief`,
   cleanup: (day: string) => `cleanup:${day}`,
+  model: (model: string, restaurantId: string, day: string) => `${model}:${restaurantId}:${day}`,
 };
 
 // One restaurant's morning steps never run at the same time, and neither do
@@ -62,6 +63,8 @@ export const keys = {
 export const concurrencyKeys = {
   morning: (restaurantId: string) => `morning:${restaurantId}`,
   whatsapp: (restaurantId: string) => `whatsapp:${restaurantId}`,
+  // A restaurant's analytics models run one at a time.
+  models: (restaurantId: string) => `models:${restaurantId}`,
 };
 
 // The morning chain for a restaurant starts with this step today.
@@ -76,13 +79,15 @@ export function briefCheckTime(now: Date) {
 }
 
 // What the hourly job (or its daily backup) queues for one active restaurant.
-export type PlannedJob = { type: string; key: string; priority: number; concurrencyKey?: string; payload?: Record<string, unknown> };
+export type PlannedJob = { type: string; key: string; priority: number; concurrencyKey?: string; payload?: Record<string, unknown>; runAt?: Date };
 
 export function plannedJobs(
   r: { id: string; hasOwnerChannel: boolean },
   job: "hourly" | "daily",
   now: Date,
   morningGateResult: string | null,
+  // The analytics service's nightly models (empty while ANALYTICS_JOBS is off).
+  models: readonly string[] = [],
 ): PlannedJob[] {
   const out: PlannedJob[] = [];
   const add = (type: string, key: string, extra: Partial<PlannedJob> = {}) => out.push({ type, key, priority: priorityFor(type, now), ...extra });
@@ -99,6 +104,18 @@ export function plannedJobs(
   if (morningGateResult === null) {
     const { day, step } = firstMorningStep(now);
     add("morning", keys.morning(r.id, day, step), { concurrencyKey: concurrencyKeys.morning(r.id), payload: { step, day, carry: {} } });
+  }
+  // The nightly models: queued by the hourly run in the 05:00 UK hour to start at
+  // 05:35 (after the 05:00 trading-day cut-off), and by the daily backup in case
+  // that run was missed (one key per UK day, so a model runs once a day). Last, so
+  // a problem queueing them never stops the jobs above.
+  if (models.length && (job === "daily" || londonParts(now).hour === NIGHTLY_MODELS_AT.hour)) {
+    const day = londonYmd(now);
+    const p = londonParts(now);
+    const due = londonTime(p.year, p.month, p.day, NIGHTLY_MODELS_AT.hour, NIGHTLY_MODELS_AT.minute);
+    const runAt = due > now ? due : undefined; // a late run (or the backup) starts them at once
+    for (const model of models)
+      add(model, keys.model(model, r.id, day), { concurrencyKey: concurrencyKeys.models(r.id), payload: { day }, ...(runAt ? { runAt } : {}) });
   }
   return out;
 }
