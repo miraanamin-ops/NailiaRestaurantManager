@@ -13,6 +13,10 @@
 //   AGENTS_LIVE_ALLOWED  false = kill switch: every agent runs in shadow, whatever a
 //                        restaurant is set to. true = an agent the builder set to live
 //                        goes live once its readiness check passes.
+//   ANALYTICS_JOBS       true = the nightly jobs queue the analytics service's models
+//                        (03:05 UK, one job per model per active restaurant). Off
+//                        unless set; TEST_MODE never turns it on. Turn it on only
+//                        once the Python worker is deployed, or the jobs pile up.
 //   TEST_MODE            DEPRECATED. Only fills in a switch above that isn't set.
 //
 // Safe by default: a missing or unreadable setting means redirect email, tools
@@ -29,6 +33,7 @@ export type Switches = {
   testTools: { on: boolean; source: Source; note?: string };
   google: { mode: GoogleSetting; source: Source; note?: string };
   agentsLive: { allowed: "all" | "none" | "legacy"; source: Source; note?: string };
+  analyticsJobs: { on: boolean; source: Source; note?: string };
 };
 
 // true / false, on / off, yes / no, 1 / 0 (any case, spaces ignored). Anything else is unreadable.
@@ -94,6 +99,15 @@ export function agentsLiveSwitch(env: Env): Switches["agentsLive"] {
   return { allowed: "legacy", source: "default" };
 }
 
+// Off unless set to true. Unlike the others, TEST_MODE doesn't fill it in: it
+// queues work for a separate service, which may not be running.
+export function analyticsJobsSwitch(env: Env): Switches["analyticsJobs"] {
+  const own = readFlag(env.ANALYTICS_JOBS);
+  if (typeof own === "boolean") return { on: own, source: "setting" };
+  if (own === "unreadable") return { on: false, source: "default", note: `ANALYTICS_JOBS="${env.ANALYTICS_JOBS}" isn't true or false, so it's off` };
+  return { on: false, source: "default" };
+}
+
 export function agentLiveAllowed(env: Env, agent: LiveAgent) {
   const s = agentsLiveSwitch(env);
   if (s.allowed === "legacy") return agent === "reputation" || legacyTestMode(env);
@@ -131,6 +145,7 @@ export function allSwitches(env: Env): Switches {
     testTools: testToolsSwitch(env),
     google: googleSwitch(env),
     agentsLive: agentsLiveSwitch(env),
+    analyticsJobs: analyticsJobsSwitch(env),
   };
 }
 
@@ -144,12 +159,13 @@ export function describeSwitches(s: Switches) {
     { name: "TEST_TOOLS", value: `${s.testTools.on ? "on" : "off"}${from(s.testTools.source)}`, note: s.testTools.note },
     { name: "GOOGLE_MODE", value: `${s.google.mode}${from(s.google.source)}`, note: s.google.note },
     { name: "AGENTS_LIVE_ALLOWED", value: `${live}${s.agentsLive.allowed === "legacy" ? " (not set)" : from(s.agentsLive.source)}`, note: s.agentsLive.note },
+    { name: "ANALYTICS_JOBS", value: `${s.analyticsJobs.on ? "on" : "off"}${from(s.analyticsJobs.source)}`, note: s.analyticsJobs.note },
   ];
 }
 
 // The compact record kept on each job run, so changes between runs can be spotted.
 export function switchesRecord(s: Switches) {
-  return { environment: s.environment, email_redirect: s.emailRedirect.on, test_tools: s.testTools.on, google: s.google.mode, agents_live: s.agentsLive.allowed };
+  return { environment: s.environment, email_redirect: s.emailRedirect.on, test_tools: s.testTools.on, google: s.google.mode, agents_live: s.agentsLive.allowed, analytics_jobs: s.analyticsJobs.on };
 }
 
 // What changed from one run's record to the next ("email_redirect: true → false").

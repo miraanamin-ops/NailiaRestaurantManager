@@ -20,6 +20,14 @@ export const JOB_TYPES = [
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
+// Models the analytics service (analytics/service, Python) runs every night, one
+// job per model per active restaurant, queued by the 03:05 UK hourly run (the
+// 09:00 daily backup queues the same job if that run was missed; same key, so
+// never twice). Each needs its row in job_types with runner 'external'
+// (supabase/039_analytics_jobs.sql). Only queued while ANALYTICS_JOBS is on.
+export const NIGHTLY_MODELS = ["forecast_baseline"] as const;
+export const NIGHTLY_MODELS_HOUR = 3; // UK hour of the hourly run that queues them
+
 // Lower runs first.
 export const PRIORITY = {
   owner: 0, // owner replies

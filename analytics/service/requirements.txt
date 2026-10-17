@@ -1,0 +1,5 @@
+# The analytics service (analytics/service). Python 3.10+. Pinned; add a model's
+# libraries (pandas, LightGBM, OR-Tools...) here when that model arrives.
+psycopg[binary]==3.3.6
+numpy==2.2.6
+tzdata==2026.5
