@@ -6,6 +6,9 @@
 //     weather (real, not dummy) are kept, so it can be re-seeded.
 //   - anything test commands or scripts made in any restaurant: NEW REVIEW reviews,
 //     seeded sign-ups and reviews, and messages from the fake test number.
+//   - operations data (staff, rotas, invoices, forecasts...; supabase/036_ops_analytics.sql
+//     clear_ops_dummy_data): everything of the demo restaurants except the menu, weather
+//     and prayer times, and every row marked 'synthetic' in any restaurant or shared table.
 // Usage: node --env-file=.env.local scripts/clear-dummy-data.mjs [--yes]
 import { createClient } from "@supabase/supabase-js";
 
@@ -91,6 +94,14 @@ for (const id of ids) {
     console.log(`${YES ? "Deleting" : "Would delete"} ${String(salesPaths.length).padStart(5)} ${folder === "pos" ? "sales files" : "till report photos"}`);
     if (YES && salesPaths.length) await s.storage.from("sales-files").remove(salesPaths);
   }
+}
+
+// Operations data: one database function does it all (it only counts unless --yes).
+const ops = ok(await s.rpc("clear_ops_dummy_data", { p_dry_run: !YES }), "operations data");
+for (const row of ops.data ?? []) {
+  if (!row.n_rows) continue;
+  total += Number(row.n_rows);
+  console.log(`${YES ? "Deleting" : "Would delete"} ${String(row.n_rows).padStart(5)} from ${row.table_name}`);
 }
 
 if (YES) {

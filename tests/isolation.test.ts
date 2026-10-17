@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import twilio from "twilio";
 import { fakeAfter, flushAfter } from "./support/after";
 import { memoryDb } from "./support/memory-db";
+import { OWNED_TABLES } from "./support/owned-tables";
 
 const A = "aaaaaaaa-0000-0000-0000-000000000001"; // Ember & Spice
 const B = "bbbbbbbb-0000-0000-0000-000000000002"; // Cardamom Corner
@@ -391,7 +392,7 @@ describe("logged-in pages", () => {
 describe("no query forgets which restaurant it's for", () => {
   // Restaurant-owned tables: every read or write of them must say which restaurant
   // (or a specific row by id/token). A new query that doesn't fails this test.
-  const OWNED = ["customers", "reviews", "drafts", "campaigns", "campaign_sends", "sent_log", "audit_log", "reports", "google_posts", "rewards", "consents", "customer_events", "draft_feedback", "blocked_sends", "messages", "onboarding", "feedback", "feedback_requests", "z_reports", "sales_days", "sales_hours", "sales_items", "pos_layouts", "pos_imports", "weather_days", "staff_numbers", "agent_jobs", "jobs", "profile_versions", "shadow_drafts", "review_themes", "local_calendar"];
+  const OWNED = OWNED_TABLES;
   const SCOPED = /restaurant_id|\.eq\("id"|\.in\("id"|eq\("token"|eq\("draft_id"|in\("draft_id"|eq\("campaign_id"|eq\("customer_id"|eq\("unsubscribe_token"|eq\("confirm_token"|eq\("request_id"|eq\("review_id"|in\("review_id"|eq\("batch_id"|is\("restaurant_id"/;
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {

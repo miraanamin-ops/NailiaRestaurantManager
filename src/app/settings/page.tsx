@@ -4,6 +4,7 @@ import Link from "next/link";
 import { pickRestaurantId, requireOwner } from "@/lib/auth";
 import { DAYS } from "@/lib/onboarding/profile-data";
 import { getRestaurant } from "@/lib/onboarding/store";
+import { menuWithIds } from "@/lib/ops/menu";
 import { AllergenEditor, MenuEditor } from "../onboarding/setup/editors";
 import { button, Card, Frame, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
@@ -32,6 +33,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
   const restaurantId = pickRestaurantId(owner, one("r"));
   if (!restaurantId) return <Frame>No restaurant found for this login.</Frame>;
   const r = await getRestaurant(restaurantId);
+  // The menu with dish ids, so an edit (even a rename) keeps the same dishes.
+  const menu = await menuWithIds(restaurantId);
   const unconfirmed = (r.menu ?? []).some((c) => c.items.some((i) => !i.allergens_confirmed));
   const { count: customerCount } = await getSupabase()
     .from("customers")
@@ -187,7 +190,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           <h2 className="text-lg font-bold">Menu</h2>
           {(r.menu ?? []).length ? null : <p className="text-sm text-stone-600">No menu yet. Add dishes below, or send photos of your menu on WhatsApp during set-up.</p>}
           <MenuEditor
-            initial={(r.menu ?? []).length ? r.menu : [{ category: "Menu", items: [{ name: "", price: 0, description: null }] }]}
+            initial={menu.length ? menu : [{ category: "Menu", items: [{ name: "", price: 0, description: null }] }]}
             save={saveSettingsMenu.bind(null, restaurantId)}
             label="Save menu"
           />
@@ -200,7 +203,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
               {unconfirmed ? "⚠️ Some dishes' allergens aren't confirmed yet, so customers aren't told about them. " : "All confirmed. "}
               Tap a dish to change it; saving confirms every dish as shown.
             </p>
-            <AllergenEditor initial={r.menu} save={saveSettingsAllergens.bind(null, restaurantId)} label="Confirm allergens" />
+            <AllergenEditor initial={menu} save={saveSettingsAllergens.bind(null, restaurantId)} label="Confirm allergens" />
           </Card>
         )}
 

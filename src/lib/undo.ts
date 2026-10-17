@@ -2,6 +2,7 @@ import "server-only";
 import { lastUndoable, logAction, markUndone, type AuditEntry } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { google, type GooglePost } from "@/lib/google";
+import { updateRestaurantColumns, type MenuRename } from "@/lib/ops/menu";
 import { recordColumnChange } from "@/lib/profile/versions";
 import { processQueue } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -92,7 +93,9 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
     case "restore_setting": {
       const fields: Partial<Restaurant> = { [plan.field]: plan.value };
       if (plan.field === "paused") fields.paused_at = plan.value ? new Date().toISOString() : null;
-      check(await getSupabase().from("restaurants").update(fields).eq("id", restaurant.id));
+      // The menu goes back through saveMenu; a rename is undone on the same dish.
+      const renames = ((entry.data?.renames ?? []) as MenuRename[]).map((x) => ({ from: x.to, to: x.from }));
+      await updateRestaurantColumns(restaurant.id, fields, { source: "owner_message", renames });
       // A profile field put back is a new profile version too (ignored for other settings).
       await recordColumnChange({
         restaurantId: restaurant.id,

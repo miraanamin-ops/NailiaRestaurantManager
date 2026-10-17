@@ -60,6 +60,62 @@ export function weatherRows(json: { daily?: Daily }, kind: "archive" | "recent",
     .filter((r) => r.temp_max !== null || r.rain_mm !== null);
 }
 
+// The forecast as issued now, plus the last two days hour by hour. Times come
+// back as Unix seconds, so every hour is a real instant (the clock-change hours
+// stay apart); days are London days (timezone Europe/London).
+export function forecastUrl(lat: number, lon: number) {
+  const q = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    daily: "temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code",
+    hourly: "temperature_2m,precipitation,precipitation_probability,weather_code,cloud_cover,wind_speed_10m",
+    past_days: "2",
+    forecast_days: "7",
+    timezone: "Europe/London",
+    timeformat: "unixtime",
+  });
+  return `https://api.open-meteo.com/v1/forecast?${q}`;
+}
+
+type Series = { time?: number[] } & Record<string, (number | null)[] | number[] | undefined>;
+
+export type ForecastDayRow = { target_day: string; temp_max: number | null; temp_min: number | null; rain_mm: number | null; rain_chance: number | null; weather_code: number | null };
+export type ForecastHourRow = { hour_start: string; temp: number | null; rain_mm: number | null; rain_chance: number | null; weather_code: number | null };
+export type HourActualRow = { hour_start: string; temp: number | null; rain_mm: number | null; weather_code: number | null; cloud_pct: number | null; wind_kmh: number | null };
+
+const londonDay = (unixSeconds: number) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(unixSeconds * 1000));
+
+// One forecast answer -> what was forecast (days from today, hours from this
+// hour on) and the hours already past (stored as hourly actuals).
+export function forecastRows(json: { daily?: Series; hourly?: Series }, issuedAt: Date) {
+  const pick = (s: Series | undefined, key: string, i: number, round = 10) => {
+    const v = (s?.[key] as (number | null)[] | undefined)?.[i];
+    return typeof v === "number" && Number.isFinite(v) ? Math.round(v * round) / round : null;
+  };
+  const today = londonDay(issuedAt.getTime() / 1000);
+  const days: ForecastDayRow[] = (json.daily?.time ?? [])
+    .map((t, i) => ({
+      target_day: londonDay(t),
+      temp_max: pick(json.daily, "temperature_2m_max", i),
+      temp_min: pick(json.daily, "temperature_2m_min", i),
+      rain_mm: pick(json.daily, "precipitation_sum", i),
+      rain_chance: pick(json.daily, "precipitation_probability_max", i, 1),
+      weather_code: pick(json.daily, "weather_code", i, 1),
+    }))
+    .filter((d) => d.target_day >= today);
+  const hourStart = Math.floor(issuedAt.getTime() / 3_600_000) * 3600;
+  const hours: ForecastHourRow[] = [];
+  const past: HourActualRow[] = [];
+  (json.hourly?.time ?? []).forEach((t, i) => {
+    const iso = new Date(t * 1000).toISOString();
+    const base = { hour_start: iso, temp: pick(json.hourly, "temperature_2m", i), rain_mm: pick(json.hourly, "precipitation", i), weather_code: pick(json.hourly, "weather_code", i, 1) };
+    if (t >= hourStart) hours.push({ ...base, rain_chance: pick(json.hourly, "precipitation_probability", i, 1) });
+    else past.push({ ...base, cloud_pct: pick(json.hourly, "cloud_cover", i, 1), wind_kmh: pick(json.hourly, "wind_speed_10m", i) });
+  });
+  return { days, hours, past };
+}
+
 // WMO weather codes in plain words.
 export function conditionsFor(code: number) {
   if (code === 0) return "Clear";

@@ -191,6 +191,11 @@ const fmt = (min: number) => {
   return `9:${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 };
 
+// The times checked are simulated; the real time a run takes depends on how busy the
+// machine is (about 7s alone, over 30s with the whole suite in parallel), so these get
+// more than the usual 30 seconds.
+const SIM_TIMEOUT = 120_000;
+
 describe("50 restaurants on a Monday morning", () => {
   test("every brief goes by 9:15, and owners' messages are answered first", async () => {
     const r = await simulate({ ownerMessages: 40, seed: 7 });
@@ -207,7 +212,7 @@ describe("50 restaurants on a Monday morning", () => {
     // which waits for their first to be answered (messages are answered in order).
     expect(r.ownerWaitMedian).toBeLessThan(1);
     expect(r.ownerWaitMax).toBeLessThan(30);
-  });
+  }, SIM_TIMEOUT);
 
   test("one restaurant failing all morning doesn't delay the other 49", async () => {
     const failing = ids[0];
@@ -218,5 +223,5 @@ describe("50 restaurants on a Monday morning", () => {
     for (const t of r.briefs.values()) expect(t).toBeLessThanOrEqual(BRIEF_BY.getTime());
     // Its retries (1, 5, 15 minutes...) carry on; the step dies after 5 tries (the builder is told then, and at 9:31).
     expect(r.failures.slice(0, 4)).toEqual(["queued after try 1", "queued after try 2", "queued after try 3", "queued after try 4"]);
-  });
+  }, SIM_TIMEOUT);
 });

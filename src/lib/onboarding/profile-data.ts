@@ -18,8 +18,10 @@ export type MenuItem = {
   allergens?: string[];
   // Allergens are only ever shown to customers (or used in their messages) once confirmed.
   allergens_confirmed?: boolean;
+  // The dish's id, only while the settings page edits the menu (never in restaurants.menu).
+  id?: string;
 };
-export type MenuCategory = { category: string; items: MenuItem[] };
+export type MenuCategory = { category: string; items: MenuItem[]; id?: string };
 
 // "9:00 AM" / "11:30 PM" / "12:00" -> "09:00" / "23:30" / "12:00"
 export function to24h(t: string) {

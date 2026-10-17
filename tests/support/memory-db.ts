@@ -187,6 +187,11 @@ export function memoryDb(seed: Record<string, Row[]>) {
   // PGlite (support/queue-pg.ts), emptied the first time this stand-in uses it.
   let queueReady: Promise<(fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>> | null = null;
   const rpc = async (fn: string, args?: Record<string, unknown>) => {
+    // The menu's functions run on the real SQL too (support/menu-pg.ts), on this stand-in's rows.
+    if (fn === "save_menu" || fn === "menu_json") {
+      const { menuRpc } = await import("./menu-pg");
+      return menuRpc(tables, fn, args ?? {});
+    }
     queueReady ??= (async () => {
       const { rpcOn, sharedQueueDb } = await import("./queue-pg");
       const pg = await sharedQueueDb();
