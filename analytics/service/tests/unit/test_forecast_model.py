@@ -20,7 +20,7 @@ from dinerai_analytics.cutoff import issue_time_for, known_through
 from dinerai_analytics.models.forecast_daily import defaults as dflt
 from dinerai_analytics.models.forecast_daily import model
 from dinerai_analytics.models.forecast_daily.design import FACTORS, Config, Prepared
-from dinerai_analytics.models.forecast_daily.evaluate import pass_bar
+from dinerai_analytics.models.forecast_daily.evaluate import cached_long, pass_bar
 from dinerai_analytics.models.forecast_daily.model import make_profiles
 from dinerai_analytics.models.forecast_daily.nb import fit_nb
 from dinerai_analytics.models.forecast_daily.predict import predict
@@ -241,16 +241,33 @@ def test_the_pass_bar():
     def s(w, cov=0.8, bias=0.0, days=84):
         return {"wape": w, "coverage": cov, "bias": bias, "n": days * 14, "days": days}
 
-    good = {"series": {("orders", "all"): s(0.10), **{("orders", c): s(0.15) for c in prep.channels}},
+    good = {"series": {("orders", "all"): s(0.13), **{("orders", c): s(0.21) for c in prep.channels}},
             "benchmarks": {"baseline": {("orders", "all"): s(0.13), **{("orders", c): s(0.20) for c in prep.channels}}}}
-    assert pass_bar(prep, good, 200)["passed"]
-    bad = copy.deepcopy(good)
-    bad["series"][("orders", "all")] = s(0.115)  # only 11.5% better
-    assert not pass_bar(prep, bad, 200)["passed"]
-    assert not pass_bar(prep, {**good, "series": {**good["series"], ("orders", "all"): s(0.10, cov=0.9)}}, 200)["passed"]
-    assert not pass_bar(prep, {**good, "series": {**good["series"], ("orders", "all"): s(0.10, bias=0.06)}}, 200)["passed"]
-    assert not pass_bar(prep, good, 50)["passed"]  # under 8 weeks
-    assert pass_bar(prep, good, 200)["deciding_channels"] == ["all", *prep.channels]
+    long = {"wape": 0.134, "baseline_wape": 0.15}  # 10.7% better
+    assert pass_bar(prep, good, 200, long)["passed"]  # level with the baseline on 12 weeks, channels 5% worse
+    worse = copy.deepcopy(good)
+    worse["series"][("orders", "all")] = s(0.131)  # worse than the baseline on the 12 weeks
+    assert not pass_bar(prep, worse, 200, long)["passed"]
+    assert not pass_bar(prep, good, 200, {"wape": 0.136, "baseline_wape": 0.15})["passed"]  # only 9.3% better over the long back-test
+    assert not pass_bar(prep, good, 200, None)["passed"]  # no long back-test
+    ch = copy.deepcopy(good)
+    ch["series"][("orders", prep.channels[0])] = s(0.211)  # a deciding channel 5.5% worse
+    assert not pass_bar(prep, ch, 200, long)["passed"]
+    assert pass_bar(prep, {**good, "series": {**good["series"], ("orders", "all"): s(0.13, cov=0.88)}}, 200, long)["passed"]
+    assert not pass_bar(prep, {**good, "series": {**good["series"], ("orders", "all"): s(0.13, cov=0.89)}}, 200, long)["passed"]
+    assert not pass_bar(prep, {**good, "series": {**good["series"], ("orders", "all"): s(0.13, cov=0.74)}}, 200, long)["passed"]
+    assert not pass_bar(prep, {**good, "series": {**good["series"], ("orders", "all"): s(0.13, bias=0.06)}}, 200, long)["passed"]
+    assert not pass_bar(prep, good, 50, long)["passed"]  # under 8 weeks
+    assert pass_bar(prep, good, 200, long)["deciding_channels"] == ["all", *prep.channels]
+
+
+def test_the_long_back_test_is_reused_for_28_days():
+    issue = dt.datetime(2026, 10, 17, 5, 35, tzinfo=dt.timezone.utc)
+    run = {"model_version": "1.1.0", "data_cutoff": issue - dt.timedelta(days=10),
+           "metrics": {"long_backtest": {"made_on": "2026-10-07", "wape": 0.1, "baseline_wape": 0.2}}}
+    assert cached_long([run], issue, "1.1.0")["wape"] == 0.1
+    assert cached_long([run], issue, "1.2.0") is None  # another version
+    assert cached_long([{**run, "metrics": {"long_backtest": {"made_on": "2026-09-19"}}}], issue, "1.1.0") is None  # 28 days old
 
 
 def test_under_8_weeks_no_forecast_and_not_passed(monkeypatch):
@@ -284,6 +301,8 @@ def test_a_full_nightly_run(monkeypatch):
     assert res.outputs["forecast_drivers"] and all(r["multiplier"] > 0 for r in res.outputs["forecast_drivers"])
     m = res.metrics
     assert m["pass"]["passed"] == res.passed and m["primary"]["metric"] == "orders"
+    assert m["long_backtest"]["cutoffs"] > 10 and not m["long_backtest"]["cached"]
+    assert any(c["check"] == "orders/all long back-test WAPE vs baseline" for c in m["pass"]["checks"])
     assert {b["metric"] for b in m["benchmarks"]["baseline"]} >= {"orders"} and set(m["benchmarks"]) == {"last_week", "baseline", "ets"}
     json.dumps(m, default=str)
 

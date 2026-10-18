@@ -6,6 +6,8 @@
    Sales older than 14 days at the issue time: the run fails (something is wrong upstream).
 3. The choices made by back-test (evaluate.select), cached for 28 days.
 4. The 12-week replay, re-fitted every night, and its scores with the benchmarks.
+   The long back-test (report.long_backtest, about 50 cut-offs across the history)
+   for the pass bar, cached for 28 days like the choices.
 5. Today's forecast: 56 days daily, 14 days hourly, ranges calibrated on every
    back-test error.
 6. Outputs: forecasts, model_coefficients (every weight with its prior), and
@@ -29,6 +31,7 @@ from .evaluate import (
     LONG_HORIZON,
     Replay,
     actual_series,
+    cached_long,
     cached_selection,
     hourly_actuals,
     origins_for,
@@ -39,6 +42,7 @@ from .evaluate import (
 )
 from .hourly import HourProfiles, hourly_counts
 from .predict import Prediction, predict
+from .report import long_backtest, long_summary
 
 HOURLY_DAYS = 14
 
@@ -117,6 +121,7 @@ class Nightly:
     replay: Replay | None = None
     live: Prediction | None = None
     profiles: HourProfiles | None = None
+    long: dict | None = None  # the full long back-test, when this run made it (not cached)
 
 
 def run(ctx: RunContext) -> ModelResult:
@@ -163,8 +168,18 @@ def nightly(ctx: RunContext) -> Nightly:
     timing["replay_s"] = round(time.monotonic() - t, 2)
     t = time.monotonic()
     scored = score(prep, rp, ctx.issue_day, ctx.trading_day_cutoff_hour, actuals, hourly_act)
-    bar = pass_bar(prep, scored, span)
     timing["scoring_s"] = round(time.monotonic() - t, 2)
+
+    # The long back-test: from a recent run if made in the last 28 days, else made now.
+    t = time.monotonic()
+    long_full = None
+    long = cached_long(prior, ctx.issue_time, VERSION)
+    long_cached = long is not None
+    if long is None:
+        long_full = long_backtest(prep, ctx.trading_day_cutoff_hour, ctx.restaurant_id, profiles)
+        long = long_summary(long_full, ctx.issue_day)
+    timing["long_backtest_s"] = round(time.monotonic() - t, 2)
+    bar = pass_bar(prep, scored, span, long)
 
     # Today's forecast.
     t = time.monotonic()
@@ -187,6 +202,7 @@ def nightly(ctx: RunContext) -> Nightly:
         "special_days": scored["special_days"],
         "benchmarks": {name: _series_list(s) for name, s in scored["benchmarks"].items()},
         "pass": bar,
+        "long_backtest": {**long, "cached": long_cached},
         "calibration": {"q": rp.calibration.table(), "n": rp.calibration.counts()},
         "backtest": {**scored["window"], "warmup_days": len(warmup), "refit": "every night, warm-started", "long_range": "every 7th night to day 55"},
         "forecast": {"issue_day": ctx.issue_day.isoformat(), "known_through": ctx.known_through.isoformat(), "rows": len(rows),
@@ -196,7 +212,7 @@ def nightly(ctx: RunContext) -> Nightly:
     }
     result = ModelResult(outputs={"forecasts": rows, "model_coefficients": coefficient_rows(live), "forecast_drivers": driver_rows(live)},
                          metrics=metrics, score=primary["wape"], passed=bar["passed"])
-    return Nightly(result, prep, cfg, rp, live, profiles)
+    return Nightly(result, prep, cfg, rp, live, profiles, long_full)
 
 
 def _count(items):

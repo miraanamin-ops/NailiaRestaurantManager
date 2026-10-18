@@ -211,7 +211,10 @@ def cmd_forecast_report(a) -> int:
             n = fmodel.nightly(ctx)
             entry = {"restaurant": {"id": str(r["id"]), "slug": r["slug"], "name": r["name"]}, "passed": n.result.passed, "metrics": n.result.metrics}
             if n.replay is not None:
-                entry["long_backtest"] = freport.long_backtest(n.prep, ctx.trading_day_cutoff_hour, ctx.restaurant_id, n.profiles, a.cutoffs)
+                # The nightly run made the 50-cut-off long back-test unless one was cached; reuse it when it matches.
+                same = n.long is not None and len(n.long["cutoffs"]) == a.cutoffs
+                entry["long_backtest"] = n.long if same else freport.long_backtest(n.prep, ctx.trading_day_cutoff_hour, ctx.restaurant_id, n.profiles,
+                                                                                   a.cutoffs)
                 entry["charts"] = freport.chart_data(n.prep, n)
                 entry["weights_now"] = freport.weights_now(n.prep, n.live)
             out[r["slug"]] = entry

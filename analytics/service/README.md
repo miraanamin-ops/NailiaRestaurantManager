@@ -185,12 +185,15 @@ has a written reason. The type comes from the restaurant's cuisine. To change a
 default, edit the file. A test checks that every entry still has a reason and that
 every factor has a default.
 
-**Passed** (written to `model_runs.passed`, checked on the 12-week back-test):
-- orders/all WAPE at least 15% better than `forecast_baseline` on the same days;
-- 80% range coverage between 75% and 85%;
-- bias under 5% either way;
-- at least 8 weeks of history;
-- the same bar for every channel with at least 15% of the orders.
+**Passed** (written to `model_runs.passed`, the same bar for every restaurant):
+- orders/all: WAPE no worse than `forecast_baseline` on the 12-week back-test, and at
+  least 10% better than it on the long back-test (which covers Ramadan, Eid and other
+  special periods);
+- every channel with at least 15% of the orders: WAPE no more than 5% worse than
+  `forecast_baseline` on the 12-week back-test;
+- for orders/all and each of those channels: 80% range coverage between 75% and 88%
+  (slightly wide ranges do less harm than narrow ones), and bias under 5% either way;
+- at least 8 weeks of history.
 
 Under 8 weeks of history the run succeeds with no forecast and passed false.
 
@@ -218,9 +221,12 @@ From `analytics/service/` (`ENV` is `C:\Users\miraa\dev\analytics-dev.env`):
 **The 12-week back-test** runs inside every nightly run, and its results are in that
 run's metrics (`pass`, `series`, `benchmarks`, `hourly`, `special_days`).
 
-**The long back-test** runs only in `forecast-report`. It uses about 50 cut-offs
-spread over the history, and gives Eid, Ramadan and match days separately. It takes
-about a minute per restaurant.
+**The long back-test** uses about 50 cut-offs spread over the history, and gives
+Eid, Ramadan and match days separately. It takes about a minute per restaurant, so
+the nightly run makes it once every 28 days (and when the model version changes) and
+keeps its orders/all summary in the run's metrics (`long_backtest`, with `cached`
+true on the nights that reuse it). `forecast-report` shows it in full, with every
+series, horizon and weight.
 
 `recovery_report.py` is the only code that reads the generator's ground truth. It
 sits outside the model package, and a test checks that the model never reads it.
@@ -263,5 +269,6 @@ the Railway service. `supabase/rollback/forecast_model_rollback.sql` undoes 040,
 nightly batch takes too long; copies never run the same job. `job_types.max_running`
 (4 each for `forecast_baseline`, `forecast_daily` and `forecast_refresh`) caps how many
 run at once across all copies. A `forecast_daily` run took 35 to 60 seconds per
-restaurant on the builder's laptop, most of it the 12-week replay. Its time budget is
-10 minutes.
+restaurant on the builder's laptop, most of it the 12-week replay, and 65 to 95
+seconds on the night every 28 days that re-makes the long back-test. Its time budget
+is 10 minutes.

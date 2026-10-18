@@ -40,8 +40,10 @@ WARMUP_DAYS = 28
 SELECTION_ORIGINS = 12
 SELECTION_EVERY_DAYS = 28
 MIN_GAIN = 0.02  # a more complex choice must win by 2% relative WAPE
-PASS_IMPROVEMENT = 0.15  # orders/all WAPE at least 15% better than the baseline
-COVERAGE_RANGE = (0.75, 0.85)
+PASS_LONG_IMPROVEMENT = 0.10  # orders/all WAPE at least 10% better than the baseline on the long back-test
+CHANNEL_SLACK = 0.05  # a deciding channel may be up to 5% worse than the baseline on the 12-week back-test
+COVERAGE_RANGE = (0.75, 0.88)  # slightly wide ranges do less harm than narrow ones
+LONG_EVERY_DAYS = 28  # the long back-test is run again every 28 days, cached in the run's metrics between
 MAX_ABS_BIAS = 0.05
 MIN_CHANNEL_SHARE = 0.15
 SCORE_BUCKETS = tuple((n, lo, hi) for n, lo, hi in BUCKETS if hi < HORIZON_DAYS)
@@ -155,15 +157,24 @@ def select(prep: Prepared, issue_day: dt.date, cutoff: int, restaurant_id: str) 
 
 def cached_selection(prior_runs: list[dict], issue_time: dt.datetime, version: str) -> dict | None:
     """The latest selection from a run of this version made in the 28 days before this issue time."""
+    return _cached(prior_runs, issue_time, version, "selection", SELECTION_EVERY_DAYS)
+
+
+def cached_long(prior_runs: list[dict], issue_time: dt.datetime, version: str) -> dict | None:
+    """The latest long back-test summary from a run of this version made in the 28 days before this issue time."""
+    return _cached(prior_runs, issue_time, version, "long_backtest", LONG_EVERY_DAYS)
+
+
+def _cached(prior_runs: list[dict], issue_time: dt.datetime, version: str, key: str, every_days: int) -> dict | None:
     best = None
     for r in prior_runs:
-        sel = (r.get("metrics") or {}).get("selection")
-        if not sel or r.get("model_version") != version or not r.get("data_cutoff"):
+        sel = (r.get("metrics") or {}).get(key)
+        if not sel or "made_on" not in sel or r.get("model_version") != version or not r.get("data_cutoff"):
             continue
-        if not (issue_time - dt.timedelta(days=SELECTION_EVERY_DAYS) < r["data_cutoff"] <= issue_time):
+        if not (issue_time - dt.timedelta(days=every_days) < r["data_cutoff"] <= issue_time):
             continue
         made = dt.date.fromisoformat(sel["made_on"])
-        if (issue_time.date() - made).days >= SELECTION_EVERY_DAYS:
+        if (issue_time.date() - made).days >= every_days:
             continue
         if best is None or r["data_cutoff"] > best[0]:
             best = (r["data_cutoff"], sel)
@@ -308,8 +319,11 @@ def _brief(s: dict) -> dict:
     return {k: s[k] for k in ("wape", "coverage", "bias", "n", "days")}
 
 
-def pass_bar(prep: Prepared, scored: dict, span_days: int) -> dict:
-    """Checked per restaurant on the 12-week back-test: orders/all and every channel with at least 15% of orders."""
+def pass_bar(prep: Prepared, scored: dict, span_days: int, long: dict | None) -> dict:
+    """Checked per restaurant. orders/all: no worse than the baseline on the 12-week back-test and at least 10% better
+    on the long back-test (`long`, the summary from long_summary, which covers Ramadan, Eid and other special periods).
+    Every channel with at least 15% of orders: no more than 5% worse than the baseline on the 12-week back-test. Both:
+    80% range coverage 75% to 88% and bias under 5% either way. And at least 8 weeks of history."""
     checks = []
     series, base = scored["series"], scored["benchmarks"]["baseline"]
     checks.append({"check": "history", "need": "at least 8 weeks", "value": span_days, "ok": span_days >= 56})
@@ -322,10 +336,16 @@ def pass_bar(prep: Prepared, scored: dict, span_days: int) -> dict:
             continue
         checks.append({"check": f"{label} days scored", "need": f">= {MIN_SCORED_DAYS}", "value": s["days"], "ok": s["days"] >= MIN_SCORED_DAYS})
         bw = b["wape"] if b else None
-        ok = bw is not None and s["wape"] <= (1 - PASS_IMPROVEMENT) * bw
-        checks.append({"check": f"{label} WAPE vs baseline", "need": f"<= {round((1 - PASS_IMPROVEMENT) * bw, 4) if bw else None}",
-                       "value": s["wape"], "baseline": bw, "improvement": round(1 - s["wape"] / bw, 4) if bw else None, "ok": ok})
-        checks.append({"check": f"{label} 80% range coverage", "need": "0.75 to 0.85", "value": s["coverage"],
+        allowed = 1.0 if key[1] == "all" else 1 + CHANNEL_SLACK
+        checks.append({"check": f"{label} WAPE vs baseline", "need": f"<= {round(allowed * bw, 4) if bw else None}",
+                       "value": s["wape"], "baseline": bw, "improvement": round(1 - s["wape"] / bw, 4) if bw else None,
+                       "ok": bw is not None and s["wape"] <= allowed * bw})
+        if key[1] == "all":
+            lw, lb = (long or {}).get("wape"), (long or {}).get("baseline_wape")
+            checks.append({"check": f"{label} long back-test WAPE vs baseline", "need": f"<= {round((1 - PASS_LONG_IMPROVEMENT) * lb, 4) if lb else None}",
+                           "value": lw, "baseline": lb, "improvement": round(1 - lw / lb, 4) if lw is not None and lb else None,
+                           "ok": lw is not None and bool(lb) and lw <= (1 - PASS_LONG_IMPROVEMENT) * lb})
+        checks.append({"check": f"{label} 80% range coverage", "need": f"{COVERAGE_RANGE[0]} to {COVERAGE_RANGE[1]}", "value": s["coverage"],
                        "ok": s["coverage"] is not None and COVERAGE_RANGE[0] <= s["coverage"] <= COVERAGE_RANGE[1]})
         checks.append({"check": f"{label} bias", "need": "under 5% either way", "value": s["bias"],
                        "ok": s["bias"] is not None and abs(s["bias"]) < MAX_ABS_BIAS})

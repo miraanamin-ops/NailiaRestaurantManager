@@ -1,12 +1,13 @@
 """The report: the long back-test across the history, and the data for the charts.
 
-Long back-test (for the report only, never the pass bar): about 50 cut-offs spread
+Long back-test: about 50 cut-offs spread
 evenly from 10 weeks into the history to two weeks before the end. At each one the
 model is fitted on what was known then (the choices re-made every 28 days, the
 calibration from earlier cut-offs only) and forecasts 14 days; the benchmarks
 forecast the same days. Every metric by channel and horizon, special days (Eid,
 Ramadan, match days) separately, and every weight at every cut-off (so the charts
-show how each weight moved).
+show how each weight moved). The nightly run keeps its orders/all summary
+(long_summary) for the pass bar, and runs it again every 28 days.
 
 Chart data: the 12-week replay's forecasts 1 and 7 days ahead against what
 happened, with ranges, and today's 56-day forecast.
@@ -109,6 +110,15 @@ def long_backtest(prep: Prepared, cutoff: int, restaurant_id: str, profiles: Hou
         "weights": weights,
         "seconds": round(time.monotonic() - t0, 1),
     }
+
+
+def long_summary(lb: dict, made_on: dt.date) -> dict:
+    """What the pass bar needs from a long back-test: orders/all against the baseline on the same days."""
+    m = lb["model"].get("orders/all", {}).get("all", {})
+    b = lb["benchmarks"]["baseline"].get("orders/all", {}).get("all", {})
+    return {"made_on": made_on.isoformat(), "cutoffs": len(lb["cutoffs"]), "first_cutoff": lb["cutoffs"][0] if lb["cutoffs"] else None,
+            "last_cutoff": lb["cutoffs"][-1] if lb["cutoffs"] else None, "wape": m.get("wape"), "baseline_wape": b.get("wape"),
+            "coverage": m.get("coverage"), "bias": m.get("bias"), "days": m.get("days"), "seconds": lb["seconds"]}
 
 
 def weights_now(prep: Prepared, live) -> dict:
