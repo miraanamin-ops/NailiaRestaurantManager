@@ -1,0 +1,68 @@
+{
+  "type": "general",
+  "about": "The starting point for every restaurant type: each weight's prior (the model's guess before it sees the restaurant's data) and how sure it is. effect_pct is the % change in orders for the factor (per unit where a unit is named), by channel; 'all' applies to every channel unless a channel has its own number, and a channel not named gets 0. sd is on the log scale (0.10 = about +/- 10%). Common-sense starting points, written by hand: not taken from any synthetic data. halal.json, cafe.json and takeaway.json only list what differs.",
+  "weekday_pct": {
+    "values": {"mon": -15, "tue": -10, "wed": -5, "thu": 0, "fri": 15, "sat": 20, "sun": 0},
+    "sd": 0.30,
+    "reason": "Weekends drive eating out; early in the week is quiet. Relative to an average day, before allowing for shorter or longer opening hours."
+  },
+  "season": {
+    "amplitude_pct": 0,
+    "peak": "07-15",
+    "sd": 0.10,
+    "reason": "No assumption about the time of year for a general restaurant: the data decides."
+  },
+  "factors": {
+    "trend": {"effect_pct": {"all": 0}, "unit": "per year", "sd": 0.15, "reason": "No assumption about growth or decline."},
+    "weekday_summer": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "Only used if the back-test shows weekdays behave differently in summer; no assumption about how."},
+
+    "bank_holiday": {"effect_pct": {"all": 5}, "sd": 0.20, "reason": "A free day means more leisure eating."},
+    "bh_eve": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "The night before a long weekend can be a little busier, but not reliably."},
+    "bh_after": {"effect_pct": {"all": -5}, "sd": 0.10, "reason": "People stay in after a long weekend."},
+    "xmas_eve": {"effect_pct": {"all": -10}, "sd": 0.25, "reason": "Family time at home."},
+    "xmas_week": {"effect_pct": {"all": -5}, "sd": 0.25, "reason": "27 to 30 December: many people away or eating leftovers."},
+    "nye": {"effect_pct": {"all": 0}, "sd": 0.25, "reason": "Parties pull both ways: busy for some, empty for others."},
+    "new_year": {"effect_pct": {"all": -10}, "sd": 0.25, "reason": "A quiet, tired day at home."},
+    "mothers_day": {"effect_pct": {"dine_in": 10}, "sd": 0.20, "reason": "A family meal out."},
+    "valentines": {"effect_pct": {"dine_in": 10}, "sd": 0.20, "reason": "Couples dining."},
+    "school_holiday": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "No clear direction for a general restaurant."},
+    "inset_day": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "Like a one-day school holiday."},
+    "payday_window": {"effect_pct": {"all": 3}, "sd": 0.05, "reason": "More spending money on payday and the 2 days after."},
+    "clock_change_fwd": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "The lost hour is already in the opening-hours offset; no other assumption."},
+    "clock_change_back": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "The extra hour is already in the opening-hours offset; no other assumption."},
+    "diwali": {"effect_pct": {"dine_in": 5}, "sd": 0.15, "reason": "A festive evening out for many London families."},
+
+    "ramadan_1_10": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "Little effect expected outside a Muslim customer base."},
+    "ramadan_11_20": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "Little effect expected outside a Muslim customer base."},
+    "ramadan_last10": {"effect_pct": {"all": 0}, "sd": 0.10, "reason": "Little effect expected outside a Muslim customer base."},
+    "eid_fitr_d1": {"effect_pct": {"all": 5}, "sd": 0.15, "reason": "A celebration day in the area lifts trade a little."},
+    "eid_fitr_d2": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "Small or no effect expected."},
+    "eid_fitr_d3": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "Small or no effect expected."},
+    "eid_adha_d1": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "Small or no effect expected."},
+    "eid_adha_d2": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "Small or no effect expected."},
+    "eid_adha_d3": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "Small or no effect expected."},
+    "chand_raat": {"effect_pct": {"all": 0}, "sd": 0.25, "reason": "Small or no effect expected."},
+
+    "temp_warm": {"effect_pct": {"dine_in": 0.5, "delivery": -0.5}, "unit": "per degree C above normal", "sd": 0.01, "reason": "Warm weather brings people out and away from delivery."},
+    "temp_cold": {"effect_pct": {"dine_in": -0.5, "delivery": 0.5}, "unit": "per degree C below normal", "sd": 0.01, "reason": "Cold keeps people in."},
+    "temp_hot": {"effect_pct": {"dine_in": -2}, "unit": "per degree C above 26", "sd": 0.02, "reason": "Too hot for a hot meal."},
+    "rain_lunch": {"effect_pct": {"dine_in": -1.5, "takeaway": -1, "delivery": 1.5}, "unit": "per mm in open hours 11:00 to 15:00 (capped at 10)", "sd": 0.02, "reason": "Rain swaps going out for delivery."},
+    "rain_dinner": {"effect_pct": {"dine_in": -1.5, "takeaway": -1, "delivery": 1.5}, "unit": "per mm in open hours 17:00 to 22:00 (capped at 10)", "sd": 0.02, "reason": "Rain swaps going out for delivery."},
+    "sunshine": {"effect_pct": {"dine_in": 1, "delivery": -0.5}, "unit": "per hour above the month's normal", "sd": 0.015, "reason": "Sun brings walk-ins."},
+
+    "football_during": {"effect_pct": {"dine_in": -5, "takeaway": 5, "delivery": 5}, "unit": "per match unit (importance x relevance x share of the window open)", "sd": 0.15, "reason": "People watch at home with food."},
+    "football_after": {"effect_pct": {"takeaway": 5, "delivery": 5}, "unit": "per match unit", "sd": 0.15, "reason": "Food after the final whistle."},
+    "cricket_during": {"effect_pct": {"all": 0}, "unit": "per match unit", "sd": 0.15, "reason": "No assumption for a general restaurant; no fixtures feed yet."},
+    "cricket_after": {"effect_pct": {"all": 0}, "unit": "per match unit", "sd": 0.15, "reason": "No assumption for a general restaurant; no fixtures feed yet."},
+    "venue": {"effect_pct": {"all": 2}, "unit": "per 10,000 people at 0 km (fading with distance)", "sd": 0.10, "reason": "Crowds passing by."},
+    "disruption": {"effect_pct": {"dine_in": -10, "delivery": 5}, "sd": 0.20, "reason": "Strikes keep commuters away and push some to delivery."},
+
+    "deal": {"effect_pct": {"all": 5}, "sd": 0.15, "reason": "A typical modest lift while a deal runs."},
+    "log_price_index": {"coefficient": -0.5, "unit": "elasticity of orders to the menu price index", "sd": 0.40, "reason": "Restaurant elasticities are usually between -0.3 and -1."}
+  },
+  "dispersion": {"theta": 20, "sd_log": 1.5, "reason": "Orders vary a bit more than pure chance (negative binomial); a weak guess the data quickly overrides."},
+  "sports": {
+    "football": {"national_teams": ["England"], "reason": "England matches are watched widely; club matches only count for the restaurant's own teams."},
+    "cricket": {"national_teams": [], "reason": "No assumption for a general restaurant."}
+  }
+}

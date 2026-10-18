@@ -17,7 +17,8 @@ Scores per series (a series is a (metric, channel) pair, e.g. ("orders", "all"))
   coverage  share of actuals that fell between low and high
   bias      sum of (likely - actual) / sum of actual (positive = forecasts too high)
   n         forecasts scored; days = distinct target days scored
-  by_horizon  the same for days 0 to 6 ahead and 7 to 13 ahead
+  by_horizon  the same for days 0 to 6 ahead and 7 to 13 ahead (or the buckets passed in)
+  abs_err, err, actual, inside  the totals behind them, so series can be pooled
 """
 
 from __future__ import annotations
@@ -62,6 +63,11 @@ class _Acc:
             "bias": round(self.err / self.actual, 4) if self.actual else None,
             "n": self.n,
             "days": len(self.days),
+            # The totals behind them, so several series can be pooled (e.g. every hour of the day).
+            "abs_err": round(self.abs_err, 4),
+            "err": round(self.err, 4),
+            "actual": round(self.actual, 4),
+            "inside": self.inside,
         }
 
 
@@ -88,11 +94,12 @@ def rolling_backtest(
     cutoff_hour: int,
     weeks: int = BACKTEST_WEEKS,
     horizon: int = HORIZON_DAYS,
+    horizon_buckets: tuple[tuple[str, int, int], ...] = HORIZON_BUCKETS,
 ) -> dict:
     """Scores per series key, plus a description of the window."""
     w = window(issue_day, cutoff_hour, weeks, horizon)
     total = {k: _Acc() for k in actuals}
-    buckets = {k: {name: _Acc() for name, _, _ in HORIZON_BUCKETS} for k in actuals}
+    buckets = {k: {name: _Acc() for name, _, _ in horizon_buckets} for k in actuals}
     for origin in w.origins:
         issued = issue_time_for(origin)
         kt = known_through(issued, cutoff_hour)
@@ -108,7 +115,7 @@ def rolling_backtest(
                 if actual is None:
                     continue
                 total[key].add(target, actual, p)
-                for name, lo, hi in HORIZON_BUCKETS:
+                for name, lo, hi in horizon_buckets:
                     if lo <= h <= hi:
                         buckets[key][name].add(target, actual, p)
     return {
@@ -129,3 +136,18 @@ def rolling_backtest(
 def truncate(series: dict[dt.date, float], through: dt.date) -> dict[dt.date, float]:
     """Only the days a model may use."""
     return {d: v for d, v in series.items() if d <= through}
+
+
+def pooled(summaries: list[dict]) -> dict:
+    """One score from several series' summaries (e.g. every hour of the day)."""
+    abs_err = sum(s["abs_err"] for s in summaries)
+    err = sum(s["err"] for s in summaries)
+    actual = sum(s["actual"] for s in summaries)
+    n = sum(s["n"] for s in summaries)
+    inside = sum(s["inside"] for s in summaries)
+    return {
+        "wape": round(abs_err / actual, 4) if actual else None,
+        "coverage": round(inside / n, 4) if n else None,
+        "bias": round(err / actual, 4) if actual else None,
+        "n": n,
+    }

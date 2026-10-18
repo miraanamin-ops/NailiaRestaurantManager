@@ -1,0 +1,37 @@
+{
+  "type": "cafe",
+  "about": "Cafes, brunch places and bakeries. Only what differs from general.json.",
+  "weekday_pct": {
+    "values": {"mon": -10, "tue": -10, "wed": -10, "thu": -5, "fri": 0, "sat": 30, "sun": 20},
+    "sd": 0.30,
+    "reason": "Brunch is a weekend habit."
+  },
+  "season": {
+    "amplitude_pct": 5,
+    "peak": "07-15",
+    "sd": 0.10,
+    "reason": "Cafes do more daytime walk-in trade in summer."
+  },
+  "factors": {
+    "bank_holiday": {"effect_pct": {"all": 15}, "sd": 0.20, "reason": "A free day is a brunch day."},
+    "xmas_eve": {"effect_pct": {"all": -10}, "sd": 0.25, "reason": "Family time at home."},
+    "xmas_week": {"effect_pct": {"all": -5}, "sd": 0.25, "reason": "Many regulars away."},
+    "nye": {"effect_pct": {"all": -20}, "sd": 0.25, "reason": "A daytime cafe misses the evening; people save themselves for the night."},
+    "new_year": {"effect_pct": {"all": -10}, "sd": 0.25, "reason": "A quiet, tired day."},
+    "mothers_day": {"effect_pct": {"dine_in": 15}, "sd": 0.20, "reason": "Brunch or cake out with mum."},
+    "valentines": {"effect_pct": {"all": 0}, "sd": 0.20, "reason": "An evening occasion; a daytime cafe misses it."},
+    "school_holiday": {"effect_pct": {"all": 5}, "sd": 0.10, "reason": "Parents and children out in the daytime."},
+    "inset_day": {"effect_pct": {"all": 5}, "sd": 0.10, "reason": "Like a one-day school holiday."},
+    "payday_window": {"effect_pct": {"all": 2}, "sd": 0.05, "reason": "Cafe spend is small, so payday matters less."},
+    "diwali": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "An evening festival; a daytime cafe misses it."},
+    "ramadan_1_10": {"effect_pct": {"all": -3}, "sd": 0.10, "reason": "Some daytime customers fasting."},
+    "ramadan_11_20": {"effect_pct": {"all": -3}, "sd": 0.10, "reason": "Some daytime customers fasting."},
+    "ramadan_last10": {"effect_pct": {"all": -3}, "sd": 0.10, "reason": "Some daytime customers fasting."},
+    "eid_fitr_d1": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "No clear effect on a daytime cafe."},
+    "temp_warm": {"effect_pct": {"dine_in": 1, "delivery": -0.5}, "unit": "per degree C above normal", "sd": 0.01, "reason": "Warm days fill the tables and the pavement."},
+    "rain_lunch": {"effect_pct": {"dine_in": -2, "takeaway": -1, "delivery": 1.5}, "unit": "per mm in open hours 11:00 to 15:00 (capped at 10)", "sd": 0.02, "reason": "Lunchtime walk-ins stay away in the rain."},
+    "sunshine": {"effect_pct": {"dine_in": 2, "delivery": -0.5}, "unit": "per hour above the month's normal", "sd": 0.015, "reason": "Sun brings walk-ins, more so for a cafe."},
+    "football_during": {"effect_pct": {"all": 0}, "unit": "per match unit", "sd": 0.15, "reason": "Most matches are outside a daytime cafe's hours."},
+    "football_after": {"effect_pct": {"all": 0}, "unit": "per match unit", "sd": 0.15, "reason": "Most matches are outside a daytime cafe's hours."}
+  }
+}

@@ -1,7 +1,7 @@
 // The queue's rules in plain code (no database), unit-tested in tests/queue.test.ts:
 // priorities, the morning steps and their order, and job keys.
 import { londonMinutes, londonParts, londonTime, londonWeekday, londonYmd } from "@/lib/clock";
-import { BRIEF_DUE, NIGHTLY_MODELS_AT, PRIORITY } from "./config";
+import { BRIEF_DUE, type NightlyModel, PRIORITY } from "./config";
 
 export const briefDueMinutes = BRIEF_DUE.hour * 60 + BRIEF_DUE.minute;
 
@@ -87,7 +87,7 @@ export function plannedJobs(
   now: Date,
   morningGateResult: string | null,
   // The analytics service's nightly models (empty while ANALYTICS_JOBS is off).
-  models: readonly string[] = [],
+  models: readonly NightlyModel[] = [],
 ): PlannedJob[] {
   const out: PlannedJob[] = [];
   const add = (type: string, key: string, extra: Partial<PlannedJob> = {}) => out.push({ type, key, priority: priorityFor(type, now), ...extra });
@@ -105,17 +105,20 @@ export function plannedJobs(
     const { day, step } = firstMorningStep(now);
     add("morning", keys.morning(r.id, day, step), { concurrencyKey: concurrencyKeys.morning(r.id), payload: { step, day, carry: {} } });
   }
-  // The nightly models: queued by the hourly run in the 05:00 UK hour to start at
-  // 05:35 (after the 05:00 trading-day cut-off), and by the daily backup in case
-  // that run was missed (one key per UK day, so a model runs once a day). Last, so
-  // a problem queueing them never stops the jobs above.
-  if (models.length && (job === "daily" || londonParts(now).hour === NIGHTLY_MODELS_AT.hour)) {
+  // The nightly models: each queued by the hourly run in the UK hour of its `at`
+  // to start at that time (05:35 after the 05:00 trading-day cut-off; 07:00 for
+  // the weather refresh), and by the daily backup in case that run was missed
+  // (one key per model per UK day, so a model runs once a day). Last, so a
+  // problem queueing them never stops the jobs above.
+  if (models.length) {
     const day = londonYmd(now);
     const p = londonParts(now);
-    const due = londonTime(p.year, p.month, p.day, NIGHTLY_MODELS_AT.hour, NIGHTLY_MODELS_AT.minute);
-    const runAt = due > now ? due : undefined; // a late run (or the backup) starts them at once
-    for (const model of models)
-      add(model, keys.model(model, r.id, day), { concurrencyKey: concurrencyKeys.models(r.id), payload: { day }, ...(runAt ? { runAt } : {}) });
+    for (const model of models) {
+      if (job !== "daily" && p.hour !== model.at.hour) continue;
+      const due = londonTime(p.year, p.month, p.day, model.at.hour, model.at.minute);
+      const runAt = due > now ? due : undefined; // a late run (or the backup) starts it at once
+      add(model.type, keys.model(model.type, r.id, day), { concurrencyKey: concurrencyKeys.models(r.id), payload: { day }, ...(runAt ? { runAt } : {}) });
+    }
   }
   return out;
 }

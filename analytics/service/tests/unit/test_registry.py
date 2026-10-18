@@ -22,10 +22,13 @@ def spec(**kw) -> ModelSpec:
 
 def test_the_built_in_models():
     reg = load_registry()
-    assert reg.job_types == ["forecast_baseline"]
+    assert reg.job_types == ["forecast_baseline", "forecast_daily", "forecast_refresh"]
     s = reg.for_job_type("forecast_baseline")
     assert s is forecast_baseline.SPEC
     assert (s.role, s.kind, s.views) == ("benchmark", "forecast", ("sales_daily", "sales_channels"))
+    # The real forecast is production (shown once it passes); its 07:00 refresh too.
+    assert [(x.name, x.role) for x in (reg.for_job_type("forecast_daily"), reg.for_job_type("forecast_refresh"))] == [
+        ("forecast_daily", "production"), ("forecast_refresh", "production")]
 
 
 def test_register_and_look_up():

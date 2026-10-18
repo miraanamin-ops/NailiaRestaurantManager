@@ -8,49 +8,67 @@ import type { PGlite } from "@electric-sql/pglite";
 import { beforeAll, describe, expect, test } from "vitest";
 import { londonTime } from "@/lib/clock";
 import { isShowableRun, MODEL_OUTPUT_TABLES } from "@/lib/ops/model-roles";
-import { NIGHTLY_MODELS } from "@/lib/queue/config";
+import { NIGHTLY_MODELS, type NightlyModel } from "@/lib/queue/config";
 import { plannedJobs } from "@/lib/queue/rules";
 import { newFullDb, readMigration } from "./support/full-pg";
 
 const R = { id: "abababab-0000-0000-0000-000000000001", hasOwnerChannel: true };
 
 describe("the nightly model jobs", () => {
-  const modelJobs = (job: "hourly" | "daily", now: Date, models: readonly string[] = NIGHTLY_MODELS) =>
-    plannedJobs(R, job, now, "not yet", models).filter((p) => (NIGHTLY_MODELS as readonly string[]).includes(p.type));
+  const types = NIGHTLY_MODELS.map((m) => m.type);
+  const modelJobs = (job: "hourly" | "daily", now: Date, models: readonly NightlyModel[] = NIGHTLY_MODELS) =>
+    plannedJobs(R, job, now, "not yet", models).filter((p) => types.includes(p.type));
+  const job = (type: string, runAt: Date) => ({
+    type,
+    key: `${type}:${R.id}:2026-10-18`,
+    priority: 50,
+    concurrencyKey: `models:${R.id}`,
+    payload: { day: "2026-10-18" },
+    runAt,
+  });
 
-  test("queued by the 05:05 UK hourly run to start at 05:35, one per model, keyed by the UK day", () => {
-    const at505 = londonTime(2026, 10, 18, 5, 5);
-    expect(modelJobs("hourly", at505)).toEqual([
-      {
-        type: "forecast_baseline",
-        key: `forecast_baseline:${R.id}:2026-10-18`,
-        priority: 50,
-        concurrencyKey: `models:${R.id}`,
-        payload: { day: "2026-10-18" },
-        runAt: londonTime(2026, 10, 18, 5, 35),
-      },
-    ]);
+  test("the 05:05 UK hourly run queues the re-fits to start at 05:35, one per model, keyed by the UK day", () => {
+    const at535 = londonTime(2026, 10, 18, 5, 35);
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 5, 5))).toEqual([job("forecast_baseline", at535), job("forecast_daily", at535)]);
     // Other hours queue nothing, in summer and in winter time (when UK and UTC agree).
     expect(modelJobs("hourly", londonTime(2026, 10, 18, 3, 5))).toEqual([]);
     expect(modelJobs("hourly", londonTime(2026, 10, 18, 4, 5))).toEqual([]);
     expect(modelJobs("hourly", londonTime(2026, 10, 18, 6, 5))).toEqual([]);
     const winter = modelJobs("hourly", londonTime(2026, 12, 1, 5, 5));
-    expect(winter.map((p) => p.runAt?.toISOString())).toEqual(["2026-12-01T05:35:00.000Z"]);
-    expect(modelJobs("hourly", londonTime(2026, 7, 1, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-07-01T04:35:00.000Z"]);
+    expect(winter.map((p) => p.runAt?.toISOString())).toEqual(["2026-12-01T05:35:00.000Z", "2026-12-01T05:35:00.000Z"]);
+    expect(modelJobs("hourly", londonTime(2026, 7, 1, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-07-01T04:35:00.000Z", "2026-07-01T04:35:00.000Z"]);
+  });
+
+  test("the 07:05 hourly run queues the weather refresh to start at 07:00, so it starts at once", () => {
+    // 07:00 has passed by 07:05, so it has no runAt (it starts at once).
+    const refresh: Partial<ReturnType<typeof job>> = job("forecast_refresh", londonTime(2026, 10, 18, 7, 0));
+    delete refresh.runAt;
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 7, 5))).toEqual([refresh]);
+    // Each model has its own time.
+    expect(NIGHTLY_MODELS).toEqual([
+      { type: "forecast_baseline", at: { hour: 5, minute: 35 } },
+      { type: "forecast_daily", at: { hour: 5, minute: 35 } },
+      { type: "forecast_refresh", at: { hour: 7, minute: 0 } },
+    ]);
+  });
+
+  test("a model due later in its hour is queued to start then", () => {
+    const later: NightlyModel[] = [{ type: "forecast_refresh", at: { hour: 7, minute: 40 } }];
+    expect(modelJobs("hourly", londonTime(2026, 10, 18, 7, 5), later)).toEqual([job("forecast_refresh", londonTime(2026, 10, 18, 7, 40))]);
   });
 
   test("on the clock-change nights 05:35 still means 05:35 UK", () => {
-    expect(modelJobs("hourly", londonTime(2026, 3, 29, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-03-29T04:35:00.000Z"]);
-    expect(modelJobs("hourly", londonTime(2026, 10, 25, 5, 5)).map((p) => p.runAt?.toISOString())).toEqual(["2026-10-25T05:35:00.000Z"]);
+    expect(modelJobs("hourly", londonTime(2026, 3, 29, 5, 5)).map((p) => p.runAt?.toISOString())[0]).toBe("2026-03-29T04:35:00.000Z");
+    expect(modelJobs("hourly", londonTime(2026, 10, 25, 5, 5)).map((p) => p.runAt?.toISOString())[0]).toBe("2026-10-25T05:35:00.000Z");
   });
 
   test("a late hourly run, or the daily backup, starts them at once", () => {
     expect(modelJobs("hourly", londonTime(2026, 10, 18, 5, 50))[0].runAt).toBeUndefined();
-    expect(modelJobs("daily", londonTime(2026, 10, 18, 10, 0))[0].runAt).toBeUndefined();
+    expect(modelJobs("daily", londonTime(2026, 10, 18, 10, 0)).every((p) => p.runAt === undefined)).toBe(true);
   });
 
-  test("the daily backup queues the same job (same key), so a missed 05:05 run is caught up and never doubled", () => {
-    const night = modelJobs("hourly", londonTime(2026, 10, 18, 5, 5));
+  test("the daily backup queues the same jobs (same keys), so missed runs are caught up and never doubled", () => {
+    const night = [...modelJobs("hourly", londonTime(2026, 10, 18, 5, 5)), ...modelJobs("hourly", londonTime(2026, 10, 18, 7, 5))];
     const backup = modelJobs("daily", londonTime(2026, 10, 18, 10, 0));
     expect(backup.map((p) => p.key)).toEqual(night.map((p) => p.key));
   });
@@ -62,7 +80,7 @@ describe("the nightly model jobs", () => {
 
   test("they come after the restaurant's other jobs", () => {
     const all = plannedJobs(R, "hourly", londonTime(2026, 10, 18, 5, 5), null, NIGHTLY_MODELS);
-    expect(all.at(-1)?.type).toBe("forecast_baseline");
+    expect(all.slice(-2).map((p) => p.type)).toEqual(["forecast_baseline", "forecast_daily"]);
   });
 });
 
@@ -160,6 +178,70 @@ describe("the database (039 on a fresh database)", () => {
     // The service still reads both through its analytics view (benchmarks are compared there).
     const viaView = await as("analytics_reader", null, () => all<{ role: string }>("select role from analytics.model_runs order by role"));
     expect(viaView.map((r) => r.role)).toEqual(["benchmark", "production"]);
+  });
+
+  test("040: the forecast's job types, and the file runs again safely", async () => {
+    expect(
+      await all("select type, runner, max_running, max_attempts, lock_seconds from job_types where type in ('forecast_daily', 'forecast_refresh') order by type"),
+    ).toEqual([
+      { type: "forecast_daily", runner: "external", max_running: 4, max_attempts: 3, lock_seconds: 300 },
+      { type: "forecast_refresh", runner: "external", max_running: 4, max_attempts: 3, lock_seconds: 180 },
+    ]);
+    await pg.exec(readMigration("040_forecast_model.sql"));
+    expect(await all("select count(*)::int as n from schema_migrations where name = '040_forecast_model.sql'")).toEqual([{ n: 1 }]);
+  });
+
+  test("040: an owner sees weights and drivers only of a production run that succeeded and passed", async () => {
+    const runs = [
+      ["aaaaaaaa-0000-0000-0000-0000000000d1", "production", true],
+      ["aaaaaaaa-0000-0000-0000-0000000000d2", "production", false],
+      ["aaaaaaaa-0000-0000-0000-0000000000d3", "benchmark", true],
+    ] as const;
+    const addRows = async (id: string) => {
+      await pg.query("insert into model_coefficients (restaurant_id, model_run_id, channel, factor, estimate) values ($1, $2, 'all', 'weekday_sat', 0.2)", [A, id]);
+      await pg.query(
+        "insert into forecast_drivers (restaurant_id, model_run_id, target_day, channel, factor, multiplier) values ($1, $2, '2026-10-20', 'all', 'weekday', 1.2)",
+        [A, id],
+      );
+    };
+    const newRun = (id: string, role: string) =>
+      pg.query("insert into model_runs (id, restaurant_id, model_name, model_version, kind, role) values ($1, $2, 'forecast_daily', '1', 'forecast', $3)", [id, A, role]);
+    await as("model_writer", null, async () => {
+      for (const [id, role, passed] of runs) {
+        await newRun(id, role);
+        await addRows(id);
+        await pg.query("select finish_model_run($1, 'succeeded', null, 0.1, $2)", [id, passed]);
+      }
+      // A run still going isn't shown either.
+      await newRun("aaaaaaaa-0000-0000-0000-0000000000d4", "production");
+      await addRows("aaaaaaaa-0000-0000-0000-0000000000d4");
+    });
+    const seen = await as("authenticated", "owner@ember.test", async () => ({
+      coefficients: (await all<{ model_run_id: string }>("select model_run_id from model_coefficients")).map((r) => r.model_run_id),
+      drivers: (await all<{ model_run_id: string }>("select model_run_id from forecast_drivers")).map((r) => r.model_run_id),
+    }));
+    expect(seen).toEqual({ coefficients: [runs[0][0]], drivers: [runs[0][0]] });
+    // The writer may only add rows; an owner may not add any.
+    await expect(as("model_writer", null, () => all("select * from model_coefficients"))).rejects.toThrow(/permission denied/);
+    await expect(as("model_writer", null, () => all("delete from forecast_drivers"))).rejects.toThrow(/permission denied/);
+    await expect(
+      as("authenticated", "owner@ember.test", () =>
+        all("insert into forecast_drivers (restaurant_id, model_run_id, target_day, channel, factor, multiplier) values ($1, $2, '2026-10-21', 'all', 'x', 1)", [
+          A,
+          runs[0][0],
+        ]),
+      ),
+    ).rejects.toThrow(/row-level security|permission denied/);
+  });
+
+  test("040: an uncertain date takes its alternative day from the notes, then and later", async () => {
+    await pg.query(
+      "insert into local_calendar (restaurant_id, day, name, type, date_uncertain, notes) values ($1, '2027-03-10', 'Eid al-Fitr', 'religious', true, 'Alternative dates: 2027-03-11 (UK moon sighting)')",
+      [A],
+    );
+    expect(await all("select alt_day::text as alt_day from local_calendar where restaurant_id = $1 and day = '2027-03-10'", [A])).toEqual([{ alt_day: "2027-03-11" }]);
+    const viaView = await as("analytics_reader", null, () => all("select alt_day::text as alt_day from analytics.calendar where first_day = '2027-03-10'"));
+    expect(viaView).toEqual([{ alt_day: "2027-03-11" }]);
   });
 
   test("the service gives a job back on shutdown without using up a try, and can look at its own jobs only", async () => {

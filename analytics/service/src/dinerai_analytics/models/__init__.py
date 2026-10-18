@@ -4,8 +4,10 @@ and one register() line below (see registry.py for the rest)."""
 from __future__ import annotations
 
 from ..registry import Registry
-from . import forecast_baseline
+from . import forecast_baseline, forecast_daily
 
 
 def register_models(reg: Registry) -> None:
     reg.register(forecast_baseline.SPEC)
+    reg.register(forecast_daily.SPEC)
+    reg.register(forecast_daily.REFRESH_SPEC)
