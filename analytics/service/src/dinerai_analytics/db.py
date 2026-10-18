@@ -21,8 +21,9 @@ from psycopg.types.json import Jsonb
 
 from .config import Config
 
-# The tables model_writer may add rows to (supabase/035, 033).
-OUTPUT_TABLES = frozenset({"model_runs", "forecasts", "suggested_rotas", "suggested_rota_shifts", "menu_analysis", "finance_snapshots", "deal_outcomes"})
+# The tables model_writer may add rows to (supabase/035, 033, 040).
+OUTPUT_TABLES = frozenset({"model_runs", "forecasts", "suggested_rotas", "suggested_rota_shifts", "menu_analysis", "finance_snapshots", "deal_outcomes",
+                           "model_coefficients", "forecast_drivers"})
 OPERATORS = frozenset({"=", "<", "<=", ">", ">=", "<>"})
 
 

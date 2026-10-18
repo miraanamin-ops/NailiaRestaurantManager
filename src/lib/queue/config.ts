@@ -21,15 +21,24 @@ export const JOB_TYPES = [
 export type JobType = (typeof JOB_TYPES)[number];
 
 // Models the analytics service (analytics/service, Python) runs every night, one
-// job per model per active restaurant, due at 05:35 UK: after the 05:00
-// trading-day cut-off, so yesterday's trading counts. The 05:05 hourly run
-// queues them to start at 05:35; the 09:00 daily backup queues the same job
-// (same key, so never twice) if that run was missed, to start at once. Each
-// needs its row in job_types with runner 'external' (supabase/039_analytics_jobs.sql).
+// job per model per active restaurant, each due at its own UK time (`at`):
+//   05:35  forecast_baseline and forecast_daily: after the 05:00 trading-day
+//          cut-off, so yesterday's trading counts (the re-fit and forecast);
+//   07:00  forecast_refresh: days 0 to 2 again with the latest weather forecast
+//          and calendar, no re-fit.
+// The hourly run in the hour of `at` (05:05, 07:05) queues them to start at that
+// time; the 09:00 daily backup queues every one (same key, so never twice) if
+// its run was missed, to start at once. Each needs its row in job_types with
+// runner 'external' (supabase/039_analytics_jobs.sql, 040_forecast_model.sql).
 // Only queued while ANALYTICS_JOBS is on. The Python side issues its forecasts
 // on the same clock (analytics/service/src/dinerai_analytics/cutoff.py).
-export const NIGHTLY_MODELS = ["forecast_baseline"] as const;
-export const NIGHTLY_MODELS_AT = { hour: 5, minute: 35 } as const; // UK time they're due
+export type NightlyModel = { type: string; at: { hour: number; minute: number } };
+export const NIGHTLY_MODELS_AT = { hour: 5, minute: 35 } as const; // UK time the nightly re-fits are due
+export const NIGHTLY_MODELS: readonly NightlyModel[] = [
+  { type: "forecast_baseline", at: NIGHTLY_MODELS_AT },
+  { type: "forecast_daily", at: NIGHTLY_MODELS_AT },
+  { type: "forecast_refresh", at: { hour: 7, minute: 0 } },
+];
 
 // Lower runs first.
 export const PRIORITY = {

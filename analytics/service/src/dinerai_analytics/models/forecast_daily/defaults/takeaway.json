@@ -1,0 +1,30 @@
+{
+  "type": "takeaway",
+  "about": "Takeaways (cuisine mentions takeaway). Only what differs from general.json.",
+  "weekday_pct": {
+    "values": {"mon": -10, "tue": -10, "wed": -10, "thu": -5, "fri": 20, "sat": 20, "sun": 0},
+    "sd": 0.30,
+    "reason": "Friday and Saturday are takeaway nights."
+  },
+  "season": {
+    "amplitude_pct": 3,
+    "peak": "01-15",
+    "sd": 0.10,
+    "reason": "Delivery does better on dark, cold evenings."
+  },
+  "factors": {
+    "xmas_week": {"effect_pct": {"all": 0}, "sd": 0.25, "reason": "Nobody wants to cook between Christmas and New Year."},
+    "nye": {"effect_pct": {"all": 10}, "sd": 0.25, "reason": "A night in with food delivered."},
+    "new_year": {"effect_pct": {"all": 10}, "sd": 0.25, "reason": "A tired day: order in."},
+    "mothers_day": {"effect_pct": {"all": 0}, "sd": 0.20, "reason": "A meal out, not a takeaway occasion."},
+    "valentines": {"effect_pct": {"delivery": 5}, "sd": 0.20, "reason": "A night in for some couples."},
+    "payday_window": {"effect_pct": {"all": 5}, "sd": 0.05, "reason": "Payday treats are often a takeaway."},
+    "ramadan_1_10": {"effect_pct": {"all": 3}, "sd": 0.10, "reason": "Some late-evening orders after iftar."},
+    "ramadan_11_20": {"effect_pct": {"all": 3}, "sd": 0.10, "reason": "Some late-evening orders after iftar."},
+    "ramadan_last10": {"effect_pct": {"all": 3}, "sd": 0.10, "reason": "Some late-evening orders after iftar."},
+    "chand_raat": {"effect_pct": {"all": 5}, "sd": 0.25, "reason": "A late night out before Eid."},
+    "football_during": {"effect_pct": {"dine_in": -5, "takeaway": 5, "delivery": 10}, "unit": "per match unit", "sd": 0.15, "reason": "Match nights are delivery nights."},
+    "football_after": {"effect_pct": {"all": 5}, "unit": "per match unit", "sd": 0.15, "reason": "Food after the final whistle."},
+    "venue": {"effect_pct": {"dine_in": 2, "takeaway": 5, "delivery": 5}, "unit": "per 10,000 people at 0 km (fading with distance)", "sd": 0.10, "reason": "Crowds walking past pick up food."}
+  }
+}

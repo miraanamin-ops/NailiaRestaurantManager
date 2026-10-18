@@ -1,0 +1,33 @@
+{
+  "type": "halal",
+  "about": "Halal restaurants (cuisine mentions halal). Only what differs from general.json.",
+  "weekday_pct": {
+    "values": {"mon": -15, "tue": -15, "wed": -10, "thu": -5, "fri": 15, "sat": 25, "sun": 15},
+    "sd": 0.30,
+    "reason": "Families eat out at weekends; Friday is busy after Jummah."
+  },
+  "factors": {
+    "bank_holiday": {"effect_pct": {"all": 10}, "sd": 0.20, "reason": "Family meals out on a free day."},
+    "mothers_day": {"effect_pct": {"dine_in": 10}, "sd": 0.20, "reason": "A family meal out."},
+    "valentines": {"effect_pct": {"dine_in": 5}, "sd": 0.20, "reason": "Some couples dining, a smaller occasion for a family restaurant."},
+    "school_holiday": {"effect_pct": {"all": 3}, "sd": 0.10, "reason": "Families out in the daytime."},
+    "inset_day": {"effect_pct": {"all": 3}, "sd": 0.10, "reason": "Like a one-day school holiday."},
+    "diwali": {"effect_pct": {"all": 0}, "sd": 0.15, "reason": "Not a festival of a halal restaurant's core customers; the data can still show one."},
+    "ramadan_1_10": {"effect_pct": {"all": 0}, "sd": 0.20, "reason": "The daytime loss is balanced by iftar."},
+    "ramadan_11_20": {"effect_pct": {"all": 5}, "sd": 0.20, "reason": "Iftar meals out build through the month."},
+    "ramadan_last10": {"effect_pct": {"all": 10}, "sd": 0.20, "reason": "The last nights build up: late meals and Eid shopping."},
+    "eid_fitr_d1": {"effect_pct": {"all": 40}, "sd": 0.30, "reason": "The biggest celebration for a halal customer base."},
+    "eid_fitr_d2": {"effect_pct": {"all": 20}, "sd": 0.30, "reason": "Celebrations carry on."},
+    "eid_fitr_d3": {"effect_pct": {"all": 10}, "sd": 0.30, "reason": "Tailing off."},
+    "eid_adha_d1": {"effect_pct": {"all": 25}, "sd": 0.30, "reason": "Celebrated, but more at home than Eid al-Fitr."},
+    "eid_adha_d2": {"effect_pct": {"all": 15}, "sd": 0.30, "reason": "Celebrations carry on."},
+    "eid_adha_d3": {"effect_pct": {"all": 5}, "sd": 0.30, "reason": "Tailing off."},
+    "chand_raat": {"effect_pct": {"all": 15}, "sd": 0.25, "reason": "The night before Eid: shopping and eating out."},
+    "cricket_during": {"effect_pct": {"dine_in": -5, "takeaway": 5, "delivery": 5}, "unit": "per match unit", "sd": 0.15, "reason": "Big internationals are watched at home with food, like football."},
+    "cricket_after": {"effect_pct": {"takeaway": 5, "delivery": 5}, "unit": "per match unit", "sd": 0.15, "reason": "Food after the match."}
+  },
+  "sports": {
+    "football": {"national_teams": ["England"], "reason": "England matches are watched widely."},
+    "cricket": {"national_teams": ["Pakistan", "India", "Bangladesh", "England"], "reason": "Internationals followed by many South Asian and British customers (used once a fixtures feed exists)."}
+  }
+}

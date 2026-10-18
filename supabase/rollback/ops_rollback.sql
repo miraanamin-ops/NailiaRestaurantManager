@@ -11,6 +11,15 @@
 
 begin;
 
+-- 0. What 040 (the forecast model) built on these tables, first: its tables, its
+--    helper, and the calendar trigger (it reads the notes column, which goes
+--    below; its two date columns go with the other calendar columns in 4).
+drop table if exists model_coefficients, forecast_drivers cascade;
+drop function if exists ops_run_is_showable(uuid);
+drop trigger if exists local_calendar_alt_day on local_calendar;
+drop function if exists ops_calendar_alt_day();
+delete from schema_migrations where name = '040_forecast_model.sql';
+
 -- 1. The menu guard first, so restaurants.menu can be written normally again.
 drop trigger if exists ops_menu_guard on restaurants;
 drop trigger if exists ops_menu_after_insert on restaurants;
@@ -69,7 +78,8 @@ alter table local_calendar drop column if exists end_day, drop column if exists 
   drop column if exists scope, drop column if exists region, drop column if exists council_code,
   drop column if exists latitude, drop column if exists longitude, drop column if exists venue_id,
   drop column if exists expected_size, drop column if exists external_source, drop column if exists external_id,
-  drop column if exists notes, drop column if exists updated_at;
+  drop column if exists notes, drop column if exists updated_at,
+  drop column if exists alt_day, drop column if exists alt_probability;
 drop table if exists venues cascade;
 
 alter table sales_days drop column if exists covers, drop column if exists covers_source;

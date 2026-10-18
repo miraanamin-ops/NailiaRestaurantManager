@@ -5,9 +5,13 @@ It takes its jobs from the app's job queue (`supabase/027_job_queue.sql`), reads
 clean data from the `analytics` views, and writes model outputs (forecasts now;
 rotas, menu engineering, finance and deal uplift later).
 
-Today it runs one model, `forecast_baseline`: same weekday, average of the last 4
-weeks. It is a **benchmark**, the yardstick the real forecast model must beat, and
-it is never shown to an owner.
+It runs three models:
+- `forecast_baseline`: same weekday, average of the last 4 weeks. A **benchmark**,
+  the yardstick the real forecast must beat, never shown to an owner.
+- `forecast_daily` (05:35 UK): the demand forecast, a **production** model. Shown to
+  an owner only on nights its back-test passes. No AI: pure statistics.
+- `forecast_refresh` (07:00 UK): days 0 to 2 of that forecast again, with the newest
+  weather forecast and calendar, without re-fitting.
 
 ## How it fits together
 
@@ -58,9 +62,11 @@ src/dinerai_analytics/
   cutoff.py      issue time (05:35 UK) and which trading days are known by then
   backtest.py    the 12-week rolling back-test every forecast model uses
   logs.py        JSON lines (or --pretty)
-  cli.py         worker | enqueue | run-one | status | check | models
-  models/        one file per model, registered in models/__init__.py
+  cli.py         worker | enqueue | run-one | status | check | models | forecast-report
+  models/        one file (or folder) per model, registered in models/__init__.py
+    forecast_daily/   the demand forecast; each module's notes say what it does
 scripts/dev_worker_login.py   gives queue_worker a login on the DEV database
+scripts/recovery_report.py    the forecast's estimates against the generator's known effects
 tests/unit, tests/integration
 ```
 
@@ -104,10 +110,19 @@ data (`clear_ops_dummy_data`).
 
 - **Unit tests:** the registry, the config guards, the cut-off rule, the baseline
   maths and the back-test scoring.
+- **The forecast's unit tests** (`test_forecast_features.py`, `test_forecast_model.py`,
+  on a small made-up restaurant in `forecast_fixture.py`):
+  - every feature builder: clock changes, the trading-day cut-off, Ramadan and
+    maghrib, Jummah, distance decay, weather as issued, deals and prices as known;
+  - the model as a whole: hours adding up to days and channels to all, the same
+    numbers for the same seed, no look-ahead (later data is altered and the forecast
+    mustn't move), uncertain dates, the refresh, the calibration, the pass bar;
+  - housekeeping: the defaults files, and that the model never reads ground truth.
 - **Integration and permission tests:** a throwaway local Postgres (pgserver), built
   with setup.sql and every migration (the generator's `apply_migrations.py`), the
   3-week fixtures (`load.py --fixture`), and one restaurant with 21 weeks of plain,
-  made-up sales.
+  made-up sales. `test_forecast_daily.py` covers the new tables' rights, a nightly
+  run and its refresh end to end, and too little history.
 - **GitHub:** the `analytics-service` job in `.github/workflows/ci.yml` runs them on
   every push.
 
@@ -142,11 +157,86 @@ then, so its numbers are directly comparable with the baseline's.
   back-test is complete enough to compare against. A benchmark is never shown,
   whatever "passed" says.
 
+## The forecast (forecast_daily)
+
+**What it forecasts:** orders per day for each channel (dine-in, takeaway,
+delivery) and in all, 56 days ahead; hourly for the first 14 days. From those:
+sales (net of VAT) and covers. Each comes as low, likely and high (P10, P50, P90).
+
+**The model** (one per restaurant and channel), with orders as a negative binomial:
+
+    log(expected orders) = level + trend + season + weekday + the factors + log(hours open)
+
+- **The factors:** calendar, religious, weather, matches and crowds, deals, prices.
+  The full list, and how each is built, is in the module notes
+  (`models/forecast_daily/*.py`).
+- **Fitting:** each weight starts from a default (its prior) and moves as far as the
+  data supports. Recent days count more (26-week half-life). It is re-fitted every
+  night on all history.
+- **Ranges:** simulated (500 draws), then calibrated on the back-test so the 80%
+  range holds about 80% of actual days.
+- **Hours:** each day is split into hours by an hour profile: Ramadan follows
+  maghrib, and Friday's Jummah window follows dhuhr. Hours add up exactly to the day,
+  and channels add up exactly to all.
+
+**The defaults** live in `models/forecast_daily/defaults/`: `general.json` is complete,
+and `halal.json`, `cafe.json` and `takeaway.json` list only what differs. Each weight
+has a written reason. The type comes from the restaurant's cuisine. To change a
+default, edit the file. A test checks that every entry still has a reason and that
+every factor has a default.
+
+**Passed** (written to `model_runs.passed`, the same bar for every restaurant):
+- orders/all: WAPE no worse than `forecast_baseline` on the 12-week back-test, and at
+  least 10% better than it on the long back-test (which covers Ramadan, Eid and other
+  special periods);
+- every channel with at least 15% of the orders: WAPE no more than 5% worse than
+  `forecast_baseline` on the 12-week back-test;
+- for orders/all and each of those channels: 80% range coverage between 75% and 88%
+  (slightly wide ranges do less harm than narrow ones), and bias under 5% either way;
+- at least 8 weeks of history.
+
+Under 8 weeks of history the run succeeds with no forecast and passed false.
+
+**What a run writes:**
+- `forecasts`, daily and hourly;
+- `model_coefficients`: every weight with its sd and its prior, so you can see the
+  weights change night by night;
+- `forecast_drivers`: the 6 biggest reasons behind each day, as multipliers.
+
+The run's metrics hold every score by channel and horizon, side by side with the
+three benchmarks (last week, the baseline, exponential smoothing).
+
+### Running it against dinerai-dev
+
+From `analytics/service/` (`ENV` is `C:\Users\miraa\dev\analytics-dev.env`):
+
+| What | Command |
+|---|---|
+| A nightly run, written to the database (as if at 05:35 that day) | `.venv\Scripts\python -m dinerai_analytics run-one --env ENV --restaurant demo-saffron-lane --model forecast_daily --as-of 2026-10-17` |
+| The same, computed and printed only | add `--dry-run` |
+| The 07:00 refresh of that run | `... run-one --env ENV --restaurant demo-saffron-lane --model forecast_refresh --as-of 2026-10-17` |
+| The full report (the nightly run, the long back-test, chart data, today's weights) for every demo restaurant | `... forecast-report --env ENV --restaurant demo --as-of 2026-10-17 --out C:\Users\miraa\dev\forecast-report.json` |
+| The recovery table (estimates against the generator's known effects) | `.venv\Scripts\python scripts\recovery_report.py --report C:\Users\miraa\dev\forecast-report.json --truth C:\Users\miraa\dev\naila-synth\analytics\generator\output` |
+
+**The 12-week back-test** runs inside every nightly run, and its results are in that
+run's metrics (`pass`, `series`, `benchmarks`, `hourly`, `special_days`).
+
+**The long back-test** uses about 50 cut-offs spread over the history, and gives
+Eid, Ramadan and match days separately. It takes about a minute per restaurant, so
+the nightly run makes it once every 28 days (and when the model version changes) and
+keeps its orders/all summary in the run's metrics (`long_backtest`, with `cached`
+true on the nights that reuse it). `forecast-report` shows it in full, with every
+series, horizon and weight.
+
+`recovery_report.py` is the only code that reads the generator's ground truth. It
+sits outside the model package, and a test checks that the model never reads it.
+
 ## Deploying (Railway)
 
 Not deployed yet. The builder deploys it once the real forecast model passes its back-test. Then, in this order:
 
-1. **Supabase, production:** SQL Editor, paste `supabase/039_analytics_jobs.sql`, Run.
+1. **Supabase, production:** SQL Editor, paste `supabase/039_analytics_jobs.sql`, Run;
+   then the same with `supabase/040_forecast_model.sql` (the forecast's job types and tables).
 2. **Give the worker a password.** On your computer run
    `py -c "import secrets; print(secrets.token_urlsafe(24))"` and copy the result.
    In Supabase > SQL Editor run
@@ -169,11 +259,16 @@ Not deployed yet. The builder deploys it once the real forecast model passes its
    settings and run `check --env <file> --allow-production`. Every line should say ok.
 6. **Vercel:** Settings > Environment Variables > add `ANALYTICS_JOBS` = `true`
    (Production), then redeploy. From the next 05:35 UK, every active restaurant gets
-   a nightly `forecast_baseline` job.
+   nightly `forecast_baseline` and `forecast_daily` jobs, and a `forecast_refresh` at 07:00.
 
 **To stop it:** set `ANALYTICS_JOBS` to `false` in Vercel (no new jobs), and remove
-the Railway service. `supabase/rollback/analytics_rollback.sql` undoes 039.
+the Railway service. `supabase/rollback/forecast_model_rollback.sql` undoes 040, then
+`supabase/rollback/analytics_rollback.sql` undoes 039.
 
 **Scaling:** each copy runs one job at a time. Raise Railway's replica count when the
 nightly batch takes too long; copies never run the same job. `job_types.max_running`
-(4 for `forecast_baseline`) caps how many run at once across all copies.
+(4 each for `forecast_baseline`, `forecast_daily` and `forecast_refresh`) caps how many
+run at once across all copies. A `forecast_daily` run took 35 to 60 seconds per
+restaurant on the builder's laptop, most of it the 12-week replay, and 65 to 95
+seconds on the night every 28 days that re-makes the long back-test. Its time budget
+is 10 minutes.

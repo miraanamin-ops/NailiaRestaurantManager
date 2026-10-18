@@ -28,7 +28,8 @@ Kind = Literal["forecast", "rota", "menu", "finance", "deal", "other"]
 ROLES = ("benchmark", "production")
 KINDS = ("forecast", "rota", "menu", "finance", "deal", "other")
 # Output tables a model may return rows for (the runner adds model_run_id, restaurant_id and issued_at).
-MODEL_OUTPUTS = ("forecasts", "suggested_rotas", "suggested_rota_shifts", "menu_analysis", "finance_snapshots", "deal_outcomes")
+MODEL_OUTPUTS = ("forecasts", "suggested_rotas", "suggested_rota_shifts", "menu_analysis", "finance_snapshots", "deal_outcomes",
+                 "model_coefficients", "forecast_drivers")
 _NAME = re.compile(r"^[a-z][a-z0-9_]{1,62}$")
 _VERSION = re.compile(r"^\d+\.\d+\.\d+$")
 

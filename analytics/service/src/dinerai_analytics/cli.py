@@ -6,6 +6,8 @@
   status   --env FILE JOB_ID [--watch]
   check    --env FILE|process                                       connection and permission smoke test
   models                                                            the registered models
+  forecast-report --env FILE --restaurant ID|SLUG|demo --out FILE.json [--as-of ...] [--cutoffs 50]
+           forecast_daily's back-tests and chart data (computes, writes nothing to the database)
 
 Every command that touches a database needs --env, and --allow-production for
 the production project. Add --pretty for readable logs instead of JSON lines.
@@ -182,6 +184,46 @@ def cmd_check(a) -> int:
     return 0 if all(ok for _, ok in results) and user == "queue_worker" else 1
 
 
+def cmd_forecast_report(a) -> int:
+    """forecast_daily's full report (for the private charts page): the nightly run computed in full (nothing is
+    written), the long back-test across the history, and the chart data, as one JSON file."""
+    from pathlib import Path
+
+    from .models.forecast_daily import model as fmodel
+    from .models.forecast_daily import report as freport
+    from .runner import make_context
+
+    cfg = _config(a)
+    spec = load_registry(cfg.extra_models).by_name("forecast_daily")
+    out = {}
+    with connect(cfg) as conn:
+        if a.restaurant == "demo":
+            refs = [str(r["restaurant_id"]) for r in conn.execute(
+                "select distinct d.restaurant_id from analytics.sales_daily d join analytics.restaurants r on r.id = d.restaurant_id "
+                "where r.is_demo order by 1").fetchall()]
+        else:
+            refs = [a.restaurant]
+        for ref in refs:
+            r = _restaurant(conn, ref)
+            payload = {"as_of": a.as_of} if a.as_of else {}
+            job = Job(id="report", type=spec.job_type, restaurant_id=str(r["id"]), key="report", payload=payload, attempts=0, max_attempts=1, lock_seconds=300)
+            ctx = make_context(conn, spec, job)
+            n = fmodel.nightly(ctx)
+            entry = {"restaurant": {"id": str(r["id"]), "slug": r["slug"], "name": r["name"]}, "passed": n.result.passed, "metrics": n.result.metrics}
+            if n.replay is not None:
+                # The nightly run made the 50-cut-off long back-test unless one was cached; reuse it when it matches.
+                same = n.long is not None and len(n.long["cutoffs"]) == a.cutoffs
+                entry["long_backtest"] = n.long if same else freport.long_backtest(n.prep, ctx.trading_day_cutoff_hour, ctx.restaurant_id, n.profiles,
+                                                                                   a.cutoffs)
+                entry["charts"] = freport.chart_data(n.prep, n)
+                entry["weights_now"] = freport.weights_now(n.prep, n.live)
+            out[r["slug"]] = entry
+            log("forecast_report.restaurant", slug=r["slug"], passed=n.result.passed, wape=n.result.score)
+    Path(a.out).write_text(json.dumps(out, default=str), encoding="utf8")
+    print(f"Wrote {a.out} ({len(out)} restaurant(s))")
+    return 0
+
+
 def cmd_models(a) -> int:
     for s in load_registry().specs:
         print(f"{s.name} {s.version}  role={s.role}  kind={s.kind}  job_type={s.job_type}  views={','.join(s.views)}  budget={s.time_budget_s}s")
@@ -224,6 +266,13 @@ def parser() -> argparse.ArgumentParser:
 
     c = with_env(sub.add_parser("check"))
     c.set_defaults(fn=cmd_check)
+
+    fr = with_env(sub.add_parser("forecast-report"))
+    fr.add_argument("--restaurant", required=True, help="an id or slug, or 'demo' for every demo restaurant with sales")
+    fr.add_argument("--as-of", type=lambda s: dt.date.fromisoformat(s).isoformat())
+    fr.add_argument("--cutoffs", type=int, default=50, help="cut-offs in the long back-test")
+    fr.add_argument("--out", required=True, help="the JSON file to write")
+    fr.set_defaults(fn=cmd_forecast_report)
 
     m = sub.add_parser("models")
     m.add_argument("--pretty", action="store_true")

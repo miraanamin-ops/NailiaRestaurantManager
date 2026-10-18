@@ -8,13 +8,17 @@ version = "0.1.0"
 description = "DinerAI's analytics service: runs the statistical models from the job queue"
 requires-python = ">=3.10"
 # Pinned versions live in requirements.txt.
-dependencies = ["psycopg[binary]>=3.2", "numpy>=1.26", "tzdata"]
+dependencies = ["psycopg[binary]>=3.2", "numpy>=1.26", "scipy>=1.11", "tzdata"]
 
 [project.scripts]
 dinerai-analytics = "dinerai_analytics.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# forecast_daily's editable defaults (the priors per restaurant type) ship with the package.
+[tool.setuptools.package-data]
+"dinerai_analytics.models.forecast_daily" = ["defaults/*.json"]
 
 [tool.ruff]
 line-length = 160

@@ -2,4 +2,6 @@
 # libraries (pandas, LightGBM, OR-Tools...) here when that model arrives.
 psycopg[binary]==3.3.6
 numpy==2.2.6
+# forecast_daily: the optimiser (L-BFGS-B fallback), gammaln/digamma for the negative binomial.
+scipy==1.15.3
 tzdata==2026.5
