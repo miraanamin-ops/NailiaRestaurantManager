@@ -11,7 +11,9 @@ import { ownerChannel } from "@/lib/followups";
 import { runReviewCheck } from "@/lib/google-jobs";
 import { runMorningStep, type MorningCarry } from "@/lib/morning";
 import { messageOwner } from "@/lib/notify";
-import { runWeather } from "@/lib/sales/weather";
+import { backfillJob } from "@/lib/feeds/backfill";
+import { clearFeedCache, FEED_JOB_HANDLERS } from "@/lib/feeds/jobs";
+import { checkFeedHealth } from "@/lib/feeds/status";
 import { processQueue } from "@/lib/send";
 import { OwnerToldError, SORRY } from "@/lib/sorry";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -139,26 +141,23 @@ const releaseSends: JobHandler = {
   },
 };
 
-// Hourly: today's weather (once a day; the first time, the last 12 months too).
+// The old hourly weather job: the weather feed (feed_weather, 04:30 and 06:45
+// UK) does this now. Kept so jobs queued before the change finish quietly.
 const weather: JobHandler = {
-  run: async (job) => {
-    const r = await restaurantFor(job);
-    if (!r?.active) return { skipped: "restaurant not active" };
-    return { weather: await runWeather(r, new Date()) };
-  },
+  run: async () => ({ skipped: "moved to the weather feed (feed_weather)" }),
 };
 
 // 9:31 UK: briefs that haven't gone, and the queue's own health.
 const healthCheck: JobHandler = {
   run: async () => {
     const now = new Date();
-    return { lateBriefs: await checkLateBriefs(now), queue: await checkQueueHealth(now) };
+    return { lateBriefs: await checkLateBriefs(now), queue: await checkQueueHealth(now), feeds: await checkFeedHealth(now) };
   },
 };
 
 // Daily: old finished and dead jobs (lib/queue/config.ts RETENTION).
 const cleanupJob: JobHandler = {
-  run: async () => ({ removed: await cleanup() }),
+  run: async () => ({ removed: await cleanup(), feedCache: await clearFeedCache() }),
 };
 
 export const HANDLERS: Record<string, JobHandler> = {
@@ -172,4 +171,6 @@ export const HANDLERS: Record<string, JobHandler> = {
   weather,
   health_check: healthCheck,
   cleanup: cleanupJob,
+  ...FEED_JOB_HANDLERS,
+  feed_backfill: backfillJob,
 };

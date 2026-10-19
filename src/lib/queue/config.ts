@@ -17,6 +17,15 @@ export const JOB_TYPES = [
   "weather",
   "health_check",
   "cleanup",
+  // The outside data feeds (lib/feeds, supabase/041_outside_feeds.sql)
+  "feed_weather",
+  "feed_calendar",
+  "feed_prayer",
+  "feed_football",
+  "feed_events",
+  "feed_disruption",
+  "feed_terms_check",
+  "feed_backfill",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

@@ -41,7 +41,7 @@ describe("the app", () => {
     expect(route("localhost:3000", "/")).toEqual({ kind: "app" });
   });
   test("owner pages need a login; customer pages don't", () => {
-    for (const p of ["/", "/log", "/settings", "/settings/email-preview", "/report/abc", "/onboarding", "/onboarding/setup"]) expect(needsLogin(p)).toBe(true);
+    for (const p of ["/", "/log", "/settings", "/settings/email-preview", "/report/abc", "/onboarding", "/onboarding/setup", "/feeds", "/feeds/terms"]) expect(needsLogin(p)).toBe(true);
     for (const p of ["/r/ember-spice", "/reward/x", "/start", "/login", "/export/download", "/api/whatsapp", "/site", "/reports"]) expect(needsLogin(p)).toBe(false);
   });
 });

@@ -1,0 +1,22 @@
+{
+  "_note": "Dates as observed by the East London Mosque (which many East London Muslims follow). Communities following UK moon sighting were often a day later; those days are in 'alternatives' and the events are marked date_uncertain. Ramadan runs from the first fast to the last fast, inclusive. Checked on 2026-10-17.",
+  "sources": [
+    "https://www.eastlondonmosque.org.uk/news/eid-al-fitr-2025 (Eid al-Fitr Sunday 30 March 2025)",
+    "https://www.eastlondonmosque.org.uk/news/eid-al-fitr-2026 (Eid al-Fitr Friday 20 March 2026; Ramadan began Wednesday 18 February)",
+    "https://www.newham.gov.uk/downloads/file/6522/schooltermandholidaydates202425 (Ramadan from the evening of 28 February 2025; Eid al-Adha 6 June 2025)",
+    "https://en.wikipedia.org/wiki/Ramadan_in_the_United_Kingdom (UK moon sighting: Ramadan 19 February 2026, Eid 21 March 2026)",
+    "https://hyphenonline.com/2026/04/22/when-is-eid-al-adha-2026-uk-europe/ (Eid al-Adha Wednesday 27 May 2026)"
+  ],
+  "events": [
+    {"name": "Ramadan", "kind": "ramadan", "start": "2025-03-01", "end": "2025-03-29", "uncertain": false},
+    {"name": "Eid al-Fitr", "kind": "eid_fitr", "start": "2025-03-30", "end": "2025-03-30", "uncertain": true, "alternatives": ["2025-03-31"]},
+    {"name": "Eid al-Adha", "kind": "eid_adha", "start": "2025-06-06", "end": "2025-06-06", "uncertain": false},
+    {"name": "Ramadan", "kind": "ramadan", "start": "2026-02-18", "end": "2026-03-19", "uncertain": true, "alternatives": ["starts 2026-02-19 (UK moon sighting)"]},
+    {"name": "Eid al-Fitr", "kind": "eid_fitr", "start": "2026-03-20", "end": "2026-03-20", "uncertain": true, "alternatives": ["2026-03-21 (UK moon sighting)"]},
+    {"name": "Eid al-Adha", "kind": "eid_adha", "start": "2026-05-27", "end": "2026-05-27", "uncertain": false}
+  ],
+  "cultural": [
+    {"name": "Diwali", "day": "2024-11-01", "source": "Newham calendar 2024-25"},
+    {"name": "Diwali", "day": "2025-10-21", "source": "Newham calendar 2025-26"}
+  ]
+}

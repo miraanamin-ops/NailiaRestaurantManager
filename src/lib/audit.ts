@@ -35,7 +35,9 @@ export type AuditAction =
   | "agent_failed" // an agent job failed (the builder was alerted)
   | "profile_changed" // a profile field changed (a new profile version)
   | "profile_reverted" // Revert on one profile change
-  | "job_retried"; // the builder retried a dead job from /log
+  | "job_retried" // the builder retried a dead job from /log
+  | "builder_command" // a BUILDER ... WhatsApp command from BUILDER_WHATSAPP
+  | "outside_data"; // the builder changed outside data on /feeds (a confirmed date, term dates, a timetable...)
 
 export type AuditEntry = {
   id: string;

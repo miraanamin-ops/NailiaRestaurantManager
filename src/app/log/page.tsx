@@ -9,6 +9,8 @@ import { recentRuns } from "@/lib/job-runs";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { allSwitches, describeSwitches, switchChanges } from "@/lib/switches";
 import { deadJobs, queueStats, type QueueJob, type QueueStat } from "@/lib/queue/store";
+import { FEEDS, feedProblem, type FeedName } from "@/lib/feeds/config";
+import { feedStatuses, type FeedStatus } from "@/lib/feeds/status";
 import { AgentCompare, type CompareAgent } from "./agent-compare";
 import { retryJob } from "./actions";
 
@@ -46,6 +48,8 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   profile_changed: { icon: "🗂️", label: "Profile changed" },
   profile_reverted: { icon: "↩️", label: "Profile change reverted" },
   job_retried: { icon: "🔁", label: "Job retried" },
+  builder_command: { icon: "🛠️", label: "Builder command" },
+  outside_data: { icon: "🛰️", label: "Outside data" },
 };
 
 const dayOf = (iso: string) =>
@@ -79,6 +83,8 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   // The job queue, every restaurant (builder only). Before supabase/027_job_queue.sql
   // has been run there's no queue: the section says so.
   const queue = owner.isBuilder ? await queueSummary() : null;
+  // The outside data feeds (builder only). Before supabase/041_outside_feeds.sql there are none.
+  const feeds: FeedStatus[] | null = owner.isBuilder ? await feedStatuses().catch(() => null) : null;
 
   const days = new Map<string, AuditEntry[]>();
   for (const e of entries) {
@@ -170,6 +176,30 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
         )}
 
         {queue && <QueueSection queue={queue} r={restaurant.id} retried={typeof sp.retried === "string" ? sp.retried : null} />}
+
+        {feeds && (
+          <section id="feeds">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500">Outside data (builder only)</h2>
+            <ul className="divide-y divide-stone-100 rounded-2xl bg-white text-sm shadow-sm ring-1 ring-stone-200/70">
+              {feeds.map((f) => {
+                const problem = feedProblem(f, new Date());
+                return (
+                  <li key={f.feed} className="px-4 py-2.5">
+                    <span aria-hidden>{!f.enabled ? "⏸️" : problem ? "⚠️" : f.last_outcome === "skipped" ? "⏭️" : f.last_outcome === "ok" ? "✅" : "⏳"} </span>
+                    <b>{FEEDS[f.feed as FeedName]?.label ?? f.feed}</b> · last success {f.last_success_at ? `${dayOf(f.last_success_at).split(" ").slice(0, 3).join(" ")} ${timeOf(f.last_success_at)}` : "never"}
+                    {f.next_run_at && <> · next {dayOf(f.next_run_at).split(" ").slice(0, 3).join(" ")} {timeOf(f.next_run_at)}</>}
+                    {f.last_rows && <span className="block text-xs text-stone-500">Rows: {Object.entries(f.last_rows).map(([k, v]) => `${k} ${v}`).join(", ")}</span>}
+                    {problem && <span className="block text-xs text-red-700">{problem}</span>}
+                    {!problem && f.last_outcome === "skipped" && <span className="block text-xs text-stone-500">Skipped: {String(f.last_detail?.skipped ?? "")}</span>}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-1 text-xs text-stone-500">
+              Switches, coverage, dates to confirm and what you add by hand: <a href={`/feeds?r=${restaurant.id}`} className="underline">Outside data</a>.
+            </p>
+          </section>
+        )}
 
         {runs?.data && (
           <section>

@@ -5,7 +5,7 @@ import "server-only";
 const MAX_BYTES = 500_000;
 const MAX_CHARS = 5000;
 
-export function textFromHtml(html: string) {
+export function textFromHtml(html: string, maxChars = MAX_CHARS) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -17,7 +17,7 @@ export function textFromHtml(html: string) {
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, MAX_CHARS);
+    .slice(0, maxChars);
 }
 
 // Only ordinary public websites: never this server, a local network or a cloud metadata address.

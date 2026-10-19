@@ -32,9 +32,17 @@ function condition(col: string, op: string, raw: string): Pred {
       return (r) => cmp(r[col], v) > 0;
     case "gte":
       return (r) => cmp(r[col], v) >= 0;
+    case "like":
+      return likePred(col, v);
     default:
       throw new Error(`memory-db: unsupported filter ${op}`);
   }
+}
+
+// SQL LIKE (% or PostgREST's *, any characters).
+function likePred(col: string, pattern: string): Pred {
+  const re = new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/[%*]/g, ".*")}$`);
+  return (r) => re.test(String(r[col] ?? ""));
 }
 
 // "a.is.null,b.lt.2026-01-01" / 'from_number.eq."x",to_number.eq."x"' / "w.in.(a,b)"
@@ -104,7 +112,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
       }
       if (op === "delete") {
         tables[name] = rows.filter((r) => !matched.includes(r));
-        return { data: null, error: null, count: null };
+        return { data: returning ? matched.map((r) => ({ ...r })) : null, error: null, count: null };
       }
       for (const o of [...order].reverse()) matched = [...matched].sort((a, b) => cmp(a[o.col], b[o.col]) * (o.asc ? 1 : -1));
       if (offset || limit !== null) matched = matched.slice(offset, limit === null ? undefined : offset + limit);
@@ -148,6 +156,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
       lt: (c: string, v: unknown) => (preds.push((r) => cmp(r[c], v) < 0), chain),
       lte: (c: string, v: unknown) => (preds.push((r) => cmp(r[c], v) <= 0), chain),
       or: (expr: string) => (preds.push(parseOr(expr)), chain),
+      like: (c: string, pattern: string) => (preds.push(likePred(c, pattern)), chain),
       order: (c: string, o?: { ascending?: boolean }) => ((order = [...order, { col: c, asc: o?.ascending ?? true }]), chain),
       limit: (n: number) => ((limit = n), chain),
       range: (from: number, to: number) => ((offset = from), (limit = to - from + 1), chain),
@@ -188,6 +197,11 @@ export function memoryDb(seed: Record<string, Row[]>) {
   let queueReady: Promise<(fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>> | null = null;
   const rpc = async (fn: string, args?: Record<string, unknown>) => {
     // The menu's functions run on the real SQL too (support/menu-pg.ts), on this stand-in's rows.
+    // The outside data feeds' functions, in plain code with the same rules (support/feeds-memory.ts).
+    if (fn.startsWith("feed_")) {
+      const { feedRpc } = await import("./feeds-memory");
+      return feedRpc(tables, fn, args ?? {});
+    }
     if (fn === "save_menu" || fn === "menu_json") {
       const { menuRpc } = await import("./menu-pg");
       return menuRpc(tables, fn, args ?? {});

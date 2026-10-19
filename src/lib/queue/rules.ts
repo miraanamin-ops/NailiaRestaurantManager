@@ -98,7 +98,6 @@ export function plannedJobs(
     }
     add("feedback", keys.hourly("feedback", r.id, now));
     add("release_sends", keys.hourly("release_sends", r.id, now));
-    add("weather", keys.hourly("weather", r.id, now));
   }
   // From 9am, once a day: the morning job's first step (the rest follow in order).
   if (morningGateResult === null) {

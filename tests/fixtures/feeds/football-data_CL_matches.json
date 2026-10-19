@@ -1,0 +1,10 @@
+{
+  "_note": "Shaped from football-data.org v4's documented answer for /competitions/CL/matches. Replace with a real answer: scripts/save-feed-fixtures.mjs",
+  "competition": { "id": 2001, "name": "UEFA Champions League", "code": "CL", "type": "CUP" },
+  "matches": [
+    { "competition": { "id": 2001, "name": "UEFA Champions League", "code": "CL", "type": "CUP" }, "id": 551001, "utcDate": "2026-11-04T20:00:00Z",
+      "status": "TIMED", "matchday": 4, "stage": "LEAGUE_STAGE", "group": null,
+      "homeTeam": { "id": 57, "name": "Arsenal FC", "shortName": "Arsenal", "tla": "ARS" },
+      "awayTeam": { "id": 5, "name": "FC Bayern München", "shortName": "Bayern", "tla": "FCB" } }
+  ]
+}

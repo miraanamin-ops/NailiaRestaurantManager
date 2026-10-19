@@ -1,4 +1,6 @@
 import "server-only";
+import { enqueueBackfill } from "@/lib/feeds/backfill";
+import { LOCATION_RESET } from "@/lib/feeds/config";
 import { getSupabase, type MenuCategory } from "@/lib/supabase";
 import type { OpsSource } from "./types";
 
@@ -38,8 +40,19 @@ export async function updateRestaurantColumns(
   const { menu, ...rest } = fields;
   if (menu !== undefined) await saveMenu(restaurantId, menu as MenuCategory[], opts);
   if (Object.keys(rest).length) {
-    const { error } = await getSupabase().from("restaurants").update(rest).eq("id", restaurantId);
+    // A new address moves the restaurant: its position, weather cell and council
+    // are found again, and its outside data filled in for the new place.
+    const moved = "address" in rest;
+    const update = moved ? { ...rest, ...LOCATION_RESET } : rest;
+    const { error } = await getSupabase().from("restaurants").update(update).eq("id", restaurantId);
     if (error) throw new Error(error.message);
+    if (moved) {
+      try {
+        await enqueueBackfill(restaurantId, "location");
+      } catch (err) {
+        console.error("Couldn't queue the outside data backfill", err);
+      }
+    }
   }
 }
 

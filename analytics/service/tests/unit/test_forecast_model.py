@@ -343,3 +343,17 @@ def test_the_model_never_reads_the_ground_truth():
         if f.name != "defaults.py":
             assert not re.search(r"\bopen\(|read_text|read_bytes|np\.load|json\.load\(", text), f"{f.name} reads a file"
     assert "HERE / " in (PKG / "defaults.py").read_text(encoding="utf8")
+
+
+def test_a_cricket_fixture_counts_as_cricket_and_football_stays_football():
+    # analytics.football_fixtures.sport (041): the builder enters cricket; a row without it is football.
+    data = make_data()
+    day = D(2026, 9, 26)  # a Saturday in the fixture's history
+    kick = dt.datetime(2026, 9, 26, 13, 0, tzinfo=dt.timezone.utc)  # 14:00 UK, open hours
+    data.fixtures = [
+        {"event_id": "c1", "sport": "cricket", "competition": "T20 World Cup group stage", "home_team": "Pakistan", "away_team": "India", "kickoff_at": kick},
+        {"event_id": "f1", "competition": "Friendly", "home_team": "England", "away_team": "Wales", "kickoff_at": kick},
+    ]
+    prep = Prepared(data, END, 5, 56)
+    assert prep.static["cricket_during"][day] == pytest.approx(1.5)  # a tournament group, Pakistan followed by halal restaurants
+    assert prep.static["football_during"][day] == pytest.approx(0.5)  # a friendly

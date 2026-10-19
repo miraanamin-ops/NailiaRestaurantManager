@@ -6,6 +6,9 @@ import { MAX_FAILURES, type MorningCarry } from "@/lib/morning";
 import { morningGate } from "@/lib/morning-gate";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { analyticsJobsSwitch } from "@/lib/switches";
+import { enqueueBackfill } from "@/lib/feeds/backfill";
+import { plannedFeedJobs } from "@/lib/feeds/config";
+import { enabledFeeds } from "@/lib/feeds/status";
 import { NIGHTLY_MODELS } from "./config";
 import { kickWorkers } from "./kick";
 import { briefCheckTime, concurrencyKeys, keys, plannedJobs, priorityFor, type MorningStep } from "./rules";
@@ -51,6 +54,22 @@ export async function dispatch(job: "hourly" | "daily", now: Date) {
   // Ten restaurants at a time, so 50 restaurants still take seconds.
   for (let i = 0; i < restaurants.length; i += 10) summary.push(...(await Promise.all(restaurants.slice(i, i + 10).map(queueFor))));
 
+  // The outside data feeds (04:30 and 06:45 UK; lib/feeds/config.ts), and a
+  // backfill for each restaurant whose history hasn't had its outside data yet.
+  const feeds: string[] = [];
+  try {
+    const located = restaurants as (Restaurant & { weather_cell?: string | null; outside_backfilled_at?: string | null })[];
+    for (const p of plannedFeedJobs(job, now, located.map((r) => ({ id: r.id, weatherCell: r.weather_cell ?? null })), await enabledFeeds())) {
+      if (await enqueue({ type: p.type, restaurantId: p.restaurantId, key: p.key, payload: p.payload, runAt: p.runAt })) feeds.push(p.type);
+    }
+    for (const r of located.filter((x) => "outside_backfilled_at" in x && !x.outside_backfilled_at)) {
+      if (await enqueueBackfill(r.id, "first_run", now)) feeds.push("feed_backfill");
+    }
+  } catch (err) {
+    console.error("Couldn't queue the outside data feeds", err);
+    summary.push({ restaurant: null, feeds: { error: err instanceof Error ? err.message : String(err) } });
+  }
+
   // System jobs: the 9:31 check that every brief has gone, and the daily clean-up.
   const system: string[] = [];
   try {
@@ -69,6 +88,6 @@ export async function dispatch(job: "hourly" | "daily", now: Date) {
   } catch (err) {
     console.error("Couldn't start workers", err);
   }
-  summary.push({ restaurant: null, system, workersStarted: started });
+  summary.push({ restaurant: null, system, feeds, workersStarted: started });
   return summary;
 }

@@ -11,10 +11,11 @@ import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
+import { OutsideDataCard, TeamsCard } from "./outside-cards";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
-const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked on WhatsApp." };
+const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked on WhatsApp.", teams: "✅ Teams saved." };
 
 // Change anything set up during onboarding. (Or just message Naila on WhatsApp:
 // "change Friday hours to 11pm", "add lamb chops, £14".)
@@ -54,7 +55,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
       <p className="mb-4 text-sm text-stone-600">
         Tip: you can also just tell Naila on WhatsApp, e.g. <i>change Friday hours to 11pm</i> or <i>add lamb chops, £14</i>. Every change can be undone by sending <b>UNDO</b>.
       </p>
-      {one("saved") && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-emerald-900">{SAVED[one("saved")!]}</p>}
+      {one("saved") && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-emerald-900">{SAVED[one("saved")!] ?? `✅ ${one("saved")}`}</p>}
       {one("error") && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-red-800">{one("error")}</p>}
 
       <div className="space-y-5">
@@ -215,9 +216,12 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           </Card>
         )}
 
+        <TeamsCard restaurantId={restaurantId} />
+
         <HistoryCard restaurantId={restaurantId} />
 
         {owner.isBuilder && <BuilderCard r={r} />}
+        {owner.isBuilder && <OutsideDataCard r={r} />}
         {owner.isBuilder && <CalendarCard restaurantId={restaurantId} />}
         {owner.isBuilder && <CostCard restaurantId={restaurantId} />}
       </div>

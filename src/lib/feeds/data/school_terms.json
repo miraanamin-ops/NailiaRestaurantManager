@@ -1,0 +1,54 @@
+{
+  "_note": "Council term dates for community and voluntary controlled schools. Holidays are every day between terms plus the half terms. Academies may differ; councils do not publish inset days (schools set them), so none are listed. Dates checked by hand against the sources below on 2026-10-17.",
+  "councils": {
+    "E09000026": {
+      "name": "Redbridge",
+      "sources": [
+        "https://www.redbridge.gov.uk/schools/school-holidays-and-term-dates (2024-25 and 2025-26 from the archived copy of 2025-10-16; 2026-27 from the live page)"
+      ],
+      "terms": [
+        {"start": "2024-09-02", "end": "2024-12-20", "half_term": ["2024-10-28", "2024-11-01"]},
+        {"start": "2025-01-06", "end": "2025-04-04", "half_term": ["2025-02-17", "2025-02-21"]},
+        {"start": "2025-04-22", "end": "2025-07-22", "half_term": ["2025-05-26", "2025-05-30"]},
+        {"start": "2025-09-01", "end": "2025-12-19", "half_term": ["2025-10-27", "2025-10-31"]},
+        {"start": "2026-01-05", "end": "2026-03-27", "half_term": ["2026-02-16", "2026-02-20"]},
+        {"start": "2026-04-13", "end": "2026-07-20", "half_term": ["2026-05-25", "2026-05-29"]},
+        {"start": "2026-09-02", "end": "2026-12-18", "half_term": ["2026-10-26", "2026-10-30"]}
+      ]
+    },
+    "E09000025": {
+      "name": "Newham",
+      "sources": [
+        "https://www.newham.gov.uk/downloads/file/6522/schooltermandholidaydates202425",
+        "https://www.newham.gov.uk/downloads/file/7864/school-term-and-holiday-dates-2025-2026 (archived copy)"
+      ],
+      "assumed": "Autumn 2026 start (2026-09-02) and half term are the London pattern used by Redbridge and Waltham Forest; Newham's 2026-27 calendar was not found.",
+      "terms": [
+        {"start": "2024-09-02", "end": "2024-12-20", "half_term": ["2024-10-28", "2024-11-01"]},
+        {"start": "2025-01-06", "end": "2025-04-04", "half_term": ["2025-02-17", "2025-02-21"]},
+        {"start": "2025-04-22", "end": "2025-07-23", "half_term": ["2025-05-26", "2025-05-30"]},
+        {"start": "2025-09-01", "end": "2025-12-19", "half_term": ["2025-10-27", "2025-10-31"]},
+        {"start": "2026-01-05", "end": "2026-03-27", "half_term": ["2026-02-16", "2026-02-20"]},
+        {"start": "2026-04-13", "end": "2026-07-22", "half_term": ["2026-05-25", "2026-05-29"]},
+        {"start": "2026-09-02", "end": "2026-12-18", "half_term": ["2026-10-26", "2026-10-30"]}
+      ]
+    },
+    "E09000031": {
+      "name": "Waltham Forest",
+      "sources": [
+        "https://walthamforest.gov.uk/media/7414 (2024-25 calendar)",
+        "https://www.walthamforest.gov.uk/media/7254 (holiday pattern 2025-26)",
+        "https://www.walthamforest.gov.uk/schools-education-and-learning/school-term-and-closure-dates/school-holiday-and-term-dates (2026-27)"
+      ],
+      "terms": [
+        {"start": "2024-09-02", "end": "2024-12-19", "half_term": ["2024-10-21", "2024-10-25"]},
+        {"start": "2025-01-06", "end": "2025-04-04", "half_term": ["2025-02-17", "2025-02-21"]},
+        {"start": "2025-04-22", "end": "2025-07-23", "half_term": ["2025-05-27", "2025-05-30"]},
+        {"start": "2025-09-01", "end": "2025-12-19", "half_term": ["2025-10-27", "2025-10-31"]},
+        {"start": "2026-01-05", "end": "2026-03-27", "half_term": ["2026-02-16", "2026-02-20"]},
+        {"start": "2026-04-13", "end": "2026-07-20", "half_term": ["2026-05-26", "2026-05-29"]},
+        {"start": "2026-09-02", "end": "2026-12-18", "half_term": ["2026-10-26", "2026-10-30"]}
+      ]
+    }
+  }
+}

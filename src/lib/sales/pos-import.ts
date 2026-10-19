@@ -1,6 +1,9 @@
 import "server-only";
 import { logAction } from "@/lib/audit";
+import { londonYmd } from "@/lib/clock";
 import { check, checkRow } from "@/lib/drafts";
+import { enqueueBackfill } from "@/lib/feeds/backfill";
+import { historicImport } from "@/lib/feeds/config";
 import { appUrl, getSupabase } from "@/lib/supabase";
 import { plural } from "@/lib/text";
 import { suggestMapping } from "./ai";
@@ -250,6 +253,15 @@ async function runImport(row: PosImport, table: Table, mapping: PosMapping, acto
       supabase.from("sales_items").select("day, hour, amount, receipt").eq("restaurant_id", rid).eq("is_dummy", false).gte("day", first).lte("day", last).range(from, to),
     );
     await saveDaysFromPos(rid, dayTotals(all.filter((l) => touched.includes(l.day)).map((l) => ({ ...l, amount: Number(l.amount) }))));
+  }
+
+  // Older sales than before: the forecast trains on them, so their outside data (weather, prayer times, calendar) is filled in.
+  if (fresh.length && historicImport(first, londonYmd(new Date()))) {
+    try {
+      await enqueueBackfill(rid, "pos_import");
+    } catch (err) {
+      console.error("Couldn't queue the outside data backfill", err);
+    }
   }
 
   const amount = round2(fresh.reduce((s, l) => s + l.amount, 0));

@@ -8,6 +8,9 @@ import { handleStaffMessage } from "@/lib/sales/whatsapp";
 import { replyUnregistered } from "@/lib/unregistered";
 import { getSupabase } from "@/lib/supabase";
 import { alertBuilder } from "@/lib/builder-alerts";
+import { handleBuilderCommand } from "@/lib/feeds/builder";
+import { isBuilderCommand, isBuilderNumber } from "@/lib/feeds/builder-parse";
+import { sendText } from "@/lib/whatsapp";
 import { messageOwner } from "@/lib/notify";
 import { kickWorkers } from "@/lib/queue/kick";
 import type { OwnerMessagePayload } from "@/lib/queue/handlers";
@@ -73,6 +76,9 @@ export async function POST(req: NextRequest) {
   // Not an owner: maybe a staff number the owner registered (ADD STAFF), which
   // can only send till reports and sales files for that one restaurant.
   const staff = restaurant || linkCode ? null : await findStaff(owner);
+  // The builder's own commands (BUILDER ...), from BUILDER_WHATSAPP only. The same
+  // phone can also be a demo restaurant's owner: anything else it sends goes there as usual.
+  const builderCommand = !media && isBuilderNumber(owner, process.env.BUILDER_WHATSAPP) && isBuilderCommand(body);
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? staff?.restaurant_id ?? null,
     direction: "inbound",
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
-    error: restaurant || linkCode || staff ? null : "Ignored: not a registered owner number",
+    error: restaurant || linkCode || staff || builderCommand ? null : "Ignored: not a registered owner number",
   });
   // Twilio sometimes delivers the same message twice. Each message id can only be
   // logged once (unique index), so a second copy is a duplicate: do nothing.
@@ -91,6 +97,20 @@ export async function POST(req: NextRequest) {
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
+
+  if (builderCommand) {
+    after(async () => {
+      let reply: string;
+      try {
+        reply = await handleBuilderCommand(body);
+      } catch (err) {
+        console.error("A builder command failed", err);
+        reply = "⚠️ That builder command failed: " + (err instanceof Error ? err.message : String(err));
+      }
+      await sendText(sandbox, owner, reply).catch((err) => console.error("Couldn't answer the builder", err));
+    });
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
 
   // A link code: the only thing an unregistered number can do. (With TEST_TOOLS on a
   // test phone can also move itself between demo restaurants this way.)

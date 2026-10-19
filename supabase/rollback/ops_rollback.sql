@@ -11,6 +11,19 @@
 
 begin;
 
+-- 0a. What 041 (the outside data feeds) built on these tables, first (its
+--     tables use the ops_source type that goes below). See also
+--     outside_feeds_rollback.sql, which undoes 041 alone.
+drop table if exists school_date_drafts, school_dates, councils, feed_status cascade;
+drop function if exists feed_upsert_fixtures(jsonb);
+drop function if exists feed_upsert_calendar(jsonb);
+drop function if exists feed_insert_forecasts(jsonb);
+drop function if exists restaurant_calendar(uuid, date, date);
+drop function if exists ops_calendar_applies(local_calendar, restaurants) cascade;
+drop trigger if exists weather_forecasts_frozen on weather_forecasts;
+drop function if exists weather_forecasts_frozen();
+delete from schema_migrations where name = '041_outside_feeds.sql';
+
 -- 0. What 040 (the forecast model) built on these tables, first: its tables, its
 --    helper, and the calendar trigger (it reads the notes column, which goes
 --    below; its two date columns go with the other calendar columns in 4).
