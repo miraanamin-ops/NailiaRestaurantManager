@@ -1,7 +1,7 @@
 """Event factors: sport matches, crowds at nearby venues, disruption days.
 
-Sport matches (one builder for every sport; football today, cricket once a
-fixtures feed exists):
+Sport matches (one builder for every sport: football from the football feed,
+cricket entered by the builder; analytics.football_fixtures.sport says which):
   intensity = importance (by competition) x relevance (1 if a team is one of the
   restaurant's restaurant_teams or a national team the restaurant type follows,
   in the defaults file, else 0), counted over the open part of two windows:

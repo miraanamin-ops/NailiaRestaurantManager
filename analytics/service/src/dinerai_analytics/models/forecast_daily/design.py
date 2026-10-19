@@ -128,7 +128,7 @@ class Prepared:
         self.static.update(religious_factors(self.days, self.cal_rows))
         teams = set(data.teams)
         national = {s: set(dflt.national_teams(self.defaults, s)) for s in ("football", "cricket")}
-        matches = [Match("football", f["competition"] or "", f["home_team"] or "", f["away_team"] or "", f["kickoff_at"])
+        matches = [Match(f.get("sport") or "football", f["competition"] or "", f["home_team"] or "", f["away_team"] or "", f["kickoff_at"])
                    for f in data.fixtures if f.get("kickoff_at")]
         self.static.update(sport_factors(matches, teams, national, self.hours, cutoff_hour))
         rel = {str(r["event_id"]): r for r in data.relevance}

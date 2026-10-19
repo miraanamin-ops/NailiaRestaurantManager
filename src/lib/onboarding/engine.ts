@@ -7,6 +7,7 @@ import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
 import { canFinish, mark, nextStep, STEP_LABELS, STEPS, stepsDone, type StepId } from "./steps";
 import { getOnboarding, getRestaurant, patchData, saveOnboarding, updateRestaurantFields, type Onboarding } from "./store";
 import { contrast } from "@/lib/email/brand";
+import { enqueueBackfill } from "@/lib/feeds/backfill";
 import { saveLogo } from "@/lib/photos";
 import { testToolsOn } from "@/lib/test-mode";
 import { brandFromHtml, isPublicWebAddress, readWebsitePage } from "./website";
@@ -263,6 +264,12 @@ export async function finish(restaurantId: string) {
   const now = new Date().toISOString();
   const restaurant = await updateRestaurantFields(restaurantId, { active: true });
   const onboarding = await saveOnboarding(restaurantId, { steps: mark(s.onboarding.steps, "finish", "done"), completed_at: now, wa_waiting: null });
+  // A new restaurant: its outside data (weather, prayer times, calendar) for the history it will train on.
+  try {
+    await enqueueBackfill(restaurantId, "created");
+  } catch (err) {
+    console.error("Couldn't queue the outside data backfill", err);
+  }
   return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant) };
 }
 

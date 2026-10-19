@@ -6,7 +6,7 @@ import type { ModelRole } from "./model-roles";
 export type { ModelRole };
 
 // Where a row came from (the ops_source list in 030_ops_foundation.sql).
-export const OPS_SOURCES = ["photo", "export", "manual", "owner_message", "assumed", "feed", "synthetic", "model", "migrated"] as const;
+export const OPS_SOURCES = ["photo", "export", "manual", "owner_message", "assumed", "feed", "synthetic", "model", "migrated", "builder"] as const;
 export type OpsSource = (typeof OPS_SOURCES)[number];
 
 type Base = { id: string; restaurant_id: string; created_at: string };

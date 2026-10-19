@@ -77,8 +77,8 @@ def load(reader: ViewReader, restaurant_id: str, known_through: dt.date, issue_t
                       where=[("last_day", ">=", since), ("first_day", "<=", until)])
     rel = reader.rows("calendar_relevance", ["event_id", "distance_m", "relevant"])
     event_ids = {str(c["id"]) for c in cal}
-    fixtures = [f for f in reader.rows("football_fixtures", ["event_id", "competition", "home_team", "away_team", "kickoff_at"], restaurant_column=None)
-                if str(f["event_id"]) in event_ids]
+    fixture_columns = ["event_id", "sport", "competition", "home_team", "away_team", "kickoff_at"]
+    fixtures = [f for f in reader.rows("football_fixtures", fixture_columns, restaurant_column=None) if str(f["event_id"]) in event_ids]
     teams = [t["team"] for t in reader.rows("restaurant_teams", ["team"])]
     venues = reader.rows("venues", ["id", "latitude", "longitude", "capacity"], restaurant_column=None)
     prayer = reader.rows("prayer_times", ["day", "dhuhr", "maghrib", "restaurant_uses"], where=[("day", ">=", since), ("day", "<=", until)])

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { checkJobHealth, finishRun, startRun, type Job } from "@/lib/job-runs";
 import { clearOldRateLimits } from "@/lib/rate-limit";
 import { dispatch } from "@/lib/queue/dispatch";
+import { checkFeedHealth } from "@/lib/feeds/status";
 import { checkLateBriefs, checkQueueHealth } from "@/lib/queue/health";
 
 // Only queues work now (seconds), but give it room on a slow day.
@@ -10,7 +11,8 @@ export const maxDuration = 60;
 // Scheduled jobs. All need the CRON_SECRET password.
 //   ?job=hourly  (Supabase pg_cron, 5 past every hour): queues, for every active
 //                restaurant, the review check, held GM alerts, "How was your
-//                visit?" emails, sends that are due and the day's weather; from
+//                visit?" emails and sends that are due; at 04:05 and 06:05 the
+//                outside data feeds (lib/feeds, due 04:30 and 06:45); from
 //                9am UK time the morning job's first step (once a day); and the
 //                9:31 brief check and the daily clean-up. Then it starts workers.
 //   ?job=daily   (Vercel cron, 09:00 UTC = 9am or 10am UK): a backup that queues
@@ -42,6 +44,7 @@ async function recordedRun(job: Job) {
     try {
       await checkQueueHealth(now);
       await checkLateBriefs(now);
+      await checkFeedHealth(now);
     } catch (err) {
       console.error("Queue health check failed", err);
     }

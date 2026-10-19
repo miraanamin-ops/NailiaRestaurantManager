@@ -5,7 +5,8 @@ import { getSupabase, restaurantNow, type Customer, type Restaurant } from "@/li
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { claude, MAX_TOKENS, MODEL, WITH_FALLBACK } from "@/lib/claude";
 import { customerSummary, lookUpCustomers, lookUpReviews, reviewSummary } from "@/lib/claude-data";
-import { londonLongDate } from "@/lib/clock";
+import { londonLongDate, londonYmd } from "@/lib/clock";
+import { ownerEventFrom, type OwnerEvent } from "@/lib/feeds/owner-events";
 import type { ProfileChange } from "@/lib/onboarding/profile-changes";
 import { customerSafeMenu } from "@/lib/onboarding/profile-data";
 import { clip } from "@/lib/text";
@@ -391,6 +392,23 @@ const lookUpCustomersTool: Anthropic.Beta.BetaTool = {
   },
 };
 
+// "There's a fair on Saturday": an event near the restaurant, for the local calendar (a confirm card).
+const localEventTool: Anthropic.Beta.BetaTool = {
+  name: "add_local_event",
+  description:
+    "The owner tells you about an event near the restaurant on a particular day (a fair, festival, market, parade, street party, big match screening nearby, road closure). Not for the restaurant's own offers, hours or menu. Work the date out from today's date. The owner gets a card to confirm before anything is saved.",
+  input_schema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: 'What it is, in a few words, e.g. "Valentines Park summer fair"' },
+      date: { type: "string", description: "The day it's on (or starts), YYYY-MM-DD" },
+      end_date: { type: "string", description: "The last day if it runs for several days, YYYY-MM-DD" },
+      size: { type: "string", enum: ["small", "medium", "large", "unknown"], description: "small: a few hundred people; medium: a few thousand; large: 10,000 or more; unknown if not said" },
+    },
+    required: ["name", "date"],
+  },
+};
+
 // "Change Friday hours to 11pm", "add lamb chops, £14": the owner changing the restaurant's own details.
 const changeDetailsTool: Anthropic.Beta.BetaTool = {
   name: "change_restaurant_details",
@@ -510,7 +528,8 @@ export type ChatResult =
   | { type: "revise"; instruction: string; content: string }
   | { type: "campaign"; fields: CampaignFields }
   | { type: "pasted_review"; authorName: string; rating: number | null; text: string }
-  | { type: "profile_changes"; changes: ProfileChange[] };
+  | { type: "profile_changes"; changes: ProfileChange[] }
+  | { type: "local_event"; event: OwnerEvent };
 
 // A normal WhatsApp message from the owner: answer it, or produce a draft.
 export async function chat(
@@ -530,6 +549,7 @@ export async function chat(
     lookUpReviewsTool,
     lookUpCustomersTool,
     changeDetailsTool,
+    localEventTool,
   ];
   const system = systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx));
   const isLookUp = (b: Anthropic.Beta.BetaContentBlock): b is Anthropic.Beta.BetaToolUseBlock =>
@@ -574,6 +594,11 @@ export async function chat(
         text: input.text.trim().slice(0, 4000),
       };
     }
+  }
+  if (toolUse?.name === "add_local_event") {
+    const event = ownerEventFrom(toolUse.input as Record<string, unknown>, londonYmd(ctx.now));
+    if (event) return { type: "local_event", event };
+    return { type: "text", text: "Which day is it on? Tell me the date and I'll add it to your calendar." };
   }
   if (toolUse?.name === "change_restaurant_details") {
     const changes = (toolUse.input as { changes?: unknown }).changes;

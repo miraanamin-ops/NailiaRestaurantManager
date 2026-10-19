@@ -7,6 +7,8 @@ import type { Send } from "@/lib/google-jobs";
 import { planProfileChanges, type ProfileChange } from "@/lib/onboarding/profile-changes";
 import { applyProfileChanges } from "@/lib/profile-edits";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
+import { ownerEventCard, ownerEventRow, type OwnerEvent } from "@/lib/feeds/owner-events";
+import { dayLabel } from "@/lib/sales/format";
 import type { Turn } from "@/lib/bot/turn";
 import { composeChecked, gmProfile, routeMessage } from "./gm";
 import { buttonLabel, expectedLanguage, ON_IT_AFTER_MS, ON_IT_LINES, ROUTE_WORDS, SKIP_REASONS, type LanguageSeen, type Route } from "./gm-rules";
@@ -154,9 +156,26 @@ async function factCard(turn: Turn, body: string) {
   return true;
 }
 
+// An event the owner told today's assistant about: a confirm card of the same kind
+// (owner only, never sent), saved to the restaurant's own calendar on Approve.
+export async function localEventCard(turn: Turn, body: string, event: OwnerEvent) {
+  const r = turn.ctx.restaurant;
+  const draft = await createDraft({ restaurantId: r.id, kind: "profile_change", content: ownerEventCard(event, (d) => dayLabel(d, Number(d.slice(0, 4)))), audience: "your local calendar", request: body, checks: {}, mode: "present", actor: "assistant", agentInput: { local_event: event } });
+  await turn.send(draftMessage(draft, r), true);
+}
+
 // Approve on a fact card: the change is saved (UNDO puts it back).
 export async function approveFact(turn: Turn, draft: Draft) {
-  const changes = ((draft as Draft & { agent_input?: { changes: ProfileChange[] } }).agent_input?.changes ?? []) as ProfileChange[];
+  const input = (draft as Draft & { agent_input?: { changes?: ProfileChange[]; local_event?: OwnerEvent } }).agent_input ?? {};
+  if (input.local_event) {
+    await updateDraft(draft.id, { status: "approved", approved_at: new Date().toISOString(), waiting_for: null });
+    const { upsertCalendar } = await import("@/lib/feeds/store");
+    await upsertCalendar([ownerEventRow(input.local_event, turn.ctx.restaurant, draft.id)]);
+    await logAction({ restaurantId: draft.restaurant_id, draftId: draft.id, actor: "owner", action: "outside_data", detail: `Added ${input.local_event.name} (${input.local_event.day}) to the local calendar`, data: { event: input.local_event } });
+    await turn.send(`👍 Added ${input.local_event.name} to your calendar.`);
+    return;
+  }
+  const changes = (input.changes ?? []) as ProfileChange[];
   await updateDraft(draft.id, { status: "approved", approved_at: new Date().toISOString(), waiting_for: null });
   const restaurant = check(await getSupabase().from("restaurants").select("*").eq("id", turn.ctx.restaurantId).single<Restaurant>())!;
   await turn.send(await applyProfileChanges(restaurant, changes));
@@ -165,6 +184,10 @@ export async function approveFact(turn: Turn, draft: Draft) {
 // Edit on a fact card: the owner's correction is read again, as a new card.
 export async function correctFact(turn: Turn, draft: Draft, correction: string) {
   await updateDraft(draft.id, { status: "superseded", waiting_for: null });
+  if ((draft as Draft & { agent_input?: { local_event?: OwnerEvent } }).agent_input?.local_event) {
+    await turn.send("OK, not saved. Tell me again with the right details, e.g. _there's a fair in the park on Saturday 24 October_.");
+    return;
+  }
   const handled = await factCard(turn, `${draft.request ?? ""}\nCorrection: ${correction}`);
   if (!handled) await turn.send("Sorry, I couldn't read that change. Try e.g. _change Friday hours to 11pm_, or use the settings page.");
 }

@@ -1,0 +1,22 @@
+{
+  "_note": "Shaped from the Ticketmaster Discovery API v2's documented answer for /discovery/v2/events.json (no API key was available to save a real one). Replace with a real answer: scripts/save-feed-fixtures.mjs",
+  "_embedded": {
+    "events": [
+      { "name": "Coldplay", "type": "event", "id": "G5vYZ9xyz01", "url": "https://www.ticketmaster.co.uk/event/1",
+        "dates": { "start": { "localDate": "2026-10-30", "localTime": "19:00:00", "dateTime": "2026-10-30T19:00:00Z" }, "status": { "code": "onsale" } },
+        "classifications": [{ "segment": { "name": "Music" }, "genre": { "name": "Rock" } }],
+        "_embedded": { "venues": [{ "name": "The O2", "id": "KovZ9177Arf", "location": { "longitude": "0.003", "latitude": "51.503" } }] } },
+      { "name": "Grand Designs Live", "type": "event", "id": "G5vYZ9xyz02", "url": "https://www.ticketmaster.co.uk/event/2",
+        "dates": { "start": { "localDate": "2026-11-05", "dateTime": "2026-11-05T10:00:00Z" }, "end": { "localDate": "2026-11-08" }, "status": { "code": "onsale" } },
+        "classifications": [{ "segment": { "name": "Miscellaneous" } }],
+        "_embedded": { "venues": [{ "name": "ExCeL London", "id": "KovZpZAEkn6A", "location": { "longitude": "0.0295", "latitude": "51.5085" } }] } },
+      { "name": "Comedy Night", "type": "event", "id": "G5vYZ9xyz03",
+        "dates": { "start": { "localDate": "2026-11-01", "localTime": "20:00:00", "dateTime": "2026-11-01T20:00:00Z" }, "status": { "code": "onsale" } },
+        "_embedded": { "venues": [{ "name": "Rich Mix", "id": "KovZ9177xyz", "location": { "longitude": "-0.0715", "latitude": "51.5250" } }] } },
+      { "name": "Cancelled Gig", "type": "event", "id": "G5vYZ9xyz04",
+        "dates": { "start": { "localDate": "2026-11-02" }, "status": { "code": "cancelled" } },
+        "_embedded": { "venues": [{ "name": "The O2", "id": "KovZ9177Arf", "location": { "longitude": "0.003", "latitude": "51.503" } }] } }
+    ]
+  },
+  "page": { "size": 200, "totalElements": 4, "totalPages": 1, "number": 0 }
+}

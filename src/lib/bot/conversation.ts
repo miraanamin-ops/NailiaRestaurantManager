@@ -1,7 +1,7 @@
 import "server-only";
 import { growthMode, liveGrowthRequest, queueGrowthShadow } from "@/lib/agents/growth";
 import { gmMode, legacyRoute, queueGmShadow } from "@/lib/agents/gm";
-import { answerAgentQuestion, answerChoice, correctFact, decideIdea, gmLive, saveReasonTap } from "@/lib/agents/gm-live";
+import { answerAgentQuestion, answerChoice, correctFact, decideIdea, gmLive, localEventCard, saveReasonTap } from "@/lib/agents/gm-live";
 import { answerWithInsights, insightsMode, queueInsightsShadow } from "@/lib/agents/insights";
 import { chat, rewriteDraft, type ChatResult, type StoredMessage } from "@/lib/assistant";
 import { londonYmd } from "@/lib/clock";
@@ -134,6 +134,8 @@ function legacyAnswer(result: ChatResult) {
       return "(drafted a reply to a pasted review)";
     case "profile_changes":
       return "(changed the restaurant's details)";
+    case "local_event":
+      return `(offered to add ${result.event.name} on ${result.event.day} to the local calendar)`;
     case "revise":
       return `(revised the draft on screen) ${result.content}`;
   }
@@ -159,6 +161,7 @@ async function respond(turn: Turn, body: string, result: ChatResult, active: Awa
   }
   if (result.type === "pasted_review") return pastedReviewReply(ctx, result, send);
   if (result.type === "profile_changes") return send(await applyProfileChanges(await getRestaurant(ctx.restaurantId), result.changes));
+  if (result.type === "local_event") return localEventCard(turn, body, result.event);
   if (result.type === "revise" && active?.waiting_for === "decision") {
     if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, result.instruction, send);
     return reviseAndSend(ctx, active, result.instruction, result.content, send);

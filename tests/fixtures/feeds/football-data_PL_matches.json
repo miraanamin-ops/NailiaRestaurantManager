@@ -1,0 +1,32 @@
+{
+  "_note": "Shaped from football-data.org v4's documented answer for /competitions/PL/matches (no API key was available to save a real one). Replace with a real answer: node --env-file=.env.local scripts/save-feed-fixtures.mjs",
+  "filters": { "dateFrom": "2026-10-19", "dateTo": "2026-12-18", "permission": "TIER_ONE" },
+  "resultSet": { "count": 4, "first": "2026-10-24", "last": "2026-11-07", "played": 0 },
+  "competition": { "id": 2021, "name": "Premier League", "code": "PL", "type": "LEAGUE" },
+  "matches": [
+    { "area": { "id": 2072, "name": "England", "code": "ENG" }, "competition": { "id": 2021, "name": "Premier League", "code": "PL", "type": "LEAGUE" },
+      "season": { "id": 2403, "startDate": "2026-08-22", "endDate": "2027-05-30", "currentMatchday": 8 }, "id": 538101, "utcDate": "2026-10-24T14:00:00Z",
+      "status": "TIMED", "matchday": 9, "stage": "REGULAR_SEASON", "group": null, "lastUpdated": "2026-10-18T08:20:00Z",
+      "homeTeam": { "id": 563, "name": "West Ham United FC", "shortName": "West Ham", "tla": "WHU" },
+      "awayTeam": { "id": 57, "name": "Arsenal FC", "shortName": "Arsenal", "tla": "ARS" },
+      "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null } } },
+    { "area": { "id": 2072, "name": "England", "code": "ENG" }, "competition": { "id": 2021, "name": "Premier League", "code": "PL", "type": "LEAGUE" },
+      "season": { "id": 2403, "startDate": "2026-08-22", "endDate": "2027-05-30", "currentMatchday": 8 }, "id": 538102, "utcDate": "2026-10-25T16:30:00Z",
+      "status": "TIMED", "matchday": 9, "stage": "REGULAR_SEASON", "group": null, "lastUpdated": "2026-10-18T08:20:00Z",
+      "homeTeam": { "id": 73, "name": "Tottenham Hotspur FC", "shortName": "Tottenham", "tla": "TOT" },
+      "awayTeam": { "id": 64, "name": "Liverpool FC", "shortName": "Liverpool", "tla": "LIV" },
+      "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null } } },
+    { "area": { "id": 2072, "name": "England", "code": "ENG" }, "competition": { "id": 2021, "name": "Premier League", "code": "PL", "type": "LEAGUE" },
+      "season": { "id": 2403, "startDate": "2026-08-22", "endDate": "2027-05-30", "currentMatchday": 8 }, "id": 538103, "utcDate": "2026-10-31T15:00:00Z",
+      "status": "POSTPONED", "matchday": 10, "stage": "REGULAR_SEASON", "group": null, "lastUpdated": "2026-10-18T08:20:00Z",
+      "homeTeam": { "id": 61, "name": "Chelsea FC", "shortName": "Chelsea", "tla": "CHE" },
+      "awayTeam": { "id": 354, "name": "Crystal Palace FC", "shortName": "Crystal Palace", "tla": "CRY" },
+      "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null } } },
+    { "area": { "id": 2072, "name": "England", "code": "ENG" }, "competition": { "id": 2021, "name": "Premier League", "code": "PL", "type": "LEAGUE" },
+      "season": { "id": 2403, "startDate": "2026-08-22", "endDate": "2027-05-30", "currentMatchday": 8 }, "id": 538199, "utcDate": "2026-12-12T15:00:00Z",
+      "status": "SCHEDULED", "matchday": 16, "stage": "REGULAR_SEASON", "group": null, "lastUpdated": "2026-10-18T08:20:00Z",
+      "homeTeam": { "id": 402, "name": "Brentford FC", "shortName": "Brentford", "tla": "BRE" },
+      "awayTeam": { "id": 563, "name": "West Ham United FC", "shortName": "West Ham", "tla": "WHU" },
+      "score": { "winner": null, "duration": "REGULAR", "fullTime": { "home": null, "away": null } } }
+  ]
+}

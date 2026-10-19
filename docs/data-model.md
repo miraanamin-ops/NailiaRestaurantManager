@@ -162,6 +162,16 @@ Name matching is only the fallback for menus sent without ids (onboarding, messa
 
 - **restaurant_events**: closures (full or partial), refits, menu changes, price changes, promotions, short-staffed days, other; start and end, source, notes, who made it, and `treat_as_unusual` (forecasting leaves that period out of what normal looks like).
 
+### 10. The outside data feeds (`041`)
+
+Filled by `src/lib/feeds/` (one job per feed on the queue). See `docs/before-launch.md` for each source's terms.
+
+- **feed_status**: one row per feed: its switch (`enabled`), how fresh it should be (`fresh_hours`), the last run, last success, outcome (ok, skipped, failed), error, row counts and next run. Service only.
+- **councils** and **school_dates**: each council's terms (with their half term) and inset days, by academic year, confirmed by the builder; the holidays in `local_calendar` are made from them. **school_date_drafts**: what Claude read from a council page, waiting for the builder to tick each row.
+- **local_calendar** (changed again): `authority` (whose moon-sighting dates a religious row follows), `confirmed_at` and `confirmed_by` (an uncertain date the builder confirmed; a feed never changes it back), `fetched_at`. Feed rows are shared (restaurant empty) and unique by feed and external id; the one-per-name-per-day rule applies to rows typed in by hand only.
+- **football_fixtures** (changed): `sport` (football, cricket) and `fetched_at`. **venues** (changed): `ticketmaster_id` and `typical_crowd` (an event's expected size). **prayer_times**: `fetched_at`; a builder-uploaded timetable (`timetable:<mosque>`) wins on the days it covers. **weather_forecasts**: `model_run_at`, and an update is refused (forecasts are kept exactly as issued). **restaurants**: `religious_authority`, `weather_cell`, `outside_backfilled_at`.
+- **analytics.calendar** now gives each restaurant its own rows and the shared rows that apply to it (by scope, authority, council, region and nearness), so bank holidays and every shared feed row reach the model.
+
 ## Security
 
 - **Row Level Security** is on for every new table, with standard policies (`ops_apply_policies` in 030):

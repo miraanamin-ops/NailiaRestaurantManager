@@ -19,6 +19,7 @@
     "@react-pdf/renderer": "^4.9.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.117.3",
+    "adhan": "4.4.6",
     "next": "16.4.0",
     "qrcode": "^1.5.4",
     "react": "19.3.0",
