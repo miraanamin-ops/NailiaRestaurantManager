@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +16,7 @@ export const metadata: Metadata = { title: "Check the columns", robots: { index:
 // in; the owner changes anything wrong, checks the preview, and imports.
 export default function ImportPage({ params, searchParams }: PageProps<"/sales/import/[id]">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <CheckColumns params={params} searchParams={searchParams} />
     </Suspense>
   );
@@ -78,6 +79,7 @@ async function CheckColumns({ params, searchParams }: Pick<PageProps<"/sales/imp
         <Card>
           <form method="get" className="space-y-3">
             <input type="hidden" name="r" value={rid} />
+            {one("back") === "onboarding" && <input type="hidden" name="back" value="onboarding" />}
             {FIELDS.map((f) => (
               <label key={f.key} className="block">
                 <span className="text-sm font-medium">
@@ -153,6 +155,7 @@ async function CheckColumns({ params, searchParams }: Pick<PageProps<"/sales/imp
           {mapping && works ? (
             <form action={importWithMapping} className="space-y-2">
               <input type="hidden" name="r" value={rid} />
+              {one("back") === "onboarding" && <input type="hidden" name="back" value="onboarding" />}
               <input type="hidden" name="id" value={row.id} />
               {hidden.map(([k, v]) => (
                 <input key={k} type="hidden" name={k} value={v ?? NONE} />
@@ -164,6 +167,7 @@ async function CheckColumns({ params, searchParams }: Pick<PageProps<"/sales/imp
           )}
           <form action={cancelUpload}>
             <input type="hidden" name="r" value={rid} />
+            {one("back") === "onboarding" && <input type="hidden" name="back" value="onboarding" />}
             <input type="hidden" name="id" value={row.id} />
             <button className="w-full py-2 text-sm text-stone-600 underline">Cancel this file</button>
           </form>

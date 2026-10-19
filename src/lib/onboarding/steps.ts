@@ -2,7 +2,7 @@
 // it's unit-tested (tests/onboarding.test.ts). The web wizard and WhatsApp both
 // use this, so they always agree on where the owner is.
 
-export const STEPS = ["google", "menu", "allergens", "voice", "reward", "finish"] as const;
+export const STEPS = ["google", "menu", "allergens", "voice", "replies", "reward", "sales", "finish"] as const;
 export type StepId = (typeof STEPS)[number];
 
 export const STEP_LABELS: Record<StepId, string> = {
@@ -10,7 +10,9 @@ export const STEP_LABELS: Record<StepId, string> = {
   menu: "Your menu",
   allergens: "Allergens",
   voice: "How you sound",
+  replies: "Replying to reviews",
   reward: "Sign-up reward",
+  sales: "Last year's sales",
   finish: "QR codes and finish",
 };
 

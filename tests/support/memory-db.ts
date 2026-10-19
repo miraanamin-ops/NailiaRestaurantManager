@@ -68,7 +68,28 @@ function parseOr(expr: string): Pred {
   return (r) => preds.some((p) => p(r));
 }
 
-export function memoryDb(seed: Record<string, Row[]>) {
+// SQL LIKE: % is any run of characters, _ is one; a backslash makes either literal.
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
+function likeRegex(pattern: string, flags: string) {
+  let re = "";
+  for (let i = 0; i < pattern.length; i++) {
+    const ch = pattern[i];
+    if (ch === "\\" && i + 1 < pattern.length) re += escapeRe(pattern[++i]);
+    else if (ch === "%") re += ".*";
+    else if (ch === "_") re += ".";
+    else re += escapeRe(ch);
+  }
+  return new RegExp(`^${re}$`, flags);
+}
+
+// Options: `unique` lists tables whose "id" must be unique (a second insert gets
+// Postgres's 23505 error); `rpc` stands in for database functions.
+type Options = {
+  unique?: string[];
+  rpc?: Record<string, (args: Record<string, unknown>, tables: Record<string, Row[]>) => unknown>;
+};
+
+export function memoryDb(seed: Record<string, Row[]>, options: Options = {}) {
   const tables: Record<string, Row[]> = Object.fromEntries(Object.entries(seed).map(([k, rows]) => [k, rows.map((r) => ({ ...r }))]));
   const table = (name: string) => (tables[name] ??= []);
 
@@ -91,6 +112,9 @@ export function memoryDb(seed: Record<string, Row[]>) {
           created_at: new Date().toISOString(),
           ...p,
         }));
+        if (options.unique?.includes(name) && list.some((n) => rows.some((r) => r.id === n.id))) {
+          return { data: null, error: { message: "duplicate key value violates unique constraint", code: "23505" }, count: null };
+        }
         rows.push(...list);
         return { data: returning ? list : null, error: null, count: null };
       }
@@ -157,6 +181,7 @@ export function memoryDb(seed: Record<string, Row[]>) {
       lte: (c: string, v: unknown) => (preds.push((r) => cmp(r[c], v) <= 0), chain),
       or: (expr: string) => (preds.push(parseOr(expr)), chain),
       like: (c: string, pattern: string) => (preds.push(likePred(c, pattern)), chain),
+      ilike: (c: string, v: string) => (preds.push((r) => likeRegex(v, "i").test(String(r[c] ?? ""))), chain),
       order: (c: string, o?: { ascending?: boolean }) => ((order = [...order, { col: c, asc: o?.ascending ?? true }]), chain),
       limit: (n: number) => ((limit = n), chain),
       range: (from: number, to: number) => ((offset = from), (limit = to - from + 1), chain),
@@ -196,6 +221,9 @@ export function memoryDb(seed: Record<string, Row[]>) {
   // PGlite (support/queue-pg.ts), emptied the first time this stand-in uses it.
   let queueReady: Promise<(fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>> | null = null;
   const rpc = async (fn: string, args?: Record<string, unknown>) => {
+    // A test's own stand-in for a database function (options.rpc) comes first.
+    const impl = options.rpc?.[fn];
+    if (impl) return { data: impl(args ?? {}, tables), error: null };
     // The menu's functions run on the real SQL too (support/menu-pg.ts), on this stand-in's rows.
     // The outside data feeds' functions, in plain code with the same rules (support/feeds-memory.ts).
     if (fn.startsWith("feed_")) {

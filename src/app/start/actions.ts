@@ -1,14 +1,26 @@
 "use server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { logAction } from "@/lib/audit";
 import { emailLoginLink, looksLikeEmail } from "@/lib/auth";
+import { createTrialCheckout } from "@/lib/billing/checkout";
+import { publicSignupOpen, TERMS_VERSION } from "@/lib/billing/config";
+import { claimInvite, cleanInviteCode } from "@/lib/billing/invites";
+import { planSignup } from "@/lib/billing/signup-plan";
 import { normaliseWhatsApp } from "@/lib/onboarding/steps";
-import { createRestaurantFromSignup, recentUnfinishedSignup } from "@/lib/onboarding/store";
+import { createRestaurantFromSignup, getRestaurant, restaurantsForEmail, updateRestaurantFields } from "@/lib/onboarding/store";
 import { clientIp, DAY, limitKey, MINUTE, overLimit } from "@/lib/rate-limit";
 import { baseUrlFrom } from "@/lib/supabase";
 import { verifyTurnstile } from "@/lib/turnstile";
 
-// The sign-up form: creates the restaurant and emails a login link straight into onboarding.
+// The sign-up form ("Start free trial").
+//   - An email that already has a running (or paid-for) restaurant just gets a login
+//     link: nothing about billing, invites or terms is touched (lib/billing/signup-plan.ts).
+//   - A valid pilot invite code skips Stripe: straight to a login link into onboarding.
+//   - Otherwise the restaurant is made (inactive) and the owner goes to Stripe Checkout
+//     for the free trial; /start/return sends the login link afterwards.
+//     On the live site that's only open once PUBLIC_SIGNUP=true (invite-only before).
 // Protected by a hidden bot field, Cloudflare Turnstile (when its keys are set) and
 // rate limits: 5 sign-ups per connection an hour, 20 a day.
 export async function startSignup(form: FormData) {
@@ -20,31 +32,64 @@ export async function startSignup(form: FormData) {
   const email = get("email").toLowerCase().slice(0, 200);
   const restaurantName = get("restaurant_name").slice(0, 80);
   const whatsapp = normaliseWhatsApp(get("whatsapp"));
-  if (!ownerName || !restaurantName) redirect("/start?error=missing");
-  if (!looksLikeEmail(email)) redirect("/start?error=email");
-  if (!whatsapp) redirect("/start?error=whatsapp");
+  const inviteTyped = get("invite");
+  const invite = cleanInviteCode(inviteTyped);
+  const back = (error: string) => redirect(`/start?error=${error}${inviteTyped ? `&invite=${encodeURIComponent(inviteTyped.slice(0, 40))}` : ""}`);
+  if (!ownerName || !restaurantName) back("missing");
+  if (!looksLikeEmail(email)) back("email");
+  if (!whatsapp) back("whatsapp");
+  if (get("terms") !== "yes") back("terms");
+  if (inviteTyped && !invite) back("invite");
 
   const requestHeaders = await headers();
   const ip = clientIp(requestHeaders);
-  const human = await verifyTurnstile(get("cf-turnstile-response"), ip);
+  // These don't depend on each other, so they run at the same time.
+  const [human, limited, existing] = await Promise.all([
+    verifyTurnstile(get("cf-turnstile-response"), ip),
+    overLimit([
+      { key: limitKey("start-ip-hour", ip), max: 5, windowMs: 60 * MINUTE },
+      { key: limitKey("start-ip-day", ip), max: 20, windowMs: DAY },
+    ]),
+    restaurantsForEmail(email),
+  ]);
   if (!human.ok) {
     console.warn("Turnstile rejected a restaurant sign-up", human.error);
     redirect(`/start?error=captcha&why=${encodeURIComponent(human.error ?? "failed")}`);
   }
-  if (
-    await overLimit([
-      { key: limitKey("start-ip-hour", ip), max: 5, windowMs: 60 * MINUTE },
-      { key: limitKey("start-ip-day", ip), max: 20, windowMs: DAY },
-    ])
-  ) {
-    redirect("/start?error=slow");
+  if (limited) back("slow");
+  const base = baseUrlFrom(requestHeaders);
+
+  const plan = planSignup(existing, restaurantName);
+  if (plan.kind === "login") return sendLogin(email, plan.next, base);
+  if (!invite && !publicSignupOpen()) back("invite_only");
+  if (invite && !(await claimInvite(invite))) back("invite");
+
+  // Pressing the button twice, or coming back after cancelling Checkout, carries on
+  // with the same unfinished restaurant rather than making another.
+  const restaurant = plan.kind === "continue" ? await getRestaurant(plan.restaurantId) : await createRestaurantFromSignup({ ownerName, email, restaurantName, whatsapp });
+  const accepted = { terms_accepted_at: new Date().toISOString(), terms_version: TERMS_VERSION };
+
+  if (invite) {
+    await updateRestaurantFields(restaurant.id, { ...accepted, pilot_invite_code: invite });
+    await logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: `Signed up with pilot code ${invite}: no card needed`, data: { invite } });
+    return sendLogin(email, `/onboarding?r=${restaurant.id}`, base);
   }
 
-  // Pressing the button twice (or signing up again before finishing) carries on
-  // with the same restaurant rather than making another.
-  const restaurant =
-    (await recentUnfinishedSignup(email, restaurantName)) ?? (await createRestaurantFromSignup({ ownerName, email, restaurantName, whatsapp }));
-  const error = await emailLoginLink(email, `/onboarding?r=${restaurant.id}`, baseUrlFrom(requestHeaders));
+  const updated = await updateRestaurantFields(restaurant.id, accepted);
+  let checkoutUrl: string | null = null;
+  try {
+    checkoutUrl = await createTrialCheckout(updated, base);
+  } catch (err) {
+    console.error("Couldn't start Stripe Checkout", err);
+  }
+  if (!checkoutUrl) back("billing");
+  // Logged after the owner is on their way to Stripe, so it doesn't slow them down.
+  after(() => logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: "Sent to Stripe Checkout for the free trial" }));
+  redirect(checkoutUrl!);
+}
+
+async function sendLogin(email: string, next: string, base: string): Promise<never> {
+  const error = await emailLoginLink(email, next, base);
   if (error) redirect(`/start?error=${error}`);
-  redirect(`/start?sent=1&email=${encodeURIComponent(email)}`);
+  redirect("/start?sent=1");
 }

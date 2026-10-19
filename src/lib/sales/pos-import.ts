@@ -84,9 +84,14 @@ export async function receivePosFile(input: {
   channel: "web" | "whatsapp";
   sentBy: string | null;
   actor: "owner" | "staff";
+  // A file the browser already put in storage (onboarding's direct upload, up to
+  // MAX_DIRECT_UPLOAD_BYTES): not saved again, and a bigger size limit.
+  storedPath?: string;
+  maxBytes?: number;
 }): Promise<ImportOutcome> {
   const { restaurantId, bytes } = input;
-  if (bytes.length > MAX_FILE_BYTES) return { status: "failed", importId: null, message: "That file is too big (over 4 MB). Try exporting a shorter period, e.g. one month." };
+  const max = input.maxBytes ?? MAX_FILE_BYTES;
+  if (bytes.length > max) return { status: "failed", importId: null, message: `That file is too big (over ${Math.round(max / 1024 / 1024)} MB). Try exporting a shorter period, e.g. a few months at a time.` };
   const kind = fileKind(input.contentType, bytes, input.fileName ?? "");
   if (kind === "xls") return { status: "failed", importId: null, message: "That's an old Excel file (.xls). Please export it as CSV or .xlsx from your till and send it again." };
   if (kind === "unknown") return { status: "failed", importId: null, message: "I can read sales files as CSV or Excel (.xlsx). That file is neither." };
@@ -100,7 +105,7 @@ export async function receivePosFile(input: {
   if (!table || !table.rows.length) return { status: "failed", importId: null, message: "I couldn't find a table of sales in that file. Is it the right export?" };
 
   const signature = layoutSignature(table.headers);
-  const filePath = await saveSalesFile(restaurantId, "pos", bytes, input.contentType || "application/octet-stream", kind);
+  const filePath = input.storedPath ?? (await saveSalesFile(restaurantId, "pos", bytes, input.contentType || "application/octet-stream", kind));
   const supabase = getSupabase();
   const row = checkRow(
     await supabase
@@ -229,30 +234,41 @@ async function runImport(row: PosImport, table: Table, mapping: PosMapping, acto
     // Real sales replace dummy data for the same days.
     check(await supabase.from("sales_items").delete().eq("restaurant_id", rid).eq("is_dummy", true).gte("day", first).lte("day", last));
     check(await supabase.from("sales_hours").delete().eq("restaurant_id", rid).eq("source", "seed").gte("day", first).lte("day", last));
-    for (let i = 0; i < fresh.length; i += 500) {
-      check(
-        await supabase.from("sales_items").insert(
-          fresh.slice(i, i + 500).map((l) => ({
-            restaurant_id: rid,
-            day: l.day,
-            hour: l.hour,
-            item: l.item,
-            quantity: l.quantity,
-            amount: l.amount,
-            receipt: l.receipt,
-            import_id: row.id,
-            row_key: l.row_key,
-            is_dummy: false,
-          })),
+    // In batches of 1,000, four at a time (a year of item sales can be 150,000+ lines).
+    const CHUNK = 1000;
+    const PARALLEL = 4;
+    const chunks: (typeof fresh)[] = [];
+    for (let i = 0; i < fresh.length; i += CHUNK) chunks.push(fresh.slice(i, i + CHUNK));
+    for (let i = 0; i < chunks.length; i += PARALLEL) {
+      const results = await Promise.all(
+        chunks.slice(i, i + PARALLEL).map((chunk) =>
+          supabase.from("sales_items").insert(
+            chunk.map((l) => ({
+              restaurant_id: rid,
+              day: l.day,
+              hour: l.hour,
+              item: l.item,
+              quantity: l.quantity,
+              amount: l.amount,
+              receipt: l.receipt,
+              import_id: row.id,
+              row_key: l.row_key,
+              is_dummy: false,
+            })),
+          ),
         ),
       );
+      for (const res of results) check(res);
     }
-    // Each touched day's totals from all its real item sales (this file and earlier ones).
-    const touched = [...new Set(fresh.map((l) => l.day))];
-    const all = await selectAll<{ day: string; hour: number | null; amount: number; receipt: string | null }>((from, to) =>
-      supabase.from("sales_items").select("day, hour, amount, receipt").eq("restaurant_id", rid).eq("is_dummy", false).gte("day", first).lte("day", last).range(from, to),
-    );
-    await saveDaysFromPos(rid, dayTotals(all.filter((l) => touched.includes(l.day)).map((l) => ({ ...l, amount: Number(l.amount) }))));
+    // Each touched day's totals from all its real item sales (this file and earlier
+    // ones). With nothing imported before for these days, this file is all there is.
+    const touched = new Set(fresh.map((l) => l.day));
+    const all = existing.length
+      ? await selectAll<{ day: string; hour: number | null; amount: number; receipt: string | null }>((from, to) =>
+          supabase.from("sales_items").select("day, hour, amount, receipt").eq("restaurant_id", rid).eq("is_dummy", false).gte("day", first).lte("day", last).range(from, to),
+        )
+      : fresh;
+    await saveDaysFromPos(rid, dayTotals(all.filter((l) => touched.has(l.day)).map((l) => ({ day: l.day, hour: l.hour, receipt: l.receipt, amount: Number(l.amount) }))));
   }
 
   // Older sales than before: the forecast trains on them, so their outside data (weather, prayer times, calendar) is filled in.

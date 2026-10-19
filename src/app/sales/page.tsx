@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -29,7 +30,7 @@ const IMPORT_STATUS: Record<string, string> = {
 // (Till reports come in as photos on WhatsApp; files can come either way.)
 export default function SalesPage({ searchParams }: PageProps<"/sales">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Sales searchParams={searchParams} />
     </Suspense>
   );

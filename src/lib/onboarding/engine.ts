@@ -1,11 +1,13 @@
 import "server-only";
 import { logSetting } from "@/lib/audit";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
-import { applyMenuCorrection, DEFAULT_DISCOUNT_CAP, draftVoices, extractMenu, suggestAllergens, suggestReward, type MenuImage } from "./ai";
+import { applyMenuCorrection, DEFAULT_DISCOUNT_CAP, draftReplyChoices, draftVoices, extractMenu, suggestAllergens, suggestReward, type MenuImage } from "./ai";
+import { pickExample, type ProfileExamples } from "./reply-examples";
 import { placesAvailable, profileFromPlace, searchPlaces } from "./places";
 import { formatPrice, menuItemCount, type MenuCategory } from "./profile-data";
 import { canFinish, mark, nextStep, STEP_LABELS, STEPS, stepsDone, type StepId } from "./steps";
 import { getOnboarding, getRestaurant, patchData, saveOnboarding, updateRestaurantFields, type Onboarding } from "./store";
+import { shouldBeActive } from "@/lib/billing/access";
 import { contrast } from "@/lib/email/brand";
 import { enqueueBackfill } from "@/lib/feeds/backfill";
 import { saveLogo } from "@/lib/photos";
@@ -171,6 +173,34 @@ export async function confirmAllergens(restaurantId: string, menu: MenuCategory[
 
 // ---------- 4. Brand voice ----------
 
+// The voice step reads the owner's website when there is one. If Google didn't
+// find it, the step asks first: a web address, or "no website". Asked once
+// (data.voice.websiteAsked).
+export function needsWebsiteQuestion(r: Restaurant, o: Onboarding) {
+  return !r.website && !o.data.voice?.websiteAsked && !o.data.voice?.samples;
+}
+
+// Saves the website the owner gave (or none). False if it isn't a usable public address.
+export async function setWebsite(restaurantId: string, raw: string | null) {
+  const o = (await getOnboarding(restaurantId))!;
+  const typed = raw?.trim();
+  if (typed) {
+    let url: URL;
+    try {
+      url = new URL(/^https?:\/\//i.test(typed) ? typed : `https://${typed}`);
+    } catch {
+      return false;
+    }
+    if (!isPublicWebAddress(url) || !url.hostname.includes(".")) return false;
+    const r = await getRestaurant(restaurantId);
+    const website = url.toString().replace(/\/$/, "");
+    await updateRestaurantFields(restaurantId, { website });
+    await logSetting(restaurantId, "website", r.website, website, "Added your website");
+  }
+  await patchData(restaurantId, { voice: { ...o.data.voice, websiteAsked: true } });
+  return true;
+}
+
 export async function draftVoiceOptions(restaurantId: string, captions: string[] = []) {
   const r = await getRestaurant(restaurantId);
   const page = await readWebsitePage(r.website);
@@ -221,7 +251,62 @@ export async function chooseVoice(restaurantId: string, voice: string) {
   await setStep(restaurantId, o, "voice", "done");
 }
 
-// ---------- 5. Reward and discount cap ----------
+// ---------- 5. Replying to reviews ----------
+
+// An example good and bad review with 3 replies each (made once, kept in the onboarding row).
+export async function replyChoices(restaurantId: string) {
+  const o = (await getOnboarding(restaurantId))!;
+  if (o.data.replies) return o.data.replies;
+  const r = await getRestaurant(restaurantId);
+  const replies = await draftReplyChoices({
+    name: r.name,
+    cuisine: r.cuisine,
+    voice: r.brand_voice,
+    dishes: (r.menu ?? []).flatMap((c) => c.items.map((i) => i.name)),
+    signOff: r.sign_off_name ?? r.owner_name?.split(" ")[0] ?? null,
+    phone: r.phone,
+  });
+  await patchData(restaurantId, { replies });
+  return replies;
+}
+
+// The owner's picks (a number 1 to 3, or their own words) become the profile's
+// review reply examples, which every future reply follows. The step is done once
+// both have one; the other can come later.
+export async function chooseReplies(restaurantId: string, picks: { positive?: { n?: number; own?: string }; negative?: { n?: number; own?: string } }) {
+  const o = (await getOnboarding(restaurantId))!;
+  const choices = o.data.replies;
+  if (!choices) return false;
+  const positive = picks.positive ? pickExample(choices.positive, picks.positive) : null;
+  const negative = picks.negative ? pickExample(choices.negative, picks.negative) : null;
+  if (!positive && !negative) return false;
+  const r = await getRestaurant(restaurantId);
+  const before: ProfileExamples = r.profile_examples ?? {};
+  const after: ProfileExamples = {
+    ...before,
+    review_replies: { ...before.review_replies, ...(positive ? { positive } : {}), ...(negative ? { negative } : {}) },
+  };
+  await updateRestaurantFields(restaurantId, { profile_examples: after });
+  await logSetting(restaurantId, "profile_examples", before, after, "Picked how you like to reply to reviews");
+  if (after.review_replies?.positive && after.review_replies?.negative) {
+    await setStep(restaurantId, (await getOnboarding(restaurantId))!, "replies", "done");
+  }
+  return true;
+}
+
+// ---------- 7. Last year's sales ----------
+
+// The sales files imported so far (the step can be finished once there's one).
+export async function salesImported(restaurantId: string) {
+  const { recentImports } = await import("@/lib/sales/pos-import");
+  return (await recentImports(restaurantId, 20)).filter((i) => i.status === "imported");
+}
+
+export async function finishSalesStep(restaurantId: string) {
+  return setStep(restaurantId, (await getOnboarding(restaurantId))!, "sales", "done");
+}
+
+// ---------- 6. Reward and discount cap ----------
 
 export async function rewardDefaults(restaurantId: string) {
   const r = await getRestaurant(restaurantId);
@@ -251,7 +336,12 @@ export function summaryLines(r: Restaurant, o: Onboarding) {
     line("menu", items ? `Menu: ${items} dishes in ${r.menu.length} section${r.menu.length === 1 ? "" : "s"}` : "Menu: skipped"),
     line("allergens", items && confirmedAllergens ? "Allergens: confirmed for every dish" : "Allergens: not confirmed yet (customers never see unconfirmed ones)"),
     line("voice", r.brand_voice ? `Voice: ${r.brand_voice.split(".")[0]}.` : "Voice: skipped"),
+    line(
+      "replies",
+      r.profile_examples?.review_replies?.positive || r.profile_examples?.review_replies?.negative ? "Review replies: your picks saved, every reply will follow them" : "Review replies: skipped",
+    ),
     line("reward", `Sign-up reward: ${r.signup_reward ?? "not set"} · discount cap ${r.discount_cap_percent}%`),
+    line("sales", o.steps.sales?.status === "done" ? "Sales: last year's figures imported" : "Sales: skipped (send a till export any time)"),
   ];
 }
 
@@ -262,7 +352,9 @@ export async function finish(restaurantId: string) {
     return { ok: false as const, needsWhatsapp: !s.whatsappLinked, missing };
   }
   const now = new Date().toISOString();
-  const restaurant = await updateRestaurantFields(restaurantId, { active: true });
+  // Active only with a trial, a subscription, a pilot code or an exemption too (lib/billing/access.ts).
+  const active = shouldBeActive(true, s.restaurant);
+  const restaurant = await updateRestaurantFields(restaurantId, { active });
   const onboarding = await saveOnboarding(restaurantId, { steps: mark(s.onboarding.steps, "finish", "done"), completed_at: now, wa_waiting: null });
   // A new restaurant: its outside data (weather, prayer times, calendar) for the history it will train on.
   try {
@@ -270,7 +362,7 @@ export async function finish(restaurantId: string) {
   } catch (err) {
     console.error("Couldn't queue the outside data backfill", err);
   }
-  return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant) };
+  return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant), needsTrial: !active };
 }
 
 export function menuSummaryText(menu: MenuCategory[], maxChars = 1200) {
@@ -293,6 +385,7 @@ export function finishMessage(r: Restaurant, summary: string[], qrPack: string) 
     "",
     `🖨️ Your QR codes to print (table cards and a counter sign): ${qrPack}`,
     "",
+    ...(r.active ? [] : [`One last step before I start: your free trial. ${appUrl()}/onboarding?r=${r.id}`, ""]),
     "From now on, just message me like you would a person. You can change anything any time, e.g. _change Friday hours to 11pm_ or _add lamb chops, £14_. Send *HELP* for the commands.",
   ].join("\n");
 }
@@ -325,6 +418,7 @@ export async function resetOnboarding(restaurantId: string) {
     google_rating: null,
     google_rating_count: null,
     photos: [],
+    profile_examples: {},
   });
   return saveOnboarding(restaurantId, { steps: {}, data: {}, wa_waiting: null, completed_at: null, started_at: new Date().toISOString() });
 }

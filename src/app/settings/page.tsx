@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -10,6 +11,7 @@ import { button, Card, Frame, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
+import { BillingBanner, BillingCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 import { OutsideDataCard, TeamsCard } from "./outside-cards";
 
@@ -21,7 +23,7 @@ const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "�
 // "change Friday hours to 11pm", "add lamb chops, £14".)
 export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-stone-100" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Settings searchParams={searchParams} />
     </Suspense>
   );
@@ -55,10 +57,12 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
       <p className="mb-4 text-sm text-stone-600">
         Tip: you can also just tell Naila on WhatsApp, e.g. <i>change Friday hours to 11pm</i> or <i>add lamb chops, £14</i>. Every change can be undone by sending <b>UNDO</b>.
       </p>
+      <BillingBanner r={r} />
       {one("saved") && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-emerald-900">{SAVED[one("saved")!] ?? `✅ ${one("saved")}`}</p>}
       {one("error") && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-red-800">{one("error")}</p>}
 
       <div className="space-y-5">
+        <BillingCard r={r} />
         <Card>
           <h2 className="text-lg font-bold">Details</h2>
           <form action={saveDetails} className="space-y-4">

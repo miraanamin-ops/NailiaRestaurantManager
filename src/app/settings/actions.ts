@@ -1,4 +1,5 @@
 "use server";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { currentOwner } from "@/lib/auth";
 import { cleanMenu } from "@/lib/onboarding/menu-input";
@@ -17,7 +18,8 @@ import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
 import { entryProblems } from "@/lib/local-calendar-rules";
 import { OFFER_TYPES } from "@/lib/offers";
-import { getSupabase } from "@/lib/supabase";
+import { createPortalSession } from "@/lib/billing/checkout";
+import { baseUrlFrom, getSupabase } from "@/lib/supabase";
 import { ALWAYS_APPROVE, NEVER_AUTO, TASK_LABELS, TASKS, TRUST_LEVELS, trustLevel } from "@/lib/trust";
 
 // The settings page's save buttons. Every change is logged (UNDO on WhatsApp puts it back).
@@ -279,4 +281,20 @@ export async function removeCalendarEntry(form: FormData) {
   );
   if (removed?.length) await logAction({ restaurantId: r.id, actor: "builder", action: "setting", detail: `Removed ${removed[0].name} (${removed[0].day}) from the local calendar`, data: { field: "local_calendar", before: removed[0] } });
   back(r.id, "saved=calendar");
+}
+
+// "Manage billing": Stripe's own page to update the card, see invoices or cancel
+// (a cancellation takes effect at the end of the paid month; set in Stripe's portal settings).
+export async function openBilling(form: FormData) {
+  const restaurantId = String(form.get("r") ?? "");
+  const r = await own(restaurantId);
+  let url: string | null = null;
+  try {
+    url = await createPortalSession(r, `${baseUrlFrom(await headers())}/settings?r=${restaurantId}`);
+  } catch (err) {
+    console.error("Couldn't open the billing portal", err);
+  }
+  if (!url) redirect(`/settings?r=${restaurantId}&error=${encodeURIComponent("Couldn't open billing just now. Please try again.")}`);
+  await logAction({ restaurantId, actor: "owner", action: "billing", detail: "Opened Manage billing" });
+  redirect(url!);
 }
