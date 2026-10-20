@@ -20,13 +20,16 @@ const TARGETED_TEMPLATE_NAME = "naila_draft_buttons_targeted_v1";
 // bank holiday's hours (ids "same:<id>", "closed:<id>", "different:<id>").
 // buttons "choice": 2 or 3 options for an unclear message (ids "choose:<id>:<n>", titles from options).
 // buttons "idea": Like it / Skip, for a special idea (Draft only). buttons "reasons": one-tap skip reasons.
-export type ButtonTarget = { draftId: string; briefNumber?: number; buttons?: "approval" | "question" | "hours" | "choice" | "idea" | "reasons"; options?: string[] };
+// buttons "offer": Draft an offer / Not now, for the brief's quiet-night offer (draftId is then
+// the forecast_briefs row id; ids "quietoffer:<id>", "noquiet:<id>").
+export type ButtonTarget = { draftId: string; briefNumber?: number; buttons?: "approval" | "question" | "hours" | "choice" | "idea" | "reasons" | "offer"; options?: string[] };
 const QUESTION_TEMPLATE_NAME = "naila_review_question_v1";
 const HOURS_TEMPLATE_NAME = "naila_hours_question_v1";
 const CHOICE2_TEMPLATE_NAME = "naila_choice_two_v1";
 const CHOICE3_TEMPLATE_NAME = "naila_choice_three_v1";
 const IDEA_TEMPLATE_NAME = "naila_special_idea_v1";
 const REASONS_TEMPLATE_NAME = "naila_skip_reasons_v1";
+const OFFER_TEMPLATE_NAME = "naila_quiet_offer_v1";
 // The one-tap skip reasons (lib/agents/gm-rules.ts SKIP_REASONS), in order.
 const SKIP_REASON_TITLES = ["Wrong tone", "Wrong offer", "Not now"];
 
@@ -39,7 +42,7 @@ export function getTwilio() {
 
 const templateSids = new Map<string, Promise<string>>();
 
-type TemplateKind = "approval" | "approval_targeted" | "question" | "hours" | "choice2" | "choice3" | "idea" | "reasons";
+type TemplateKind = "approval" | "approval_targeted" | "question" | "hours" | "choice2" | "choice3" | "idea" | "reasons" | "offer";
 const TEMPLATE_NAMES: Record<TemplateKind, string> = {
   approval: TEMPLATE_NAME,
   approval_targeted: TARGETED_TEMPLATE_NAME,
@@ -49,6 +52,7 @@ const TEMPLATE_NAMES: Record<TemplateKind, string> = {
   choice3: CHOICE3_TEMPLATE_NAME,
   idea: IDEA_TEMPLATE_NAME,
   reasons: REASONS_TEMPLATE_NAME,
+  offer: OFFER_TEMPLATE_NAME,
 };
 const FALLBACKS: Record<TemplateKind, string> = {
   approval: "Reply 1 = Approve, 2 = Edit, 3 = Skip",
@@ -58,6 +62,7 @@ const FALLBACKS: Record<TemplateKind, string> = {
   choice2: "Reply 1 or 2",
   choice3: "Reply 1, 2 or 3",
   idea: "Reply LIKE or SKIP",
+  offer: "Reply DRAFT OFFER or NO OFFER",
   reasons: "Reply with a reason, or ignore this",
 };
 
@@ -76,6 +81,11 @@ async function findOrCreateTemplate(kind: TemplateKind): Promise<string> {
       ? [
           { title: "Like it", id: "like:{{2}}" },
           { title: "Skip", id: "skipidea:{{2}}" },
+        ]
+      : kind === "offer"
+      ? [
+          { title: "Draft an offer", id: "quietoffer:{{2}}" },
+          { title: "Not now", id: "noquiet:{{2}}" },
         ]
       : kind === "reasons"
       ? SKIP_REASON_TITLES.map((title, i) => ({ title, id: `reason:{{2}}:${i + 1}` }))
@@ -149,7 +159,7 @@ export async function sendWithApprovalButtons(from: string, to: string, body: st
           ? (target.options ?? []).length >= 3
             ? "choice3"
             : "choice2"
-          : target?.buttons === "question" || target?.buttons === "hours" || target?.buttons === "idea" || target?.buttons === "reasons"
+          : target?.buttons === "question" || target?.buttons === "hours" || target?.buttons === "idea" || target?.buttons === "reasons" || target?.buttons === "offer"
             ? target.buttons
             : target
               ? "approval_targeted"
@@ -176,6 +186,10 @@ ${(target.options ?? []).map((o, i) => `*${i + 1}* ${o}`).join(" · ")}`
     ? `${clip(body, TEXT_MAX - 40)}
 
 Reply *LIKE* or *SKIP*`
+    : target?.buttons === "offer"
+    ? `${clip(body, TEXT_MAX - 50)}
+
+Reply *DRAFT OFFER* or *NO OFFER*`
     : target?.buttons === "reasons"
     ? `${clip(body, TEXT_MAX - 80)}
 

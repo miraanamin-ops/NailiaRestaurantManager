@@ -77,12 +77,22 @@ export type SalesSection = {
   summary?: string | null;
 };
 
+// How the forecast did last week: each day's orders against the range that morning's
+// brief showed (lib/forecast). Only when there are days with both.
+export type ForecastSection = {
+  id: "forecast";
+  days: { day: string; low: number; high: number; actual: number; inside: boolean }[];
+  inside: number;
+  total: number;
+  unvalidated: boolean; // shown under the builder's demo override (TEST)
+};
+
 export type ActionsSection = {
   id: "actions";
   actions: { title: string; why: string; message: string }[];
 };
 
-export type ReportSection = HeadlineSection | SalesSection | ReputationSection | ThemesSection | CustomersSection | GoogleSection | ActionsSection;
+export type ReportSection = HeadlineSection | SalesSection | ReputationSection | ThemesSection | CustomersSection | GoogleSection | ForecastSection | ActionsSection;
 export type SectionId = ReportSection["id"];
 
 export type ReportData = {
@@ -102,6 +112,7 @@ export const SECTION_TITLES: Record<SectionId, string> = {
   themes: "What customers said",
   customers: "Customers and campaigns",
   google: "Google visibility",
+  forecast: "How the forecast did last week",
   actions: "Next week's 3 actions",
 };
 
@@ -138,6 +149,7 @@ export function formatValue(v: number, format: ValueFormat) {
 
 // The small print under the Sales section (web page and PDF).
 export const SALES_FOOTNOTE = "Information about your business, not financial advice.";
+export const FORECAST_FOOTNOTE = "Forecasts are information, not financial advice.";
 
 // A wa.me link that opens WhatsApp with the action's message ready to send.
 export function whatsappLink(number: string | null, message: string) {

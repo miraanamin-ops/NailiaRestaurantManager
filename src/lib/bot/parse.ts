@@ -111,6 +111,7 @@ export type Command =
   | { name: "export_customers" | "email_previews" | "run_feedback" }
   | { name: "add_staff" | "remove_staff"; number: string }
   | { name: "staff" | "sales" | "run_weather" }
+  | { name: "test_forecast"; on: boolean }
   | { name: "sample_z" | "test_z"; sample: ZSample };
 
 // The sample till reports (public/samples/): 1-3 read cleanly, "bad" is blurred and cut off.
@@ -167,6 +168,9 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (t === "STAFF" || t === "STAFF NUMBERS" || t === "MY STAFF") return { name: "staff" };
   if (t === "SALES" || t === "UPLOAD SALES" || t === "SALES PAGE") return { name: "sales" };
   if (t === "RUN WEATHER" || t === "WEATHER") return { name: "run_weather" };
+  // "TEST FORECAST ON": show forecasts from runs that didn't pass, labelled TEST (demo restaurants only).
+  const testForecast = t.match(/^TEST FORECASTS? (ON|OFF)$/);
+  if (testForecast) return { name: "test_forecast", on: testForecast[1] === "ON" };
   // "SAMPLE ZREPORT 2" sends you sample till report 2 to forward back; "TEST ZREPORT BAD" pretends you just sent it.
   const z = t.match(/^(SAMPLE|TEST) Z(?:[- ]?REPORT)?(?: (\d|BAD))?$/);
   if (z && (!z[2] || (Z_SAMPLES as readonly string[]).includes(z[2].toLowerCase()))) {
@@ -221,4 +225,34 @@ export function parseGmTap(payload: string | undefined, body: string, onScreen: 
   if (onScreen === "choice" && /^[1-3]$/.test(t)) return { kind: "choose", n: Number(t) };
   if (onScreen === "special_idea" && /^(like|like it|skip)$/.test(t)) return { kind: "idea", like: t !== "skip" };
   return null;
+}
+
+// The brief's quiet-night offer: "Draft an offer" / "Not now" (quietoffer:<id> /
+// noquiet:<id>, the id of that day's forecast_briefs row), or typed DRAFT OFFER /
+// NO OFFER (the latest offer still open).
+export type OfferTap = { yes: boolean; id?: string };
+
+export function parseOfferTap(payload: string | undefined, body: string): OfferTap | null {
+  const tap = payload?.match(/^(quietoffer|noquiet):([0-9a-f-]{36})$/);
+  if (tap) return { yes: tap[1] === "quietoffer", id: tap[2] };
+  if (payload) return null;
+  const t = body.trim().toLowerCase().replace(/[.!]$/, "");
+  if (/^draft (?:an |the )?offer$/.test(t)) return { yes: true };
+  if (/^no offer$/.test(t)) return { yes: false };
+  return null;
+}
+
+// A question about the forecast ("how busy will Saturday be?", "why is Friday
+// quiet?", "what's the forecast for tomorrow?"). These go to today's assistant,
+// which has look_up_forecast (Insights and the GM's router don't read forecasts).
+const FORECAST_WORD = /\b(forecast|forecasts|forecasting|predict(?:ion|ed)?)\b/i;
+const BUSY_WORD = /\b(busy|busier|quiet|quieter|slow|dead|packed|rammed|how many (?:orders|customers|covers))\b/i;
+const AHEAD_WORD = /\b(today|tonight|tomorrow|this week|next week|this weekend|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|eid)\b/i;
+
+export function looksLikeForecastQuestion(text: string) {
+  const t = text.trim();
+  if (!t || t.length > 300) return false;
+  if (FORECAST_WORD.test(t)) return /\?|\b(what|how|why|when|show|tell)\b/i.test(t);
+  // "Thursday is quiet" (asking for an offer) isn't a question; "will Thursday be quiet?" is.
+  return BUSY_WORD.test(t) && AHEAD_WORD.test(t) && (/\?/.test(t) || /^(how|why|will|is|are|what|when)\b/i.test(t)) && !/\b(was|were|did|yesterday|last)\b/i.test(t);
 }

@@ -29,6 +29,7 @@ export const TEST_COMMANDS = new Set([
   "sample_z",
   "test_z",
   "run_weather",
+  "test_forecast",
 ]);
 
 export function isTestCommand(name: string) {

@@ -13,6 +13,7 @@ import {
   type Compare,
   type CustomersSection,
   type Daily,
+  type ForecastSection,
   type GoogleSection,
   type HeadlineSection,
   type ReportData,
@@ -21,8 +22,10 @@ import {
   type SalesSection,
   type ThemesSection,
   type ValueFormat,
+  FORECAST_FOOTNOTE,
   SALES_FOOTNOTE,
 } from "./types";
+import { dayLabel } from "@/lib/sales/format";
 
 // The same report as the web page, as a clean A4 PDF in the restaurant's colours.
 // The built-in PDF font (Helvetica) has no emoji or arrows, so text is cleaned first.
@@ -194,6 +197,27 @@ function Sales({ x, brand }: { x: SalesSection; brand: string }) {
   );
 }
 
+// ✓ isn't in Helvetica, so the PDF says "inside" in words.
+function ForecastHow({ x }: { x: ForecastSection }) {
+  return (
+    <View style={s.section} wrap={false}>
+      <Text style={s.h2}>{SECTION_TITLES.forecast}</Text>
+      <Text style={s.bigValue}>
+        {x.inside} of {x.total}
+      </Text>
+      <Text style={s.label}>days landed inside the forecast range{x.unvalidated ? " (TEST: unvalidated forecast)" : ""}</Text>
+      <View style={{ marginTop: 8 }}>
+        {x.days.map((d) => (
+          <Text key={d.day} style={s.item}>
+            {clean(dayLabel(d.day))}: {d.actual} orders, forecast {d.low} to {d.high} ({d.inside ? "inside" : d.actual > d.high ? "above" : "below"})
+          </Text>
+        ))}
+      </View>
+      <Text style={[s.item, { fontSize: 8, color: FAINT, marginBottom: 1 }]}>{FORECAST_FOOTNOTE}</Text>
+    </View>
+  );
+}
+
 function Reputation({ x, brand }: { x: ReputationSection; brand: string }) {
   return (
     <View style={s.section} wrap={false}>
@@ -321,6 +345,8 @@ function PdfSection({ section, data }: { section: ReportSection; data: ReportDat
       return <Customers x={section} brand={brand} />;
     case "google":
       return <GoogleVisibility x={section} />;
+    case "forecast":
+      return <ForecastHow x={section} />;
     case "actions":
       return <Actions x={section} data={data} brand={brand} />;
     default:

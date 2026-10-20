@@ -6,6 +6,8 @@ import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
 import { londonYmd, startOfLondonDay } from "@/lib/clock";
 import { addDays } from "@/lib/sales/format";
 import { buildSalesSection, salesFacts, type SalesDayRow, type SalesItemRow } from "@/lib/sales/report-section";
+import { forecastReportDays } from "@/lib/forecast";
+import { forecastWeek } from "@/lib/forecast/rules";
 import { selectAll } from "@/lib/sales/store";
 import { check, checkRow } from "@/lib/drafts";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
@@ -19,6 +21,7 @@ import {
   type Compare,
   type CustomersSection,
   type Daily,
+  type ForecastSection,
   type GoogleSection,
   type HeadlineSection,
   type ReportData,
@@ -230,6 +233,19 @@ const DATA_SECTIONS: DataSection[] = [
       return `Google posts published ${g.posts.now} (before ${g.posts.before}).${g.insights ? ` Listing views ${g.insights.views.now}, calls ${g.insights.calls.now}, direction requests ${g.insights.directions.now}.` : ""}`;
     },
   },
+  {
+    id: "forecast",
+    connected: () => true, // left out (build returns null) until a brief has shown a forecast for a day with sales
+    async build({ restaurant, period: p }) {
+      const { days, unvalidated } = await forecastReportDays(restaurant.id, londonYmd(p.start), londonYmd(new Date(p.end.getTime() - 1)));
+      if (!days.length) return null;
+      const week = forecastWeek(days);
+      const section: ForecastSection = { id: "forecast", days: week.rows, inside: week.inside, total: week.total, unvalidated };
+      return section;
+    },
+    // Not given to the AI that writes the summary and actions: the section speaks for itself.
+    facts: () => "",
+  },
 ];
 
 async function loadRows(restaurant: Restaurant, p: Period): Promise<Rows> {
@@ -330,7 +346,8 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     const section = await def.build(input);
     if (!section) continue;
     dataSections.push(section);
-    facts.push(def.facts(section));
+    const sectionFacts = def.facts(section);
+    if (sectionFacts) facts.push(sectionFacts);
   }
   const reputation = dataSections.find((s): s is ReputationSection => s.id === "reputation");
   const customers = dataSections.find((s): s is CustomersSection => s.id === "customers");

@@ -13,7 +13,10 @@ import { deadJobs, queueStats, type QueueJob, type QueueStat } from "@/lib/queue
 import { FEEDS, feedProblem, type FeedName } from "@/lib/feeds/config";
 import { feedStatuses, type FeedStatus } from "@/lib/feeds/status";
 import { AgentCompare, type CompareAgent } from "./agent-compare";
-import { retryJob } from "./actions";
+import { retryJob, toggleForecastOverride } from "./actions";
+import { londonYmd } from "@/lib/clock";
+import { forecastBriefsOn, type ForecastBriefRow } from "@/lib/forecast";
+import { testToolsEnabled } from "@/lib/test-mode";
 
 export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
 
@@ -87,6 +90,8 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   const queue = owner.isBuilder ? await queueSummary() : null;
   // The outside data feeds (builder only). Before supabase/041_outside_feeds.sql there are none.
   const feeds: FeedStatus[] | null = owner.isBuilder ? await feedStatuses().catch(() => null) : null;
+  // The forecast in today's brief, every restaurant (builder only). Before supabase/042 there's none.
+  const forecast = owner.isBuilder ? await forecastSummary(owner.restaurantIds).catch(() => null) : null;
 
   const days = new Map<string, AuditEntry[]>();
   for (const e of entries) {
@@ -177,6 +182,8 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
           </section>
         )}
 
+        {forecast && <ForecastSection forecast={forecast} restaurant={restaurant} changed={typeof sp.forecast === "string" ? sp.forecast : null} />}
+
         {queue && <QueueSection queue={queue} r={restaurant.id} retried={typeof sp.retried === "string" ? sp.retried : null} />}
 
         {feeds && (
@@ -251,6 +258,74 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
       </main>
       )}
     </div>
+  );
+}
+
+type ForecastSummary = { today: string; rows: { id: string; name: string; isDemo: boolean; row: ForecastBriefRow | null }[] };
+
+async function forecastSummary(restaurantIds: string[]): Promise<ForecastSummary> {
+  const today = londonYmd(new Date());
+  const restaurants =
+    check(await getSupabase().from("restaurants").select("id, name, is_demo, active").in("id", restaurantIds).order("created_at").returns<{ id: string; name: string; is_demo: boolean; active: boolean }[]>()) ?? [];
+  const rows = await forecastBriefsOn(today, restaurants.map((r) => r.id));
+  const byId = new Map(rows.map((r) => [r.restaurant_id, r]));
+  return { today, rows: restaurants.filter((r) => r.active || byId.has(r.id)).map((r) => ({ id: r.id, name: r.name, isDemo: r.is_demo, row: byId.get(r.id) ?? null })) };
+}
+
+const OFFER_WORDS: Record<string, string> = { offered: "offered (waiting)", blocked: "not offered: the 7-day gap", drafted: "drafted", declined: "declined (Not now)" };
+
+function ForecastSection({ forecast, restaurant, changed }: { forecast: ForecastSummary; restaurant: Restaurant; changed: string | null }) {
+  const canOverride = restaurant.is_demo && testToolsEnabled();
+  return (
+    <section id="forecast">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500">Forecast in today&apos;s brief (builder only)</h2>
+      <ul className="divide-y divide-stone-100 rounded-2xl bg-white text-sm shadow-sm ring-1 ring-stone-200/70">
+        {forecast.rows.map(({ id, name, row }) => (
+          <li key={id} className="px-4 py-2.5">
+            <span aria-hidden>{!row ? "⏳" : row.status === "shown" ? (row.unvalidated ? "🧪" : "📈") : row.status === "no_forecast" ? "⚠️" : "➖"} </span>
+            <b>{name}</b> ·{" "}
+            {!row
+              ? "no brief yet today"
+              : row.status === "shown"
+                ? `shown${row.unvalidated ? " (TEST: unvalidated)" : ""}`
+                : row.status === "no_forecast"
+                  ? "\"No forecast today\""
+                  : "nothing shown (never had a passed forecast)"}
+            {row?.run_id && (
+              <span className="block text-xs text-stone-500">
+                Run {row.run_id.slice(0, 8)} · {row.run_name === "forecast_refresh" ? "07:00 refresh" : "05:35 run"}
+                {row.orders_likely !== null && ` · likely ${row.orders_likely} orders (${row.orders_low} to ${row.orders_high})`}
+              </span>
+            )}
+            {row?.reason && <span className="block text-xs text-amber-800">{row.reason}</span>}
+            {row && row.flags.length > 0 && (
+              <span className="block text-xs text-stone-500">Flags: {row.flags.map((f) => `${f.day} ${f.kind} ${f.pct > 0 ? "+" : ""}${f.pct}%${f.reason ? ` (${f.reason})` : ""}`).join("; ")}</span>
+            )}
+            {row?.offer && (
+              <span className="block text-xs text-stone-500">
+                Offer for {row.offer.day}: {OFFER_WORDS[row.offer.status] ?? row.offer.status}
+                {row.offer.draft_id && ` · draft ${row.offer.draft_id.slice(0, 8)}`}
+              </span>
+            )}
+          </li>
+        ))}
+        {!forecast.rows.length && <li className="px-4 py-2.5 text-stone-500">No restaurants.</li>}
+      </ul>
+      {canOverride && (
+        <form action={toggleForecastOverride} className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-600">
+          <input type="hidden" name="r" value={restaurant.id} />
+          <input type="hidden" name="on" value={restaurant.forecast_unvalidated ? "0" : "1"} />
+          <span>
+            {restaurant.name}: unvalidated (TEST) forecasts are <b>{restaurant.forecast_unvalidated ? "shown" : "hidden"}</b>.
+          </span>
+          <button type="submit" className="rounded-full bg-stone-900 px-3 py-1 text-white">
+            {restaurant.forecast_unvalidated ? "Hide them" : "Show them (demo only)"}
+          </button>
+          {changed === "0" && <span className="text-red-700">That couldn&apos;t be changed.</span>}
+        </form>
+      )}
+      <p className="mt-1 text-xs text-stone-500">Made at the 9am brief from the latest passed run (07:00 refresh, else 05:35). Owners see a forecast only from runs that passed.</p>
+    </section>
   );
 }
 
