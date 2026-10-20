@@ -9,6 +9,7 @@ import {
   type Compare,
   type CustomersSection,
   type Daily,
+  type ForecastSection,
   type GoogleSection,
   type HeadlineSection,
   type ReportData,
@@ -17,8 +18,10 @@ import {
   type SalesSection,
   type ThemesSection,
   type ValueFormat,
+  FORECAST_FOOTNOTE,
   SALES_FOOTNOTE,
 } from "@/lib/report/types";
+import { dayLabel } from "@/lib/sales/format";
 
 // One renderer per section id. A section type with no renderer here is skipped,
 // so new sections (Sales, Operations, Finance) can be added one at a time.
@@ -39,6 +42,8 @@ export function Section({ section, ctx }: { section: ReportSection; ctx: Ctx }) 
       return <Customers s={section} ctx={ctx} />;
     case "google":
       return <GoogleVisibility s={section} />;
+    case "forecast":
+      return <ForecastHow s={section} />;
     case "actions":
       return <Actions s={section} ctx={ctx} />;
     default:
@@ -306,6 +311,42 @@ function GoogleVisibility({ s }: { s: GoogleSection }) {
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+function ForecastHow({ s }: { s: ForecastSection }) {
+  return (
+    <Card title={SECTION_TITLES.forecast}>
+      <div className="text-4xl font-bold tabular-nums tracking-tight text-stone-900">
+        {s.inside} of {s.total}
+      </div>
+      <div className="mt-0.5 text-sm text-stone-600">days landed inside the forecast range{s.unvalidated ? " (TEST: unvalidated forecast)" : ""}</div>
+      <table className="mt-5 w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-stone-500">
+            <th className="pb-1 font-medium">Day</th>
+            <th className="pb-1 font-medium">Forecast</th>
+            <th className="pb-1 text-right font-medium">Orders</th>
+          </tr>
+        </thead>
+        <tbody className="tabular-nums text-stone-700">
+          {s.days.map((d) => (
+            <tr key={d.day} className="border-t border-stone-100">
+              <td className="py-1.5">{dayLabel(d.day)}</td>
+              <td className="py-1.5">
+                {d.low} to {d.high}
+              </td>
+              <td className={`py-1.5 text-right ${d.inside ? "text-emerald-700" : "text-stone-900"}`}>
+                {d.actual} {d.inside ? "✓" : d.actual > d.high ? "(above)" : "(below)"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-4 text-xs text-stone-500">
+        <p>{FORECAST_FOOTNOTE}</p>
+      </div>
     </Card>
   );
 }

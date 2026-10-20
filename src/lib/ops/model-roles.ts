@@ -14,4 +14,5 @@ export function isShowableRun(run: { role?: string | null; status?: string | nul
 }
 
 // The output tables a model writes (the gate in ops/models.ts is the only reader).
-export const MODEL_OUTPUT_TABLES = ["forecasts", "suggested_rotas", "suggested_rota_shifts", "menu_analysis", "finance_snapshots", "deal_outcomes"] as const;
+// model_coefficients and forecast_drivers came with the demand forecast (040).
+export const MODEL_OUTPUT_TABLES = ["forecasts", "suggested_rotas", "suggested_rota_shifts", "menu_analysis", "finance_snapshots", "deal_outcomes", "model_coefficients", "forecast_drivers"] as const;

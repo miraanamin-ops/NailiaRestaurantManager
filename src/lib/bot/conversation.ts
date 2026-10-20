@@ -13,7 +13,8 @@ import { getSupabase } from "@/lib/supabase";
 import { decideOnScreen, decideTargeted } from "./decisions";
 import { campaignCreateAndSend, checkCreateAndSend, pastedReviewReply, reviseAndSend, reviseCampaignAndSend } from "./flows";
 import { answerHoursQuestion, hoursForQuestion } from "./hours-questions";
-import { looksLikeNumbersQuestion, parseAction, parseGmTap, parseHoursAnswer, parseQuestionAnswer, parseTargetedAction } from "./parse";
+import { looksLikeForecastQuestion, looksLikeNumbersQuestion, parseAction, parseGmTap, parseHoursAnswer, parseOfferTap, parseQuestionAnswer, parseTargetedAction } from "./parse";
+import { answerOfferTap } from "@/lib/forecast/offer";
 import { answerQuestion } from "./questions";
 import type { Turn } from "./turn";
 
@@ -53,6 +54,9 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
     // Not handled live: today's assistant answers the original message.
     message = chosen.message;
   }
+  // The brief's quiet-night offer: Draft an offer / Not now.
+  const offerTap = parseOfferTap(buttonPayload, body);
+  if (offerTap && (await answerOfferTap(turn, offerTap))) return;
   const gmOn = (await gmMode(ctx.restaurant)) === "live";
   // A question from scheduled work (Growth, Insights), answered in words while it's on screen.
   if (gmOn && !buttonPayload && active?.kind === "agent_question" && active.waiting_for === "decision") return answerAgentQuestion(turn, active, body);
@@ -84,12 +88,15 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   // background, next to today's answer, for the /log comparison.
   // The GM live: it routes the message and answers it if a live part of the system
   // can; otherwise (chat, look-ups, a specialist in shadow) today's assistant does.
-  if (gmOn && !buttonPayload && message === body && (await gmLive(turn, body, active))) return;
+  // A question about the forecast goes straight to today's assistant, which has
+  // look_up_forecast (Insights and the GM's router don't read forecasts yet).
+  const forecastQuestion = !buttonPayload && looksLikeForecastQuestion(body);
+  if (gmOn && !buttonPayload && !forecastQuestion && message === body && (await gmLive(turn, body, active))) return;
 
   const started = Date.now();
   const onScreen = active?.waiting_for === "decision" ? `${active.kind.replace(/_/g, " ")} for ${active.audience ?? "the owner"}` : null;
   // (With the GM live, its router spots number questions instead of this word list.)
-  const numbers = !gmOn && !buttonPayload && looksLikeNumbersQuestion(body) ? await insightsMode(ctx.restaurant) : "off";
+  const numbers = !gmOn && !buttonPayload && !forecastQuestion && looksLikeNumbersQuestion(body) ? await insightsMode(ctx.restaurant) : "off";
   if (numbers === "live" && (await answerWithInsights(ctx.restaurant, body, ctx.now, send))) {
     // The GM in shadow: its route for the same message, next to today's.
     await queueGmShadow(ctx.restaurant, { message: body, owner, legacy_route: "insights", legacy_text: "(Insights answered)", legacy_ms: Date.now() - started, on_screen: onScreen });

@@ -1,5 +1,6 @@
 import "server-only";
-import { doneTally, sendBrief, waitingDrafts, type BriefOutcome } from "@/lib/brief";
+import { doneTally, sendBrief, sendForecastOffer, waitingDrafts, type BriefOutcome } from "@/lib/brief";
+import { briefForecast } from "@/lib/forecast";
 import { londonMinutes, londonTimeOn } from "@/lib/clock";
 import { check, updateDraft, type Draft } from "@/lib/drafts";
 import { draftPreviewUrl } from "@/lib/email/previews";
@@ -38,7 +39,10 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
   const nudge = await zNudgeFor(r, now).catch(() => null);
   // Receipts come from code; the composer only words them.
   const receipts = [...tally, ...(opts.extra ?? []), ...feedback.lines, ...(nudge ? [nudge] : [])];
-  if (!all.length && !tally.length && !receipts.length) return { sent: false, items: 0, tally };
+  // Today's forecast: code's own lines, added after the composer's summary unchanged
+  // (the same lines today's brief shows; the composer never sees or rewords them).
+  const forecast = await briefForecast(r, now);
+  if (!all.length && !tally.length && !receipts.length && !forecast.block) return { sent: false, items: 0, tally };
 
   let brief: Awaited<ReturnType<typeof composeBrief>>;
   try {
@@ -53,7 +57,8 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
   for (const [i, c] of cards.entries()) await updateDraft(c.draft.id, { brief_number: i + 1, briefed_at: briefAt });
   check(await getSupabase().from("restaurants").update({ last_brief_at: briefAt, brief_waiting_since: null }).eq("id", r.id));
 
-  await messageOwner(channel, `${brief.summary}${opts.note ? `\n\n${opts.note}` : ""}`);
+  await messageOwner(channel, gmSummaryText(brief.summary, forecast.block, opts.note));
+  await sendForecastOffer(channel, forecast);
   await markFeedbackReported(r.id, feedback.ids);
   for (const [i, c] of cards.entries()) {
     const d = c.draft;
@@ -72,6 +77,11 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
     usage: brief.usage,
   });
   return { sent: true, items: cards.length, tally };
+}
+
+// The GM's summary message: the composer's words, then the forecast block exactly as code wrote it.
+export function gmSummaryText(summary: string, forecast: string | null, note?: string) {
+  return [summary, forecast, note].filter(Boolean).join("\n\n");
 }
 
 // ---------- The Monday report message ----------

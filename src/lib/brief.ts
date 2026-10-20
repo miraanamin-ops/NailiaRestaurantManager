@@ -9,6 +9,7 @@ import { draftPreviewUrl } from "@/lib/email/previews";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { zNudgeFor } from "@/lib/sales/z-reports";
 import { attemptSend, type SendResult } from "@/lib/send";
+import { briefForecast, type BriefForecast } from "@/lib/forecast";
 import { queueGmBriefShadow } from "@/lib/agents/gm";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural, shorten } from "@/lib/text";
@@ -143,13 +144,15 @@ export async function sendBrief(
     return null;
   });
   if (nudge) extra = [...extra, nudge];
-  if (!items.length && !tally.length && !extra.length) return { sent: false, items: 0, tally };
+  // Today's forecast (the same lines the GM's brief shows). Never stops the brief.
+  const forecast = await briefForecast(restaurant, now);
+  if (!items.length && !tally.length && !extra.length && !forecast.block) return { sent: false, items: 0, tally };
 
   const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(restaurant.id, items)]);
   const briefAt = new Date().toISOString();
   const send = (text: string, withButtons: Parameters<typeof messageOwner>[2] = false, mediaUrl: string | null = null) =>
     messageOwner(channel, text, withButtons, { mediaUrl });
-  const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, note, restaurant });
+  const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, forecast: forecast.block, note, restaurant });
 
   // Number the items first, so a fast tap on a button finds its brief.
   for (const [i, d] of items.entries()) await updateDraft(d.id, { brief_number: i + 1, briefed_at: briefAt });
@@ -158,6 +161,7 @@ export async function sendBrief(
   );
 
   await send(brief.summary);
+  await sendForecastOffer(channel, forecast);
   await markFeedbackReported(restaurant.id, feedback.ids);
   // The GM in shadow: its own brief (summary and up to 5 cards) for the same items, next to this one on /log.
   await queueGmBriefShadow(restaurant, { legacy_text: brief.summary, draft_ids: all.map((d) => d.id), receipts: tally, extra, today: now.toISOString().slice(0, 10) });
@@ -165,6 +169,11 @@ export async function sendBrief(
     await send(brief.itemMessages[i], { draftId: d.id, briefNumber: i + 1, buttons: d.kind === "review_question" ? "question" : d.kind === "hours_question" ? "hours" : "approval" }, draftPreviewUrl(d));
   }
   return { sent: true, items: items.length, tally };
+}
+
+// The quiet-night offer, after the summary: "Draft an offer" / "Not now" (both brief paths).
+export async function sendForecastOffer(channel: OwnerChannel, forecast: BriefForecast) {
+  if (forecast.offer) await messageOwner(channel, forecast.offer.question, { draftId: forecast.offer.id, buttons: "offer" });
 }
 
 // The brief's wording: one numbered summary, then each item's own message.
@@ -176,10 +185,11 @@ export function composeBrief(input: {
   names: Map<string, string>;
   tally: string[];
   extra?: string[];
+  forecast?: string | null; // lib/forecast: today's forecast lines, as code wrote them
   note?: string;
   restaurant: Pick<Restaurant, "discount_cap_percent">;
 }) {
-  const { items, reviews, names, tally, extra = [], note } = input;
+  const { items, reviews, names, tally, extra = [], forecast, note } = input;
   const lines: string[] = [];
   if (items.length) {
     lines.push(`☀️ *Good morning! ${plural(items.length, "thing")} need${items.length === 1 ? "s" : ""} your OK*`);
@@ -191,6 +201,7 @@ export function composeBrief(input: {
   const tl = tallyLine(tally);
   if (tl) lines.push("", tl);
   if (extra.length) lines.push("", ...extra);
+  if (forecast) lines.push("", forecast);
   if (items.length) {
     lines.push(
       "",

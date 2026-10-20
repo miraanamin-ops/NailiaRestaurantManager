@@ -32,6 +32,7 @@ const TABLES = [
   "z_reports",
   "pos_imports",
   "pos_layouts",
+  "forecast_briefs",
   "audit_log",
   "campaign_sends",
   "campaigns",

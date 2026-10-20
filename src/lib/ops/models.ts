@@ -1,6 +1,8 @@
 import "server-only";
 import { db, must } from "./db";
 import { isShowableRun } from "./model-roles";
+import { runAccess, unvalidatedForecastsAllowed } from "@/lib/forecast/access";
+import { FORECAST_MODELS } from "@/lib/forecast/rules";
 import type { DealOutcomeRow, FinanceSnapshotRow, ForecastMetric, ForecastRow, ModelKind, ModelRole, ModelRunRow, OpsSource, SalesChannelSplitRow, Channel } from "./types";
 
 // Model runs and outputs (035_ops_models.sql), deal outcomes (033) and the extra
@@ -111,6 +113,80 @@ export function latestPerTarget<T extends { target_day: string; hour_start: stri
     if (!cur || r.issued_at > cur.issued_at) best.set(key, r);
   }
   return [...best.values()].sort((a, b) => (a.target_day + (a.hour_start ?? "")).localeCompare(b.target_day + (b.hour_start ?? "")));
+}
+
+// ---------- The demand forecast (forecast_daily 05:35, forecast_refresh 07:00) ----------
+// Used by src/lib/forecast/. Run details (status, passed, metrics) may be read for
+// any production run, to choose one and to tell the builder why there's no
+// forecast; outputs only ever come from a run runAccess allows: production,
+// succeeded and passed, or, under the builder's demo override (TEST_TOOLS on, a
+// demo restaurant, its forecast_unvalidated setting on), succeeded but not
+// passed, labelled TEST. Benchmark runs never.
+
+export type ForecastRunInfo = Pick<ModelRunRow, "id" | "model_name" | "role" | "status" | "passed" | "started_at" | "metrics">;
+export type ForecastDriverRow = { model_run_id: string; target_day: string; channel: string; factor: string; multiplier: number; issued_at: string };
+
+const RUN_FIELDS = "id, model_name, role, status, passed, started_at, metrics";
+
+// Production forecast runs started since a time, newest first (details only, no outputs).
+export async function forecastRunsSince(restaurantId: string, sinceIso: string) {
+  return (must(
+    await db()
+      .from("model_runs")
+      .select(RUN_FIELDS)
+      .eq("restaurant_id", restaurantId)
+      .eq("kind", "forecast")
+      .eq("role", "production")
+      .in("model_name", [...FORECAST_MODELS])
+      .gte("started_at", sinceIso)
+      .order("started_at", { ascending: false }),
+    "forecast runs",
+  ) ?? []) as ForecastRunInfo[];
+}
+
+// One run's details (e.g. the 05:35 run a refresh was based on).
+export async function forecastRun(restaurantId: string, runId: string) {
+  return must(await db().from("model_runs").select(RUN_FIELDS).eq("restaurant_id", restaurantId).eq("id", runId).maybeSingle(), "forecast run") as ForecastRunInfo | null;
+}
+
+// Whether the demo override applies, read from the restaurant row itself (callers can't claim it).
+export async function forecastOverride(restaurantId: string) {
+  const r = must(await db().from("restaurants").select("is_demo, forecast_unvalidated").eq("id", restaurantId).maybeSingle(), "restaurant") as {
+    is_demo: boolean | null;
+    forecast_unvalidated?: boolean | null;
+  } | null;
+  return unvalidatedForecastsAllowed(process.env, r);
+}
+
+// A run's daily forecasts (no hours) and drivers for a span of days. Nothing if the
+// run may not be shown to this restaurant.
+export async function forecastFromRun(restaurantId: string, runId: string, fromDay: string, toDay: string) {
+  const [run, override] = await Promise.all([forecastRun(restaurantId, runId), forecastOverride(restaurantId)]);
+  const access = runAccess(run, override);
+  if (!run || !access.ok) return { ok: false as const, unvalidated: false, forecasts: [] as ForecastRow[], drivers: [] as ForecastDriverRow[] };
+  const [forecasts, drivers] = await Promise.all([
+    db()
+      .from("forecasts")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .eq("model_run_id", runId)
+      .is("hour_start", null)
+      .gte("target_day", fromDay)
+      .lte("target_day", toDay),
+    db()
+      .from("forecast_drivers")
+      .select("model_run_id, target_day, channel, factor, multiplier, issued_at")
+      .eq("restaurant_id", restaurantId)
+      .eq("model_run_id", runId)
+      .gte("target_day", fromDay)
+      .lte("target_day", toDay),
+  ]);
+  return {
+    ok: true as const,
+    unvalidated: access.unvalidated,
+    forecasts: (must(forecasts, "forecasts") ?? []) as ForecastRow[],
+    drivers: (must(drivers, "forecast drivers") ?? []) as ForecastDriverRow[],
+  };
 }
 
 export async function latestFinanceSnapshot(restaurantId: string, weekStart: string) {

@@ -11,6 +11,14 @@
 
 begin;
 
+-- 0b. What 042 (the forecast in the brief) built on these tables, first (its
+--     policy uses ops_owns_restaurant, which goes below). See also
+--     forecast_briefs_rollback.sql, which undoes 042 alone.
+drop table if exists forecast_briefs cascade;
+alter table restaurants drop constraint if exists restaurants_forecast_unvalidated_demo_only;
+alter table restaurants drop column if exists forecast_unvalidated;
+delete from schema_migrations where name = '042_forecast_briefs.sql';
+
 -- 0a. What 041 (the outside data feeds) built on these tables, first (its
 --     tables use the ops_source type that goes below). See also
 --     outside_feeds_rollback.sql, which undoes 041 alone.

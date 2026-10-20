@@ -24,6 +24,8 @@ import {
 } from "@/lib/campaigns";
 import { DRAFT_KINDS, KIND_LABELS, type Draft, type DraftKind, type getLearningContext } from "@/lib/drafts";
 import { exampleFor, examplePrompt } from "@/lib/onboarding/reply-examples";
+import { lookUpForecast } from "@/lib/forecast";
+import { FOOTNOTE_SHORT, mentionsStaffing, numbersOnlyFrom, TEST_LABEL } from "@/lib/forecast/rules";
 
 // Drafts must fit in a WhatsApp button message (1024 chars) with a header.
 const DRAFT_MAX_CHARS = 700;
@@ -145,7 +147,8 @@ const CHAT_INSTRUCTIONS = `Chatting with the owner:
 - When the owner wants an offer, promotion or birthday email for customers, call create_email_campaign.
 - For a review reply or any other one-off public message, call create_draft.
 - Never write these out in chat: the tools send the owner a preview with Approve, Edit and Skip buttons.
-- For specific reviews (what someone said, which ones need replies, the id a review reply needs), call look_up_reviews. For specific customers (a name, a birthday, the id a message needs), call look_up_customers. Look up just what this message needs.`;
+- For specific reviews (what someone said, which ones need replies, the id a review reply needs), call look_up_reviews. For specific customers (a name, a birthday, the id a message needs), call look_up_customers. Look up just what this message needs.
+- For how busy a day ahead will be, or why (orders, sales, quiet or busy days), call look_up_forecast and answer only from what it returns: its ranges and reasons, never a number of your own. If it says there's no forecast, say so. No advice on staff, rotas or shifts.`;
 
 const WRITE_INSTRUCTIONS = `You are writing one draft right now. Reply with only the finished message text, exactly as it would be sent: no intro, no explanation, no quotes around it, no JSON or code.`;
 
@@ -336,6 +339,12 @@ export function writeBirthdayCampaign(ctx: RestaurantContext, learning: Learning
   );
 }
 
+// The brief's quiet-night offer, after the owner tapped "Draft an offer": the request
+// carries the day, the reason and the shortfall, as code worked them out.
+export function writeOfferCampaign(ctx: RestaurantContext, learning: Learning, request: string) {
+  return writeCampaign(ctx, learning, request, "everyone");
+}
+
 const pastedReviewTool: Anthropic.Beta.BetaTool = {
   name: "draft_pasted_review_reply",
   description:
@@ -389,6 +398,18 @@ const lookUpCustomersTool: Anthropic.Beta.BetaTool = {
       name: { type: "string", description: "All or part of the customer's name" },
       birthday_within_days: { type: "integer", minimum: 0, maximum: 60 },
       limit: { type: "integer", minimum: 1, maximum: 10 },
+    },
+  },
+};
+
+const lookUpForecastTool: Anthropic.Beta.BetaTool = {
+  name: "look_up_forecast",
+  description: `The restaurant's demand forecast for days from today up to 14 days ahead: each day's likely orders with a range, likely sales before VAT, how it compares with a normal day of that weekday, and the main reasons (e.g. Eid, rain). Only forecasts that passed their back-test.`,
+  input_schema: {
+    type: "object",
+    properties: {
+      from_day: { type: "string", description: "First day, YYYY-MM-DD (London). Default today." },
+      to_day: { type: "string", description: "Last day, YYYY-MM-DD. Default 6 days after today." },
     },
   },
 };
@@ -478,10 +499,13 @@ export async function extractProfileChanges(ctx: RestaurantContext, message: str
 
 const LOOKUP_ROUNDS = 4;
 
-function runLookUp(ctx: RestaurantContext, tool: Anthropic.Beta.BetaToolUseBlock) {
+const LOOK_UP_TOOLS = new Set(["look_up_reviews", "look_up_customers", "look_up_forecast"]);
+
+async function runLookUp(ctx: RestaurantContext, tool: Anthropic.Beta.BetaToolUseBlock) {
   const input = (tool.input ?? {}) as Record<string, unknown>;
   const num = (k: string) => (typeof input[k] === "number" ? (input[k] as number) : undefined);
   const str = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : undefined);
+  if (tool.name === "look_up_forecast") return lookUpForecast(ctx.restaurant, ctx.now, str("from_day"), str("to_day"));
   if (tool.name === "look_up_reviews") {
     return lookUpReviews(ctx.reviews, {
       min_rating: num("min_rating"),
@@ -549,12 +573,14 @@ export async function chat(
     ...(activeDraft?.waiting_for === "decision" ? [reviseDraftTool] : []),
     lookUpReviewsTool,
     lookUpCustomersTool,
+    lookUpForecastTool,
     changeDetailsTool,
     localEventTool,
   ];
   const system = systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx));
-  const isLookUp = (b: Anthropic.Beta.BetaContentBlock): b is Anthropic.Beta.BetaToolUseBlock =>
-    b.type === "tool_use" && (b.name === "look_up_reviews" || b.name === "look_up_customers");
+  const isLookUp = (b: Anthropic.Beta.BetaContentBlock): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use" && LOOK_UP_TOOLS.has(b.name);
+  // What look_up_forecast returned: the answer may only quote these numbers.
+  const forecast: { lines: string[]; unvalidated: boolean }[] = [];
 
   // Claude may look things up first (a few rounds at most), then answer or draft.
   let response: Anthropic.Beta.BetaMessage | null = null;
@@ -576,10 +602,14 @@ export async function chat(
     if (action || !lookUps.length || response.stop_reason !== "tool_use") break;
     // Pass the whole turn back unchanged (including any thinking), then the results.
     messages.push({ role: "assistant", content: response.content });
-    messages.push({
-      role: "user",
-      content: lookUps.map((t) => ({ type: "tool_result" as const, tool_use_id: t.id, content: JSON.stringify(runLookUp(ctx, t)) })),
-    });
+    const results = await Promise.all(
+      lookUps.map(async (t) => {
+        const result = await runLookUp(ctx, t);
+        if (t.name === "look_up_forecast") forecast.push(result as Awaited<ReturnType<typeof lookUpForecast>>);
+        return { type: "tool_result" as const, tool_use_id: t.id, content: JSON.stringify(result) };
+      }),
+    );
+    messages.push({ role: "user", content: results });
   }
   if (!response) return { type: "text", text: "Sorry, I couldn't come up with an answer. Could you rephrase that?" };
 
@@ -637,7 +667,18 @@ export async function chat(
   }
 
   const text = textOf(response);
+  if (forecast.length) return { type: "text", text: clip(forecastAnswer(text, forecast), CHAT_MAX_CHARS) };
   return { type: "text", text: text ? clip(text, CHAT_MAX_CHARS) : "Sorry, I couldn't come up with an answer. Could you rephrase that?" };
+}
+
+// An answer about the forecast: Claude's words only if every number in them is one
+// look_up_forecast gave it (otherwise code's own lines), with the TEST label when the
+// forecast is unvalidated, and the short footnote every time.
+export function forecastAnswer(text: string, found: { lines: string[]; unvalidated: boolean }[]) {
+  const lines = found.flatMap((f) => f.lines);
+  const body = text && numbersOnlyFrom(text, lines) && !mentionsStaffing(text) ? text : lines.join("\n");
+  const label = found.some((f) => f.unvalidated) && !body.includes(TEST_LABEL) ? `(${TEST_LABEL})\n` : "";
+  return `${label}${body}\n\n${FOOTNOTE_SHORT}`;
 }
 
 async function writeOnly(ctx: RestaurantContext, learning: Learning, request: string) {

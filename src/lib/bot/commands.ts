@@ -20,6 +20,7 @@ import { emailPreviewsCommand, exportCustomersCommand, runFeedbackCommand } from
 import { addStaff, removeStaff, staffText } from "@/lib/sales/staff";
 import { runWeatherCommand, salesCommand, sampleZCommand, testZCommand } from "./sales-commands";
 import type { Command } from "./parse";
+import { setForecastUnvalidated } from "@/lib/forecast";
 import { updateRestaurant, type Turn } from "./turn";
 
 // Exact typed commands: settings, test commands and shortcuts. (Parsing is in ./parse.ts.)
@@ -43,6 +44,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - Send a *photo of your till report* (Z-report) at the end of the day and I'll save the sales
 - Send a *sales file* from your till (CSV or Excel), or upload it on the sales page
 - *SALES*: last 7 days' sales and the sales page link
+- Ask *how busy will Saturday be?* or *why is Friday quiet?*: the forecast, with its reasons (once your forecast is ready)
 - *ADD STAFF +447700900123*: let a staff phone send till reports and sales files (nothing else) · *REMOVE STAFF* · *STAFF* to list them`;
 
 // Only listed (and only working) with TEST_TOOLS on, for a demo restaurant.
@@ -58,7 +60,8 @@ const TEST_HELP_TEXT = `🧪 *Test commands* (test tools are on)
 - *RESET ONBOARDING*: (test restaurants only) clear the set-up and go through onboarding again
 - *RUN FEEDBACK*: send "How was your visit?" emails now, without waiting 3 hours after a redemption
 - *SAMPLE ZREPORT 1* (or 2, 3, BAD): sends you a sample till report photo to forward back · *TEST ZREPORT 2*: pretends you just sent it
-- *RUN WEATHER*: store the weather now (the first time, the last 12 months too)`;
+- *RUN WEATHER*: store the weather now (the first time, the last 12 months too)
+- *TEST FORECAST ON*: show forecasts from runs that didn't pass their back-test, labelled TEST (*TEST FORECAST OFF* to hide them); then *RUN BRIEF*`;
 
 // TEST CHECKER: a draft with deliberate mistakes taken from THIS restaurant's own
 // menu (a wrong price, wrong opening hours, an unagreed freebie).
@@ -194,6 +197,8 @@ export async function runCommand(command: Command, turn: Turn) {
       return testZCommand(turn, command.sample);
     case "run_weather":
       return runWeatherCommand(turn);
+    case "test_forecast":
+      return send(`🧪 ${(await setForecastUnvalidated(r.id, command.on)).message}${command.on ? " Text *RUN BRIEF* to see it." : ""}`);
     case "birthday_campaign":
       return proposeBirthdayCampaign(ctx, send);
     case "campaign_results": {
