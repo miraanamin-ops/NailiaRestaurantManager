@@ -11,6 +11,7 @@ import type { ReportData } from "@/lib/report/types";
 import type { ButtonTarget } from "@/lib/whatsapp";
 import type { Send } from "@/lib/google-jobs";
 import { zNudgeFor } from "@/lib/sales/z-reports";
+import { briefSectionBlocks } from "@/lib/sections";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { composeBrief } from "./gm";
 import { runComposer } from "./gm-core";
@@ -42,7 +43,9 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
   // Today's forecast: code's own lines, added after the composer's summary unchanged
   // (the same lines today's brief shows; the composer never sees or rewords them).
   const forecast = await briefForecast(r, now);
-  if (!all.length && !tally.length && !receipts.length && !forecast.block) return { sent: false, items: 0, tally };
+  // Each feature's own block (lib/sections): code's lines, unchanged, like the forecast.
+  const sections = await briefSectionBlocks(r, now);
+  if (!all.length && !tally.length && !receipts.length && !forecast.block && !sections.length) return { sent: false, items: 0, tally };
 
   let brief: Awaited<ReturnType<typeof composeBrief>>;
   try {
@@ -57,7 +60,7 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
   for (const [i, c] of cards.entries()) await updateDraft(c.draft.id, { brief_number: i + 1, briefed_at: briefAt });
   check(await getSupabase().from("restaurants").update({ last_brief_at: briefAt, brief_waiting_since: null }).eq("id", r.id));
 
-  await messageOwner(channel, gmSummaryText(brief.summary, forecast.block, opts.note));
+  await messageOwner(channel, gmSummaryText(brief.summary, [forecast.block, ...sections].filter(Boolean).join("\n\n") || null, opts.note));
   await sendForecastOffer(channel, forecast);
   await markFeedbackReported(r.id, feedback.ids);
   for (const [i, c] of cards.entries()) {

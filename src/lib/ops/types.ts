@@ -82,6 +82,7 @@ export type StaffRow = Base & Confirmable & {
   roles: string[];
   skills: string[];
   contracted_hours: number | null;
+  max_hours_week: number | null; // 043: the most hours a week they want (or may) work
   employment_start: string | null;
   employment_end: string | null;
   age_band: AgeBand | null;
@@ -120,6 +121,14 @@ export type CoverRuleRow = Base & {
   effective_from: string;
   effective_to: string | null;
   source: OpsSource;
+};
+// 043: per role, the fewest people on any shift, plus one more per so many forecast orders an hour.
+export type RotaRuleRow = Base & {
+  role: string;
+  min_on_shift: number;
+  orders_per_extra_staff: number | null;
+  source: OpsSource;
+  updated_at: string;
 };
 
 // 4. Rotas

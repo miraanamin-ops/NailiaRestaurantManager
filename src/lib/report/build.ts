@@ -9,6 +9,7 @@ import { buildSalesSection, salesFacts, type SalesDayRow, type SalesItemRow } fr
 import { forecastReportDays } from "@/lib/forecast";
 import { forecastWeek } from "@/lib/forecast/rules";
 import { selectAll } from "@/lib/sales/store";
+import { reportFeatureSections } from "@/lib/sections";
 import { check, checkRow } from "@/lib/drafts";
 import { google, type GooglePost, type GoogleReview } from "@/lib/google";
 import { newToken } from "@/lib/signups";
@@ -349,6 +350,10 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     const sectionFacts = def.facts(section);
     if (sectionFacts) facts.push(sectionFacts);
   }
+  // Each feature's own section (lib/sections), after the built-in ones.
+  const features = await reportFeatureSections(restaurant, period);
+  dataSections.push(...features.sections);
+  facts.push(...features.facts);
   const reputation = dataSections.find((s): s is ReputationSection => s.id === "reputation");
   const customers = dataSections.find((s): s is CustomersSection => s.id === "customers");
   const sales = dataSections.find((s): s is SalesSection => s.id === "sales");

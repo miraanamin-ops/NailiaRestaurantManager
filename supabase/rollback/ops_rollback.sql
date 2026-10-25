@@ -11,6 +11,12 @@
 
 begin;
 
+-- 0c. What 043 (the pilot sprint's rota rules) built on these tables, first
+--     (its policy uses ops_owns_restaurant). See also pilot_rota_rollback.sql,
+--     which undoes 043 alone.
+drop table if exists rota_rules cascade;
+delete from schema_migrations where name = '043_pilot_rota.sql';
+
 -- 0b. What 042 (the forecast in the brief) built on these tables, first (its
 --     policy uses ops_owns_restaurant, which goes below). See also
 --     forecast_briefs_rollback.sql, which undoes 042 alone.

@@ -189,6 +189,26 @@ export async function forecastFromRun(restaurantId: string, runId: string, fromD
   };
 }
 
+// A run's hourly forecasts of one metric (all channels together) for a span of
+// days. Nothing if the run may not be shown to this restaurant.
+export async function forecastHoursFromRun(restaurantId: string, runId: string, fromDay: string, toDay: string, metric: ForecastMetric = "orders") {
+  const [run, override] = await Promise.all([forecastRun(restaurantId, runId), forecastOverride(restaurantId)]);
+  if (!run || !runAccess(run, override).ok) return [] as ForecastRow[];
+  return (must(
+    await db()
+      .from("forecasts")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .eq("model_run_id", runId)
+      .eq("metric", metric)
+      .eq("channel", "all")
+      .not("hour_start", "is", null)
+      .gte("target_day", fromDay)
+      .lte("target_day", toDay),
+    "hourly forecasts",
+  ) ?? []) as ForecastRow[];
+}
+
 export async function latestFinanceSnapshot(restaurantId: string, weekStart: string) {
   const rows = must(
     await db().from("finance_snapshots").select("*").eq("restaurant_id", restaurantId).eq("week_start", weekStart).order("issued_at", { ascending: false }),

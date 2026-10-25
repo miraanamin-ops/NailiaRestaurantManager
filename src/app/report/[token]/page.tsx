@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { NotFoundCard } from "@/components/brand-shell";
 import { requireOwner } from "@/lib/auth";
 import { getReportByToken } from "@/lib/report/build";
-import { REPORT_LINK_DAYS, reportExpired } from "@/lib/report/types";
+import { REPORT_LINK_DAYS, reportExpired, sectionKey } from "@/lib/report/types";
 import { Section } from "./sections";
 
 function ExpiredCard() {
@@ -61,7 +61,7 @@ async function Report({ params }: Pick<PageProps<"/report/[token]">, "params">) 
       </header>
       <main className="mx-auto -mt-5 w-full max-w-xl space-y-4 px-4 pb-12">
         {data.sections.map((s) => (
-          <Section key={s.id} section={s} ctx={{ data, brand }} />
+          <Section key={sectionKey(s)} section={s} ctx={{ data, brand }} />
         ))}
         <p className="pt-2 text-center text-xs text-stone-500">
           {data.googleMode === "dummy" ? "Test data: Google isn't connected yet. " : ""}Made{" "}

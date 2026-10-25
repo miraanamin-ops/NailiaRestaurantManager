@@ -9,6 +9,7 @@ import {
   type Compare,
   type CustomersSection,
   type Daily,
+  type FeatureSection,
   type ForecastSection,
   type GoogleSection,
   type HeadlineSection,
@@ -44,6 +45,8 @@ export function Section({ section, ctx }: { section: ReportSection; ctx: Ctx }) 
       return <GoogleVisibility s={section} />;
     case "forecast":
       return <ForecastHow s={section} />;
+    case "feature":
+      return <Feature s={section} />;
     case "actions":
       return <Actions s={section} ctx={ctx} />;
     default:
@@ -347,6 +350,29 @@ function ForecastHow({ s }: { s: ForecastSection }) {
       <div className="mt-4 text-xs text-stone-500">
         <p>{FORECAST_FOOTNOTE}</p>
       </div>
+    </Card>
+  );
+}
+
+// Every feature section from the registry (lib/sections), drawn the same way.
+function Feature({ s }: { s: FeatureSection }) {
+  return (
+    <Card title={s.title}>
+      {s.stats.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {s.stats.map((st) => (
+            <Stat key={st.label} label={st.label} value={st.value} format={st.format} />
+          ))}
+        </div>
+      )}
+      {s.lines.length > 0 && (
+        <ul className={`${s.stats.length ? "mt-5 border-t border-stone-100 pt-4 " : ""}space-y-1.5 text-sm text-stone-700`}>
+          {s.lines.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      )}
+      {s.footnote && <p className="mt-4 text-xs text-stone-500">{s.footnote}</p>}
     </Card>
   );
 }

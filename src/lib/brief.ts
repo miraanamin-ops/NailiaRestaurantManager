@@ -11,6 +11,7 @@ import { zNudgeFor } from "@/lib/sales/z-reports";
 import { attemptSend, type SendResult } from "@/lib/send";
 import { briefForecast, type BriefForecast } from "@/lib/forecast";
 import { queueGmBriefShadow } from "@/lib/agents/gm";
+import { briefSectionBlocks } from "@/lib/sections";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural, shorten } from "@/lib/text";
 
@@ -146,13 +147,15 @@ export async function sendBrief(
   if (nudge) extra = [...extra, nudge];
   // Today's forecast (the same lines the GM's brief shows). Never stops the brief.
   const forecast = await briefForecast(restaurant, now);
-  if (!items.length && !tally.length && !extra.length && !forecast.block) return { sent: false, items: 0, tally };
+  // Each feature's own block (lib/sections). A failing one is left out.
+  const sections = await briefSectionBlocks(restaurant, now);
+  if (!items.length && !tally.length && !extra.length && !forecast.block && !sections.length) return { sent: false, items: 0, tally };
 
   const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(restaurant.id, items)]);
   const briefAt = new Date().toISOString();
   const send = (text: string, withButtons: Parameters<typeof messageOwner>[2] = false, mediaUrl: string | null = null) =>
     messageOwner(channel, text, withButtons, { mediaUrl });
-  const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, forecast: forecast.block, note, restaurant });
+  const brief = composeBrief({ items, totalWaiting: all.length, reviews, names, tally, extra, forecast: forecast.block, sections, note, restaurant });
 
   // Number the items first, so a fast tap on a button finds its brief.
   for (const [i, d] of items.entries()) await updateDraft(d.id, { brief_number: i + 1, briefed_at: briefAt });
@@ -186,10 +189,11 @@ export function composeBrief(input: {
   tally: string[];
   extra?: string[];
   forecast?: string | null; // lib/forecast: today's forecast lines, as code wrote them
+  sections?: string[]; // lib/sections: each feature's block, as code wrote it
   note?: string;
   restaurant: Pick<Restaurant, "discount_cap_percent">;
 }) {
-  const { items, reviews, names, tally, extra = [], forecast, note } = input;
+  const { items, reviews, names, tally, extra = [], forecast, sections = [], note } = input;
   const lines: string[] = [];
   if (items.length) {
     lines.push(`☀️ *Good morning! ${plural(items.length, "thing")} need${items.length === 1 ? "s" : ""} your OK*`);
@@ -202,6 +206,7 @@ export function composeBrief(input: {
   if (tl) lines.push("", tl);
   if (extra.length) lines.push("", ...extra);
   if (forecast) lines.push("", forecast);
+  for (const block of sections) lines.push("", block);
   if (items.length) {
     lines.push(
       "",

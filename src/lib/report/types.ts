@@ -92,8 +92,22 @@ export type ActionsSection = {
   actions: { title: string; why: string; message: string }[];
 };
 
-export type ReportSection = HeadlineSection | SalesSection | ReputationSection | ThemesSection | CustomersSection | GoogleSection | ForecastSection | ActionsSection;
+// A feature's own section from the registry (lib/sections): one shared renderer
+// draws every one, so a new feature needs no new renderer. key = the feature's id.
+export type FeatureSection = {
+  id: "feature";
+  key: string;
+  title: string;
+  stats: { label: string; value: Compare; format: ValueFormat }[]; // at most 3
+  lines: string[];
+  footnote?: string | null;
+};
+
+export type ReportSection = HeadlineSection | SalesSection | ReputationSection | ThemesSection | CustomersSection | GoogleSection | ForecastSection | FeatureSection | ActionsSection;
 export type SectionId = ReportSection["id"];
+
+// A React key for a section (feature sections share the id "feature").
+export const sectionKey = (s: ReportSection) => (s.id === "feature" ? `feature:${s.key}` : s.id);
 
 export type ReportData = {
   version: 1;
@@ -113,6 +127,7 @@ export const SECTION_TITLES: Record<SectionId, string> = {
   customers: "Customers and campaigns",
   google: "Google visibility",
   forecast: "How the forecast did last week",
+  feature: "", // each feature section carries its own title
   actions: "Next week's 3 actions",
 };
 

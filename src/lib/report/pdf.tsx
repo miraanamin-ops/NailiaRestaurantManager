@@ -8,11 +8,13 @@ import {
   direction,
   formatValue,
   SECTION_TITLES,
+  sectionKey,
   whatsappLink,
   type ActionsSection,
   type Compare,
   type CustomersSection,
   type Daily,
+  type FeatureSection,
   type ForecastSection,
   type GoogleSection,
   type HeadlineSection,
@@ -305,6 +307,28 @@ function GoogleVisibility({ x }: { x: GoogleSection }) {
   );
 }
 
+// Every feature section from the registry (lib/sections), drawn the same way.
+function Feature({ x }: { x: FeatureSection }) {
+  return (
+    <View style={s.section} wrap={false}>
+      <Text style={s.h2}>{clean(x.title)}</Text>
+      {x.stats.length > 0 && (
+        <View style={[s.row, { marginBottom: 8 }]}>
+          {x.stats.map((st) => (
+            <Stat key={st.label} label={clean(st.label)} value={st.value} format={st.format} />
+          ))}
+        </View>
+      )}
+      {x.lines.map((line, i) => (
+        <Text key={i} style={s.item}>
+          - {clean(line)}
+        </Text>
+      ))}
+      {x.footnote && <Text style={[s.item, { fontSize: 8, color: FAINT, marginBottom: 1 }]}>{clean(x.footnote)}</Text>}
+    </View>
+  );
+}
+
 function Actions({ x, data, brand }: { x: ActionsSection; data: ReportData; brand: string }) {
   return (
     <View style={[s.section, { borderBottomWidth: 0 }]} wrap={false}>
@@ -347,6 +371,8 @@ function PdfSection({ section, data }: { section: ReportSection; data: ReportDat
       return <GoogleVisibility x={section} />;
     case "forecast":
       return <ForecastHow x={section} />;
+    case "feature":
+      return <Feature x={section} />;
     case "actions":
       return <Actions x={section} data={data} brand={brand} />;
     default:
@@ -366,7 +392,7 @@ function ReportPdf({ data }: { data: ReportData }) {
         </View>
         <View style={s.body}>
           {data.sections.map((section) => (
-            <PdfSection key={section.id} section={section} data={data} />
+            <PdfSection key={sectionKey(section)}section={section} data={data} />
           ))}
         </View>
         <View style={s.footer} fixed>
