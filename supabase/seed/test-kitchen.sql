@@ -1,7 +1,9 @@
 -- =====================================================================
 -- DinerAI pilot sprint: the "Test Kitchen" demo restaurant (docs/pilot-sprint.md).
--- Run 043_pilot_rota.sql first. Then paste this into Supabase > SQL Editor and
--- click "Run". Not a migration (nothing is recorded in schema_migrations).
+-- DEV PROJECT ONLY: it refuses any database not marked "dinerai-dev" (the live
+-- one never is). Run 043_pilot_rota.sql first. Then paste this into the dev
+-- project's Supabase > SQL Editor and click "Run". Not a migration (nothing is
+-- recorded in schema_migrations).
 -- Safe to run again: it replaces Test Kitchen's dummy sales, staff and rules
 -- with fresh ones and leaves everything else alone.
 --
@@ -22,6 +24,12 @@
 
 do $$
 begin
+  -- Demo data stays on dev: only a database marked as the dev project (its
+  -- description starts "dinerai-dev", set by apply_migrations.py) may run this.
+  -- The live database never has the mark, so it always refuses there.
+  if coalesce(shobj_description((select oid from pg_database where datname = current_database()), 'pg_database'), '') not like 'dinerai-dev%' then
+    raise exception 'REFUSED: this is not the dev database (it has no "dinerai-dev" mark). Demo data never goes into the live database. Nothing changed.';
+  end if;
   -- Its id must be free or already Test Kitchen's (a demo with its slug), and
   -- its staff ids must not belong to anyone else.
   if exists (select 1 from restaurants where id = '7e57c0de-0000-4000-8000-000000000000' and (not coalesce(is_demo, false) or slug is distinct from 'test-kitchen'))

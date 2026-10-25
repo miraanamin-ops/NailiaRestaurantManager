@@ -7,7 +7,7 @@
 Rules:
 - --env is required: credentials are read from that file only (DATABASE_URL, and
   TEST_TOOLS=true to allow loading). Files inside OneDrive are refused.
-- The production project is refused, unless --allow-production AND --fixture.
+- The production (live) project is always refused: demo data stays on dev.
 - Each dataset's restaurant must be a demo restaurant (or not exist yet; it is then
   created as a demo, inactive). A real restaurant is never touched.
 - Re-running replaces a dataset: its old rows are cleared first (the older tables by
@@ -140,16 +140,11 @@ def main(argv=None) -> int:
     ap.add_argument("--fixture", action="store_true", help="load the 3-week fixtures/ slice instead of output/")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--clear", action="store_true", help="remove the dataset(s) and load nothing")
-    ap.add_argument("--allow-production", action="store_true")
     a = ap.parse_args(argv)
     try:
         env = read_env(a.env)
         if is_production(env):
-            if not a.allow_production:
-                raise Refused("That is the PRODUCTION Supabase project. Load into the dev project instead "
-                              "(or, for the 3-week fixture only, add --allow-production --fixture).")
-            if not a.fixture:
-                raise Refused("Only the 3-week fixture may go into production (--fixture). The full datasets go into the dev project.")
+            raise Refused("That is the PRODUCTION (live) Supabase project. Demo data only goes into the dev project. Nothing was changed.")
         if not test_tools_on(env):
             raise Refused("TEST_TOOLS is not on in that env file. Add TEST_TOOLS=true to allow loading demo data there.")
         keys = list(DATASETS) if a.dataset == "all" else [a.dataset]

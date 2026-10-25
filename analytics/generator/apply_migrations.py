@@ -8,6 +8,8 @@ supabase/, in the order the app's tests use (tests/support/full-pg.ts).
 - Refuses a database that already has the app's tables, unless --resume.
 - Afterwards removes the scheduled jobs the migrations create (pg_cron), so the dev
   project never calls the live app's cron endpoint.
+- Then marks the database as the dev project (its description), which the dev-only
+  SQL seeds in supabase/seed/ require.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import sys
 from pathlib import Path
 
 import psycopg
+from psycopg import sql as pgsql
 
 from synth.dbsafety import Refused, describe_target, is_production, read_env
 
@@ -66,6 +69,18 @@ def remove_schedules(cur) -> list[str]:
     return jobs
 
 
+# The dev project's mark: dev-only SQL seeds (supabase/seed/) refuse any database
+# without it, so they can never run on the live one.
+DEV_MARK = "dinerai-dev: the DinerAI dev project (demo data allowed)"
+
+
+def mark_dev(cur) -> None:
+    cur.execute("select current_database()")
+    name = cur.fetchone()[0]
+    # COMMENT takes no bind parameters, so the name and text are quoted by psycopg.
+    cur.execute(pgsql.SQL("comment on database {} is {}").format(pgsql.Identifier(name), pgsql.Literal(DEV_MARK)))
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--env", required=True)
@@ -82,6 +97,8 @@ def main(argv=None) -> int:
             jobs = remove_schedules(cur)
             if jobs:
                 print(f"  removed scheduled jobs (the dev project must not call the live app): {', '.join(jobs)}")
+            mark_dev(cur)
+            print("  marked as the dev project (dev-only seeds may run here)")
             cur.execute("select count(*) from schema_migrations")
             print(f"Done: {cur.fetchone()[0]} migrations recorded.")
         return 0

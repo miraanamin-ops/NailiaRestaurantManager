@@ -44,12 +44,12 @@ def test_test_tools_switch_matches_the_app():
     assert not tools_on({"TEST_TOOLS": "maybe", "TEST_MODE": "true"})  # unreadable = safe value
 
 
-def test_load_refuses_production_and_full_data_there(tmp_path, capsys):
+def test_load_always_refuses_production(tmp_path, capsys):
     prod = env_file(tmp_path, DATABASE_URL=f"postgresql://postgres.{PRODUCTION_REF}:pw@host:5432/postgres", TEST_TOOLS="true")
     assert load.main(["--env", prod]) == 2
     assert "PRODUCTION" in capsys.readouterr().err
-    assert load.main(["--env", prod, "--allow-production"]) == 2
-    assert "Only the 3-week fixture" in capsys.readouterr().err
+    assert load.main(["--env", prod, "--fixture"]) == 2  # not even the 3-week fixture
+    assert "PRODUCTION" in capsys.readouterr().err
     assert apply_migrations.main(["--env", prod]) == 2
 
 
@@ -92,6 +92,9 @@ def database(tmp_path_factory):
         strip = lambda f, sql: re.sub(r"create extension if not exists (pg_cron|pg_net);", "", sql, flags=re.I)
         apply_migrations.apply_all(cur, resume=False, transform=strip)
         assert apply_migrations.remove_schedules(cur)  # the migrations scheduled jobs; a dev project must not keep them
+        apply_migrations.mark_dev(cur)
+        cur.execute("select shobj_description(oid, 'pg_database') from pg_database where datname = current_database()")
+        assert cur.fetchone()[0].startswith("dinerai-dev")  # the mark supabase/seed/*.sql requires
         cur.execute("insert into restaurants (id, name, is_demo) values ('abababab-0000-0000-0000-00000000000a', 'Real', false)")
         cur.execute("insert into staff (restaurant_id, display_name, source) values ('abababab-0000-0000-0000-00000000000a', 'Real person', 'manual')")
     yield uri

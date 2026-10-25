@@ -9,8 +9,12 @@
 // (a till report or POS file) are left alone. Running it again replaces the dummy data.
 // If a restaurant has no stored weather yet, the last 12 months are fetched first
 // (Open-Meteo, the same as the app's weather job).
-// Usage: node --env-file=.env.local scripts/seed-sales.mjs [--remove]
+// Usage: node --env-file=<dev project env file> scripts/seed-sales.mjs [--remove]
+// Refuses the live database (scripts/lib/live-guard.mjs): demo data stays on dev.
 import { createClient } from "@supabase/supabase-js";
+import { refuseLive } from "./lib/live-guard.mjs";
+
+refuseLive(process.env, "seed-sales.mjs");
 
 const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const SLUGS = ["ember-spice", "cardamom-corner"];

@@ -73,8 +73,12 @@ type ReportSectionDef = { id; order; build({ restaurant, period }): Promise<{ ti
 
 ## Test Kitchen (demo restaurant)
 
-`supabase/seed/test-kitchen.sql`, after `043_pilot_rota.sql` (paste into Supabase > SQL Editor). Id `7e57c0de-0000-4000-8000-000000000000`, slug `test-kitchen`, `is_demo`, **not active** (scheduled jobs skip it until switched on and a WhatsApp number is linked). Google stays in dummy mode (4 dummy reviews; nothing reaches Google). 12 months of daily and hourly sales up to yesterday (Fri and Sat busiest, the same pattern as the dummy forecast), 8 staff (4 kitchen, 3 front of house, 1 both) with pay, hours caps and availability, and the two rota rules. Safe to run again; refuses if its id or slug belongs to any other restaurant. Remove with `delete from restaurants where id = '7e57c0de-0000-4000-8000-000000000000' and is_demo;`.
+**Dev project only.** `supabase/seed/test-kitchen.sql`, after `043_pilot_rota.sql` (paste into the dev project's Supabase > SQL Editor). It refuses any database not marked as the dev project (its description starts "dinerai-dev", set by `analytics/generator/apply_migrations.py`), so it can never run on the live database. Id `7e57c0de-0000-4000-8000-000000000000`, slug `test-kitchen`, `is_demo`, **not active** (scheduled jobs skip it until switched on and a WhatsApp number is linked). Google stays in dummy mode (4 dummy reviews; nothing reaches Google). 12 months of daily and hourly sales up to yesterday (Fri and Sat busiest, the same pattern as the dummy forecast), 8 staff (4 kitchen, 3 front of house, 1 both) with pay, hours caps and availability, and the two rota rules. Safe to run again; refuses if its id or slug belongs to any other restaurant. Remove with `delete from restaurants where id = '7e57c0de-0000-4000-8000-000000000000' and is_demo;`.
 
 ## Tests
 
-`tests/pilot-contracts.test.ts` (the three functions, real and dummy paths, and the registry) and `tests/pilot-schema.test.ts` (043, its rollback and the seed on the full migration chain in PGlite).
+`tests/pilot-contracts.test.ts` (the three functions, real and dummy paths, and the registry) and `tests/pilot-schema.test.ts` (043, its rollback and the seed on the full migration chain in PGlite, including its refusal without the dev mark). `tests/seed-guards.test.ts`: every `scripts/seed-*.mjs` stops with live settings.
+
+## Notes for later
+
+- `tests/queue.test.ts` failed to start once (25 Oct) during a full run while the machine was busy, then passed on its own and in a rerun. It builds a whole database in PGlite before its tests, so it's probably a slow start, not a bug. Look at it only if it fails again.

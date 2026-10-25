@@ -3,9 +3,12 @@
 // "done for you" line has something from the last 24 hours. Last week is busier.
 // Everything it adds is tagged, so running it again replaces it, and --remove
 // takes it all out. Existing data is never touched.
-// Usage: node --env-file=.env.local scripts/seed-two-weeks.mjs [--remove]  (seeds the Ember & Spice demo; the texts are grill-specific)
+// Usage: node --env-file=<dev project env file> scripts/seed-two-weeks.mjs [--remove]  (refuses the live database; seeds the Ember & Spice demo; the texts are grill-specific)
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { refuseLive } from "./lib/live-guard.mjs";
+
+refuseLive(process.env, "seed-two-weeks.mjs");
 
 const TAG = "report-seed";
 const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);

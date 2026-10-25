@@ -15,9 +15,14 @@ const SEED = readFileSync(new URL("../supabase/seed/test-kitchen.sql", import.me
 
 const one = async <T = Record<string, unknown>>(pg: PGlite, sql: string, params: unknown[] = []) => (await pg.query<T>(sql, params)).rows[0];
 
+// The dev project's mark (analytics/generator/apply_migrations.py mark_dev); the live database never has it.
+const markDev = (db: PGlite, mark: string | null) =>
+  db.exec(`do $$ begin execute format('comment on database %I is %s', current_database(), ${mark === null ? "'null'" : `quote_literal('${mark}')`}); end $$;`);
+
 let pg: PGlite;
 beforeAll(async () => {
   pg = await newFullDb();
+  await markDev(pg, "dinerai-dev: the DinerAI dev project (demo data allowed)");
 }, 120_000);
 
 describe("043_pilot_rota.sql", () => {
@@ -37,6 +42,15 @@ describe("043_pilot_rota.sql", () => {
 });
 
 describe("seed/test-kitchen.sql", () => {
+  test("refuses any database without the dev mark (the live one never has it), changing nothing", async () => {
+    for (const mark of [null, "default administrative connection database", "live dinerai-dev"]) {
+      await markDev(pg, mark);
+      await expect(pg.exec(SEED)).rejects.toThrow(/not the dev database/);
+      expect(await one(pg, "select count(*)::int as n from restaurants where id = $1", [TK])).toEqual({ n: 0 });
+    }
+    await markDev(pg, "dinerai-dev: the DinerAI dev project (demo data allowed)");
+  });
+
   test("makes Test Kitchen: a demo restaurant, not active, with its menu in dishes", async () => {
     await pg.exec(SEED);
     expect(await one(pg, "select name, slug, is_demo, active from restaurants where id = $1", [TK])).toEqual({ name: "Test Kitchen", slug: "test-kitchen", is_demo: true, active: false });

@@ -3,7 +3,7 @@
 - Credentials come only from the env file named on the command line, never from a
   default location, and never from a copy of the repo in OneDrive.
 - The production Supabase project is recognised by its project ref; loading there is
-  refused unless --allow-production is given AND the data is the 3-week fixture.
+  always refused (demo data stays on dev).
 - Loading respects the app's TEST_TOOLS switch (same rules as src/lib/switches.ts).
 """
 

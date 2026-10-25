@@ -61,8 +61,8 @@ DATABASE_URL=postgresql://postgres.<dev-project-ref>:<password>@aws-0-eu-west-2.
 TEST_TOOLS=true
 ```
 
-- The production project (`gfrkcvcqmdhdhpcytlkc`) is refused. `--allow-production` lets
-  only the 3-week fixture in (`--fixture`); `apply_migrations.py` never runs there.
+- The production project (`gfrkcvcqmdhdhpcytlkc`) is always refused, fixture or not: demo
+  data stays on dev. `apply_migrations.py` never runs there either.
 - `TEST_TOOLS` must be on (the app's own switch rules, including the deprecated `TEST_MODE`).
 - A restaurant with a dataset's id that is not a demo restaurant is never touched; a
   slug clash with another restaurant is refused.
