@@ -11,7 +11,7 @@ import { forecastWeek } from "@/lib/forecast/rules";
 import { selectAll } from "@/lib/sales/store";
 import { reportFeatureSections } from "@/lib/sections";
 import { check, checkRow } from "@/lib/drafts";
-import { google, type GooglePost, type GoogleReview } from "@/lib/google";
+import { google, googleFor, googleModeFor, type GooglePost, type GoogleReview } from "@/lib/google";
 import { newToken } from "@/lib/signups";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural } from "@/lib/text";
@@ -203,7 +203,7 @@ const DATA_SECTIONS: DataSection[] = [
     id: "google",
     connected: () => true,
     async build({ restaurant, period: p, rows }) {
-      const g = google();
+      const g = await googleFor(restaurant.id);
       let insights: GoogleSection["insights"] = null;
       // Views, calls and direction requests only exist once Google is live.
       if (g.mode === "live" && g.getInsights) {
@@ -213,6 +213,7 @@ const DATA_SECTIONS: DataSection[] = [
             views: { now: now.views, before: before.views },
             calls: { now: now.calls, before: before.calls },
             directions: { now: now.directions, before: before.directions },
+            websiteClicks: { now: now.websiteClicks, before: before.websiteClicks },
           };
         } catch (err) {
           console.error("Google insights failed; leaving them out of the report", err);
@@ -414,7 +415,7 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
       label: rangeLabel(period.start, period.end),
       prevLabel: rangeLabel(period.prevStart, period.start),
     },
-    googleMode: google().mode,
+    googleMode: await googleModeFor(restaurant.id),
     whatsappNumber: restaurant.whatsapp_from?.replace(/\D/g, "") || null,
     sections: [headline, ...dataSections, actions],
   };

@@ -24,7 +24,7 @@ import { birthdayGrowth } from "@/lib/agents/growth";
 import { londonYmd } from "@/lib/clock";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage } from "@/lib/format";
-import { google } from "@/lib/google";
+import { googleFor } from "@/lib/google";
 import { buttonsFor, createPostDraft, postMessage, runReviewCheck, type Send } from "@/lib/google-jobs";
 import { downloadTwilioMedia, isSupportedImage, savePostPhoto } from "@/lib/photos";
 
@@ -140,8 +140,8 @@ export async function proposeBirthdayCampaign(ctx: RestaurantContext, send: Send
 // Test command: a new review "appears on Google" (dummy mode), then the
 // normal review check runs straight away instead of waiting for the hour.
 export async function newReview(ctx: RestaurantContext, rating: number | null, send: Send) {
-  const g = google();
-  if (!g.addDummyReview) return send("NEW REVIEW only works in dummy Google mode.");
+  const g = await googleFor(ctx.restaurantId);
+  if (!g.addDummyReview) return send("NEW REVIEW only works with dummy Google. This restaurant is connected to real Google, so new reviews come from Google itself (RUN REVIEWS checks now).");
   const pick = randomDummyReview(rating ?? undefined, ctx.restaurant.cuisine);
   const review = await g.addDummyReview(ctx.restaurantId, pick);
   const name = review.author_name.replace(/\.$/, "");

@@ -297,6 +297,7 @@ function GoogleVisibility({ x }: { x: GoogleSection }) {
         {x.insights && <Stat label="Listing views" value={x.insights.views} />}
         {x.insights && <Stat label="Calls" value={x.insights.calls} />}
         {x.insights && <Stat label="Directions" value={x.insights.directions} />}
+        {x.insights?.websiteClicks && <Stat label="Website clicks" value={x.insights.websiteClicks} />}
       </View>
       {x.recentPosts.map((p) => (
         <Text key={p.publishedAt} style={[s.item, { marginTop: 6 }]}>

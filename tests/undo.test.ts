@@ -15,10 +15,18 @@ describe("undoing an approval", () => {
     expect(p.type).toBe("cannot");
     expect(p.type === "cannot" && p.reason).toMatch(/can't be unsent/);
   });
-  test("a review reply or Google post comes down again in dummy mode, not live", () => {
+  test("a review reply or Google post comes down again, in dummy mode and live (the API deletes it)", () => {
     expect(undoPlan(approved, draft("review_reply", "sent", "r1"), "dummy")).toEqual({ type: "withdraw_reply" });
     expect(undoPlan(approved, draft("google_post", "sent"), "dummy")).toEqual({ type: "withdraw_post" });
-    expect(undoPlan(approved, draft("review_reply", "sent", "r1"), "live").type).toBe("cannot");
+    expect(undoPlan(approved, draft("review_reply", "sent", "r1"), "live")).toEqual({ type: "withdraw_reply" });
+    expect(undoPlan(approved, draft("google_post", "sent"), "live")).toEqual({ type: "withdraw_post" });
+  });
+  test("simulated Google posted nothing; live hours can't be put back and say how", () => {
+    expect(undoPlan(approved, draft("review_reply", "sent", "r1"), "simulated")).toEqual({ type: "withdraw_simulated" });
+    const hours = undoPlan(approved, draft("hours_update", "sent"), "live");
+    expect(hours.type).toBe("cannot");
+    expect(hours.type === "cannot" && hours.reason).toMatch(/change Friday hours/);
+    expect(undoPlan(approved, draft("hours_update", "sent"), "dummy")).toEqual({ type: "withdraw_simulated" });
   });
   test("a simulated send is just marked withdrawn", () => {
     expect(undoPlan(approved, draft("promotion", "sent"), "dummy")).toEqual({ type: "withdraw_simulated" });

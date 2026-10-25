@@ -64,6 +64,13 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
       <div className="space-y-5">
         <BillingCard r={r} />
         <Card>
+          <h2 className="text-lg font-bold">Google Business Profile</h2>
+          <p className="text-stone-700">{r.google_location_id ? `Connected: ${r.google_location_title ?? "your listing"}.` : "Not connected yet. Connect it so the replies and posts you approve go straight onto Google."}</p>
+          <Link href={`/settings/google?r=${restaurantId}`} className="text-sm font-medium text-emerald-700 underline">
+            {r.google_location_id ? "Manage Google" : "Connect Google"}
+          </Link>
+        </Card>
+        <Card>
           <h2 className="text-lg font-bold">Details</h2>
           <form action={saveDetails} className="space-y-4">
             <input type="hidden" name="r" value={restaurantId} />

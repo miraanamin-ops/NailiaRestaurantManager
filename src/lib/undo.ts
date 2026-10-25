@@ -1,14 +1,14 @@
 import "server-only";
 import { lastUndoable, logAction, markUndone, type AuditEntry } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { google, type GooglePost } from "@/lib/google";
+import { googleModeFor, google, type GooglePost } from "@/lib/google";
 import { updateRestaurantColumns, type MenuRename } from "@/lib/ops/menu";
 import { recordColumnChange } from "@/lib/profile/versions";
 import { processQueue } from "@/lib/send";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { setStaffActive } from "./sales/staff";
 import { showNumber } from "./onboarding/steps";
-import { undoPlan } from "./undo-plan";
+import { GOOGLE_KINDS, undoPlan } from "./undo-plan";
 
 // UNDO: reverses the owner's last action (from the last 24 hours) where it can,
 // and says plainly when it can't. APPROVE ALL is undone as one.
@@ -32,11 +32,17 @@ const FIELD_WORDS: Record<string, string> = { logo_url: "logo", brand_color: "bu
 
 async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Promise<{ text: string; done: boolean }> {
   const draft = entry.draft_id ? await getDraft(entry.draft_id).catch(() => null as Draft | null) : null;
-  const plan = undoPlan(entry, draft, google().mode);
+  const googleMode = await googleModeFor(restaurant.id);
+  const plan = undoPlan(entry, draft, googleMode);
+  const where = googleMode === "dummy" ? "(dummy) Google" : "Google";
   const name = draft ? draftName(draft) : "";
 
   switch (plan.type) {
     case "cannot":
+      // Logged, so what Google couldn't take back is on record.
+      if (draft && googleMode === "live" && GOOGLE_KINDS.includes(draft.kind)) {
+        await logAction({ restaurantId: restaurant.id, draftId: draft.id, actor: "owner", action: "google", detail: `UNDO couldn't change Google back: ${plan.reason}` });
+      }
       return { text: `❌ Can't undo ${entry.detail?.toLowerCase() ?? "that"}: ${plan.reason}`, done: false };
 
     case "reopen":
@@ -49,13 +55,13 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
     case "withdraw_reply":
       await google().removeReply(restaurant.id, draft!.review_id!);
       await updateDraft(draft!.id, { status: "withdrawn" });
-      return { text: `↩️ Took your ${name} down from (dummy) Google.`, done: true };
+      return { text: `↩️ Took your ${name} down from ${where}.`, done: true };
 
     case "withdraw_post": {
       const post = check(await getSupabase().from("google_posts").select("*").eq("draft_id", draft!.id).maybeSingle<GooglePost>());
       if (post) await google().unpublishPost(restaurant.id, post.id);
       await updateDraft(draft!.id, { status: "withdrawn" });
-      return { text: "↩️ Took the Google post down from (dummy) Google.", done: true };
+      return { text: `↩️ Took the Google post down from ${where}.`, done: true };
     }
 
     case "withdraw_simulated":

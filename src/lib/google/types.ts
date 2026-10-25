@@ -63,7 +63,15 @@ export interface GoogleConnector {
    * (Business Profile Performance API). Dummy mode has no such numbers, so the
    * weekly report hides them.
    */
-  getInsights?(restaurantId: string, start: Date, end: Date): Promise<{ views: number; calls: number; directions: number }>;
+  getInsights?(restaurantId: string, start: Date, end: Date): Promise<{ views: number; calls: number; directions: number; websiteClicks: number }>;
+
+  /**
+   * Live mode only: copies the restaurant's saved opening hours and special hours
+   * to Google. jobKey (e.g. the draft id) makes a retried job write only once.
+   */
+  updateHours?(restaurantId: string, jobKey: string): Promise<void>;
+  /** Live mode only: adds a photo (a public URL) to the listing, once per jobKey. */
+  uploadPhoto?(restaurantId: string, url: string, jobKey: string, category?: string): Promise<{ name: string; googleUrl: string | null }>;
 
   /** Dummy mode only: pretend a new review has appeared on Google. */
   addDummyReview?(restaurantId: string, review: { author: string; rating: number; text: string }): Promise<GoogleReview>;

@@ -38,6 +38,7 @@ export type AuditAction =
   | "job_retried" // the builder retried a dead job from /log
   | "builder_command" // a BUILDER ... WhatsApp command from BUILDER_WHATSAPP
   | "outside_data" // the builder changed outside data on /feeds (a confirmed date, term dates, a timetable...)
+  | "google" // Google connected, location linked, imported, disconnected, a login needing reconnecting, or an UNDO Google could not do
   | "billing"; // a Stripe event (trial, subscription, payment), or billing switching the restaurant on or off
 
 export type AuditEntry = {

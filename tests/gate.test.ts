@@ -152,7 +152,7 @@ describe("Google simulation inside attemptSend", () => {
     });
     const replyToReview = vi.fn();
     vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
-    vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
+    vi.doMock("@/lib/google", () => ({ googleFor: async () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
     vi.stubEnv("TEST_MODE", "true");
     vi.stubEnv("GOOGLE_MODE", "live");
     vi.stubEnv("VERCEL_ENV", "production");
@@ -188,7 +188,7 @@ describe("GOOGLE_MODE=live by environment", () => {
     });
     const replyToReview = vi.fn();
     vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
-    vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
+    vi.doMock("@/lib/google", () => ({ googleFor: async () => ({ mode: "live", replyToReview, publishPost: vi.fn() }) }));
     vi.stubEnv("TEST_MODE", "");
     for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
     const { attemptSend } = await import("@/lib/send");
@@ -233,7 +233,7 @@ describe("an approved hours update (Google not connected for hours yet)", () => 
     });
     const publishPost = vi.fn();
     vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
-    vi.doMock("@/lib/google", () => ({ google: () => ({ mode: "dummy", replyToReview: vi.fn(), publishPost }) }));
+    vi.doMock("@/lib/google", () => ({ googleFor: async () => ({ mode: "dummy", replyToReview: vi.fn(), publishPost }) }));
     const { attemptSend } = await import("@/lib/send");
     const result = await attemptSend("d1", db.tables.restaurants[0] as never, noonUk, "approve");
     expect(result).toMatchObject({ outcome: "sent" });
