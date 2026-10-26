@@ -9,6 +9,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { setStaffActive } from "./sales/staff";
 import { showNumber } from "./onboarding/steps";
 import { GOOGLE_KINDS, undoPlan } from "./undo-plan";
+import type { Adjustment } from "./rota/fill";
 
 // UNDO: reverses the owner's last action (from the last 24 hours) where it can,
 // and says plainly when it can't. APPROVE ALL is undone as one.
@@ -44,6 +45,16 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
         await logAction({ restaurantId: restaurant.id, draftId: draft.id, actor: "owner", action: "google", detail: `UNDO couldn't change Google back: ${plan.reason}` });
       }
       return { text: `❌ Can't undo ${entry.detail?.toLowerCase() ?? "that"}: ${plan.reason}`, done: false };
+
+    case "rota_unpublish": {
+      const { unpublishRota } = await import("./rota/build");
+      return { text: await unpublishRota(restaurant, draft!), done: true };
+    }
+
+    case "rota_edit": {
+      const { restoreRotaEdit } = await import("./rota/build");
+      return { text: await restoreRotaEdit(restaurant, draft!, plan.adjustments as Adjustment[], now), done: true };
+    }
 
     case "reopen":
       await updateDraft(draft!.id, { status: "pending", approved_at: null, scheduled_for: null, block_reason: null, waiting_for: null });

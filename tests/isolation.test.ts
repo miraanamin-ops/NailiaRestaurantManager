@@ -393,7 +393,7 @@ describe("no query forgets which restaurant it's for", () => {
   // Restaurant-owned tables: every read or write of them must say which restaurant
   // (or a specific row by id/token). A new query that doesn't fails this test.
   const OWNED = OWNED_TABLES;
-  const SCOPED = /restaurant_id|\.eq\("id"|\.in\("id"|eq\("token"|eq\("draft_id"|in\("draft_id"|eq\("campaign_id"|eq\("customer_id"|eq\("unsubscribe_token"|eq\("confirm_token"|eq\("request_id"|eq\("review_id"|in\("review_id"|eq\("batch_id"|is\("restaurant_id"/;
+  const SCOPED = /restaurant_id|\.eq\("id"|\.in\("id"|eq\("token"|eq\("draft_id"|in\("draft_id"|eq\("campaign_id"|eq\("customer_id"|eq\("unsubscribe_token"|eq\("confirm_token"|eq\("request_id"|eq\("review_id"|in\("review_id"|eq\("batch_id"|is\("restaurant_id"|eq\("share_token"/;
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {
       const p = join(dir, f);

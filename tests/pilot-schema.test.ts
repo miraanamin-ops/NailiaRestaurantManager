@@ -113,10 +113,18 @@ describe("seed/test-kitchen.sql", () => {
     expect(await one(pg, "select count(*)::int as n from reviews where restaurant_id = $1", [TK])).toEqual({ n: 4 });
   });
 
+  test("4 weeks of past approved rotas, before this week, in London time", async () => {
+    expect(await one(pg, "select count(*)::int as n, bool_and(status = 'approved') as ok, max(week_start) < date_trunc('week', current_date)::date as past from rota_weeks where restaurant_id = $1", [TK])).toEqual({ n: 4, ok: true, past: true });
+    // Mon to Thu: Tomasz, Ravi, Sam; Fri and Sat: 5 people; Sun: 3 = 4*3 + 2*5 + 3 = 25 shifts a week
+    expect(await one(pg, "select count(*)::int as n from rota_shifts where restaurant_id = $1", [TK])).toEqual({ n: 100 });
+    expect(await one(pg, "select to_char(starts_at at time zone 'Europe/London', 'HH24:MI') as t from rota_shifts where restaurant_id = $1 and staff_id = $2 limit 1", [TK, `${TK.slice(0, -1)}2`])).toEqual({ t: "12:00" });
+  });
+
   test("running it again changes nothing", async () => {
     const count = async () =>
       one(pg, `select (select count(*) from sales_days where restaurant_id = $1)::int as days, (select count(*) from sales_hours where restaurant_id = $1)::int as hours,
                       (select count(*) from staff where restaurant_id = $1)::int as staff, (select count(*) from staff_availability where restaurant_id = $1)::int as avail,
+                      (select count(*) from rota_weeks where restaurant_id = $1)::int as rotas, (select count(*) from rota_shifts where restaurant_id = $1)::int as shifts,
                       (select count(*) from staff_pay_rates where restaurant_id = $1)::int as pay, (select count(*) from reviews where restaurant_id = $1)::int as reviews,
                       (select sum(net_sales) from sales_days where restaurant_id = $1)::text as net`, [TK]);
     const before = await count();

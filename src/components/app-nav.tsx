@@ -7,6 +7,7 @@ import { logOut } from "@/app/login/actions";
 const PAGES = [
   { href: "/", label: "Dashboard" },
   { href: "/sales", label: "Sales" },
+  { href: "/staff", label: "Team" },
   { href: "/settings", label: "Settings" },
   { href: "/log", label: "Activity" },
 ];

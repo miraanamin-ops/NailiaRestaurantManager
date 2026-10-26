@@ -39,6 +39,8 @@ export type AuditAction =
   | "builder_command" // a BUILDER ... WhatsApp command from BUILDER_WHATSAPP
   | "outside_data" // the builder changed outside data on /feeds (a confirmed date, term dates, a timetable...)
   | "google" // Google connected, location linked, imported, disconnected, a login needing reconnecting, or an UNDO Google could not do
+  | "rota_staff" // someone added to, changed on or removed from the rota team (WhatsApp or /staff)
+  | "rota_settings" // the rota rules or settings changed (/staff)
   | "billing"; // a Stripe event (trial, subscription, payment), or billing switching the restaurant on or off
 
 export type AuditEntry = {

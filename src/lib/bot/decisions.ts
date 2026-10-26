@@ -1,6 +1,7 @@
 import "server-only";
 import { draftByBriefNumber, remainingInBrief, remainingNote } from "@/lib/brief";
-import { approveDraft, check, getLastApprovedDraft, isQuestion, skipDraft, startEdit, type Draft } from "@/lib/drafts";
+import { approveDraft, check, getLastApprovedDraft, isQuestion, OWNER_ONLY_KINDS, skipDraft, startEdit, type Draft } from "@/lib/drafts";
+import { approveRota } from "@/lib/rota/build";
 import { sendResultMessage } from "@/lib/format";
 import { presentNext } from "@/lib/google-jobs";
 import { attemptSend } from "@/lib/send";
@@ -18,6 +19,8 @@ const QUESTION_HINT = (n: number | null, kind = "review_question") =>
   kind === "hours_question"
     ? `That one's a question, not a draft: tap *Same hours*, *Closed* or *Different hours*${n ? ` (or reply SAME ${n}, CLOSED ${n} or DIFFERENT ${n})` : ""}.`
     : `That one's a question, not a draft: tap *Reply publicly*, *Handle privately* or *Both*${n ? ` (or reply PUBLIC ${n}, PRIVATE ${n} or BOTH ${n})` : ""}.`;
+
+const ROTA_EDIT_HINT = "✏️ What should change? e.g. _Ali can't do Friday_, _Mo can do Sunday_ or _swap Sara and Bilal on Sunday_. I'll re-do the rota and send it again.";
 
 // A second tap on Approve within this long counts as a duplicate attempt.
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -37,6 +40,13 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
   // The GM's cards: a fact is saved on Approve; a special idea is liked or skipped (never sent).
   if (draft.status === "pending" && draft.kind === "profile_change" && t.action === "approve") return approveFact(turn, draft);
   if (draft.status === "pending" && draft.kind === "special_idea" && t.action !== "edit") return decideIdea(turn, draft, t.action === "approve");
+  // A rota is published on Approve (never sent to anyone).
+  if (draft.status === "pending" && draft.kind === "rota" && t.action === "approve") {
+    await approveRota(r, draft, send, turn.channel);
+    await presentNext(ctx, send);
+    return;
+  }
+  if (draft.status !== "pending" && OWNER_ONLY_KINDS.has(draft.kind)) return send(`👍 ${label[0].toUpperCase()}${label.slice(1)} is already ${draft.status}.`);
 
   if (draft.status !== "pending") {
     // A second Approve on something already approved: the rules decide (and log) it.
@@ -56,7 +66,7 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
   }
   if (t.action === "edit") {
     await startEdit(draft);
-    return send(`✏️ What would you like me to change in ${label}?`);
+    return send(draft.kind === "rota" ? ROTA_EDIT_HINT : `✏️ What would you like me to change in ${label}?`);
   }
   await skipDraft(draft);
   if ((await gmMode(r)) === "live") return offerSkipReasons(send, draft.id);
@@ -83,6 +93,11 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     await decideIdea(turn, decisionDraft, action === "approve");
     return true;
   }
+  if (decisionDraft?.kind === "rota" && action === "approve") {
+    await approveRota(r, decisionDraft, send, turn.channel);
+    await presentNext(ctx, send);
+    return true;
+  }
   if (action === "approve") {
     if (decisionDraft) {
       const approved = await approveDraft(decisionDraft);
@@ -92,13 +107,18 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     }
     // A second tap on an already-approved draft: the rules decide (and log) it.
     const last = await getLastApprovedDraft(r.id);
+    // A card for the owner (a rota, a fact) has nothing to send again.
+    if (last && OWNER_ONLY_KINDS.has(last.kind) && Date.now() - new Date(last.approved_at!).getTime() < DUPLICATE_WINDOW_MS) {
+      await send("👍 That's already approved.");
+      return true;
+    }
     if (last && Date.now() - new Date(last.approved_at!).getTime() < DUPLICATE_WINDOW_MS) {
       await send(sendResultMessage(await attemptSend(last.id, r, ctx.now, "approve")));
       return true;
     }
   } else if (decisionDraft && action === "edit") {
     await startEdit(decisionDraft);
-    await send("✏️ What would you like me to change?");
+    await send(decisionDraft.kind === "rota" ? ROTA_EDIT_HINT : "✏️ What would you like me to change?");
     return true;
   } else if (decisionDraft && action === "skip") {
     await skipDraft(decisionDraft);

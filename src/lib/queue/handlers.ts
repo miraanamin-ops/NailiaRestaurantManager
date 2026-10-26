@@ -160,8 +160,21 @@ const cleanupJob: JobHandler = {
   run: async () => ({ removed: await cleanup(), feedCache: await clearFeedCache() }),
 };
 
+// Thursday 10am: next week's rota, sent to the owner as a draft (lib/rota/build.ts).
+// A week that already has a draft (or is approved) is left alone.
+const rotaWeekJob: JobHandler = {
+  run: async (job) => {
+    const r = await restaurantFor(job);
+    const channel = r?.active ? ownerChannel(r) : null;
+    if (!r || !channel) return { skipped: "no owner WhatsApp yet" };
+    const { suggestRota } = await import("@/lib/rota/build");
+    return suggestRota(r, { now: new Date(), send: (text, withButtons = false, mediaUrl = null) => messageOwner(channel, text, withButtons, { mediaUrl }), mode: "urgent", actor: "scheduled job", rebuild: false });
+  },
+};
+
 export const HANDLERS: Record<string, JobHandler> = {
   owner_message: ownerMessage,
+  rota_week: rotaWeekJob,
   morning,
   agent: agentQueueHandler(AGENT_HANDLERS),
   review_check: reviewCheck,

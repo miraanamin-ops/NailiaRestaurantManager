@@ -56,6 +56,17 @@ export const keys = {
   health: (day: string) => `health_check:${day}:brief`,
   cleanup: (day: string) => `cleanup:${day}`,
   model: (model: string, restaurantId: string, day: string) => `${model}:${restaurantId}:${day}`,
+  rota: (restaurantId: string, weekStart: string) => `rota_week:${restaurantId}:${weekStart}`,
+};
+
+// The rota suggester's weekly slot: Thursday, from 10am UK time.
+export const ROTA_DUE = { weekday: 4, hour: 10 };
+export const rotaDue = (now: Date) => londonWeekday(now) === ROTA_DUE.weekday && londonParts(now).hour >= ROTA_DUE.hour;
+// The week a Thursday's rota is for: the Monday after.
+export const rotaWeekFor = (now: Date) => {
+  const today = londonYmd(now);
+  const wd = londonWeekday(now) === 0 ? 7 : londonWeekday(now);
+  return new Date(Date.parse(`${today}T12:00:00Z`) + (8 - wd) * 86_400_000).toISOString().slice(0, 10);
 };
 
 // One restaurant's morning steps never run at the same time, and neither do
@@ -119,5 +130,9 @@ export function plannedJobs(
       add(model.type, keys.model(model.type, r.id, day), { concurrencyKey: concurrencyKeys.models(r.id), payload: { day }, ...(runAt ? { runAt } : {}) });
     }
   }
+  // Thursday from 10am UK: next week's rota as a draft (once a week; the job
+  // itself skips a week that already has one, so a later hour or the backup
+  // can't repeat it). Last of all, like the models.
+  if (r.hasOwnerChannel && rotaDue(now)) add("rota_week", keys.rota(r.id, rotaWeekFor(now)));
   return out;
 }

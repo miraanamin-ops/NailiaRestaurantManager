@@ -112,7 +112,8 @@ export type Command =
   | { name: "add_staff" | "remove_staff"; number: string }
   | { name: "staff" | "sales" | "run_weather" }
   | { name: "test_forecast"; on: boolean }
-  | { name: "sample_z" | "test_z"; sample: ZSample };
+  | { name: "sample_z" | "test_z"; sample: ZSample }
+  | { name: "run_rota" | "rota" };
 
 // The sample till reports (public/samples/): 1-3 read cleanly, "bad" is blurred and cut off.
 export const Z_SAMPLES = ["1", "2", "3", "bad"] as const;
@@ -168,6 +169,9 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (t === "STAFF" || t === "STAFF NUMBERS" || t === "MY STAFF") return { name: "staff" };
   if (t === "SALES" || t === "UPLOAD SALES" || t === "SALES PAGE") return { name: "sales" };
   if (t === "RUN WEATHER" || t === "WEATHER") return { name: "run_weather" };
+  // RUN ROTA: next week's rota now (normally Thursday 10am); ROTA: where next week's rota is up to.
+  if (t === "RUN ROTA") return { name: "run_rota" };
+  if (t === "ROTA" || t === "MY ROTA" || t === "NEXT WEEK'S ROTA") return { name: "rota" };
   // "TEST FORECAST ON": show forecasts from runs that didn't pass, labelled TEST (demo restaurants only).
   const testForecast = t.match(/^TEST FORECASTS? (ON|OFF)$/);
   if (testForecast) return { name: "test_forecast", on: testForecast[1] === "ON" };

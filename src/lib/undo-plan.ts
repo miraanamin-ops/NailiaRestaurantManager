@@ -13,6 +13,8 @@ export type UndoPlan =
   | { type: "restore_edit" }
   | { type: "restore_setting"; field: string; value: unknown }
   | { type: "staff"; number: string; active: boolean } // ADD STAFF / REMOVE STAFF, reversed
+  | { type: "rota_unpublish" } // an approved rota: back to a draft, its link switched off
+  | { type: "rota_edit"; adjustments: unknown[] } // a rota edit: the edits as they were, re-filled
   | { type: "cannot"; reason: string };
 
 // Restaurant details (hours, menu, voice, phone, address, website) come from onboarding,
@@ -61,6 +63,19 @@ export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: 
     return { type: "staff", number, active: entry.action === "staff_removed" };
   }
   if (!draft) return { type: "cannot", reason: "That draft no longer exists." };
+
+  // A rota: approving published it (nothing was sent), an edit re-filled it.
+  if (draft.kind === "rota") {
+    if (entry.action === "approved") {
+      return draft.status === "approved" ? { type: "rota_unpublish" } : { type: "cannot", reason: `It's no longer approved (it's ${draft.status}).` };
+    }
+    if (entry.action === "edited") {
+      if (!Array.isArray(entry.data?.before_adjustments)) return { type: "cannot", reason: "The earlier version wasn't saved." };
+      return draft.status === "pending"
+        ? { type: "rota_edit", adjustments: entry.data.before_adjustments }
+        : { type: "cannot", reason: `It's already ${draft.status}, so the earlier version can't be put back.` };
+    }
+  }
 
   if (entry.action === "approved") {
     if (draft.status === "queued" || draft.status === "blocked" || draft.status === "approved") return { type: "reopen" };

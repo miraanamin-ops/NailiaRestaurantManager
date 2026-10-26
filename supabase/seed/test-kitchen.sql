@@ -18,6 +18,7 @@
 --     availability (the same people as DUMMY_STAFF in src/lib/rota/types.ts),
 --     and the two rota rules.
 --   - 4 dummy Google reviews.
+--   - 4 weeks of past rotas, approved (who usually works which day).
 --
 -- To remove it all:  delete from restaurants where id = '7e57c0de-0000-4000-8000-000000000000' and is_demo;
 -- =====================================================================
@@ -189,3 +190,33 @@ select '7e57c0de-0000-4000-8000-000000000000', v.author, v.rating, v.text, now()
     ('Mina R.',  5, 'Lovely staff and the lassi is spot on.',                     interval '22 days', true)
   ) as v(author, rating, text, ago, replied)
  where not exists (select 1 from reviews where restaurant_id = '7e57c0de-0000-4000-8000-000000000000');
+
+-- 6. Four weeks of past rotas, approved (the rota suggester learns who usually
+--    works which day from these). Replaced on every run; a rota made in the app
+--    (source 'model') is never touched.
+delete from rota_weeks
+ where restaurant_id = '7e57c0de-0000-4000-8000-000000000000' and source = 'synthetic';
+
+insert into rota_weeks (restaurant_id, week_start, status, approved_at, approved_by, source)
+select '7e57c0de-0000-4000-8000-000000000000', w.week_start, 'approved', now(), 'seed', 'synthetic'
+  from (select (date_trunc('week', current_date)::date - 7 * n) as week_start from generate_series(1, 4) as n) as w
+ where not exists (select 1 from rota_weeks x where x.restaurant_id = '7e57c0de-0000-4000-8000-000000000000' and x.week_start = w.week_start);
+
+-- The usual pattern (Monday = 1): staff number, role, weekdays, from, to.
+insert into rota_shifts (restaurant_id, rota_week_id, staff_id, role, business_date, starts_at, ends_at, source)
+select '7e57c0de-0000-4000-8000-000000000000', w.id, ('7e57c0de-0000-4000-8000-00000000000' || v.n)::uuid, v.role, d,
+       (d + v.starts::time) at time zone 'Europe/London', (d + v.ends::time) at time zone 'Europe/London', 'synthetic'
+  from rota_weeks w
+  join (values
+    (2, 'kitchen', array[1, 2, 3, 4, 7], '12:00', '22:00'),
+    (3, 'kitchen', array[1, 2, 3, 4],    '16:00', '22:00'),
+    (1, 'kitchen', array[5, 6],          '12:00', '22:00'),
+    (4, 'kitchen', array[5, 6, 7],       '12:00', '22:00'),
+    (8, 'kitchen', array[5, 6],          '17:00', '23:00'),
+    (5, 'front',   array[1, 2, 3, 4],    '12:00', '22:00'),
+    (6, 'front',   array[5, 6, 7],       '12:00', '22:00'),
+    (7, 'front',   array[5, 6],          '17:00', '23:00')
+  ) as v(n, role, days, starts, ends) on true
+  cross join lateral unnest(v.days) as wd
+  cross join lateral (select w.week_start + (wd - 1) as d) as dd
+ where w.restaurant_id = '7e57c0de-0000-4000-8000-000000000000' and w.source = 'synthetic';

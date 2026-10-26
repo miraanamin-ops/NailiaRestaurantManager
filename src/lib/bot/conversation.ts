@@ -15,6 +15,7 @@ import { campaignCreateAndSend, checkCreateAndSend, pastedReviewReply, reviseAnd
 import { answerHoursQuestion, hoursForQuestion } from "./hours-questions";
 import { looksLikeForecastQuestion, looksLikeNumbersQuestion, parseAction, parseGmTap, parseHoursAnswer, parseOfferTap, parseQuestionAnswer, parseTargetedAction } from "./parse";
 import { answerOfferTap } from "@/lib/forecast/offer";
+import { reviseRota } from "@/lib/rota/build";
 import { answerQuestion } from "./questions";
 import type { Turn } from "./turn";
 
@@ -69,10 +70,17 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
 
   // The owner is telling us what to change.
   if (active?.waiting_for === "edit_instructions") {
+    if (active.kind === "rota") return void (await reviseRota(ctx.restaurant, active, body, { now: ctx.now, send, useClaude: true }));
     if (active.kind === "profile_change") return correctFact(turn, active, body);
     if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, body, send);
     const rewritten = await rewriteDraft(ctx, learning, active, body);
     return reviseAndSend(ctx, active, body, rewritten, send);
+  }
+
+  // A rota on screen: "Ali can't do Friday" typed straight away is an edit (plain
+  // code only here, so other messages still reach the assistant).
+  if (!buttonPayload && active?.kind === "rota" && active.waiting_for === "decision") {
+    if (await reviseRota(ctx.restaurant, active, body, { now: ctx.now, send, useClaude: false, quietIfNotEdit: true })) return;
   }
 
   // The owner is telling us why they skipped.
@@ -170,6 +178,7 @@ async function respond(turn: Turn, body: string, result: ChatResult, active: Awa
   if (result.type === "profile_changes") return send(await applyProfileChanges(await getRestaurant(ctx.restaurantId), result.changes));
   if (result.type === "local_event") return localEventCard(turn, body, result.event);
   if (result.type === "revise" && active?.waiting_for === "decision") {
+    if (active.kind === "rota") return void (await reviseRota(ctx.restaurant, active, result.instruction, { now: ctx.now, send, useClaude: true }));
     if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, result.instruction, send);
     return reviseAndSend(ctx, active, result.instruction, result.content, send);
   }

@@ -5,11 +5,12 @@ import { queueDraftCheck } from "@/lib/agents/enqueue";
 import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question", "profile_change", "agent_question", "special_idea", "choice"] as const;
+export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question", "profile_change", "agent_question", "special_idea", "choice", "rota"] as const;
 // Questions for the owner: answered with their own buttons (or words), never approved or sent.
 export const QUESTION_KINDS: ReadonlySet<string> = new Set(["review_question", "hours_question", "agent_question", "choice"]);
 // Cards for the owner only (GM, 024): approved or skipped, but never sent to anyone.
-export const OWNER_ONLY_KINDS: ReadonlySet<string> = new Set(["profile_change", "special_idea"]);
+// A rota (045) is approved and published for the team, never sent to a customer.
+export const OWNER_ONLY_KINDS: ReadonlySet<string> = new Set(["profile_change", "special_idea", "rota"]);
 export const isQuestion = (kind: string | null | undefined) => QUESTION_KINDS.has(kind ?? "");
 export type DraftKind = (typeof DRAFT_KINDS)[number];
 export type WaitingFor = "decision" | "edit_instructions" | "skip_reason";
@@ -87,6 +88,7 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   agent_question: "Question",
   special_idea: "Special idea",
   choice: "Which did you mean?",
+  rota: "Weekly rota",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {
@@ -188,7 +190,8 @@ export async function createDraft(input: {
     detail: `Drafted ${draftName(draft)}${mode === "hold" ? ", held for the morning brief" : ""}. Checks: ${checksLine(input.checks)}`,
   });
   // The checker agent (shadow mode) reviews it in the background; nothing waits for it.
-  if (!input.agentCheck && !isQuestion(draft.kind)) await queueDraftCheck(draft);
+  // (A rota has no customer-facing words to check.)
+  if (!input.agentCheck && !isQuestion(draft.kind) && draft.kind !== "rota") await queueDraftCheck(draft);
   return draft;
 }
 

@@ -8,6 +8,8 @@ import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import { runCommand } from "./commands";
 import { handleConversation } from "./conversation";
 import { photoPost } from "./flows";
+import { staffCommand as runStaffCommand } from "./rota-commands";
+import { parseStaffCommand, type StaffCommand } from "@/lib/rota/staff-input";
 import { parseCommand } from "./parse";
 import { salesFromMedia, salesReply } from "@/lib/sales/whatsapp";
 import { ownerSender } from "./sales-commands";
@@ -56,11 +58,14 @@ export async function handleMessage(input: {
     }
 
     const turn: Turn = { ctx, channel, owner, send };
+    let staffCommand: StaffCommand | null = null;
     if (input.media) {
       // A till report photo or sales file is saved as sales; any other photo becomes a Google post.
       const outcome = await salesFromMedia(ownerSender(turn), input.media, body, ctx.now);
       if (outcome !== "handled") await photoPost(ctx, input.media, body, send);
     } else if (command) await runCommand(command, turn);
+    // The rota team: TEAM, "add Ali, kitchen, £13, weekdays", "remove Ali from the team".
+    else if (!input.buttonPayload && (staffCommand = parseStaffCommand(body))) await runStaffCommand(turn, staffCommand);
     // YES / REPLACE / a date, answering a till report or sales file question.
     else if (!input.buttonPayload && (await salesReply(ownerSender(turn), body, ctx.now))) {
       // answered

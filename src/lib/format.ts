@@ -13,6 +13,8 @@ const BUTTON_MESSAGE_BUDGET = 900;
 // it did on the four checks, then what each check fixed or flagged.
 export function draftMessage(draft: Draft, restaurant: Pick<Restaurant, "discount_cap_percent">) {
   // A question about a review: no draft to approve, just the owner's decision.
+  // A rota card is complete as written (lib/rota/message.ts).
+  if (draft.kind === "rota") return draft.content;
   if (draft.kind === "hours_question") return `${draft.content}\n\nNothing changes until you answer.`;
   if (draft.kind === "review_question") {
     return `❓ *Your call on the ${draft.audience ?? "review"}*\n\n${draft.content}\n\nNothing is posted until you choose.`;
