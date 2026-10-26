@@ -46,7 +46,10 @@ const SETTINGS = [
   "emoji_allowed",
 ];
 
-export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "live"): UndoPlan {
+export const GOOGLE_KINDS = ["review_reply", "google_post", "hours_update", "menu_update"];
+
+// googleMode: the restaurant's Google (lib/google/index.ts googleModeFor).
+export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "simulated" | "live"): UndoPlan {
   if (entry.action === "setting") {
     const field = String(entry.data?.field ?? "");
     if (!SETTINGS.includes(field)) return { type: "cannot", reason: "That setting can't be changed back automatically." };
@@ -66,15 +69,13 @@ export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: 
     if (draft.kind === "email_campaign") {
       return { type: "cannot", reason: "The emails have already been sent, and emails can't be unsent." };
     }
-    if (draft.kind === "review_reply" && draft.review_id) {
-      return googleMode === "dummy"
-        ? { type: "withdraw_reply" }
-        : { type: "cannot", reason: "The reply is live on Google. Delete it in your Google Business Profile." };
-    }
-    if (draft.kind === "google_post") {
-      return googleMode === "dummy"
-        ? { type: "withdraw_post" }
-        : { type: "cannot", reason: "The post is live on Google. Delete it in your Google Business Profile." };
+    // Simulated Google posted nothing, so there's nothing to take down.
+    if (googleMode === "simulated" && GOOGLE_KINDS.includes(draft.kind)) return { type: "withdraw_simulated" };
+    // Dummy and live: replies and posts can be deleted (live: through the API).
+    if (draft.kind === "review_reply" && draft.review_id) return { type: "withdraw_reply" };
+    if (draft.kind === "google_post") return { type: "withdraw_post" };
+    if (draft.kind === "hours_update" && googleMode === "live") {
+      return { type: "cannot", reason: 'Your hours are already changed on Google, and Google can\'t be put back automatically. Text the old hours (e.g. "change Friday hours to 11pm") and I\'ll update Google again.' };
     }
     return { type: "withdraw_simulated" };
   }

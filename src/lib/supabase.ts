@@ -113,6 +113,14 @@ export type Restaurant = {
   // Phase 3a (021): special hours by date, and the photo library.
   special_hours: Record<string, { label?: string | null; hours: string }> | null;
   photo_library: PhotoItem[] | null;
+  // Live Google (044): the login and location used, and what was imported on connect.
+  google_connection_id?: string | null;
+  google_account_id?: string | null;
+  google_location_id?: string | null;
+  google_location_title?: string | null;
+  google_linked_at?: string | null;
+  google_import?: import("@/lib/google/mapping").GoogleImport | null;
+  google_imported_at?: string | null;
   // The review replies the owner picked during onboarding (026, lib/onboarding/reply-examples.ts).
   profile_examples?: import("@/lib/onboarding/reply-examples").ProfileExamples | null;
   // Phase 3b (022): the owner's language and quiet hours (UK time, "23:00:00" to "09:00:00").

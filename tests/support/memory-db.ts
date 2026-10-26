@@ -82,8 +82,9 @@ function likeRegex(pattern: string, flags: string) {
   return new RegExp(`^${re}$`, flags);
 }
 
-// Options: `unique` lists tables whose "id" must be unique (a second insert gets
-// Postgres's 23505 error); `rpc` stands in for database functions.
+// Options: `unique` lists tables whose "id" must be unique, or "table.column"
+// for another unique column (a second insert gets Postgres's 23505 error);
+// `rpc` stands in for database functions.
 type Options = {
   unique?: string[];
   rpc?: Record<string, (args: Record<string, unknown>, tables: Record<string, Row[]>) => unknown>;
@@ -112,7 +113,8 @@ export function memoryDb(seed: Record<string, Row[]>, options: Options = {}) {
           created_at: new Date().toISOString(),
           ...p,
         }));
-        if (options.unique?.includes(name) && list.some((n) => rows.some((r) => r.id === n.id))) {
+        const uniqueCols = (options.unique ?? []).flatMap((u) => (u === name ? ["id"] : u.startsWith(`${name}.`) ? [u.slice(name.length + 1)] : []));
+        if (uniqueCols.some((c) => list.some((n) => rows.some((r) => r[c] != null && r[c] === n[c])))) {
           return { data: null, error: { message: "duplicate key value violates unique constraint", code: "23505" }, count: null };
         }
         rows.push(...list);

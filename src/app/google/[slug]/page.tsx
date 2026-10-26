@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { NotFoundCard } from "@/components/brand-shell";
-import { google, type GooglePost } from "@/lib/google";
+import { googleFor, type GooglePost } from "@/lib/google";
 import { getRestaurantBySlug } from "@/lib/signups";
 
 export const metadata: Metadata = { title: "Google listing preview", robots: { index: false } };
@@ -45,7 +45,7 @@ async function Listing({ params }: Pick<PageProps<"/google/[slug]">, "params">) 
   const r = await getRestaurantBySlug(slug);
   if (!r) return <NotFoundCard />;
 
-  const g = google();
+  const g = await googleFor(r.id);
   const [reviews, posts] = await Promise.all([g.listReviews(r.id), g.listPublishedPosts(r.id)]);
   const avg = reviews.length ? reviews.reduce((s, x) => s + x.rating, 0) / reviews.length : 0;
 

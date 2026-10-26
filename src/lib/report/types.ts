@@ -56,7 +56,8 @@ export type GoogleSection = {
   posts: Compare;
   recentPosts: { text: string; publishedAt: string }[];
   // Only once Google is connected for real (hidden in dummy mode).
-  insights: { views: Compare; calls: Compare; directions: Compare } | null;
+  // websiteClicks: reports made before it was added don't have it.
+  insights: { views: Compare; calls: Compare; directions: Compare; websiteClicks?: Compare } | null;
 };
 
 // Only when there's sales data (till reports, POS files or dummy data) for the fortnight.
@@ -113,7 +114,7 @@ export type ReportData = {
   version: 1;
   restaurant: { name: string; tagline: string | null; brandColor: string; brandDark: string };
   period: { start: string; end: string; label: string; prevLabel: string };
-  googleMode: "dummy" | "live";
+  googleMode: "dummy" | "simulated" | "live";
   // The WhatsApp number the action buttons open a chat with (digits only), if known.
   whatsappNumber: string | null;
   sections: ReportSection[];

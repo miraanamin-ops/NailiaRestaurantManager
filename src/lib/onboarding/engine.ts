@@ -66,6 +66,18 @@ export async function confirmGoogle(restaurantId: string, placeId: string) {
   return restaurant;
 }
 
+// The owner connected their Google Business Profile (/settings/google): the
+// import fills the step instead of a Places search. Empty fields only (lib/google/import.ts).
+export async function confirmFromGoogleImport(restaurantId: string) {
+  const { googlePrefill } = await import("@/lib/google/import");
+  const prefill = await googlePrefill(restaurantId);
+  const o = await getOnboarding(restaurantId);
+  if (!prefill || !o || o.steps.google?.status === "done") return null;
+  const restaurant = Object.keys(prefill.fill).length ? await updateRestaurantFields(restaurantId, prefill.fill as Partial<Restaurant>) : await getRestaurant(restaurantId);
+  await setStep(restaurantId, o, "google", "done", { data: { ...o.data, google: { ...o.data.google, chosen: prefill.snapshot.place_id ?? prefill.snapshot.location } } });
+  return restaurant;
+}
+
 // ---------- 2. Menu ----------
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };

@@ -296,10 +296,11 @@ function GoogleVisibility({ s }: { s: GoogleSection }) {
     <Card title={SECTION_TITLES.google}>
       <Stat label="Posts published" value={s.posts} big />
       {s.insights && (
-        <div className="mt-5 grid grid-cols-3 gap-3">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Listing views" value={s.insights.views} />
           <Stat label="Calls" value={s.insights.calls} />
           <Stat label="Directions" value={s.insights.directions} />
+          {s.insights.websiteClicks && <Stat label="Website clicks" value={s.insights.websiteClicks} />}
         </div>
       )}
       {s.recentPosts.length > 0 && (

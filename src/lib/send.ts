@@ -3,7 +3,10 @@ import { deliverCampaign, deliveryNote, ensureUnsubscribeTokens, getCampaignForD
 import { emailComplianceProblems } from "@/lib/checks/compliance";
 import { moneyAndRisk, type SendSource } from "@/lib/checks/money";
 import { checkResult, type CheckResult, type DraftChecks } from "@/lib/checks/types";
-import { google, type GooglePost } from "@/lib/google";
+import { googleFor, type GooglePost } from "@/lib/google";
+import { GoogleApiError } from "@/lib/google/api";
+import { GoogleAuthError } from "@/lib/google/oauth";
+import { WriteInProgressError } from "@/lib/google/writes";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { channelFor, simulationStep } from "@/lib/gate-rules";
@@ -16,12 +19,12 @@ import { emailRedirectSwitch, googleSwitch } from "@/lib/switches";
 //   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
 
 export type { SendSource };
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit" | "scheduled";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit" | "scheduled" | "google_error";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window" | "scheduled"; scheduledFor: Date | null; detail: string; draft: Draft }
-  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit"; detail: string; draft: Draft };
+  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit" | "google_error"; detail: string; draft: Draft };
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
@@ -167,25 +170,40 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   } else if (!reachesPlatform) {
     // Simulated Google (or customer WhatsApp): nothing goes out; it is logged as simulated.
     note = `🧪 ${testStep.detail}`;
-  } else if (claimed.kind === "review_reply" && claimed.review_id) {
-    // Posted under the review (in dummy mode: saved against it).
-    await google().replyToReview(restaurant.id, claimed.review_id, claimed.content);
-    note = `💬 Reply posted on Google${google().mode === "dummy" ? " _(dummy Google: see the listing preview)_" : ""}.`;
-    simulated = google().mode === "dummy";
-  } else if (claimed.kind === "google_post") {
-    const post = check(await supabase.from("google_posts").select("*").eq("draft_id", claimed.id).maybeSingle<GooglePost>());
-    if (post) {
-      // Publish the approved wording, which may have been edited since it was drafted.
-      check(await supabase.from("google_posts").update({ text: claimed.content }).eq("id", post.id));
-      await google().publishPost(restaurant.id, { ...post, text: claimed.content });
-      note = `📍 Post published on Google${google().mode === "dummy" ? " _(dummy Google: see the listing preview)_" : ""}.`;
-      simulated = google().mode === "dummy";
+  } else if (claimed.kind === "review_reply" || claimed.kind === "google_post" || claimed.kind === "hours_update" || claimed.kind === "menu_update") {
+    // Google: this restaurant's own connector (live once it has linked its location, else dummy).
+    const g = await googleFor(restaurant.id);
+    const dummy = g.mode === "dummy";
+    const where = dummy ? "on Google _(dummy Google: see the listing preview)_" : "on Google";
+    try {
+      if (claimed.kind === "review_reply" && claimed.review_id) {
+        // Posted under the review (in dummy mode: saved against it).
+        await g.replyToReview(restaurant.id, claimed.review_id, claimed.content);
+        note = `💬 Reply posted ${where}.`;
+        simulated = dummy;
+      } else if (claimed.kind === "google_post") {
+        const post = check(await supabase.from("google_posts").select("*").eq("draft_id", claimed.id).maybeSingle<GooglePost>());
+        if (post) {
+          // Publish the approved wording, which may have been edited since it was drafted.
+          check(await supabase.from("google_posts").update({ text: claimed.content }).eq("id", post.id));
+          await g.publishPost(restaurant.id, { ...post, text: claimed.content });
+          note = `📍 Post published ${where}.`;
+          simulated = dummy;
+        }
+      } else if (claimed.kind === "hours_update" && g.updateHours) {
+        // The profile already has the new hours: copy them (and special hours) to Google.
+        await g.updateHours(restaurant.id, claimed.id);
+        note = "📍 Your hours are updated on Google.";
+        simulated = false;
+      } else {
+        // Dummy Google can't change hours, and nobody's connector can change the menu yet:
+        // it's logged as what would have been sent.
+        const change = (claimed.agent_input as { change?: { from: string; to: string } } | null)?.change;
+        note = `📍 Would have updated your ${claimed.kind === "menu_update" ? "menu" : "hours"} on Google${change ? ` to: ${change.to}` : ""} _(${claimed.kind === "menu_update" && !dummy ? "Google's menu can't be changed from here yet, so update it in your Business Profile" : "not connected to Google yet, so nothing changed there"})_.`;
+      }
+    } catch (err) {
+      return googleFailed(claimed, err, now);
     }
-  } else if (claimed.kind === "hours_update" || claimed.kind === "menu_update") {
-    // The Google connector can't change hours or the menu yet (dummy mode, and the
-    // live connector is a stub): it's logged as what would have been sent.
-    const change = (claimed.agent_input as { change?: { from: string; to: string } } | null)?.change;
-    note = `📍 Would have updated your ${claimed.kind === "menu_update" ? "menu" : "hours"} on Google${change ? ` to: ${change.to}` : ""} _(not connected to Google yet, so nothing changed there)_.`;
   }
 
   const { error: logError } = await supabase.from("sent_log").insert({
@@ -211,6 +229,34 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     data: { source, simulated },
   });
   return { outcome: "sent", draft: claimed, note };
+}
+
+// Google didn't take a write. The draft was claimed as sent, so it's put back:
+// held for a retry in an hour (rate limits, Google's own errors, a login that
+// needs reconnecting, which the owner has been sent a link for), or blocked if
+// Google refused it outright (trying again won't change that).
+export const GOOGLE_RETRY_MS = 60 * 60_000;
+async function googleFailed(draft: Draft, err: unknown, now: Date): Promise<SendResult> {
+  console.error("Google write failed", err);
+  const message = err instanceof Error ? err.message : String(err);
+  const refused = err instanceof GoogleApiError && err.status >= 400 && err.status < 500 && err.status !== 429;
+  const detail =
+    err instanceof GoogleAuthError
+      ? "Google needs you to sign in again (I've sent you the link). I'll post it once you have."
+      : err instanceof WriteInProgressError
+        ? "It's already on its way to Google."
+        : refused
+          ? `Google refused it: ${message.slice(0, 200)}`
+          : "Google didn't respond properly just now. I'll try again in an hour.";
+  const scheduledFor = refused ? null : new Date(now.getTime() + GOOGLE_RETRY_MS);
+  await logBlock(draft, refused ? "google_error" : "scheduled", detail);
+  const updated = await updateDraft(draft.id, {
+    status: refused ? "blocked" : "queued",
+    sent_at: null,
+    scheduled_for: scheduledFor?.toISOString() ?? null,
+    block_reason: detail,
+  });
+  return refused ? { outcome: "blocked", reason: "google_error", detail, draft: updated } : { outcome: "queued", reason: "scheduled", scheduledFor, detail, draft: updated };
 }
 
 // Retries queued drafts that are due. Returns what happened to each one.
