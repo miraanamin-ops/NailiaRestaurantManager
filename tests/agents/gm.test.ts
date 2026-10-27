@@ -4,7 +4,7 @@
 // tests/agents-live/gm.eval.ts.
 import { describe, expect, test } from "vitest";
 import { alertTime, BRIEF_MAX_CARDS, buttonLabel, composerProblems, expectedLanguage, inQuietHours, languageOf, rankBriefItems, routerProblems, type RouterOutputType } from "@/lib/agents/gm-rules";
-import { composerContext, judgeComposer, loadComposerCases, loadRouting } from "./support/gm-cases";
+import { composerContext, judgeComposer, loadComposerCases, loadRouting, routingKey, routingProblems } from "./support/gm-cases";
 
 describe("the router's rules", () => {
   const route = (o: Partial<RouterOutputType>): RouterOutputType => ({ route: "growth", request: "Fill a quiet Thursday", language: "English", question: null, options: [], ...o });
@@ -68,19 +68,25 @@ describe("rules code applies around the GM", () => {
 });
 
 const routing = loadRouting();
-test("40 routing cases, covering every situation phase 4 lists", () => {
-  expect(routing.cases).toHaveLength(40);
+test("56 routing cases, covering every situation phase 4 lists and the agents going live", () => {
+  expect(routing.cases).toHaveLength(56);
   const all = routing.cases.map((c) => `${c.message} ${c.note ?? ""}`).join("\n").toLowerCase();
   for (const kind of ["typo", "thursday dead", "urdu", "roman urdu", "how was last week", "job ad", "supplier", "we close at 10", "ignore your instructions"]) expect(all).toContain(kind);
   expect(routing.cases.filter((c) => c.routes.length === 1 && c.routes[0] === "ambiguous").length).toBeGreaterThanOrEqual(2);
+  // Agents live: rota edits, finance, Google, calendar campaigns, typed edits on screen, a pasted review.
+  for (const route of ["team", "insights", "reputation", "visibility", "growth", "edit"] as const) expect(routing.cases.some((c) => c.routes.includes(route))).toBe(true);
+  expect(routing.cases.some((c) => c.on_screen)).toBe(true);
+  expect(routing.cases.some((c) => c.pasted)).toBe(true);
+  expect(new Set(routing.cases.map(routingKey)).size).toBe(routing.cases.length);
 });
 
 test("every recorded route is right", () => {
   const rec = routing.recorded;
   if (!rec) return;
+  // A case added since the last recording is checked by the live run (npm run test:agents -- gm --record).
   const wrong = routing.cases.filter((c) => {
-    const r = rec.results.find((x) => x.message === c.message);
-    return !r || !c.routes.includes(r.output.route) || routerProblems(r.output).length;
+    const r = rec.results.find((x) => routingKey(x) === routingKey(c));
+    return r && (routingProblems(c, r.output).length || routerProblems(r.output).length);
   });
   expect(wrong.map((c) => c.message)).toEqual([]);
 });

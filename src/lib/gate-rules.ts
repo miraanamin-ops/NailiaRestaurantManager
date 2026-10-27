@@ -38,3 +38,27 @@ export function weeklyLimit<T extends { id: string }>(eligible: T[], recentlySen
   const allowed = eligible.filter((c) => !recentlySent.has(c.id));
   return { allowed, limited: eligible.length - allowed.length };
 }
+
+// Google writes (a review reply or a post) and the checker agent: with the checker
+// live for the restaurant, nothing reaches Google unless the checker passed that
+// exact version of the draft (an edit makes a new version, so it's checked again).
+// No live verdict for this version yet: check it now, then decide. Hours and menu
+// updates are code's own wording from the profile, so they don't need it; with the
+// checker in shadow (the old assistant) the four checks still decide, as before.
+export const CHECKED_GOOGLE_KINDS: ReadonlySet<string> = new Set(["review_reply", "google_post"]);
+
+export type CheckerStep = { outcome: "ok" } | { outcome: "check_now" } | { outcome: "blocked"; detail: string };
+
+export function googleCheckerStep(input: {
+  kind: string;
+  checkerLive: boolean;
+  version: number;
+  agentCheck: { mode: string; verdict: string; draft_version: number; notes?: string | null } | null | undefined;
+}): CheckerStep {
+  if (!input.checkerLive || !CHECKED_GOOGLE_KINDS.has(input.kind)) return { outcome: "ok" };
+  const c = input.agentCheck;
+  if (!c || c.mode !== "live" || c.draft_version !== input.version) return { outcome: "check_now" };
+  if (c.verdict === "pass") return { outcome: "ok" };
+  const why = c.notes?.trim() ? ` ${c.notes.trim().slice(0, 240)}` : "";
+  return { outcome: "blocked", detail: `The checker didn't pass this version (${c.verdict}).${why} Edit it and approve again, or skip it.` };
+}

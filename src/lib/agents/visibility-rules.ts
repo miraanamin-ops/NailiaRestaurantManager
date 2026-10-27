@@ -59,8 +59,9 @@ const EMOJI = /\p{Extended_Pictographic}/gu;
 const LINK = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:com|co\.uk|net|org|io|uk)\b/i;
 // A phone number: 9 or more digits, allowing spaces, dashes, brackets and a leading +.
 const PHONE = /(?:\+?\d[\d\s()-]{7,}\d)/;
-// For a halal restaurant: no alcohol or pork, in posts or trend ideas.
-const NOT_HALAL = /\b(?:beer|wine|lager|cider|cocktails?|gin|rum|vodka|whisk(?:e)?y|prosecco|champagne|tequila|sangria|mojito|spritz|espresso martini|negroni|margarita|pork|bacon|ham|prosciutto|chorizo|pepperoni|salami|lard|gelatine)\b/i;
+// For a halal restaurant: no alcohol or pork, in posts or trend ideas. "Ham" as in
+// West Ham or East Ham (the football club, the place) is a name, not the meat.
+const NOT_HALAL = /\b(?:beer|wine|lager|cider|cocktails?|gin|rum|vodka|whisk(?:e)?y|prosecco|champagne|tequila|sangria|mojito|spritz|espresso martini|negroni|margarita|pork|bacon|(?<!\b(?:west|east)\s)ham|prosciutto|chorizo|pepperoni|salami|lard|gelatine)\b/i;
 
 export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 const emojiCount = (text: string) => (text.match(EMOJI) ?? []).length;

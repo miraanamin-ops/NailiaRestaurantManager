@@ -104,6 +104,8 @@ export function legacyRoute(result: ChatResult | { type: "insights" }): Route {
       return "reputation";
     case "profile_changes":
       return "profile_fact";
+    case "revise":
+      return "edit";
     case "team":
       return "team";
     case "draft":
@@ -132,7 +134,7 @@ export async function composeChecked(restaurantId: string, input: ComposerInput,
       {
         draft: { type: "gm_reply", channel: "owner", audience: "the owner", content: { text: composed.output.message }, needs_owner_input: null, sources_used: ["profile:hours", "profile:signup_offer"] },
         text: composed.output.message,
-        sources: [{ ref: "gm:data", found: true, data: { profile: input.profile ?? null, receipts: input.receipts ?? null, owner_message: input.owner_message ?? null } }],
+        sources: [{ ref: "gm:data", found: true, data: { profile: input.profile ?? null, lookups: input.lookups ?? null, receipts: input.receipts ?? null, owner_message: input.owner_message ?? null } }],
         profile: checkerProfile,
         recent: [],
         maker: "gm",

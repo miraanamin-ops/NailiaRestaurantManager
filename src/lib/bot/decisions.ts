@@ -16,7 +16,9 @@ import type { Turn } from "./turn";
 
 // A question about a review isn't approved, edited or skipped: it's answered.
 const QUESTION_HINT = (n: number | null, kind = "review_question") =>
-  kind === "hours_question"
+  kind === "agent_question"
+    ? "That one's a question, not a draft: just type your answer and I'll carry on."
+    : kind === "hours_question"
     ? `That one's a question, not a draft: tap *Same hours*, *Closed* or *Different hours*${n ? ` (or reply SAME ${n}, CLOSED ${n} or DIFFERENT ${n})` : ""}.`
     : `That one's a question, not a draft: tap *Reply publicly*, *Handle privately* or *Both*${n ? ` (or reply PUBLIC ${n}, PRIVATE ${n} or BOTH ${n})` : ""}.`;
 

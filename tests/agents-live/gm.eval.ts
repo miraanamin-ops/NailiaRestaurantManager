@@ -4,30 +4,31 @@
 // recorded answers). Same commands as the others (npm run test:agents / test:agents:record).
 import { describe, expect, test, vi } from "vitest";
 import { addUsage, dollars, totals, type Usage } from "@/lib/agents/usage";
-import { composerData, judgeComposer, loadComposerCases, loadRouting, saveComposerRecorded, saveRoutingRecorded } from "../agents/support/gm-cases";
+import { composerData, judgeComposer, loadComposerCases, loadRouting, routingProblems, saveComposerRecorded, saveRoutingRecorded } from "../agents/support/gm-cases";
 import { hasKey, RECORD } from "./support";
 
 vi.mock("@/lib/builder-alerts", () => ({ alertBuilder: async () => "test run: not sent" }));
 
 describe.skipIf(!hasKey)("gm (live)", () => {
-  test("the router: all 40 routing cases", async () => {
+  test("the router: every routing case", async () => {
     const { runRouter } = await import("@/lib/agents/gm-core");
     const routing = loadRouting();
-    const results: { message: string; output: Awaited<ReturnType<typeof runRouter>>["output"] }[] = [];
+    const results: { message: string; on_screen: string | null; output: Awaited<ReturnType<typeof runRouter>>["output"] }[] = [];
     const wrong: string[] = [];
     const usages: Usage[] = [];
     const times: number[] = [];
     for (const c of routing.cases) {
       const started = Date.now();
-      const r = await runRouter({ message: c.message, recent: [], onScreen: null }, `routing "${c.message}"`).catch((err: Error) => {
+      const r = await runRouter({ message: c.message, recent: [], onScreen: c.on_screen ?? null }, `routing "${c.message}"`).catch((err: Error) => {
         wrong.push(`"${c.message}": invalid output (${err.message.slice(0, 160)})`);
         return null;
       });
       times.push(Date.now() - started);
       if (!r) continue;
       usages.push(r.usage);
-      results.push({ message: c.message, output: r.output });
-      if (!c.routes.includes(r.output.route)) wrong.push(`"${c.message}": ${r.output.route}, expected ${c.routes.join(" or ")}`);
+      results.push({ message: c.message, on_screen: c.on_screen ?? null, output: r.output });
+      const problems = routingProblems(c, r.output);
+      if (problems.length) wrong.push(`"${c.message}"${c.on_screen ? ` (on screen: ${c.on_screen})` : ""}: ${problems.join("; ")}`);
     }
     const t = totals(addUsage(...usages));
     const sorted = [...times].sort((a, b) => a - b);

@@ -28,6 +28,21 @@ export type MetricsData = {
   sales_target?: number | null;
   // Google views, calls and direction requests. Null = Google isn't connected (dummy mode).
   google?: { day: string; views: number; calls: number; directions: number }[] | null;
+  // The week ahead (lib/forecast/week-ahead.ts) for this week and next, in pounds.
+  // status: ok, or why there are no numbers to show (not_enough_history, held_back).
+  forecast_weeks?: {
+    week_start: string;
+    status: "ok" | "not_enough_history" | "held_back" | "past";
+    unvalidated: boolean;
+    source: string;
+    error_pct: number | null;
+    limit_pct: number | null;
+    days: { date: string; orders: number | null; sales_low: number | null; sales_mid: number | null; sales_high: number | null }[];
+  }[] | null;
+  // Staff cost per week from the rota (lib/finance/labour.ts), in pounds. Null = no team yet.
+  labour_weeks?: { week_start: string; status: "none" | "draft" | "approved" | "published"; cost: number; hours: number; by_day: Record<string, number>; missing_rates: number }[] | null;
+  // The owner's labour target, % of sales (LABOUR TARGET 28%).
+  labour_target_pct?: number | null;
 };
 
 // ---------- The question (the tool's input) ----------
@@ -51,15 +66,16 @@ export const METRICS = [
   "dish_margins",
   "labour_cost",
   "sales_target",
+  "sales_forecast",
 ] as const;
 export type Metric = (typeof METRICS)[number];
 
-export const PERIODS = ["yesterday", "this_week", "last_week", "week_before_last", "last_4_weeks", "last_8_weeks", "last_12_weeks", "last_month", "last_12_months", "day", "custom"] as const;
+export const PERIODS = ["yesterday", "this_week", "next_week", "last_week", "week_before_last", "last_4_weeks", "last_8_weeks", "last_12_weeks", "last_month", "last_12_months", "day", "custom"] as const;
 export const COMPARES = ["none", "previous_period", "same_weekday_last_4", "average_of_previous_4_weeks", "same_period_last_year"] as const;
 
 export const MetricQuery = z.object({
   metric: z.enum(METRICS),
-  period: z.enum(PERIODS).describe("Weeks run Monday to Sunday. last_week = the last full week; last_month = the last full calendar month; day = one date (set date)."),
+  period: z.enum(PERIODS).describe("Weeks run Monday to Sunday. next_week = the coming Monday to Sunday (sales_forecast, labour_cost); this_week for sales_forecast or labour_cost = the whole week, today included; last_week = the last full week; last_month = the last full calendar month; day = one date (set date)."),
   date: z.string().nullable().describe("YYYY-MM-DD, only for period day"),
   from: z.string().nullable().describe("YYYY-MM-DD, only for period custom"),
   to: z.string().nullable().describe("YYYY-MM-DD (inclusive), only for period custom"),
@@ -126,14 +142,18 @@ const mondayOf = (ymd: string) => addDays(ymd, -((weekdayOf(ymd) + 6) % 7));
 const daysIn = (r: Range) => Array.from({ length: daysBetween(r.from, r.to) + 1 }, (_, i) => addDays(r.from, i));
 const shift = (r: Range, days: number): Range => ({ from: addDays(r.from, days), to: addDays(r.to, days) });
 
-export function periodRange(q: Pick<MetricQueryInput, "period" | "date" | "from" | "to">, today: string): Range {
+export function periodRange(q: Pick<MetricQueryInput, "period" | "date" | "from" | "to"> & { metric?: Metric }, today: string): Range {
   const yesterday = addDays(today, -1);
   const thisMonday = mondayOf(today);
   switch (q.period) {
     case "yesterday":
       return { from: yesterday, to: yesterday };
     case "this_week":
+      // The week ahead (forecast, rota) covers the whole week; sales so far stop at yesterday.
+      if (q.metric === "sales_forecast" || q.metric === "labour_cost") return { from: thisMonday, to: addDays(thisMonday, 6) };
       return { from: thisMonday, to: today === thisMonday ? today : yesterday };
+    case "next_week":
+      return { from: addDays(thisMonday, 7), to: addDays(thisMonday, 13) };
     case "last_week":
       return { from: addDays(thisMonday, -7), to: addDays(thisMonday, -1) };
     case "week_before_last":
@@ -161,6 +181,36 @@ export function periodRange(q: Pick<MetricQueryInput, "period" | "date" | "from"
 }
 
 export class QueryError extends Error {}
+
+// The forecast's days within a list of dates (today and later), or why there are none.
+type ForecastDay = { date: string; orders: number | null; sales_low: number; sales_mid: number; sales_high: number };
+type ForecastDays = { days: ForecastDay[]; skipped: number; unvalidated: boolean; source: string } | { missing: string; how_to_get: string };
+
+function forecastDays(data: MetricsData, dates: string[]): ForecastDays {
+  const weeks = data.forecast_weeks ?? [];
+  const wanted = dates.filter((d) => d >= data.today);
+  const found: ForecastDay[] = [];
+  let skipped = dates.length - wanted.length;
+  let unvalidated = false;
+  const sources = new Set<string>();
+  for (const d of wanted) {
+    const week = weeks.find((w) => d >= w.week_start && d <= addDays(w.week_start, 6));
+    if (week?.status === "not_enough_history") return { missing: "enough sales history for a forecast", how_to_get: "Forecasts need at least 8 whole weeks of sales. Upload last year's sales (settings) or send end-of-day till reports, and the week ahead appears once there are 8 weeks." };
+    if (week?.status === "held_back") {
+      return { missing: "a forecast accurate enough to show", how_to_get: `Tested on this restaurant's past weeks, the forecast was off by ${week.error_pct ?? "more than"}% on average, over the ${week.limit_pct ?? 20}% limit, so its figures are held back until it's more accurate.` };
+    }
+    const day = week?.days.find((x) => x.date === d);
+    if (!week || !day || day.sales_mid === null || day.sales_low === null || day.sales_high === null) {
+      skipped++;
+      continue;
+    }
+    unvalidated ||= week.unvalidated;
+    sources.add(week.source);
+    found.push({ date: d, orders: day.orders, sales_low: day.sales_low, sales_mid: day.sales_mid, sales_high: day.sales_high });
+  }
+  if (!found.length) return { missing: "a forecast for those days", how_to_get: "There's a forecast for this week and next only, and only for days that haven't happened yet." };
+  return { days: found, skipped, unvalidated, source: [...sources].map((s) => (s === "forecast" ? "the nightly forecast" : s === "history" ? "the same weekday over the last 8 weeks" : s)).join(" and ") };
+}
 
 const WEEKDAY_INDEX = (name: string) => WEEKDAY_NAMES.indexOf(name);
 
@@ -246,14 +296,12 @@ export function queryMetrics(data: MetricsData, q: MetricQueryInput, id: string)
     case "dish_margins":
       if (!data.dish_costs || !Object.keys(data.dish_costs).length) return unavailable("dish costs", "Send the cost to make each dish (ingredients per plate), and margins can be worked out from item sales.");
       return unavailable("dish margins", "Menu engineering isn't in this version yet.");
-    case "labour_cost":
-      return unavailable("staff costs (rota hours or wages)", "Labour cost isn't recorded yet. It would need the weekly wage bill or rota hours.");
     case "sales_target":
       if (!data.sales_target) return unavailable("a weekly sales target", "Tell me your weekly net sales target and it can be compared every week.");
       break;
   }
 
-  const range = periodRange(q, data.today);
+  const range = periodRange({ ...q, metric: q.metric }, data.today);
   const days = countedDays(range, q.weekday);
   const label = (base: string) => `${base}${q.weekday ? ` (${q.weekday}s only)` : ""}`;
   const base = {
@@ -567,6 +615,55 @@ export function queryMetrics(data: MetricsData, q: MetricQueryInput, id: string)
       r.rows = [{ label: "Weekly target", ...money(data.sales_target!) }];
       return r;
     }
+
+    // The week ahead: the forecast's likely sales (before VAT) and its range, day by day.
+    case "sales_forecast": {
+      const ahead = forecastDays(data, days);
+      if ("missing" in ahead) return unavailable(ahead.missing, ahead.how_to_get);
+      const total = ahead.days.reduce((s, d) => s + d.sales_mid, 0);
+      const low = ahead.days.reduce((s, d) => s + d.sales_low, 0);
+      const high = ahead.days.reduce((s, d) => s + d.sales_high, 0);
+      const rows: Row[] = ahead.days.map((d) => ({
+        label: `${dayLabel(d.date, Number(d.date.slice(0, 4)))} (likely)`,
+        ...money(d.sales_mid),
+        extra: { low: money(d.sales_low), high: money(d.sales_high), ...(d.orders !== null ? { orders: count(d.orders) } : {}) },
+      }));
+      rows.push({ label: "Whole period: likely range, low end", ...money(low) }, { label: "Whole period: likely range, high end", ...money(high) });
+      if (ahead.skipped) base.notes.push(`${ahead.skipped} day${ahead.skipped === 1 ? " is" : "s are"} already past or have no forecast, so they aren't counted.`);
+      base.notes.push(ahead.unvalidated ? "A test forecast (not yet checked against this restaurant's past weeks)." : "A forecast from the restaurant's own sales history: a likely figure with a range, not a promise.");
+      return { ...base, label: label("Forecast net sales (excluding VAT)"), value: money(total), compare: null, rows, days_with_data: ahead.days.length, source: ahead.source, small_sample: null, anomalies: [] };
+    }
+
+    // Staff cost from the rota (hours x each person's rate), and as a % of sales:
+    // actual sales for days gone, the forecast's likely sales for days ahead.
+    case "labour_cost": {
+      const weeks = data.labour_weeks ?? null;
+      if (!weeks) return unavailable("staff costs (the rota)", "Labour cost comes from the weekly rota: add the team (e.g. _add Ali, kitchen, £13, weekdays_) and the rota is costed each week.");
+      const byDay = new Map<string, { cost: number; status: string }>();
+      for (const w of weeks) for (const [day, cost] of Object.entries(w.by_day)) byDay.set(day, { cost, status: w.status });
+      const withRota = days.filter((d) => byDay.has(d));
+      if (!withRota.length) return unavailable("a rota for that period", "There's no rota (draft or approved) for those days yet. Next week's draft arrives on Thursday, or text ROTA.");
+      const cost = withRota.reduce((s, d) => s + byDay.get(d)!.cost, 0);
+      const sales = new Map(data.sales_days.map((d) => [d.day, d.net]));
+      const ahead = forecastDays(data, withRota.filter((d) => d >= data.today));
+      const forecast = new Map("days" in ahead ? ahead.days.map((d) => [d.date, d.sales_mid]) : []);
+      const salesFor = (d: string) => (d < data.today ? (sales.get(d) ?? null) : (forecast.get(d) ?? null));
+      const counted = withRota.filter((d) => salesFor(d) !== null);
+      const salesTotal = counted.reduce((s, d) => s + salesFor(d)!, 0);
+      const costCounted = counted.reduce((s, d) => s + byDay.get(d)!.cost, 0);
+      const rows: Row[] = withRota.map((d) => {
+        const sd = salesFor(d);
+        const c = byDay.get(d)!.cost;
+        return { label: dayLabel(d, Number(d.slice(0, 4))), ...money(c), extra: (sd ? { labour_pct_of_sales: pct((c / sd) * 100), sales: money(sd), sales_kind: d < data.today ? "actual" : "forecast" } : { sales_kind: "no sales figure" }) as Record<string, Figure | string> };
+      });
+      if (salesTotal > 0) rows.push({ label: "Labour as a % of sales, over the days with a sales figure", ...pct((costCounted / salesTotal) * 100) });
+      if (data.labour_target_pct) rows.push({ label: "The owner's labour target (% of sales)", ...pct(data.labour_target_pct) });
+      const statuses = [...new Set(withRota.map((d) => byDay.get(d)!.status))];
+      base.notes.push(`From the ${statuses.includes("draft") && statuses.length === 1 ? "draft" : statuses.includes("draft") ? "approved and draft" : "approved"} rota: hours x each person's hourly rate, before holiday pay, NI or pension.`);
+      if (withRota.some((d) => d >= data.today)) base.notes.push("Days ahead are compared with the forecast's likely sales, not real takings.");
+      if (weeks.some((w) => w.missing_rates)) base.notes.push("Some shifts have no hourly rate, so they aren't counted.");
+      return { ...base, label: label("Staff cost from the rota"), value: money(cost), compare: null, rows, days_with_data: withRota.length, source: "the rota and staff pay rates", small_sample: null, anomalies: [] };
+    }
   }
   throw new QueryError(`Unknown metric ${String(q.metric)}`);
 }
@@ -574,9 +671,17 @@ export function queryMetrics(data: MetricsData, q: MetricQueryInput, id: string)
 // Every number a result contains (value, comparison, change, rows, anomalies),
 // with its display form: what the agent's figures may quote.
 export function numbersIn(result: MetricResult): Figure[] {
-  if (!result.available) return [];
   const out: Figure[] = [];
   const add = (f: Figure | null | undefined) => f && out.push({ value: f.value, unit: f.unit, display: f.display });
+  const fromText = (text: string) => {
+    // ("1mm" counts too: no word boundary is needed after the number; "15% off" is a percentage.)
+    for (const m of text.replace(/£[\d,.]+/g, "").matchAll(/(?<![\d.])(\d+(?:\.\d+)?)(\s?%)?/g)) add(m[2] ? pct(Number(m[1])) : count(Number(m[1])));
+  };
+  // Not available: only the counts and percentages code wrote in why ("off by 31%, over the 20% limit", "8 whole weeks").
+  if (!result.available) {
+    fromText(`${result.missing} ${result.how_to_get}`);
+    return out;
+  }
   add(result.value);
   if (result.compare) {
     add(result.compare);
@@ -599,9 +704,6 @@ export function numbersIn(result: MetricResult): Figure[] {
   // Counts quoted in the small-sample warning and notes ("Only 18 days of sales data")...
   // ...and in the comparison's wording and text details ("the average of the 4 Saturdays before", "4 days with sales figures").
   const words = [result.compare?.label ?? "", ...result.rows.flatMap((r) => [r.label, ...Object.values(r.extra ?? {}).filter((v): v is string => typeof v === "string")])];
-  for (const text of [result.small_sample ?? "", ...result.notes, ...words]) {
-    // ("1mm" counts too: no word boundary is needed after the number; "15% off" is a percentage.)
-    for (const m of text.replace(/£[\d,.]+/g, "").matchAll(/(?<![\d.])(\d+(?:\.\d+)?)(\s?%)?/g)) add(m[2] ? pct(Number(m[1])) : count(Number(m[1])));
-  }
+  for (const text of [result.small_sample ?? "", ...result.notes, ...words]) fromText(text);
   return out;
 }

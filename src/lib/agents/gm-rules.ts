@@ -12,9 +12,10 @@ import type { Problems } from "./schema";
 
 // gm.md's routing table, plus two rows code needs: "profile_question" (a simple
 // question the profile answers: the composer replies) and "chat" (general chat and
-// look-ups, still answered by today's assistant until the GM covers them), and
-// "team" (the staff team and the rota: lib/rota/understand.ts).
-export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "ambiguous"] as const;
+// look-ups: the composer answers, with the agents live), "team" (the staff team
+// and the rota: lib/rota/understand.ts) and "edit" (a change to the draft on the
+// owner's screen, typed without tapping Edit).
+export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "ambiguous"] as const;
 export type Route = (typeof ROUTES)[number];
 
 export const RouterOutput = z.object({
@@ -23,6 +24,14 @@ export const RouterOutput = z.object({
   language: z.enum(["English", "Urdu", "Roman Urdu", "Mixed English and Urdu", "Other"]).describe("The language the owner wrote in"),
   question: z.string().nullable().describe("ambiguous only: one short question for the owner"),
   options: z.array(z.object({ label: z.string().describe("A button, 20 characters at most"), route: z.enum(ROUTES) })).describe("ambiguous only: 2 or 3 choices"),
+  pasted_review: z
+    .object({
+      author_name: z.string().nullable().describe("The reviewer's name as written, or null"),
+      rating: z.number().int().min(1).max(5).nullable().describe("Stars 1 to 5 if shown, or null"),
+      text: z.string().describe("The review's own words, exactly as pasted (not the owner's note around it)"),
+    })
+    .nullable()
+    .describe("reputation only: a review the owner pasted or forwarded into the message; otherwise null"),
 });
 export type RouterOutputType = z.infer<typeof RouterOutput>;
 
@@ -40,6 +49,8 @@ export function routerProblems(out: RouterOutputType): Problems {
     if (out.options.length) problems.push("only an ambiguous message gets options");
     if (!out.request.trim()) problems.push("restate the owner's ask in one line (request)");
   }
+  if (out.pasted_review && out.route !== "reputation") problems.push("only a reputation message can carry a pasted review");
+  if (out.pasted_review && !out.pasted_review.text.trim()) problems.push("a pasted review needs its text");
   return problems;
 }
 
@@ -60,8 +71,9 @@ export const ROUTE_WORDS: Record<Route, string> = {
   profile_fact: "a profile change (confirm card)",
   one_off: "Visibility (one-off writing)",
   profile_question: "the composer (answered from the profile)",
-  chat: "today's assistant",
+  chat: "general chat and look-ups",
   team: "the rota (staff team and rota changes)",
+  edit: "a change to the draft on screen",
   ambiguous: "a question with buttons",
 };
 

@@ -17,7 +17,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
-import { gmIsLive, holdAgentQuestion, holdSpecialIdea } from "./gm-held";
+import { askOwnerNow, gmIsLive, holdAgentQuestion, holdSpecialIdea } from "./gm-held";
 import { growthLoop, type GrowthInput, type GrowthOutcome } from "./growth-core";
 import { growthPreviewPng } from "./growth-preview";
 import { campaignFieldsFrom, growthText, type GrowthDraftOutput } from "./growth-rules";
@@ -271,6 +271,8 @@ export async function liveGrowthRequest(restaurant: Restaurant, request: string,
     const jobId = await recordLive(restaurant, job, key, outcome, ms);
     for (const d of outcome.drafts) {
       if (d.kind === "question") {
+        // With the GM live, the answer comes back here with the request (not as a new message).
+        if (await gmIsLive(restaurant)) await askOwnerNow(restaurant, "growth", d.question, { task: job.task, request });
         await send(`❓ ${d.question}`);
         continue;
       }

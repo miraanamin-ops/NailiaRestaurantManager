@@ -9,7 +9,7 @@ import { GoogleAuthError } from "@/lib/google/oauth";
 import { WriteInProgressError } from "@/lib/google/writes";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { channelFor, simulationStep } from "@/lib/gate-rules";
+import { CHECKED_GOOGLE_KINDS, channelFor, googleCheckerStep, simulationStep } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { emailRedirectSwitch, googleSwitch } from "@/lib/switches";
 
@@ -17,14 +17,16 @@ import { emailRedirectSwitch, googleSwitch } from "@/lib/switches";
 // right before anything goes out and records the result on the draft:
 //   money and risk (lib/checks/money.ts): duplicates, approval, discount cap, PAUSE, sending hours
 //   compliance (lib/checks/compliance.ts): for emails, valid consent now and an unsubscribe link
+//   the checker (lib/gate-rules.ts googleCheckerStep): with it live, a Google reply or post
+//   needs its pass on that exact version
 
 export type { SendSource };
-export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit" | "scheduled" | "google_error";
+export type BlockReason = "not_approved" | "duplicate" | "discount_cap" | "paused" | "outside_window" | "no_recipients" | "trust_level" | "weekly_limit" | "scheduled" | "google_error" | "checker";
 
 export type SendResult =
   | { outcome: "sent"; draft: Draft; note?: string }
   | { outcome: "queued"; reason: "paused" | "outside_window" | "scheduled"; scheduledFor: Date | null; detail: string; draft: Draft }
-  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit" | "google_error"; detail: string; draft: Draft };
+  | { outcome: "blocked"; reason: "not_approved" | "duplicate" | "discount_cap" | "no_recipients" | "trust_level" | "weekly_limit" | "google_error" | "checker"; detail: string; draft: Draft };
 
 const SENDABLE_STATUSES = ["approved", "queued", "blocked"] as const;
 
@@ -113,6 +115,20 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       });
       return { outcome: "blocked", reason, detail, draft: updated };
     }
+  }
+
+  // 2b. The checker: with it live, a Google reply or post goes out only once it
+  //     passed this exact version (an owner's edit is checked here, before it goes).
+  const checkerProblem = await googleCheckerGate(draft, restaurant);
+  if (checkerProblem) {
+    await logBlock(draft, "checker", checkerProblem);
+    const updated = await updateDraft(draft.id, {
+      status: "blocked",
+      block_reason: checkerProblem,
+      scheduled_for: null,
+      checks: withSendChecks(draft, { money: checkResult([], []), compliance: checkResult([], [checkerProblem], "blocked") }),
+    });
+    return { outcome: "blocked", reason: "checker", detail: checkerProblem, draft: updated };
   }
 
   // 3. Simulation, as a gate step: GOOGLE_MODE=simulated posts nothing to Google,
@@ -229,6 +245,28 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     data: { source, simulated },
   });
   return { outcome: "sent", draft: claimed, note };
+}
+
+// The checker step for a Google write: null = fine to go. A version with no live
+// verdict yet is checked now (and recorded as an agent run, with its cost).
+async function googleCheckerGate(draft: Draft, restaurant: Restaurant): Promise<string | null> {
+  if (!CHECKED_GOOGLE_KINDS.has(draft.kind)) return null;
+  const { agentMode } = await import("@/lib/agents/modes");
+  const input = { kind: draft.kind, checkerLive: agentMode(restaurant, "checker") === "live", version: draft.version ?? 1, agentCheck: draft.agent_check };
+  let step = googleCheckerStep(input);
+  if (step.outcome === "check_now") {
+    try {
+      const [{ checkDraftVersion }, { recordAgentRun }] = await Promise.all([import("@/lib/agents/checker"), import("@/lib/agents/jobs")]);
+      const key = `checker:${draft.id}:v${input.version}:send:${Date.now()}`;
+      const { agentCheck, result } = await checkDraftVersion(draft, input.version, "live", key);
+      await recordAgentRun({ restaurantId: restaurant.id, key, agent: "checker", kind: "checker_live", trigger: "release_gate", draftId: draft.id, output: { ...agentCheck }, agentVersion: result.agentVersion, verdict: agentCheck.verdict, usage: result.usage });
+      step = googleCheckerStep({ ...input, agentCheck });
+    } catch (err) {
+      console.error("The checker couldn't check a Google write", err);
+      return "The checker couldn't look at it just now, so it wasn't posted. Tap Approve again in a minute.";
+    }
+  }
+  return step.outcome === "blocked" ? step.detail : null;
 }
 
 // Google didn't take a write. The draft was claimed as sent, so it's put back:

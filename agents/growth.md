@@ -3,7 +3,7 @@ name: growth
 model: sonnet
 tools: [get_profile, get_segments, get_campaign_history, get_local_calendar, get_photo_library, create_draft]
 triggers: [owner_request, weekly_plan_monday, calendar_lookahead, birthday_check_daily]
-version: 0.2
+version: 0.3
 ---
 
 # Role
@@ -92,6 +92,8 @@ The shared draft JSON:
 - Write copy to fit the template's slots: subject under 50 characters, headline under 8 words, body under 60 words.
 - Pick a photo of the dish or offer itself. No photo that matches: use the template's no-photo version.
 - No em-dashes. Emojis only if the profile allows them.
+- The halal and allergen statements: quote them word for word from the profile, or leave them out. Never shorten or reword them.
+- A date or event the owner names in their request ("Bonfire Night is next Thursday", "West Ham are at home on Saturday") is a fact you can use, even if it isn't in the calendar; cite it as `request:owner`. Only ask when the date itself is unclear.
 
 **Set `needs_owner_input` and don't draft when:**
 - The ask needs a discount over the cap, a new offer type, or spend.
@@ -133,3 +135,4 @@ Why: targets people by religion. Send Ramadan offers to the whole list, worded f
 
 - 0.1 (11 Oct 2026): first draft.
 - 0.2 (11 Oct 2026): `unredeemed_signups` segment; `birthdays_this_week` renamed `birthdays_7d` to match the code; WhatsApp disabled until Meta verification.
+- 0.3 (27 Oct 2026): agents live: halal and allergen statements word for word or not at all; a date the owner names is a fact to use, not a question.

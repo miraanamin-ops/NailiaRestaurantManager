@@ -16,6 +16,8 @@ export default defineConfig({
   },
   test: {
     include: ["tests/agents-live/**/*.eval.ts"],
+    // Meters every Claude call and stops at the test budget (tests/agents-live/spend.ts).
+    setupFiles: ["tests/agents-live/spend.ts"],
     environment: "node",
     testTimeout: 900_000, // 3 runs, each up to 2 revisions with a preview picture
     // One case at a time, so a run stays well within the API's rate limits.

@@ -8,8 +8,27 @@ import { composerProblems, expectedLanguage, numbersFrom, type ComposeKind, type
 
 export const GM_DIR = join("agents", "tests", "gm");
 
-export type RoutingCase = { message: string; routes: Route[]; note?: string };
-export type RoutingFile = { about: string; cases: RoutingCase[]; recorded?: { results: { message: string; output: RouterOutputType }[]; recorded_at: string } | null };
+// on_screen: the draft waiting on the owner's screen. pasted: the review details the router must read out.
+export type RoutingCase = { message: string; routes: Route[]; note?: string; on_screen?: string; pasted?: { author_name: string | null; rating: number | null } };
+export type RoutingFile = { about: string; cases: RoutingCase[]; recorded?: { results: { message: string; on_screen?: string | null; output: RouterOutputType }[]; recorded_at: string } | null };
+
+// The same message can be a case twice (with and without a draft on screen).
+export const routingKey = (c: { message: string; on_screen?: string | null }) => `${c.message}|${c.on_screen ?? ""}`;
+
+// What's wrong with a route for this case (empty: right).
+export function routingProblems(c: RoutingCase, out: RouterOutputType) {
+  const problems: string[] = [];
+  if (!c.routes.includes(out.route)) problems.push(`${out.route}, expected ${c.routes.join(" or ")}`);
+  if (c.pasted) {
+    const p = out.pasted_review;
+    if (!p?.text.trim()) problems.push("the pasted review wasn't read out");
+    else {
+      if (c.pasted.author_name && p.author_name?.trim().toLowerCase() !== c.pasted.author_name.toLowerCase()) problems.push(`the reviewer is ${c.pasted.author_name}, not ${p.author_name}`);
+      if (c.pasted.rating && p.rating !== c.pasted.rating) problems.push(`the review has ${c.pasted.rating} stars, not ${p.rating}`);
+    }
+  } else if (out.pasted_review) problems.push("no review was pasted");
+  return problems;
+}
 
 export function loadRouting(): RoutingFile {
   return JSON.parse(readFileSync(join(GM_DIR, "routing.json"), "utf8"));

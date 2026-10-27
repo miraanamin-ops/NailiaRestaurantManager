@@ -1,5 +1,5 @@
 {
-  "about": "40 owner messages and where the GM's router should send each (gm.md routing table). 'routes' lists every right answer: one where only one is right, two where both are genuinely right. Fixed commands (PAUSE, UNDO, STOP, APPROVE...) never reach the router.",
+  "about": "56 owner messages and where the GM's router should send each (gm.md routing table). 'routes' lists every right answer: one where only one is right, two where both are genuinely right. Fixed commands (PAUSE, UNDO, STOP, APPROVE...) never reach the router. 'on_screen' is the draft waiting on the owner's screen; 'pasted' the review details the router must read out of a pasted review.",
   "cases": [
     {
       "message": "how was last week?",
@@ -260,6 +260,113 @@
       "routes": [
         "growth"
       ]
+    },
+    {
+      "message": "Mo can't do Friday",
+      "routes": [
+        "team"
+      ],
+      "note": "rota edit, no rota on screen"
+    },
+    {
+      "message": "swap Priya and Jordan on Saturday",
+      "routes": [
+        "team"
+      ]
+    },
+    {
+      "message": "give Leah next weekend off",
+      "routes": [
+        "team"
+      ]
+    },
+    {
+      "message": "can ravi do sunday 5 till 11",
+      "routes": [
+        "team"
+      ],
+      "note": "lower case, no punctuation"
+    },
+    {
+      "message": "Mo can't do Friday",
+      "routes": [
+        "team",
+        "edit"
+      ],
+      "on_screen": "rota for next week",
+      "note": "a rota on screen: a change to the person's shifts"
+    },
+    {
+      "message": "what will staff cost next week?",
+      "routes": [
+        "insights"
+      ]
+    },
+    {
+      "message": "whats next week looking like",
+      "routes": [
+        "insights"
+      ]
+    },
+    {
+      "message": "are we under our labour target this week",
+      "routes": [
+        "insights"
+      ]
+    },
+    {
+      "message": "how busy will saturday be",
+      "routes": [
+        "insights"
+      ]
+    },
+    {
+      "message": "reply to the 3 star review",
+      "routes": [
+        "reputation"
+      ]
+    },
+    {
+      "message": "can you reply to this one: 'Food was cold and the waiter ignored us' 2 stars from Gary",
+      "routes": [
+        "reputation"
+      ],
+      "pasted": {
+        "author_name": "Gary",
+        "rating": 2
+      }
+    },
+    {
+      "message": "put up a post about our mixed grill for the weekend",
+      "routes": [
+        "visibility"
+      ]
+    },
+    {
+      "message": "eid is next week can we do something for families",
+      "routes": [
+        "growth"
+      ]
+    },
+    {
+      "message": "west ham at home saturday, do an offer for the fans",
+      "routes": [
+        "growth"
+      ]
+    },
+    {
+      "message": "make it shorter",
+      "routes": [
+        "edit"
+      ],
+      "on_screen": "review reply for Google review by Tom Reed"
+    },
+    {
+      "message": "change it to 15% off and send it thursday",
+      "routes": [
+        "edit"
+      ],
+      "on_screen": "email campaign for everyone"
     }
   ],
   "recorded": {

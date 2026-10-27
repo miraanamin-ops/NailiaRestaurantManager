@@ -28,6 +28,10 @@ export type InsightsCase = {
     campaigns?: MetricsData["campaigns"];
     // Sends for a campaign: how many were emailed, opened, clicked and redeemed.
     sends?: { campaign_id: string; sent_at: string; emailed: number; opened: number; clicked: number; redeemed: number; redeemed_on: string }[];
+    // The week ahead and the rota's costs, as lib/agents/insights.ts loads them (pounds).
+    forecast_weeks?: MetricsData["forecast_weeks"];
+    labour_weeks?: MetricsData["labour_weeks"];
+    labour_target_pct?: number | null;
   } | null;
   expect: {
     outcome: "answer" | "question";
@@ -110,6 +114,9 @@ export function caseData(c: Pick<InsightsCase, "restaurant" | "today" | "patch">
     sends: [...f.sends.filter((x) => before(x.sent_at)).map((x) => ({ ...x, redeemed_at: x.redeemed_at && before(x.redeemed_at) ? x.redeemed_at : null })), ...sends],
     rewards: f.rewards.filter((x) => before(x.created_at)),
     google: null,
+    forecast_weeks: p.forecast_weeks ?? null,
+    labour_weeks: p.labour_weeks ?? null,
+    labour_target_pct: p.labour_target_pct ?? null,
   };
 }
 

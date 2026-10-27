@@ -76,6 +76,9 @@ export function sendResultMessage(result: SendResult) {
   if (result.reason === "duplicate") {
     return `⛔ *Not sent again*: ${result.detail}`;
   }
+  if (result.reason === "checker") {
+    return `⛔ *Not posted*: ${result.detail}`;
+  }
   if (result.reason === "no_recipients") {
     return `⛔ *Not sent*: ${result.detail} Nothing went out.`;
   }

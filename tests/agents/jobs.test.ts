@@ -93,11 +93,12 @@ describe("agent jobs", () => {
 });
 
 describe("agent modes", () => {
-  test("the checker defaults to shadow and can't be set live; Reputation can (its checklist guards it)", async () => {
+  test("the checker defaults to shadow and can be set live (the gate then needs its pass on Google writes); Reputation too (its checklist guards it)", async () => {
     const { agentMode } = await import("@/lib/agents/modes");
     expect(agentMode({ agent_modes: {} }, "checker")).toBe("shadow");
     expect(agentMode({ agent_modes: { checker: "off" } }, "checker")).toBe("off");
-    expect(agentMode({ agent_modes: { checker: "live" } }, "checker")).toBe("shadow");
+    expect(agentMode({ agent_modes: { checker: "live" } }, "checker")).toBe("live");
+    expect(agentMode({ agent_modes: { checker: "auto" } }, "checker")).toBe("shadow");
     expect(agentMode({ agent_modes: { reputation: "live" } }, "reputation")).toBe("live");
     expect(agentMode({ agent_modes: {} }, "reputation")).toBe("shadow");
     // An agent that isn't built yet stays off, whatever is stored (the GM has its own checklist in gmMode).

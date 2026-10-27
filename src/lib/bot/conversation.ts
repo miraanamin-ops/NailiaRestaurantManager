@@ -1,7 +1,7 @@
 import "server-only";
 import { growthMode, liveGrowthRequest, queueGrowthShadow } from "@/lib/agents/growth";
 import { gmMode, legacyRoute, queueGmShadow } from "@/lib/agents/gm";
-import { answerAgentQuestion, answerChoice, correctFact, decideIdea, gmLive, localEventCard, saveReasonTap } from "@/lib/agents/gm-live";
+import { agentsCouldNotHelp, answerAgentQuestion, answerChoice, correctFact, decideIdea, gmLive, localEventCard, oldAssistantRetired, saveReasonTap } from "@/lib/agents/gm-live";
 import { answerWithInsights, insightsMode, queueInsightsShadow } from "@/lib/agents/insights";
 import { chat, rewriteDraft, type ChatResult, type StoredMessage } from "@/lib/assistant";
 import { londonYmd } from "@/lib/clock";
@@ -97,10 +97,18 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   // background, next to today's answer, for the /log comparison.
   // The GM live: it routes the message and answers it if a live part of the system
   // can; otherwise (chat, look-ups, a specialist in shadow) today's assistant does.
-  // A question about the forecast goes straight to today's assistant, which has
-  // look_up_forecast (Insights and the GM's router don't read forecasts yet).
-  const forecastQuestion = !buttonPayload && looksLikeForecastQuestion(body);
-  if (gmOn && !buttonPayload && !forecastQuestion && message === body && (await gmLive(turn, body, active))) return;
+  // With the restaurant on the agents (assistant-mode.ts) the old assistant is
+  // retired: what the GM can't handle gets one honest line, never the old assistant.
+  // Otherwise a question about the forecast goes to the old assistant, which has
+  // look_up_forecast (with the agents, Insights reads the forecast).
+  const retired = gmOn && oldAssistantRetired(ctx.restaurant);
+  const forecastQuestion = !retired && !buttonPayload && looksLikeForecastQuestion(body);
+  if (gmOn && !buttonPayload && !forecastQuestion && message === body) {
+    const live = await gmLive(turn, body, active);
+    if (live.handled) return;
+    if (retired) return agentsCouldNotHelp(turn, body, live.route);
+  }
+  if (retired) return agentsCouldNotHelp(turn, message, null);
 
   const started = Date.now();
   const onScreen = active?.waiting_for === "decision" ? `${active.kind.replace(/_/g, " ")} for ${active.audience ?? "the owner"}` : null;

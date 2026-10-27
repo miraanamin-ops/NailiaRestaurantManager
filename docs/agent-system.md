@@ -51,6 +51,7 @@ The gate is the last step before anything leaves the system. It checks:
 - Discount at or under the restaurant's cap
 - Unsubscribe link present in every campaign email
 - Not a duplicate of something already sent
+- With the checker live for the restaurant, a Google review reply or post has the checker's pass on that exact version (an owner's edit is checked again before it goes)
 - PAUSE is off
 - Simulation, as a gate step (the switches in `src/lib/switches.ts`): with EMAIL_REDIRECT on (always in preview and development) no email reaches a real customer, GOOGLE_MODE=simulated posts nothing to Google, and no agent is live unless AGENTS_LIVE_ALLOWED allows it (false is a kill switch)
 

@@ -151,7 +151,13 @@ export async function growthLoop(input: GrowthInput, deps: GrowthDeps, label: st
             },
             text: growthText(out),
             // The template's fixed wording is a source too, so it isn't mistaken for the draft's own claims.
-            sources: [...(await deps.resolve(refs.filter((r) => !r.startsWith("calendar:")))), ...calendarSources(refs), ...(out.type === "special_idea" ? [] : [TEMPLATE_SOURCE])],
+            // "request:owner": what the owner asked, in their words (a date they name is a fact to use).
+            sources: [
+              ...(await deps.resolve(refs.filter((r) => !r.startsWith("calendar:") && r !== "request:owner"))),
+              ...calendarSources(refs),
+              ...(refs.includes("request:owner") ? [input.request ? { ref: "request:owner", found: true as const, data: { owner_asked: input.request } } : { ref: "request:owner", found: false as const, reason: "no owner request in this job" }] : []),
+              ...(out.type === "special_idea" ? [] : [TEMPLATE_SOURCE]),
+            ],
             profile: deps.checkerProfile,
             recent: out.type === "special_idea" ? [] : deps.recent,
             maker: "growth",

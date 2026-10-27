@@ -9,7 +9,8 @@ export type AgentMode = (typeof AGENT_MODES)[number];
 // What each agent can be set to in this phase, and its default. An agent can only
 // go live once it's built to (and, from phase 2, its go-live checklist passes).
 export const MODES_AVAILABLE: Partial<Record<AgentName, { allowed: AgentMode[]; default: AgentMode }>> = {
-  checker: { allowed: ["off", "shadow"], default: "shadow" },
+  // Live: the release gate needs its pass on a Google reply or post (lib/gate-rules.ts googleCheckerStep).
+  checker: { allowed: ["off", "shadow", "live"], default: "shadow" },
   // Live only once its go-live checklist passes (lib/agents/reputation.ts reputationMode).
   reputation: { allowed: ["off", "shadow", "live"], default: "shadow" },
   // Live only once its go-live checklist passes (lib/agents/visibility.ts visibilityMode).

@@ -184,11 +184,11 @@ describe("the rules", () => {
   });
 });
 
-test("Insights has 10 to 20 saved cases, covering every situation phase 3b lists", () => {
+test("Insights has 10 to 25 saved cases, covering every situation phase 3b lists and the week ahead", () => {
   expect(cases.length).toBeGreaterThanOrEqual(10);
-  expect(cases.length).toBeLessThanOrEqual(20);
+  expect(cases.length).toBeLessThanOrEqual(25);
   const names = cases.map((c) => c.file).join(" ");
-  for (const kind of ["how-was-last-week", "saturday-compare", "dish-margins", "campaign-coincided", "small-sample-weeks", "small-sample-redemptions", "staff-cut-mondays", "zreport-3x", "monday-report"]) expect(names).toContain(kind);
+  for (const kind of ["how-was-last-week", "saturday-compare", "dish-margins", "campaign-coincided", "small-sample-weeks", "small-sample-redemptions", "staff-cut-mondays", "zreport-3x", "monday-report", "staff-cost-next-week", "next-week-sales", "labour-target-held-back"]) expect(names).toContain(kind);
 });
 
 describe.each(cases)("insights case $file", ({ case: c }) => {

@@ -16,6 +16,13 @@ export async function holdAgentQuestion(r: Restaurant, agent: "growth" | "insigh
   return createDraft({ restaurantId: r.id, kind: "agent_question", content: question, audience: "you", request: `A question from ${agent}`, checks: {}, mode: "hold", actor: agent, agentInput: { agent, job } });
 }
 
+// A question an agent asks while the owner is talking to it (an owner request):
+// on screen now, so the owner's typed answer goes back to that agent with the
+// original request (gm-live answerAgentQuestion).
+export async function askOwnerNow(r: Restaurant, agent: "growth" | "insights", question: string, job: Record<string, unknown> = {}) {
+  return createDraft({ restaurantId: r.id, kind: "agent_question", content: question, audience: "you", request: `A question from ${agent}`, checks: {}, mode: "present", actor: agent, agentInput: { agent, job } });
+}
+
 export async function holdSpecialIdea(r: Restaurant, idea: string) {
   return createDraft({ restaurantId: r.id, kind: "special_idea", content: idea, audience: "you (an idea for the menu)", request: "This week's special idea", checks: {}, mode: "hold", actor: "growth" });
 }

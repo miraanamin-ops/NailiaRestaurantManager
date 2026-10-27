@@ -1,0 +1,295 @@
+{
+  "name": "what will staff cost next week?",
+  "source": "written 27 Oct 2026 (agents live): the week ahead and the rota's costs, on the demo restaurant's numbers",
+  "task": "answer",
+  "question": "what will staff cost next week?",
+  "restaurant": "ember-spice",
+  "today": "2026-10-05",
+  "today_words": "Monday 5 October 2026",
+  "profile": {
+    "version": 5,
+    "fields": {
+      "name": "Ember & Spice Grill",
+      "google_place_id": null,
+      "menu": [
+        {
+          "category": "Grills",
+          "items": [
+            {
+              "name": "Mixed Grill Platter",
+              "price": 18.5,
+              "description": "Lamb chops, chicken tikka, seekh kebab and wings with naan and salad"
+            },
+            {
+              "name": "Lamb Chops (4 pcs)",
+              "price": 13.95,
+              "description": "Marinated overnight and flame-grilled over charcoal"
+            },
+            {
+              "name": "Chicken Tikka",
+              "price": 9.5,
+              "description": "Boneless chicken thigh in our house yoghurt marinade"
+            },
+            {
+              "name": "Seekh Kebab (2 pcs)",
+              "price": 7.95,
+              "description": "Minced lamb with fresh herbs and green chilli"
+            },
+            {
+              "name": "Peri Peri Wings (8)",
+              "price": 7.5,
+              "description": "Mild, hot or extra hot"
+            }
+          ]
+        },
+        {
+          "category": "Burgers & Wraps",
+          "items": [
+            {
+              "name": "Smash Burger",
+              "price": 8.95,
+              "description": "Double beef patty, cheese, house sauce, brioche bun"
+            },
+            {
+              "name": "Chicken Tikka Wrap",
+              "price": 7.5,
+              "description": "With mint yoghurt and pickled onions"
+            }
+          ]
+        },
+        {
+          "category": "Sides",
+          "items": [
+            {
+              "name": "Garlic Naan",
+              "price": 2.95,
+              "description": null
+            },
+            {
+              "name": "Masala Chips",
+              "price": 3.5,
+              "description": null
+            },
+            {
+              "name": "Rice",
+              "price": 2.95,
+              "description": "Pilau or plain"
+            }
+          ]
+        },
+        {
+          "category": "Drinks & Desserts",
+          "items": [
+            {
+              "name": "Mango Lassi",
+              "price": 3.95,
+              "description": null
+            },
+            {
+              "name": "Karak Chai",
+              "price": 2.5,
+              "description": null
+            },
+            {
+              "name": "Kunafa",
+              "price": 5.95,
+              "description": "Warm, with pistachio and cream"
+            }
+          ]
+        }
+      ],
+      "hours": {
+        "Friday": "14:00 â€“ 00:00",
+        "Monday": "12:00 â€“ 23:00",
+        "Sunday": "12:00 â€“ 22:30",
+        "Tuesday": "12:00 â€“ 23:00",
+        "Saturday": "12:00 â€“ 00:00",
+        "Thursday": "12:00 â€“ 23:00",
+        "Wednesday": "12:00 â€“ 23:00"
+      },
+      "special_hours": {}
+    }
+  },
+  "themes": null,
+  "patch": {
+    "forecast_weeks": [
+      {
+        "week_start": "2026-10-05",
+        "status": "ok",
+        "unvalidated": false,
+        "source": "history",
+        "error_pct": 11,
+        "limit_pct": 20,
+        "days": [
+          {
+            "date": "2026-10-05",
+            "orders": 64,
+            "sales_low": 1232,
+            "sales_mid": 1400,
+            "sales_high": 1568
+          },
+          {
+            "date": "2026-10-06",
+            "orders": 59,
+            "sales_low": 1144,
+            "sales_mid": 1300,
+            "sales_high": 1456
+          },
+          {
+            "date": "2026-10-07",
+            "orders": 66,
+            "sales_low": 1276,
+            "sales_mid": 1450,
+            "sales_high": 1624
+          },
+          {
+            "date": "2026-10-08",
+            "orders": 77,
+            "sales_low": 1496,
+            "sales_mid": 1700,
+            "sales_high": 1904
+          },
+          {
+            "date": "2026-10-09",
+            "orders": 118,
+            "sales_low": 2288,
+            "sales_mid": 2600,
+            "sales_high": 2912
+          },
+          {
+            "date": "2026-10-10",
+            "orders": 136,
+            "sales_low": 2640,
+            "sales_mid": 3000,
+            "sales_high": 3360
+          },
+          {
+            "date": "2026-10-11",
+            "orders": 100,
+            "sales_low": 1936,
+            "sales_mid": 2200,
+            "sales_high": 2464
+          }
+        ]
+      },
+      {
+        "week_start": "2026-10-12",
+        "status": "ok",
+        "unvalidated": false,
+        "source": "history",
+        "error_pct": 11,
+        "limit_pct": 20,
+        "days": [
+          {
+            "date": "2026-10-12",
+            "orders": 57,
+            "sales_low": 1100,
+            "sales_mid": 1250,
+            "sales_high": 1400
+          },
+          {
+            "date": "2026-10-13",
+            "orders": 52,
+            "sales_low": 1012,
+            "sales_mid": 1150,
+            "sales_high": 1288
+          },
+          {
+            "date": "2026-10-14",
+            "orders": 59,
+            "sales_low": 1144,
+            "sales_mid": 1300,
+            "sales_high": 1456
+          },
+          {
+            "date": "2026-10-15",
+            "orders": 70,
+            "sales_low": 1364,
+            "sales_mid": 1550,
+            "sales_high": 1736
+          },
+          {
+            "date": "2026-10-16",
+            "orders": 107,
+            "sales_low": 2068,
+            "sales_mid": 2350,
+            "sales_high": 2632
+          },
+          {
+            "date": "2026-10-17",
+            "orders": 120,
+            "sales_low": 2332,
+            "sales_mid": 2650,
+            "sales_high": 2968
+          },
+          {
+            "date": "2026-10-18",
+            "orders": 89,
+            "sales_low": 1716,
+            "sales_mid": 1950,
+            "sales_high": 2184
+          }
+        ]
+      }
+    ],
+    "labour_weeks": [
+      {
+        "week_start": "2026-10-05",
+        "status": "approved",
+        "cost": 3160,
+        "hours": 262,
+        "by_day": {
+          "2026-10-05": 340,
+          "2026-10-06": 320,
+          "2026-10-07": 360,
+          "2026-10-08": 440,
+          "2026-10-09": 580,
+          "2026-10-10": 680,
+          "2026-10-11": 440
+        },
+        "missing_rates": 0
+      },
+      {
+        "week_start": "2026-10-12",
+        "status": "draft",
+        "cost": 3010,
+        "hours": 250,
+        "by_day": {
+          "2026-10-12": 320,
+          "2026-10-13": 300,
+          "2026-10-14": 350,
+          "2026-10-15": 420,
+          "2026-10-16": 560,
+          "2026-10-17": 640,
+          "2026-10-18": 420
+        },
+        "missing_rates": 0
+      }
+    ],
+    "labour_target_pct": 28
+  },
+  "expect": {
+    "outcome": "answer",
+    "figures": [
+      {
+        "what": "next week's rota cost",
+        "value": 3010,
+        "unit": "GBP"
+      },
+      {
+        "what": "as a % of next week's forecast sales (3010 / 12200)",
+        "value": 25,
+        "unit": "percent"
+      }
+    ],
+    "mention_any": [
+      "forecast",
+      "expected",
+      "likely"
+    ],
+    "checker": [
+      "pass"
+    ]
+  },
+  "recorded": null
+}

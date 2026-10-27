@@ -220,3 +220,51 @@ select '7e57c0de-0000-4000-8000-000000000000', w.id, ('7e57c0de-0000-4000-8000-0
   cross join lateral unnest(v.days) as wd
   cross join lateral (select w.week_start + (wd - 1) as d) as dd
  where w.restaurant_id = '7e57c0de-0000-4000-8000-000000000000' and w.source = 'synthetic';
+
+-- 7. Ready for the agents (docs/pilot-sprint.md, "Agents live"): the profile
+--    details each agent's go-live check needs (Reputation: sign-off, complaints
+--    contact, recovery offers, halal and allergen statements; Visibility: logo,
+--    colours, hours, emoji setting, 5 photos; Growth: discount cap, offer types,
+--    sign-up reward, logo, colours; the GM: owner name, language, quiet hours),
+--    a website (for a post's button),
+--    and 6 dummy customers who confirmed their email and opted in. Only fills
+--    what's empty, so anything changed in the app stays. Still not active and no
+--    WhatsApp number: switching it on is a step of its own (the hand test).
+update restaurants set
+  owner_name         = coalesce(owner_name, 'Test Owner'),
+  website            = coalesce(website, 'https://testkitchen.example'),
+  owner_language     = coalesce(owner_language, 'English'),
+  quiet_hours_start  = coalesce(quiet_hours_start, '23:00'),
+  quiet_hours_end    = coalesce(quiet_hours_end, '09:00'),
+  sign_off_name      = coalesce(sign_off_name, 'The Test Kitchen team'),
+  complaint_contact  = coalesce(complaint_contact, 'hello@testkitchen.example'),
+  recovery_offers    = case when recovery_offers = '[]'::jsonb then '["a free portion of masala chips on your next visit"]'::jsonb else recovery_offers end,
+  halal_statement    = coalesce(halal_statement, 'All our meat is halal (HMC certified).'),
+  allergen_statement = coalesce(allergen_statement, 'Please tell us about any allergies when you order; our kitchen handles nuts, gluten and dairy.'),
+  logo_url           = coalesce(logo_url, 'https://app.dinerai.co.uk/samples/test-kitchen/dish-1.png'),
+  approved_offer_types = case when approved_offer_types = '{}' then array['free_item', 'percent_off'] else approved_offer_types end,
+  photo_library      = case when jsonb_array_length(photo_library) >= 5 then photo_library else (
+    select jsonb_agg(jsonb_build_object('id', 'tk-photo-' || n, 'url', 'https://app.dinerai.co.uk/samples/test-kitchen/dish-' || n || '.png',
+                                        'source', 'owner', 'caption', (array['Mixed Grill', 'Smash Burger', 'Chicken Tikka', 'Masala Chips', 'Mango Lassi'])[n],
+                                        'added_at', now()))
+      from generate_series(1, 5) as n) end
+ where id = '7e57c0de-0000-4000-8000-000000000000';
+
+-- The emoji setting only counts once it's been confirmed (a profile version).
+insert into profile_versions (restaurant_id, version, field, section, old_value, new_value, changed_by, evidence)
+select '7e57c0de-0000-4000-8000-000000000000', 1, 'emoji_allowed', 'voice', null, emoji_allowed, 'builder', '{"from": "seed/test-kitchen.sql"}'::jsonb
+  from restaurants
+ where id = '7e57c0de-0000-4000-8000-000000000000'
+   and not exists (select 1 from profile_versions where restaurant_id = '7e57c0de-0000-4000-8000-000000000000' and field = 'emoji_allowed');
+
+insert into customers (restaurant_id, name, email, birthday, visit_count, last_visit, marketing_opt_in, email_confirmed_at, source)
+select '7e57c0de-0000-4000-8000-000000000000', v.name, v.email, v.birthday::date, v.visits, current_date - v.ago, true, now() - interval '30 days', 'seed'
+  from (values
+    ('Amira Test',  'amira@testkitchen.example',  '1990-03-14', 6, 4),
+    ('Ben Test',    'ben@testkitchen.example',    '1985-11-02', 3, 12),
+    ('Chloe Test',  'chloe@testkitchen.example',  '1994-07-21', 9, 2),
+    ('Dev Test',    'dev@testkitchen.example',    '1988-01-30', 1, 40),
+    ('Ella Test',   'ella@testkitchen.example',   '1999-05-09', 4, 7),
+    ('Farid Test',  'farid@testkitchen.example',  '1979-09-17', 2, 20)
+  ) as v(name, email, birthday, visits, ago)
+ where not exists (select 1 from customers where restaurant_id = '7e57c0de-0000-4000-8000-000000000000');

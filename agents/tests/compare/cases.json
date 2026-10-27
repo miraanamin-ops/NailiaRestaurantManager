@@ -1,0 +1,226 @@
+{
+  "about": "The same owner messages through the old assistant and through the agents, on Test Kitchen's data (supabase/seed/test-kitchen.sql), scored by the same plain-code rules (tests/agents/support/compare-cases.ts). 'setup' messages run first and aren't scored; 'then' is a button tap after the scored message (e.g. Approve), scored too. Figures are worked out by code from the data at run time, never written here. 'answer_if_asked' is what the owner types if an agent asks a question first.",
+  "cases": [
+    {
+      "id": "finance-staff-next-week",
+      "area": "finance",
+      "setup": [
+        "RUN ROTA"
+      ],
+      "message": "what will staff cost next week?",
+      "expect": {
+        "answer_has_money": "next_week_labour"
+      }
+    },
+    {
+      "id": "finance-saturday",
+      "area": "finance",
+      "message": "how did Saturday compare?",
+      "expect": {
+        "answer_has_money": "last_saturday_net"
+      }
+    },
+    {
+      "id": "finance-last-week",
+      "area": "finance",
+      "message": "how was last week?",
+      "expect": {
+        "answer_has_money": "last_week_net"
+      }
+    },
+    {
+      "id": "finance-next-week-sales",
+      "area": "finance",
+      "message": "what's next week looking like for sales?",
+      "expect": {
+        "answer_money_in_range": "next_week_forecast",
+        "answer_mentions_any": [
+          "forecast",
+          "expect",
+          "likely",
+          "around",
+          "between"
+        ]
+      }
+    },
+    {
+      "id": "finance-labour-target",
+      "area": "finance",
+      "setup": [
+        "RUN ROTA",
+        "LABOUR TARGET 28%"
+      ],
+      "message": "will next week's rota keep us under our labour target?",
+      "expect": {
+        "answer_mentions_all": [
+          "28%"
+        ],
+        "answer_has_percent_near": "next_week_labour_pct"
+      }
+    },
+    {
+      "id": "review-reply-on-google",
+      "area": "google",
+      "message": "reply to the 3 star review",
+      "expect": {
+        "draft_on_screen": {
+          "kind": "review_reply",
+          "review_author": "Lewis P."
+        }
+      },
+      "then": {
+        "tap": "approve",
+        "expect": {
+          "review_replied": "Lewis P."
+        }
+      }
+    },
+    {
+      "id": "review-pasted",
+      "area": "google",
+      "message": "Can you write a reply to this one from Tripadvisor? 2 stars from Gary: \"Waited ages for our burgers and the chips were cold.\"",
+      "expect": {
+        "answer_mentions_all": [
+          "Gary"
+        ],
+        "no_google_write": true
+      }
+    },
+    {
+      "id": "reviews-question",
+      "area": "google",
+      "message": "which reviews still need a reply?",
+      "expect": {
+        "answer_mentions_all": [
+          "Dan",
+          "Lewis"
+        ]
+      }
+    },
+    {
+      "id": "google-post",
+      "area": "google",
+      "message": "put up a Google post about our mixed grill for the weekend",
+      "expect": {
+        "draft_on_screen": {
+          "kind": "google_post",
+          "content_mentions": [
+            "mixed grill"
+          ]
+        }
+      },
+      "then": {
+        "tap": "approve",
+        "expect": {
+          "post_published": true
+        }
+      }
+    },
+    {
+      "id": "campaign-bonfire-night",
+      "area": "calendar",
+      "message": "Bonfire Night is next Thursday, can we do an offer for families?",
+      "expect": {
+        "draft_on_screen": {
+          "kind": "email_campaign",
+          "content_mentions": [
+            "bonfire"
+          ],
+          "within_cap": true
+        }
+      },
+      "then": {
+        "tap": "approve",
+        "expect": {
+          "campaign_sent": true
+        }
+      }
+    },
+    {
+      "id": "campaign-match",
+      "area": "calendar",
+      "message": "West Ham are at home on Saturday, can we do something to get fans in after the match?",
+      "expect": {
+        "draft_on_screen": {
+          "kind": "email_campaign",
+          "within_cap": true
+        }
+      },
+      "answer_if_asked": "kick-off is 3pm, finishes about 5"
+    },
+    {
+      "id": "rota-cant-work",
+      "area": "rota",
+      "setup": [
+        "RUN ROTA"
+      ],
+      "message": "Mo can't do Friday",
+      "expect": {
+        "rota_edit": {
+          "staff": "Mo",
+          "off_weekday": 5
+        }
+      },
+      "then": {
+        "tap": "approve",
+        "expect": {
+          "rota_published": true
+        }
+      }
+    },
+    {
+      "id": "rota-swap",
+      "area": "rota",
+      "setup": [
+        "RUN ROTA"
+      ],
+      "message": "swap Priya and Jordan on Saturday",
+      "expect": {
+        "rota_edit": {
+          "staff": "Priya"
+        }
+      }
+    },
+    {
+      "id": "team-add",
+      "area": "rota",
+      "message": "add Zara, front, £12.21 an hour, weekends",
+      "expect": {
+        "staff_added": "Zara"
+      }
+    },
+    {
+      "id": "profile-question",
+      "area": "chat",
+      "message": "what time do we close on friday?",
+      "expect": {
+        "answer_mentions_any": [
+          "11pm",
+          "11 pm",
+          "23:00",
+          "11:00pm",
+          "11 p.m."
+        ]
+      }
+    },
+    {
+      "id": "profile-fact",
+      "area": "chat",
+      "message": "Mango Lassi is £4.25 now",
+      "expect": {
+        "menu_price_or_card": {
+          "item": "Mango Lassi",
+          "price": 4.25
+        }
+      }
+    },
+    {
+      "id": "chat-thanks",
+      "area": "chat",
+      "message": "thanks, that's really helpful",
+      "expect": {
+        "short_reply": true
+      }
+    }
+  ]
+}

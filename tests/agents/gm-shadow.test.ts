@@ -139,6 +139,6 @@ test("the comparison shows the message, today's route and reply, the GM's route 
   expect(html).toContain("The owner wrote");
   expect(html).toContain("what time do we open on sunday?");
   expect(html).toContain("Route: the composer (answered from the profile)");
-  expect(html).toContain("today: today&#x27;s assistant");
+  expect(html).toContain("today: general chat and look-ups");
   expect(html).toContain("Routing 1.2s + reply 1.8s · today&#x27;s reply took 3.1s");
 });

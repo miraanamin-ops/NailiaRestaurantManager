@@ -12,7 +12,7 @@ import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome 
 import type { MetricsData } from "./insights-metrics";
 import { insightsText, type InsightsOutput } from "./insights-rules";
 import { enqueueAgentJob, recordAgentRun, type AgentJob, type JobOutcome } from "./jobs";
-import { gmIsLive, holdAgentQuestion } from "./gm-held";
+import { askOwnerNow, gmIsLive, holdAgentQuestion } from "./gm-held";
 import { agentMode } from "./modes";
 import { callTool } from "./tools";
 
@@ -102,6 +102,50 @@ export async function loadMetricsData(restaurantId: string, today: string): Prom
     rewards: ok(rewards) ?? [],
     // Views, calls and direction requests only exist once Google is connected for real.
     google: null,
+    ...(await weekAheadData(restaurantId, today)),
+  };
+}
+
+const pounds = (pence: number | null) => (pence === null ? null : Math.round(pence) / 100);
+
+// The week ahead and staff costs (pilot sprint: "what will staff cost next week?"):
+// this week's and next week's forecast, and the rota's cost for the last 8 weeks,
+// this week and next (none without a team). In pounds, like the sales figures.
+async function weekAheadData(restaurantId: string, today: string): Promise<Pick<MetricsData, "forecast_weeks" | "labour_weeks" | "labour_target_pct">> {
+  const thisMonday = addDays(today, -((new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7));
+  const now = new Date(`${today}T12:00:00Z`);
+  const [{ getWeekAhead }, { labourForWeek, labourTarget }] = await Promise.all([import("@/lib/forecast/week-ahead"), import("@/lib/finance/labour")]);
+  const forecast = await Promise.all(
+    [thisMonday, addDays(thisMonday, 7)].map((w) =>
+      getWeekAhead(restaurantId, w, now)
+        .then((a) => ({
+          week_start: w,
+          status: a.status === "ok" && !a.show_ranges ? ("held_back" as const) : a.status,
+          unvalidated: a.unvalidated,
+          source: a.source,
+          error_pct: a.accuracy?.error_pct ?? null,
+          limit_pct: a.accuracy?.limit_pct ?? null,
+          days: a.days.map((d) => ({ date: d.date, orders: d.orders, sales_low: pounds(d.sales_low), sales_mid: pounds(d.sales_mid), sales_high: pounds(d.sales_high) })),
+        }))
+        .catch((err) => {
+          console.error("Insights: couldn't read the week ahead", err);
+          return null;
+        }),
+    ),
+  );
+  const team = await getSupabase().from("staff").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId);
+  const labour = team.count
+    ? await Promise.all(
+        Array.from({ length: 10 }, (_, i) => addDays(thisMonday, 7 * (i - 8))).map(async (w) => {
+          const l = await labourForWeek(restaurantId, w);
+          return { week_start: w, status: l.status, cost: l.costPence / 100, hours: l.hours, by_day: Object.fromEntries(Object.entries(l.byDay).map(([d, p]) => [d, p / 100])), missing_rates: l.missingRates };
+        }),
+      )
+    : null;
+  return {
+    forecast_weeks: forecast.filter((f): f is NonNullable<typeof f> => f !== null),
+    labour_weeks: labour?.filter((w) => w.status !== "none") ?? null,
+    labour_target_pct: await labourTarget(restaurantId).catch(() => null),
   };
 }
 
@@ -219,6 +263,8 @@ export async function answerWithInsights(restaurant: Restaurant, question: strin
   const job: InsightsJob = { task: "answer", question, today: londonYmd(now) };
   try {
     const { outcome, ms } = await runInsightsFor(restaurant, job, "an owner question (live)");
+    // A question back (with the GM live): on screen, so the answer comes back here.
+    if (outcome.kind === "question" && (await gmIsLive(restaurant))) await askOwnerNow(restaurant, "insights", outcome.question, { question });
     await send(answerText(outcome));
     const key = `insights:answer:${Date.now()}`;
     const jobId = await recordAgentRun({
