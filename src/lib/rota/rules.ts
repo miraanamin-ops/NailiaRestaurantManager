@@ -148,11 +148,11 @@ export function clockText(minutes: number) {
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
 
-// "12–22", "17:30–23", for WhatsApp.
+// "12–22", "17:30–23", "20–24" (until midnight), "18–1" (past midnight), for WhatsApp.
 export function shortSpan(start: number, end: number) {
   const t = (m: number) => {
     const w = ((m % 1440) + 1440) % 1440;
     return w % 60 ? `${Math.floor(w / 60)}:${String(w % 60).padStart(2, "0")}` : String(Math.floor(w / 60));
   };
-  return `${t(start)}–${t(end)}`;
+  return `${t(start)}–${end > start && end % 1440 === 0 ? "24" : t(end)}`;
 }

@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 import { datesIn, describeAdjustment, findStaff, mergeAdjustments, parseRotaEdits, splitEdits } from "@/lib/rota/edits";
 import { parseDays, parseMaxHours, parseRate, parseStaffCommand, parseTimes } from "@/lib/rota/staff-input";
-import { DEFAULT_RULES, effectiveRules, needFor, openingFor, openSpans, roleKey, rotaSettings } from "@/lib/rota/rules";
+import { DEFAULT_RULES, effectiveRules, needFor, openingFor, openSpans, roleKey, rotaSettings, shortSpan } from "@/lib/rota/rules";
 
 const WEEK = "2026-11-02"; // Monday
 const STAFF = [
@@ -173,6 +173,13 @@ describe("rota rules", () => {
     expect(openSpans("Closed")).toEqual([]);
     expect(openingFor("2026-12-25", 5, { Friday: "12:00 – 23:00" }, { "2026-12-25": { hours: "Closed" } })).toEqual([]);
     expect(openingFor("2026-11-06", 5, { Friday: "12:00 – 23:00" }, null)).toEqual([{ start: 720, end: 1380 }]);
+  });
+
+  test("short times for WhatsApp: midnight is 24, past midnight wraps", () => {
+    expect(shortSpan(720, 1320)).toBe("12–22");
+    expect(shortSpan(1050, 1380)).toBe("17:30–23");
+    expect(shortSpan(1200, 1440)).toBe("20–24");
+    expect(shortSpan(1080, 1500)).toBe("18–1");
   });
 
   test("role words", () => {
