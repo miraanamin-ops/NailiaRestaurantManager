@@ -45,6 +45,11 @@ export async function staffCommand(turn: Turn, cmd: StaffCommand) {
     if (!members.length) return turn.send(`👥 Nobody on the rota team yet. Add people like this: *add Ali, kitchen, £13, weekdays*\nOr on the staff page: ${appUrl()}/staff?r=${r.id}`);
     return turn.send(`👥 *Your rota team*\n${members.map(memberLine).join("\n")}\n\nChange anyone by adding them again (e.g. *add Ali, kitchen, £14*), or on the staff page: ${appUrl()}/staff?r=${r.id}`);
   }
+  if (cmd.name === "staff_unclear") {
+    return turn.send(
+      `I couldn't read *${cmd.unread.join("*, *")}* for ${cmd.name_given}, so nothing was saved. Try it like this:\n*add ${cmd.name_given}, kitchen, £13, weekdays*\nDays: _weekdays_, _weekends_, _every day_, _Mon-Thu_, _Fri, Sat_. Times (optional): _5pm-11pm_, _evenings_. Limit (optional): _max 30 hours_.`,
+    );
+  }
   if (cmd.name === "remove_rota_staff") {
     const members = await team(r.id, today);
     const who = findStaff(members, cmd.who);

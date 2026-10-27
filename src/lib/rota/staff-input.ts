@@ -17,12 +17,14 @@ export type StaffInput = {
 export type StaffCommand =
   | { name: "add_rota_staff"; input: StaffInput }
   | { name: "remove_rota_staff"; who: string }
-  | { name: "team" };
+  | { name: "team" }
+  | { name: "staff_unclear"; name_given: string; unread: string[] };
 
 const DAYS: [RegExp, number[]][] = [
   [/^(every ?day|any ?day|all week|7 days|daily|all days)$/, [1, 2, 3, 4, 5, 6, 7]],
   [/^(weekdays?|mon(day)?\s*(-|–|to)\s*fri(day)?)$/, [1, 2, 3, 4, 5]],
   [/^(weekends?)$/, [6, 7]],
+  [/^(the )?week ?ends?$/, [6, 7]],
 ];
 const DAY_INDEX: [RegExp, number][] = [
   [/^mon(day)?s?$/, 1],
@@ -112,6 +114,7 @@ export function parseStaffCommand(body: string): StaffCommand | null {
   const name = add[1].trim().replace(/[.!]$/, "");
   if (!NAME_OK.test(name) || /^staff$/i.test(name)) return null;
   const input: StaffInput = { name: titleCase(name), roles: [], ratePence: null, days: null, starts: null, ends: null, maxHours: null };
+  const unread: string[] = [];
   for (const raw of add[2].split(/\s*,\s*/)) {
     const part = raw.trim().replace(/[.!]$/, "").replace(/^(?:works? |available |on |does |can do )/i, "");
     if (!part) continue;
@@ -130,10 +133,13 @@ export function parseStaffCommand(body: string): StaffCommand | null {
       input.maxHours = max;
       continue;
     }
+    // "all day" / "any time" adds nothing (all day is the default): "mon to friday all day"
+    const plain = part.replace(/\s*\b(all day|all-day|any ?time|full days?|whole day)$/i, "").trim();
+    if (!plain) continue;
     // "weekends 5pm-11pm" in one part, or each on its own
-    const both = part.match(/^(.+?)\s+((?:from )?\d.+|evenings?|nights?|lunch(?:times?|es)?|daytimes?)$/i);
-    const days = parseDays(part) ?? (both ? parseDays(both[1]) : null);
-    const times = parseTimes(part) ?? (both ? parseTimes(both[2]) : null);
+    const both = plain.match(/^(.+?)\s+((?:from )?\d.+|evenings?|nights?|lunch(?:times?|es)?|daytimes?)$/i);
+    const days = parseDays(plain) ?? (both ? parseDays(both[1]) : null);
+    const times = parseTimes(plain) ?? (both ? parseTimes(both[2]) : null);
     if (days || times) {
       if (days) input.days = days;
       if (times) {
@@ -142,7 +148,10 @@ export function parseStaffCommand(body: string): StaffCommand | null {
       }
       continue;
     }
-    return null; // something we can't read: let the assistant handle the message
+    unread.push(part);
   }
-  return input.roles.length ? { name: "add_rota_staff", input } : null;
+  if (!input.roles.length) return null; // no role: not a staff message (e.g. "add lamb chops, £14")
+  // A staff message with a part we can't read: say so, rather than guess or pass it to the assistant.
+  if (unread.length) return { name: "staff_unclear", name_given: input.name, unread };
+  return { name: "add_rota_staff", input };
 }

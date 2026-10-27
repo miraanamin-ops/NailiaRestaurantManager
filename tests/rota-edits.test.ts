@@ -116,11 +116,19 @@ describe("staff by WhatsApp", () => {
     expect(parseStaffCommand("add Zara, manager/front, £15")).toMatchObject({ input: { roles: ["manager", "front"], ratePence: 1500, days: null } });
   });
 
-  test("not a staff command: dishes, staff numbers, anything unreadable", () => {
+  test("the owner's own wording: £12.50/h, 'mon to friday all day'", () => {
+    expect(parseStaffCommand("add ali, kitchen, £12.50/h, mon to friday all day")).toEqual({
+      name: "add_rota_staff",
+      input: { name: "Ali", roles: ["kitchen"], ratePence: 1250, days: [1, 2, 3, 4, 5], starts: null, ends: null, maxHours: null },
+    });
+    expect(parseStaffCommand("add Sara, front of house, £12, every day, all day")).toMatchObject({ input: { days: [1, 2, 3, 4, 5, 6, 7] } });
+  });
+
+  test("not a staff command: dishes, staff numbers; a staff message with an unreadable part says so", () => {
     expect(parseStaffCommand("add lamb chops, £14")).toBeNull(); // a dish (no role)
     expect(parseStaffCommand("ADD STAFF +447700900123")).toBeNull();
-    expect(parseStaffCommand("add Ali, kitchen, sometimes")).toBeNull();
     expect(parseStaffCommand("add Ali")).toBeNull();
+    expect(parseStaffCommand("add Ali, kitchen, sometimes")).toEqual({ name: "staff_unclear", name_given: "Ali", unread: ["sometimes"] });
   });
 
   test("remove and list", () => {
