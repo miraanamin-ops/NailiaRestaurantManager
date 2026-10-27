@@ -56,6 +56,8 @@ async function load() {
   const sent: { text: string; buttons: unknown }[] = [];
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client, appUrl: () => "https://app.test" }));
   vi.doMock("@/lib/notify", () => ({ messageOwner: vi.fn(async (_c: unknown, text: string, buttons: unknown) => void sent.push({ text, buttons })) }));
+  // Test Kitchen is a demo restaurant with the test tools on, whatever this machine's switches say.
+  vi.doMock("@/lib/dummy-data", () => ({ dummyDataAllowed: vi.fn(async () => true) }));
   vi.doMock("@/lib/builder-alerts", () => ({ alertBuilder: vi.fn(async (_k: string, m: string) => void sent.push({ text: `BUILDER: ${m}`, buttons: false })) }));
   vi.doMock("@/lib/agents/gm", async (orig) => ({ ...(await orig<object>()), queueGmBriefShadow: vi.fn(async () => {}) }));
   vi.doMock("@/lib/agents/insights", async (orig) => ({ ...(await orig<object>()), queueInsightsShadow: vi.fn(async () => {}), insightsMode: vi.fn(async () => "off") }));
