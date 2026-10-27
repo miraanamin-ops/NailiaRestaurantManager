@@ -185,8 +185,11 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (t === "CAMPAIGN RESULTS" || t === "CAMPAIGN RESULT" || t === "CAMPAIGN REPORT") return { name: "campaign_results" };
   // REPORT on its own was easy to confuse with RUN REPORT, so it asks which one.
   if (t === "REPORT") return { name: "which_report" };
-  // "LABOUR TARGET 28%", "labor target 27.5", "LABOUR TARGET OFF".
-  const target = t.match(/^LABOU?R TARGET (?:(OFF|NONE)|(\d{1,2}(?:\.\d)?) ?%?)$/);
+  // "LABOUR TARGET 28%", "labor target 27.5", "labour target is 28%", "set my labour
+  // cost target to 28% of sales", "labour target: 28", "LABOUR TARGET OFF".
+  const target = t
+    .replace(/[.!]+$/, "")
+    .match(/^(?:SET |CHANGE )?(?:MY |OUR |THE )?LABOU?R(?: COSTS?)?(?: %| PERCENT(?:AGE)?)? TARGET(?: IS| TO| =|:| OF| AT| SHOULD BE)? ?(?:(OFF|NONE)|(\d{1,2}(?:\.\d)?) ?(?:%|PERCENT)?(?: OF (?:NET )?SALES)?)$/);
   if (target) {
     if (target[1]) return { name: "labour_target", percent: null };
     const pct = Number(target[2]);

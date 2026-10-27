@@ -106,6 +106,10 @@ describe("LABOUR TARGET", () => {
     expect(parseCommand("labour target 28%", 1)).toEqual({ name: "labour_target", percent: 28 });
     expect(parseCommand("LABOR TARGET 27.5", 1)).toEqual({ name: "labour_target", percent: 27.5 });
     expect(parseCommand("Labour target off", 1)).toEqual({ name: "labour_target", percent: null });
+    // The ways owners actually say it (the first is what was typed on 27 Oct).
+    for (const said of ["labour target is 28%", "Set my labour cost target to 28% of sales.", "labour target: 28", "our labour target should be 28 percent", "labour % target 28%"]) {
+      expect(parseCommand(said, 1)).toEqual({ name: "labour_target", percent: 28 });
+    }
     expect(parseCommand("labour target 0", 1)).toBeNull();
     expect(parseCommand("labour target lots", 1)).toBeNull();
   });
