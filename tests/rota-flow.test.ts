@@ -103,6 +103,9 @@ describe("rota suggester flow", () => {
     expect(rows("staff_pay_rates")).toHaveLength(2);
     expect(rows("staff")).toHaveLength(1);
     expect(logged.map((l) => l.action)).toEqual(["rota_staff", "rota_staff"]);
+    // a name typed in lower case gets its capitals
+    const lower = await staff.saveStaff(R, { name: "bilal o'neil", roles: ["front"], ratePence: 1250, maxHours: null, days: null, starts: null, ends: null }, { today: TODAY, source: "owner_message", actor: "owner" });
+    expect(lower.member.name).toBe("Bilal O'Neil");
   });
 
   test("Thursday: next week's draft, saved as shifts, sent with buttons", async () => {

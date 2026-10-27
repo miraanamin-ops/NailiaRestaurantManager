@@ -78,6 +78,8 @@ export async function saveStaff(
   input: StaffInput & { staffId?: string; spans?: { weekday: number; starts: string; ends: string }[] },
   opts: { today: string; source: OpsSource; actor: Actor },
 ): Promise<{ member: TeamMember; created: boolean }> {
+  // "bilal" -> "Bilal": a name typed all in lower case gets its capitals.
+  if (input.name === input.name.toLowerCase()) input = { ...input, name: input.name.replace(/(^|[\s'-])(\p{L})/gu, (_m, pre: string, c: string) => pre + c.toUpperCase()) };
   const current = await team(restaurantId, opts.today);
   const existing = input.staffId ? current.find((m) => m.id === input.staffId) : findStaff(current, input.name);
   if (input.staffId && !existing) throw new Error("That person isn't on this restaurant's team");
