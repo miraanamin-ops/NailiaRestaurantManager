@@ -142,7 +142,8 @@ export async function planWeek(r: Restaurant, weekStart: string, now: Date, adju
       open: openingFor(d.date, d.weekday, r.opening_hours, rr.special_hours),
       ordersByHour: Object.fromEntries(d.orders_by_hour.map((h) => [h.hour, h.orders])),
       orders: d.orders,
-      salesPence: d.sales_mid,
+      // Labour % only against a forecast the owner may see (not one held back for its error).
+      salesPence: ahead.show_ranges ? d.sales_mid : null,
     })),
   };
   const plan = buildPlan(input);

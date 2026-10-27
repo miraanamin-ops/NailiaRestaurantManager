@@ -21,6 +21,8 @@ import {
   type ActionsSection,
   type Compare,
   type CustomersSection,
+  type FeatureSection,
+  formatValue,
   type Daily,
   type ForecastSection,
   type GoogleSection,
@@ -319,6 +321,39 @@ export function whatsappHeadline(data: ReportData, url: string) {
   return `📊 *${verdict(r, c, sales)}*${bits.length ? `: ${bits.join(", ")}.` : "."}\nYour weekly report is ready: ${url}`;
 }
 
+// The Monday report on WhatsApp: the headline, each feature section in short
+// (its title and numbers on one line, then its first lines), the 3 actions and
+// the link to the full version. Never more than WHATSAPP_MAX_LINES lines.
+export const WHATSAPP_MAX_LINES = 25;
+
+// first: the opening line (default: the headline from data's own sections).
+export function whatsappReport(data: ReportData, url: string, first?: string) {
+  const headline = first ?? whatsappHeadline(data, url).split("\n")[0];
+  const features = data.sections.filter((s): s is FeatureSection => s.id === "feature");
+  const actions = data.sections.find((s): s is ActionsSection => s.id === "actions")?.actions ?? [];
+  const build = (perSection: number, gaps: boolean) => {
+    const out = [headline];
+    for (const f of features) {
+      if (gaps) out.push("");
+      const nums = f.stats.map((st) => `${st.label} ${formatValue(st.value.now, st.format)}`).join(" · ");
+      out.push(`*${f.title}*${nums ? ` · ${nums}` : ""}`);
+      out.push(...f.lines.slice(0, perSection).map((l) => l.replace(/\*/g, "")));
+    }
+    if (actions.length) {
+      if (gaps) out.push("");
+      out.push("*3 things to do*", ...actions.slice(0, 3).map((a, i) => `${i + 1}. ${a.title}`));
+    }
+    if (gaps) out.push("");
+    out.push(`Full report: ${url}`);
+    return out;
+  };
+  for (const [n, gaps] of [[3, true], [3, false], [2, false], [1, false]] as const) {
+    const lines = build(n, gaps);
+    if (lines.length <= WHATSAPP_MAX_LINES) return lines.join("\n");
+  }
+  return [...build(1, false).slice(0, WHATSAPP_MAX_LINES - 1), `Full report: ${url}`].join("\n");
+}
+
 function fallbackSentence(r: ReputationSection | undefined, c: CustomersSection | undefined) {
   const parts: string[] = [];
   if (r) parts.push(`${plural(r.newReviews.now, "new review")} and ${plural(r.answered.now, "reply", "replies")} posted`);
@@ -351,9 +386,9 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     const sectionFacts = def.facts(section);
     if (sectionFacts) facts.push(sectionFacts);
   }
-  // Each feature's own section (lib/sections), after the built-in ones.
+  // Each feature's own section (lib/sections): shown first, in place of the built-in
+  // ones it replaces (those are still worked out above, for the headline).
   const features = await reportFeatureSections(restaurant, period);
-  dataSections.push(...features.sections);
   facts.push(...features.facts);
   const reputation = dataSections.find((s): s is ReputationSection => s.id === "reputation");
   const customers = dataSections.find((s): s is CustomersSection => s.id === "customers");
@@ -401,9 +436,11 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
         : []),
     ].slice(0, 3),
   };
+  // The AI's actions, then the sections' own (from code), then the generic ones; no title twice.
+  const seen = new Set<string>();
   const actions: ActionsSection = {
     id: "actions",
-    actions: [...(insights?.actions ?? []), ...FALLBACK_ACTIONS].slice(0, 3),
+    actions: [...(insights?.actions ?? []), ...features.actions, ...FALLBACK_ACTIONS].filter((a) => !seen.has(a.title) && seen.add(a.title)).slice(0, 3),
   };
 
   const data: ReportData = {
@@ -417,12 +454,14 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     },
     googleMode: await googleModeFor(restaurant.id),
     whatsappNumber: restaurant.whatsapp_from?.replace(/\D/g, "") || null,
-    sections: [headline, ...dataSections, actions],
+    sections: [headline, ...features.sections, ...dataSections.filter((s) => !features.replaces.has(s.id)), actions],
   };
 
   const token = newToken();
   const url = `${appUrl()}/report/${token}`;
-  const text = whatsappHeadline(data, url);
+  // The opening line counts every built-in section, shown or replaced.
+  const opening = whatsappHeadline({ ...data, sections: [headline, ...dataSections, actions] }, url);
+  const text = features.sections.length ? whatsappReport(data, url, opening.split("\n")[0]) : opening;
   const row = checkRow(
     await getSupabase()
       .from("reports")

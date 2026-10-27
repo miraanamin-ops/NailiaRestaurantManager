@@ -32,6 +32,8 @@ beforeEach(() => {
   vi.doMock("@/lib/notify", () => ({ messageOwner: async (_c: unknown, text: string, buttons: unknown = false) => void sent.push({ text, buttons }) }));
   vi.doMock("@/lib/feedback", () => ({ feedbackForBrief: async () => ({ lines: [], ids: [] }), markFeedbackReported: async () => {} }));
   vi.doMock("@/lib/sales/z-reports", () => ({ zNudgeFor: async () => null }));
+  // The features' blocks have their own tests (tests/test-kitchen-week.test.ts): none here.
+  vi.doMock("@/lib/sections", () => ({ briefSections: async () => ({ blocks: [], offers: [] }) }));
   vi.doMock("@/lib/brief", async (orig) => ({ ...(await orig<object>()), doneTally: async () => ["2 reviews answered"], sendBrief: async () => (sent.push({ text: "TODAY'S BRIEF", buttons: false }), { sent: true, items: 0, tally: [] }) }));
   vi.doMock("@/lib/claude", () => ({
     MODELS: { sonnet: "claude-sonnet-5-5", haiku: "claude-haiku-5-5" },

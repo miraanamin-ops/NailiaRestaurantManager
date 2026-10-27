@@ -11,6 +11,15 @@
 
 begin;
 
+-- 0d. What 046 (finance forecast and calendar lines) built on these tables, first
+--     (its policies use ops_owns_restaurant). See also
+--     finance_calendar_rollback.sql, which undoes 046 alone.
+drop table if exists calendar_suggestions cascade;
+drop table if exists forecast_backtests cascade;
+alter table restaurants drop column if exists labour_target_pct;
+alter table restaurants drop column if exists forecast_error_limit_pct;
+delete from schema_migrations where name = '046_finance_calendar.sql';
+
 -- 0c. What 043 (the pilot sprint's rota rules) built on these tables, first
 --     (its policy uses ops_owns_restaurant). See also pilot_rota_rollback.sql,
 --     which undoes 043 alone.

@@ -1,8 +1,11 @@
 // The pilot sprint's shared contracts (docs/pilot-sprint.md): getWeekAhead,
 // getUpcomingEvents, getRotaInputs and the brief and report section registry.
-// Real data first; in test mode a demo restaurant with none gets typed dummy data.
-import { describe, expect, test, vi } from "vitest";
+// Real data first; in test mode a demo restaurant with none gets typed dummy data
+// (except the week ahead: under 8 weeks of sales it has no numbers, never dummy ones).
+import { afterAll, describe, expect, test, vi } from "vitest";
 import { fakeSupabase } from "./support/fake-supabase";
+import { memoryDb } from "./support/memory-db";
+import { tkHistory } from "./support/tk-history";
 import { dummyWeekAhead, isMonday, weekDays } from "@/lib/forecast/week-ahead-rules";
 import { dummyUpcomingEvents, expectedEffect } from "@/lib/upcoming-events-rules";
 import { DUMMY_RULES, DUMMY_STAFF } from "@/lib/rota/types";
@@ -38,49 +41,79 @@ describe("week ahead (pure)", () => {
 });
 
 describe("getWeekAhead", () => {
-  const load = async (loaded: unknown, dummy: boolean, hours: unknown[] = []) => {
+  const TODAY = "2026-10-25"; // NOW's London day (a Sunday); the week asked for starts tomorrow
+  const load = async (opts: { historyDays: number; loaded?: unknown; hours?: unknown[]; limit?: number | null }) => {
     vi.resetModules();
-    vi.doMock("@/lib/forecast", () => ({ loadForecast: async () => loaded }));
-    vi.doMock("@/lib/dummy-data", () => ({ dummyDataAllowed: async () => dummy }));
-    vi.doMock("@/lib/ops/models", () => ({ forecastHoursFromRun: async () => hours }));
-    return (await import("@/lib/forecast/week-ahead")).getWeekAhead;
+    const { salesDays, salesHours } = tkHistory(RID, TODAY, opts.historyDays);
+    const db = memoryDb({
+      restaurants: [{ id: RID, is_demo: true, forecast_error_limit_pct: opts.limit ?? null }],
+      sales_days: salesDays,
+      sales_hours: salesHours,
+      forecast_backtests: [],
+    });
+    vi.doMock("@/lib/supabase", () => ({ getSupabase: () => db.client }));
+    vi.doMock("@/lib/forecast", () => ({ loadForecast: async () => opts.loaded ?? { kind: "none", hadRecently: false, reason: "" } }));
+    vi.doMock("@/lib/ops/models", () => ({ forecastHoursFromRun: async () => opts.hours ?? [] }));
+    vi.doMock("@/lib/local-calendar", () => ({ calendarFor: async () => [] }));
+    vi.doMock("@/lib/upcoming-events", () => ({ getUpcomingEvents: async () => [] }));
+    return { get: (await import("@/lib/forecast/week-ahead")).getWeekAhead, db };
   };
-
-  test("no forecast: dummy data in test mode, else seven empty days", async () => {
-    const none = { kind: "none", hadRecently: false, reason: "" };
-    expect((await (await load(none, true))(RID, MONDAY, NOW)).source).toBe("dummy");
-    const empty = await (await load(none, false))(RID, MONDAY, NOW);
-    expect(empty.source).toBe("none");
-    expect(empty.days).toHaveLength(7);
-    expect(empty.days.every((d) => d.orders === null && d.sales_mid === null && !d.orders_by_hour.length)).toBe(true);
+  afterAll(() => {
+    for (const m of ["@/lib/supabase", "@/lib/forecast", "@/lib/ops/models", "@/lib/local-calendar", "@/lib/upcoming-events"]) vi.doUnmock(m);
   });
 
-  test("the nightly forecast in the contract's shape, rounded, with hours", async () => {
-    const days = new Map([
-      [MONDAY, { orders: { low: 50, likely: 61.6, high: 70 }, sales: { low: 100000.4, likely: 120000.6, high: 140000 }, covers: null, channels: new Map(), drivers: [] }],
-    ]);
-    const loaded = { kind: "forecast", run: { id: "run-1", metrics: {} }, unvalidated: true, metrics: {}, days };
+  test("under 8 weeks of sales: no numbers at all, even for a demo in test mode", async () => {
+    const { get } = await load({ historyDays: 40 });
+    const w = await get(RID, MONDAY, NOW);
+    expect(w).toMatchObject({ source: "none", status: "not_enough_history", show_ranges: false, history_weeks: 5 });
+    expect(w.days).toHaveLength(7);
+    expect(w.days.every((d) => d.orders === null && d.sales_mid === null && !d.orders_by_hour.length)).toBe(true);
+  });
+
+  test("from the sales history: orders range x average order value, hours, and the back-test saved once a day", async () => {
+    const { get, db } = await load({ historyDays: 365 });
+    const w = await get(RID, MONDAY, NOW);
+    expect(w).toMatchObject({ source: "history", status: "ok", show_ranges: true, unvalidated: false });
+    expect(w.aov_pence).toBeGreaterThan(1900);
+    expect(w.aov_pence).toBeLessThan(2100);
+    for (const d of w.days) {
+      expect(d.orders_low!).toBeLessThanOrEqual(d.orders!);
+      expect(d.orders!).toBeLessThanOrEqual(d.orders_high!);
+      expect(Math.abs(d.sales_mid! - d.orders! * w.aov_pence!)).toBeLessThan(w.aov_pence!); // orders rounded, sales not
+      expect(d.orders_by_hour.reduce((n, h) => n + h.orders, 0)).toBeCloseTo(d.orders!, -1);
+    }
+    expect(w.days[5].orders!).toBeGreaterThan(w.days[1].orders!); // Saturday busier than Tuesday
+    expect(w.accuracy).toMatchObject({ method: "history_v1", weeks: 12, limit_pct: 20 });
+    expect(w.accuracy!.error_pct!).toBeLessThan(20);
+    expect(db.tables.forecast_backtests).toHaveLength(1);
+    await get(RID, MONDAY, NOW);
+    expect(db.tables.forecast_backtests).toHaveLength(1); // read back, not run again
+  });
+
+  test("the error over the limit: held back, no ranges to show", async () => {
+    const { get } = await load({ historyDays: 365, limit: 1 });
+    const w = await get(RID, MONDAY, NOW);
+    expect(w).toMatchObject({ status: "held_back", show_ranges: false });
+    expect(w.accuracy).toMatchObject({ limit_pct: 1 });
+  });
+
+  test("the nightly forecast where it has a day: its orders x our average order value, its hours, its own error", async () => {
+    const days = new Map([[MONDAY, { orders: { low: 50, likely: 61.6, high: 70 }, sales: null, covers: null, channels: new Map(), drivers: [] }]]);
+    const loaded = { kind: "forecast", run: { id: "run-1", metrics: {} }, unvalidated: true, metrics: { primary: { wape: 0.123, coverage: 0.81 } }, days };
     const hours = [
       { target_day: MONDAY, local_hour: 19, likely: 9.26 },
       { target_day: MONDAY, local_hour: 12, likely: 4.04 },
     ];
-    const w = await (await load(loaded, true, hours))(RID, MONDAY, NOW);
-    expect(w.source).toBe("forecast");
-    expect(w.unvalidated).toBe(true);
-    expect(w.days[0]).toEqual({
-      date: MONDAY,
-      weekday: 1,
-      orders: 62,
-      sales_low: 100000,
-      sales_mid: 120001,
-      sales_high: 140000,
-      orders_by_hour: [{ hour: 12, orders: 4 }, { hour: 19, orders: 9.3 }],
-    });
-    expect(w.days[1]).toMatchObject({ date: "2026-10-27", orders: null, orders_by_hour: [] });
+    const { get } = await load({ historyDays: 365, loaded, hours });
+    const w = await get(RID, MONDAY, NOW);
+    expect(w).toMatchObject({ source: "forecast", unvalidated: true, accuracy: { method: "model", error_pct: 12.3, range_hit_pct: 81 } });
+    expect(w.days[0]).toMatchObject({ orders: 62, orders_low: 50, orders_high: 70, sales_mid: Math.round(61.6 * w.aov_pence!), orders_by_hour: [{ hour: 12, orders: 4 }, { hour: 19, orders: 9.3 }] });
+    expect(w.days[1].orders).not.toBeNull(); // the rest of the week from the history
   });
 
   test("refuses a week that doesn't start on a Monday", async () => {
-    await expect((await load(null, true))(RID, "2026-10-27", NOW)).rejects.toThrow(/isn't a Monday/);
+    const { get } = await load({ historyDays: 365 });
+    await expect(get(RID, "2026-10-27", NOW)).rejects.toThrow(/isn't a Monday/);
   });
 });
 

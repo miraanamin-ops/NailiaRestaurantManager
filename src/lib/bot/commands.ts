@@ -33,6 +33,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - Send a *photo* (with a note if you like) to turn it into a Google post
 - *PAUSE* / *RESUME*: stop / restart all sending
 - *CAP 25*: set the max discount to 25%
+- *LABOUR TARGET 28%*: your labour target as a % of sales (Monday's brief and report check the rota against it)
 - *STATUS*: show the current settings
 - *set sign-up reward to a free mango lassi*: change the reward for new customers
 - *REWARD*: show the current sign-up reward
@@ -93,6 +94,7 @@ async function statusText(restaurant: Restaurant) {
     `- Customer emails: ${allSwitches(process.env).emailRedirect.on ? "redirected to the builder" : "go to customers"}`,
     `- Sending hours: ${formatWindow(restaurant.send_window_start, restaurant.send_window_end)} (${inWindow ? "open now" : "closed now"})`,
     `- Discount cap: ${restaurant.discount_cap_percent}%`,
+    `- Labour target: ${restaurant.labour_target_pct == null ? "not set (LABOUR TARGET 28%)" : `${Number(restaurant.labour_target_pct)}% of sales`}`,
     `- Queued drafts: ${count ?? 0}`,
   ].join("\n");
 }
@@ -126,6 +128,16 @@ export async function runCommand(command: Command, turn: Turn) {
       await updateRestaurant(r.id, { discount_cap_percent: command.percent });
       await logSetting(r.id, "discount_cap_percent", r.discount_cap_percent, command.percent, `Changed the discount cap from ${r.discount_cap_percent}% to ${command.percent}%`);
       return send(`💷 Discount cap set to *${command.percent}%*. Any offer above that will be blocked.`);
+    case "labour_target": {
+      const before = r.labour_target_pct == null ? null : Number(r.labour_target_pct);
+      await updateRestaurant(r.id, { labour_target_pct: command.percent });
+      await logSetting(r.id, "labour_target_pct", before, command.percent, command.percent === null ? "Switched the labour target off" : `Set the labour target to ${command.percent}% of sales`);
+      return send(
+        command.percent === null
+          ? "OK, no labour target. Text *LABOUR TARGET 28%* to set one again."
+          : `💷 Labour target set to *${command.percent}% of sales*. Monday's brief and report check each week's rota against it.`,
+      );
+    }
     case "time":
     case "time_off": {
       const fake = command.name === "time" ? londonTimeOn(new Date(), command.hhmm, command.plusDays) : null;

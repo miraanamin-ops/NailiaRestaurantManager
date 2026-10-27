@@ -19,6 +19,7 @@ export type CalendarEntry = {
   // null = every restaurant (bank holidays, Eid, Christmas); set = one restaurant's local event.
   restaurant_id: string | null;
   day: string; // YYYY-MM-DD
+  end_day?: string | null; // the last day, for a date that runs several days (school holidays, Ramadan)
   name: string;
   type: CalendarType;
   date_uncertain: boolean;

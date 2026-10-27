@@ -11,7 +11,8 @@ import { zNudgeFor } from "@/lib/sales/z-reports";
 import { attemptSend, type SendResult } from "@/lib/send";
 import { briefForecast, type BriefForecast } from "@/lib/forecast";
 import { queueGmBriefShadow } from "@/lib/agents/gm";
-import { briefSectionBlocks } from "@/lib/sections";
+import { briefSections } from "@/lib/sections";
+import type { BriefOffer } from "@/lib/sections/types";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { plural, shorten } from "@/lib/text";
 
@@ -148,7 +149,7 @@ export async function sendBrief(
   // Today's forecast (the same lines the GM's brief shows). Never stops the brief.
   const forecast = await briefForecast(restaurant, now);
   // Each feature's own block (lib/sections). A failing one is left out.
-  const sections = await briefSectionBlocks(restaurant, now);
+  const { blocks: sections, offers } = await briefSections(restaurant, now);
   if (!items.length && !tally.length && !extra.length && !forecast.block && !sections.length) return { sent: false, items: 0, tally };
 
   const [reviews, names] = await Promise.all([reviewsFor(restaurant.id, items), campaignNames(restaurant.id, items)]);
@@ -165,6 +166,7 @@ export async function sendBrief(
 
   await send(brief.summary);
   await sendForecastOffer(channel, forecast);
+  await sendSectionOffers(channel, offers);
   await markFeedbackReported(restaurant.id, feedback.ids);
   // The GM in shadow: its own brief (summary and up to 5 cards) for the same items, next to this one on /log.
   await queueGmBriefShadow(restaurant, { legacy_text: brief.summary, draft_ids: all.map((d) => d.id), receipts: tally, extra, today: now.toISOString().slice(0, 10) });
@@ -177,6 +179,12 @@ export async function sendBrief(
 // The quiet-night offer, after the summary: "Draft an offer" / "Not now" (both brief paths).
 export async function sendForecastOffer(channel: OwnerChannel, forecast: BriefForecast) {
   if (forecast.offer) await messageOwner(channel, forecast.offer.question, { draftId: forecast.offer.id, buttons: "offer" });
+}
+
+// The sections' offers (e.g. a calendar line's campaign idea), with the same buttons.
+// A tap is answered from the offer's own row (lib/forecast/offer.ts).
+export async function sendSectionOffers(channel: OwnerChannel, offers: BriefOffer[]) {
+  for (const o of offers) await messageOwner(channel, o.question, { draftId: o.id, buttons: "offer" });
 }
 
 // The brief's wording: one numbered summary, then each item's own message.

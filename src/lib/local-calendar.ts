@@ -10,23 +10,30 @@ import { bankHolidayRows, CALENDAR_TYPES, type CalendarEntry } from "./local-cal
 // it from builder controls; UK bank holidays come from gov.uk; the outside data
 // feeds (lib/feeds) add the rest, shared rows with a scope.
 
+// Longest a dated row runs for (a summer holiday is about 6 weeks): how far back
+// to look for one that started before the window but is still going.
+const LONGEST_SPAN_DAYS = 70;
+const daysBefore = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T12:00:00Z`) - n * 86_400_000).toISOString().slice(0, 10);
+
 // This restaurant's calendar between two dates: its own rows and the shared ones
 // that apply to it (lib/feeds/scope.ts: its council's school holidays, its
 // authority's Eid, events near it), of the kinds Growth plans around.
-export async function calendarFor(restaurantId: string, from: string, to: string) {
+// overlapping: also rows that started before `from` and run into it (school holidays, Ramadan).
+export async function calendarFor(restaurantId: string, from: string, to: string, opts: { overlapping?: boolean } = {}) {
   const supabase = getSupabase();
-  const rows =
+  const all =
     check(
       await supabase
         .from("local_calendar")
-        .select("id, restaurant_id, day, name, type, date_uncertain, source, scope, region, council_code, authority")
+        .select("id, restaurant_id, day, end_day, name, type, date_uncertain, source, scope, region, council_code, authority")
         .or(`restaurant_id.eq.${restaurantId},restaurant_id.is.null`)
         .in("type", [...CALENDAR_TYPES])
-        .gte("day", from)
+        .gte("day", opts.overlapping ? daysBefore(from, LONGEST_SPAN_DAYS) : from)
         .lte("day", to)
         .order("day")
         .returns<(CalendarEntry & ScopedRow)[]>(),
     ) ?? [];
+  const rows = opts.overlapping ? all.filter((r) => (r.end_day ?? r.day) >= from) : all;
   if (!rows.some((r) => !r.restaurant_id && r.scope && r.scope !== "national")) {
     return rows.filter((r) => calendarApplies(r, { id: restaurantId }, new Set())).map(entry);
   }
@@ -40,7 +47,7 @@ export async function calendarFor(restaurantId: string, from: string, to: string
 }
 
 const entry = (r: CalendarEntry & ScopedRow): CalendarEntry => ({
-  id: r.id, restaurant_id: r.restaurant_id, day: r.day, name: r.name, type: r.type, date_uncertain: r.date_uncertain, source: r.source,
+  id: r.id, restaurant_id: r.restaurant_id, day: r.day, end_day: r.end_day ?? null, name: r.name, type: r.type, date_uncertain: r.date_uncertain, source: r.source,
 });
 
 // Adds the UK bank holidays from gov.uk that aren't in the calendar yet (shared by

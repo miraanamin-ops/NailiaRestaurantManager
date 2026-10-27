@@ -25,16 +25,16 @@ const addDays = (ymd: string, n: number) => new Date(Date.parse(`${ymd}T12:00:00
 export async function getUpcomingEvents(restaurantId: string, from: string, to: string): Promise<UpcomingEvent[]> {
   if (to < from) return [];
   const [calendar, own] = await Promise.all([
-    calendarFor(restaurantId, from, to),
+    calendarFor(restaurantId, from, to, { overlapping: true }),
     restaurantEventsBetween(restaurantId, `${from}T00:00:00Z`, `${addDays(to, 1)}T00:00:00Z`),
   ]);
-  const events: UpcomingEvent[] = calendar.map((c) => ({
-    date: c.day,
-    title: c.name,
-    type: c.type,
-    expected_effect: expectedEffect(c.type, c.name),
-    source: sourceOf(c.source),
-  }));
+  const events: UpcomingEvent[] = [];
+  // A date over several days (half term, Ramadan): one entry per day inside the window.
+  for (const c of calendar) {
+    for (let d = c.day < from ? from : c.day; d <= (c.end_day ?? c.day) && d <= to; d = addDays(d, 1)) {
+      events.push({ date: d, title: c.name, type: c.type, expected_effect: expectedEffect(c.type, c.name), source: sourceOf(c.source) });
+    }
+  }
   for (const e of own) {
     const title = e.notes?.trim() ? `${RESTAURANT_EVENT_TITLES[e.type] ?? "Event"}: ${e.notes.trim()}` : (RESTAURANT_EVENT_TITLES[e.type] ?? "Event");
     const first = londonYmd(new Date(e.starts_at));

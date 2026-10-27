@@ -17,6 +17,7 @@ import type { Adjustment } from "./rota/fill";
 const SETTING_LABELS: Record<string, (v: unknown) => string> = {
   paused: (v) => (v ? "Sending is paused again" : "Sending is back on"),
   discount_cap_percent: (v) => `Discount cap is back to ${v}%`,
+  labour_target_pct: (v) => (v == null ? "The labour target is off again" : `Labour target is back to ${v}%`),
   fake_now: (v) => (v ? "The test clock is back on" : "The test clock is off again"),
   signup_reward: (v) => `Sign-up reward is back to "${v ?? "not set"}"`,
   owner_email: (v) => `Your email is back to ${v ?? "not set"}`,

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentOwner } from "@/lib/auth";
 import { retryDeadJob } from "@/lib/queue/retry";
 import { setForecastUnvalidated } from "@/lib/forecast";
+import { setForecastErrorLimit } from "@/lib/finance/settings";
 
 // Retry on a dead job (the job queue section of /log). Builder only.
 export async function retryJob(form: FormData) {
@@ -25,4 +26,16 @@ export async function toggleForecastOverride(form: FormData) {
   const on = form.get("on") === "1";
   const result = /^[0-9a-f-]{36}$/i.test(r) && owner.restaurantIds.includes(r) ? await setForecastUnvalidated(r, on) : { ok: false, message: "Not your restaurant." };
   redirect(`/log?r=${encodeURIComponent(r)}&forecast=${result.ok ? "1" : "0"}#forecast`);
+}
+
+// The forecast's error limit (the forecast section of /log): the week's ranges only
+// show to the owner when the back-test's error is at or under it. Builder only.
+export async function saveForecastErrorLimit(form: FormData) {
+  const owner = await currentOwner();
+  if (!owner) redirect("/login?next=/log");
+  if (!owner.isBuilder) throw new Error("Only the builder can change this");
+  const r = String(form.get("r") ?? "");
+  const raw = String(form.get("limit") ?? "").trim();
+  const ok = /^[0-9a-f-]{36}$/i.test(r) && owner.restaurantIds.includes(r) && (await setForecastErrorLimit(r, raw === "" ? null : Number(raw)));
+  redirect(`/log?r=${encodeURIComponent(r)}&forecast=${ok ? "1" : "0"}#forecast`);
 }

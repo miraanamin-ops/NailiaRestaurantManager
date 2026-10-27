@@ -9,4 +9,6 @@ export const OWNED_TABLES = [
   "forecast_briefs",
   // Live Google (supabase/044)
   "google_connections", "google_writes",
+  // Finance forecast and calendar lines (supabase/046)
+  "forecast_backtests", "calendar_suggestions",
 ];

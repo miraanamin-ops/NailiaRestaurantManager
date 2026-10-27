@@ -13,9 +13,10 @@ import { deadJobs, queueStats, type QueueJob, type QueueStat } from "@/lib/queue
 import { FEEDS, feedProblem, type FeedName } from "@/lib/feeds/config";
 import { feedStatuses, type FeedStatus } from "@/lib/feeds/status";
 import { AgentCompare, type CompareAgent } from "./agent-compare";
-import { retryJob, toggleForecastOverride } from "./actions";
+import { retryJob, saveForecastErrorLimit, toggleForecastOverride } from "./actions";
 import { londonYmd } from "@/lib/clock";
 import { forecastBriefsOn, type ForecastBriefRow } from "@/lib/forecast";
+import { BASELINE } from "@/lib/forecast/baseline";
 import { testToolsEnabled } from "@/lib/test-mode";
 
 export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
@@ -324,6 +325,24 @@ function ForecastSection({ forecast, restaurant, changed }: { forecast: Forecast
           {changed === "0" && <span className="text-red-700">That couldn&apos;t be changed.</span>}
         </form>
       )}
+      <form action={saveForecastErrorLimit} className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-600">
+        <input type="hidden" name="r" value={restaurant.id} />
+        <label htmlFor="forecast-limit">
+          {restaurant.name}: show the week&apos;s forecast ranges only when the back-test&apos;s error is at or under
+        </label>
+        <input
+          id="forecast-limit"
+          name="limit"
+          inputMode="decimal"
+          defaultValue={restaurant.forecast_error_limit_pct == null ? "" : String(Number(restaurant.forecast_error_limit_pct))}
+          placeholder={String(BASELINE.defaultErrorLimitPct)}
+          className="w-16 rounded border border-stone-300 px-2 py-1"
+        />
+        <span>% (empty = {BASELINE.defaultErrorLimitPct}%)</span>
+        <button type="submit" className="rounded-full bg-stone-900 px-3 py-1 text-white">
+          Save
+        </button>
+      </form>
       <p className="mt-1 text-xs text-stone-500">Made at the 9am brief from the latest passed run (07:00 refresh, else 05:35). Owners see a forecast only from runs that passed.</p>
     </section>
   );

@@ -35,13 +35,16 @@ Staff employed at any point that week; pay and availability as in force on the M
 `src/lib/forecast/week-ahead.ts`; types and dummy data in `week-ahead-rules.ts`.
 
 ```ts
-type WeekAhead = { restaurantId; weekStart; source: "forecast" | "dummy" | "none"; unvalidated: boolean; days: DayAhead[] }; // always 7
-type DayAhead  = { date; weekday; orders: number | null;                       // likely orders, whole
-                   sales_low; sales_mid; sales_high: number | null;            // pence, before VAT
-                   orders_by_hour: { hour: number; orders: number }[] };       // London hour; empty past 14 days
+type WeekAhead = { restaurantId; weekStart; source: "forecast" | "history" | "dummy" | "none";
+                   status: "ok" | "not_enough_history" | "held_back" | "past"; show_ranges: boolean; unvalidated: boolean;
+                   history_weeks; aov_pence; accuracy: { method; error_pct; range_hit_pct; weeks; limit_pct } | null; days: DayAhead[] }; // always 7
+type DayAhead  = { date; weekday; orders; orders_low; orders_high: number | null;  // whole orders
+                   normal_orders: number | null;                               // a normal day of that weekday (to see what moves it)
+                   sales_low; sales_mid; sales_high: number | null;            // pence, before VAT: orders x average order value
+                   orders_by_hour: { hour: number; orders: number }[] };       // London hour
 ```
 
-Built on the nightly forecast through `loadForecast` (the same run the 9am brief uses: the 07:00 refresh for days 0 to 2, the 05:35 run for the rest, only runs that passed, unless the builder's demo override is on, then `unvalidated: true`). Hourly orders come from the same run (or the 05:35 run a refresh was based on), through `forecastHoursFromRun` in `lib/ops/models.ts`, still the only place the app reads model outputs. Days before today are null. `weekStart` must be a Monday.
+Real data only (changed 27 Oct, see "Finance forecast and calendar" below): under 8 whole weeks of sales, no numbers (`not_enough_history`), never dummy ones. Otherwise each day comes from the nightly forecast through `loadForecast` where it has that day (the same run the 9am brief uses; `unvalidated: true` under the builder's demo override), else from the sales history (`lib/forecast/baseline.ts`). Sales are always the orders range x the average order value of the last 8 weeks. `show_ranges` is false (`held_back`) when the measured error is over the restaurant's limit: the numbers stay for the rota's staffing, but nothing shows them to the owner. Hourly orders: from the model run (through `forecastHoursFromRun` in `lib/ops/models.ts`, still the only place the app reads model outputs), else each hour's share of that weekday in the last 8 weeks of `sales_hours`. Days before today are null. `weekStart` must be a Monday. `dummyWeekAhead` is for tests only.
 
 ## 3. Calendar: `getUpcomingEvents(restaurantId, from, to)`
 
@@ -88,6 +91,21 @@ A basic weekly rota, not an optimiser. Built on `getRotaInputs` and `getWeekAhea
 - **WhatsApp**: who's on each day (plain message), then the card with Approve / Edit / Skip. Typed edits while it's on screen, or after Edit: `Ali can't do Friday`, `swap Sara and Bilal on Sunday`, `Mo can do Sunday 5pm-11pm`, `give Priya the weekend off`, `take Ali off the rota on Wednesday`. Plain code reads them; after Edit, Claude reads what plain code can't (first names only). Each edit re-runs the whole fill with all the week's edits (`rota_weeks.adjustments`) and resends.
 - **Approve**: `rota_weeks.status = published`, an 18-byte random link `/rota/<token>` (public, read-only, who works when, no pay) and `/rota/<token>/pdf` (A4 landscape), sent on WhatsApp as a document to forward. UNDO switches the link off again (back to a draft); UNDO after an edit puts the earlier edits back.
 - **Test Kitchen**: the seed now has 4 weeks of past approved rotas (the usual pattern), so the history counts. Run `045` then the seed again on dev.
+
+## Finance forecast and calendar (prompt 3, 27 Oct)
+
+Migration `046_finance_calendar.sql` (rollback in `supabase/rollback/finance_calendar_rollback.sql`).
+
+- **Forecast** (`lib/forecast/baseline.ts`, `week-ahead.ts`): the same weekday over the last 8 weeks (middle = likely, 10th to 90th percentile = the range, never narrower than ±10%), times an event effect learnt from the restaurant's own history (a kind of date seen on 2+ past days, typically 8%+ off a normal day); sales = orders x average order value. The nightly model's day wins where it has one.
+- **Back-test**: the history method over the last 12 whole weeks, each week knowing only the sales before its Monday; WAPE on sales and how many days fell inside the range, saved once a day in `forecast_backtests`. Ranges show only at or under the limit: `restaurants.forecast_error_limit_pct` (the builder sets it on /log, under "Forecast in today's brief"; empty = 20%). Over it, the owner reads "Forecast held back: tested on your past weeks it was off by X% on average, over the Y% limit."
+- **Labour** (`lib/finance/`): the week's rota, approved or published if there is one, else the draft; its own costs if the suggester made it, else shifts x each person's rate that day. As a % of forecast sales against `restaurants.labour_target_pct` (the owner texts `LABOUR TARGET 28%` or `LABOUR TARGET OFF`; UNDO works; STATUS shows it).
+- **Brief** (registry, both brief paths): `finance` (Mondays: "💷 This week", sales range and labour vs target, or the upload line) and `calendar` (every day: the next 3 days; Mondays the whole week and the school-holiday note).
+- **Calendar lines** (`lib/calendar-lines/`): an event shows only on a day the forecast moves 10%+ off a normal day of that weekday ("Sat: West Ham v Fulham, expect busier (+17%)"); Ramadan, Eid, bank holidays and school holidays always show. The owner's own events (closures, offers) never. A date over several days is one line. `getUpcomingEvents` now includes dates that started before the window and run into it (`end_day`), one entry per day.
+- **School holidays**: the council comes from the postcode (postcodes.io, saved on the restaurant); covered = a `councils` row with term dates past today. Otherwise, on Mondays: "we don't have Tower Hamlets' term dates yet, so they aren't included here" (or "add your postcode").
+- **Campaign ideas**: at most one a morning, for an event 3 to 7 days ahead, saved in `calendar_suggestions` (one per event, ever), sent after the brief with the "Draft an offer" / "Not now" buttons. The tap runs the usual campaign flow (Growth when live) with the idea's request, then the draft has its own Approve.
+- **Report** (registry): `last_week` (replaces "How the forecast did"), `google_week` (replaces Reputation, What customers said, Google visibility; dummy calls, directions and views for a demo restaurant with test tools on, labelled), `next_week`; sections can suggest actions, used after the AI's. The WhatsApp message is the report in short (each section's title and numbers on one line, its first lines, the 3 actions, the link), never over 25 lines.
+- **Data sources**: `docs/data-sources.md`.
+- **Test Kitchen**: run 046 on dev; no reseed needed. `tests/test-kitchen-week.test.ts` runs the real seed (plus a few home matches and a draft rota) through the Monday brief and report.
 
 ## Tests
 

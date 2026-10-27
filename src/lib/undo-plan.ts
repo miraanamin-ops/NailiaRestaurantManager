@@ -22,6 +22,7 @@ export type UndoPlan =
 const SETTINGS = [
   "paused",
   "discount_cap_percent",
+  "labour_target_pct",
   "fake_now",
   "signup_reward",
   "owner_email",

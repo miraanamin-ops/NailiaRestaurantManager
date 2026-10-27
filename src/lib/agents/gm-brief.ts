@@ -1,5 +1,5 @@
 import "server-only";
-import { doneTally, sendBrief, sendForecastOffer, waitingDrafts, type BriefOutcome } from "@/lib/brief";
+import { doneTally, sendBrief, sendForecastOffer, sendSectionOffers, waitingDrafts, type BriefOutcome } from "@/lib/brief";
 import { briefForecast } from "@/lib/forecast";
 import { londonMinutes, londonTimeOn } from "@/lib/clock";
 import { check, updateDraft, type Draft } from "@/lib/drafts";
@@ -11,7 +11,7 @@ import type { ReportData } from "@/lib/report/types";
 import type { ButtonTarget } from "@/lib/whatsapp";
 import type { Send } from "@/lib/google-jobs";
 import { zNudgeFor } from "@/lib/sales/z-reports";
-import { briefSectionBlocks } from "@/lib/sections";
+import { briefSections } from "@/lib/sections";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { composeBrief } from "./gm";
 import { runComposer } from "./gm-core";
@@ -44,7 +44,7 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
   // (the same lines today's brief shows; the composer never sees or rewords them).
   const forecast = await briefForecast(r, now);
   // Each feature's own block (lib/sections): code's lines, unchanged, like the forecast.
-  const sections = await briefSectionBlocks(r, now);
+  const { blocks: sections, offers } = await briefSections(r, now);
   if (!all.length && !tally.length && !receipts.length && !forecast.block && !sections.length) return { sent: false, items: 0, tally };
 
   let brief: Awaited<ReturnType<typeof composeBrief>>;
@@ -62,6 +62,7 @@ export async function gmBrief(r: Restaurant, channel: OwnerChannel, now: Date, o
 
   await messageOwner(channel, gmSummaryText(brief.summary, [forecast.block, ...sections].filter(Boolean).join("\n\n") || null, opts.note));
   await sendForecastOffer(channel, forecast);
+  await sendSectionOffers(channel, offers);
   await markFeedbackReported(r.id, feedback.ids);
   for (const [i, c] of cards.entries()) {
     const d = c.draft;

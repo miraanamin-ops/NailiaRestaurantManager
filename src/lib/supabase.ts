@@ -79,6 +79,9 @@ export type Restaurant = {
   terms_version?: string | null;
   // Show forecasts from runs that didn't pass, labelled TEST (042; demo restaurants with TEST_TOOLS only).
   forecast_unvalidated?: boolean;
+  // The owner's labour target, % of sales; the builder's forecast error limit, % (046).
+  labour_target_pct?: number | string | null;
+  forecast_error_limit_pct?: number | string | null;
   // Found or chosen during onboarding (step 12).
   owner_name: string | null;
   website: string | null;
