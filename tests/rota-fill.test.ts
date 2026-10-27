@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS, effectiveRules, openSpans } from "@/lib/rota/rules";
 import { DUMMY_RULES, DUMMY_STAFF, noAvailability, type RotaStaff, type Weekday } from "@/lib/rota/types";
 import { MINIMUM_NOTE, rotaDraftText, rotaWeekMessages, span12, time12, weekLabel } from "@/lib/rota/message";
 import { DUMMY_PROFILE, dummyWeekAhead } from "@/lib/forecast/week-ahead-rules";
+import { rotaView } from "@/lib/rota/view";
 
 const WEEK = "2026-11-02"; // a Monday
 const date = (i: number) => new Date(Date.parse(`${WEEK}T12:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10);
@@ -314,6 +315,50 @@ describe("Test Kitchen's dummy week makes a sensible rota", () => {
     const min = buildPlan({ staff: DUMMY_STAFF, rules: effectiveRules(DUMMY_RULES, DUMMY_STAFF), settings: DEFAULT_SETTINGS, days, basis: "minimum" });
     expect(rotaDraftText(WEEK, min)).toContain(MINIMUM_NOTE);
     expect(min.totals.costPence).toBeLessThan(plan.totals.costPence);
+  });
+
+  test("hour by hour: one row per hour, kitchen before front of house", () => {
+    const view = rotaView(plan, { restaurant: "Test Kitchen", week: "x" });
+    const starts = plan.days.flatMap((d) => d.shifts.map((s) => s.start));
+    const ends = plan.days.flatMap((d) => d.shifts.map((s) => s.end));
+    expect(view.hours[0].label).toBe(time12(Math.floor(Math.min(...starts) / 60) * 60));
+    expect(view.hours.length).toBe(Math.ceil(Math.max(...ends) / 60) - Math.floor(Math.min(...starts) / 60));
+    expect(view.groups.map((g) => g.label)).toEqual(["Kitchen", "Front of house"]);
+    for (const h of view.hours) {
+      expect(h.cells.length).toBe(7);
+      for (const cell of h.cells) if (cell.length > 1) expect(cell[0].key).toBe("kitchen");
+    }
+    // Saturday 7pm lists exactly the people on at some point in that hour
+    const sat = plan.days[5];
+    const row = view.hours.find((h) => h.label === "7pm")!;
+    const names = row.cells[5].flatMap((g) => g.names.map((n) => n.text.replace(/ (from|until) .*/, "")));
+    expect(names.sort()).toEqual(sat.shifts.filter((s) => s.start < 20 * 60 && s.end > 19 * 60).map((s) => s.name ?? "Open shift").sort());
+  });
+
+  test("hour by hour: part hours marked 'from' and 'until', managers with front of house, open shifts flagged", () => {
+    const p: Parameters<typeof rotaView>[0] = {
+      days: [
+        {
+          ...plan.days[0],
+          open: [{ start: 690, end: 1320 }],
+          shifts: [
+            { staffId: "a", name: "Ali", role: "kitchen", date: plan.days[0].date, start: 690, end: 1020, hours: 5.5, costPence: 0 },
+            { staffId: "b", name: "Bea", role: "manager", date: plan.days[0].date, start: 660, end: 1050, hours: 6.5, costPence: 0 },
+            { staffId: null, name: null, role: "front", date: plan.days[0].date, start: 1020, end: 1320, hours: 5, costPence: 0 },
+          ],
+        },
+        { ...plan.days[1], open: [], shifts: [] },
+      ],
+    };
+    const view = rotaView(p, { restaurant: "T", week: "x" });
+    expect(view.hours.map((h) => h.label)).toEqual(["11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm", "8pm", "9pm"]);
+    expect(view.hours[0].cells[0]).toEqual([
+      { key: "kitchen", label: "Kitchen", names: [{ text: "Ali from 11:30" }] },
+      { key: "front", label: "Front of house", names: [{ text: "Bea" }] },
+    ]);
+    expect(view.hours.find((h) => h.label === "5pm")!.cells[0]).toEqual([{ key: "front", label: "Front of house", names: [{ text: "Bea until 5:30" }, { text: "Open shift", open: true }] }]);
+    expect(view.closed).toEqual([false, true]);
+    expect(view.hours[0].cells[1]).toEqual([]);
   });
 
   test("week labels", () => {
