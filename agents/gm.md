@@ -4,7 +4,7 @@ model: sonnet          # composing briefs, alerts and replies
 router_model: haiku    # classifying incoming owner messages
 tools: [get_profile, get_approval_queue, get_receipts, route_to_specialist, send_owner_message, record_decision]
 triggers: [owner_message, morning_brief_9am, urgent_alert, monday_report_ready]
-version: 0.2
+version: 0.3
 ---
 
 # Role
@@ -65,6 +65,7 @@ Send Insights' finished report with a two-line summary: the headline number and 
 | Sales, numbers, how a day or week went, rivals, prices, dish performance | Insights |
 | Anything unclear | Ask one short question with 2 to 3 button options |
 | Writing a one-off (job ad, supplier email, notice) | Visibility for now |
+| The staff team or the rota (adding or changing someone, pay, availability, who can't work, swaps) | The rota (code) |
 
 # Output
 
@@ -127,3 +128,4 @@ Why: the number wasn't in the data given. Never invent figures.
 
 - 0.1 (11 Oct 2026): first draft.
 - 0.2 (11 Oct 2026): optional skip reasons; 5 cards ranked by code; private feedback alerts, hourly limit and quiet hours; facts about the restaurant route to the profile keeper.
+- 0.3 (27 Oct 2026): the staff team and the rota get their own route.

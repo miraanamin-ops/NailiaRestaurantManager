@@ -233,3 +233,84 @@ describe("rota suggester flow", () => {
     expect(rows("rota_shifts").map((s) => s.staff_id)).not.toContain(idOf("Ali"));
   });
 });
+
+describe("anything the owner says about the team, read by Claude (stubbed here)", () => {
+  type Action = Record<string, unknown>;
+  const act = (a: Action) => ({ person: null, other_person: null, roles: [], hourly_rate_pounds: null, max_hours_week: null, days: [], from: null, until: null, week: "next", ...a });
+  let readings: { actions: Action[]; question: string | null }[] = [];
+  const seen: string[] = [];
+  let parse: ReturnType<typeof vi.fn>;
+
+  async function loadWithClaude(first = 400) {
+    const loaded = await load(first);
+    seen.length = 0;
+    parse = vi.fn(async (req: { messages: { content: string }[] }) => {
+      seen.push(req.messages[0].content);
+      const r = readings.shift()!;
+      return { stop_reason: "end_turn", parsed_output: { actions: r.actions.map(act), question: r.question } };
+    });
+    vi.doMock("@/lib/claude", () => ({
+      MODEL: "m",
+      MAX_TOKENS: 1,
+      WITH_FALLBACK: {},
+      claude: () => ({ beta: { messages: { parse } } }),
+    }));
+    const understand = await import("@/lib/rota/understand");
+    return { ...loaded, understand };
+  }
+
+  test("'add Ali, 12.50£ an hour, available monday to friday all day': no role, so it asks; the answer saves everything", async () => {
+    const { understand, staff } = await loadWithClaude();
+    readings = [{ actions: [{ kind: "save_person", person: "Ali", hourly_rate_pounds: 12.5, days: [1, 2, 3, 4, 5] }], question: null }];
+    expect(await understand.handleTeamMessage(restaurant as never, "add Ali, 12.50£ an hour, available monday to friday all day", { now: NOW, send })).toBe(true);
+    expect(sent.at(-1)!.text).toBe("What does Ali do: manager, kitchen, front of house, delivery? (Nothing's saved yet.)");
+    expect(rows("staff")).toEqual([]);
+    // the owner answers "kitchen": Claude reads it with the recent messages
+    readings = [{ actions: [{ kind: "save_person", person: "Ali", roles: ["kitchen"], hourly_rate_pounds: 12.5, days: [1, 2, 3, 4, 5] }], question: null }];
+    await understand.handleTeamMessage(restaurant as never, "kitchen", { now: NOW, send });
+    expect(sent.at(-1)!.text).toContain("- *Ali*: kitchen, £12.50/h; Mon–Fri all day");
+    expect((await staff.team(R, TODAY))[0]).toMatchObject({ name: "Ali", roles: ["kitchen"], ratePence: 1250 });
+  });
+
+  test("Claude only gets names and roles, never pay", async () => {
+    const { understand, staff } = await loadWithClaude();
+    await add(staff, "add Ali, kitchen, £12.50, weekdays");
+    readings = [{ actions: [{ kind: "show_team" }], question: null }];
+    await understand.handleTeamMessage(restaurant as never, "who's on my team?", { now: NOW, send });
+    expect(sent.at(-1)!.text).toContain("*Your rota team*");
+    const call = parse.mock.calls[0][0] as { system: string };
+    const teamLine = call.system.split("\n").find((l) => l.startsWith("The team now:"));
+    expect(teamLine).toBe("The team now: Ali (kitchen).");
+  });
+
+  test("a pay rise, someone leaving, and nonsense left for the assistant", async () => {
+    const { understand, staff } = await loadWithClaude();
+    await add(staff, "add Sara, front of house, £12, every day");
+    await add(staff, "add Bilal, front of house, £12, every day");
+    readings = [{ actions: [{ kind: "save_person", person: "sara", hourly_rate_pounds: 13 }, { kind: "remove_person", person: "Bilal" }], question: null }];
+    await understand.handleTeamMessage(restaurant as never, "Sara's going up to 13 quid an hour and Bilal's left", { now: NOW, send });
+    const now = await staff.team(R, TODAY);
+    expect(now.map((m) => [m.name, m.ratePence])).toEqual([["Sara", 1300]]);
+    readings = [{ actions: [], question: null }];
+    expect(await understand.handleTeamMessage(restaurant as never, "thanks!", { now: NOW, send })).toBe(false);
+  });
+
+  test("a rota change in any wording re-fills a drafted week; for a week not suggested yet it's kept for Thursday", async () => {
+    const { understand, staff, build } = await loadWithClaude();
+    await team(staff);
+    // not suggested yet: noted on the week
+    readings = [{ actions: [{ kind: "cant_work", person: "ali", days: [5] }], question: null }];
+    await understand.handleTeamMessage(restaurant as never, "ali's got a wedding on friday so he's out", { now: NOW, send });
+    expect(sent.at(-1)!.text).toContain("Noted for Mon 2 – Sun 8 Nov: Ali off Friday");
+    expect(rows("rota_weeks")[0].adjustments).toEqual([{ type: "unavailable", staffId: idOf("Ali"), dates: ["2026-11-06"] }]);
+    // Thursday's suggestion uses it
+    await build.suggestRota(restaurant as never, { now: NOW, send, mode: "urgent", actor: "scheduled job", rebuild: false });
+    expect(shiftsOn("2026-11-06").map((s) => s.staff_id)).not.toContain(idOf("Ali"));
+    // then another change re-fills the same draft
+    const v = draft().version;
+    readings = [{ actions: [{ kind: "swap", person: "Sara", other_person: "Dee", days: [6] }], question: null }];
+    await understand.handleTeamMessage(restaurant as never, "can sara and dee switch on saturday", { now: NOW, send, rotaOnScreen: true });
+    expect(draft().version).toBe(v + 1);
+    expect(sent.at(-1)!.text).toContain("Sara ⇄ Dee on Saturday");
+  });
+});

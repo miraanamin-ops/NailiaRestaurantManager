@@ -16,6 +16,7 @@ import { answerHoursQuestion, hoursForQuestion } from "./hours-questions";
 import { looksLikeForecastQuestion, looksLikeNumbersQuestion, parseAction, parseGmTap, parseHoursAnswer, parseOfferTap, parseQuestionAnswer, parseTargetedAction } from "./parse";
 import { answerOfferTap } from "@/lib/forecast/offer";
 import { reviseRota } from "@/lib/rota/build";
+import { handleTeamMessage } from "@/lib/rota/understand";
 import { answerQuestion } from "./questions";
 import type { Turn } from "./turn";
 
@@ -153,6 +154,8 @@ function legacyAnswer(result: ChatResult) {
       return `(offered to add ${result.event.name} on ${result.event.day} to the local calendar)`;
     case "revise":
       return `(revised the draft on screen) ${result.content}`;
+    case "team":
+      return "(changed the staff team or the rota)";
   }
 }
 
@@ -177,6 +180,11 @@ async function respond(turn: Turn, body: string, result: ChatResult, active: Awa
   if (result.type === "pasted_review") return pastedReviewReply(ctx, result, send);
   if (result.type === "profile_changes") return send(await applyProfileChanges(await getRestaurant(ctx.restaurantId), result.changes));
   if (result.type === "local_event") return localEventCard(turn, body, result.event);
+  if (result.type === "team") {
+    const handled = await handleTeamMessage(ctx.restaurant, body, { now: ctx.now, send, rotaOnScreen: active?.kind === "rota" });
+    if (!handled) await send("Sorry, I didn't follow that. Tell me about the person, e.g. _add Ali, kitchen, £13 an hour, weekdays_, or the change, e.g. _Ali can't do Friday_.");
+    return;
+  }
   if (result.type === "revise" && active?.waiting_for === "decision") {
     if (active.kind === "rota") return void (await reviseRota(ctx.restaurant, active, result.instruction, { now: ctx.now, send, useClaude: true }));
     if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, result.instruction, send);

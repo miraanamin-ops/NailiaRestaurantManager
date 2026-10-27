@@ -104,6 +104,8 @@ export function legacyRoute(result: ChatResult | { type: "insights" }): Route {
       return "reputation";
     case "profile_changes":
       return "profile_fact";
+    case "team":
+      return "team";
     case "draft":
       return result.kind === "review_reply" ? "reputation" : result.kind === "google_post" ? "visibility" : result.kind === "email_campaign" || result.kind === "promotion" ? "growth" : "one_off";
     default:

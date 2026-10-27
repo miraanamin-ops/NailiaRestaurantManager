@@ -431,6 +431,14 @@ const localEventTool: Anthropic.Beta.BetaTool = {
   },
 };
 
+// The staff team or the rota, in the owner's words: lib/rota/understand.ts reads the details.
+const teamTool: Anthropic.Beta.BetaTool = {
+  name: "update_team_or_rota",
+  description:
+    "The owner is talking about their staff team or the weekly rota: adding, changing or removing a staff member (role, pay, weekly hours, the days or times they can work), someone who can't or can work a day, swapping shifts, or wanting to see the team or the rota. Not for a job ad (that's a draft).",
+  input_schema: { type: "object", properties: { request: { type: "string", description: "The owner's ask in one line" } }, required: ["request"] },
+};
+
 // "Change Friday hours to 11pm", "add lamb chops, £14": the owner changing the restaurant's own details.
 const changeDetailsTool: Anthropic.Beta.BetaTool = {
   name: "change_restaurant_details",
@@ -554,7 +562,8 @@ export type ChatResult =
   | { type: "campaign"; fields: CampaignFields }
   | { type: "pasted_review"; authorName: string; rating: number | null; text: string }
   | { type: "profile_changes"; changes: ProfileChange[] }
-  | { type: "local_event"; event: OwnerEvent };
+  | { type: "local_event"; event: OwnerEvent }
+  | { type: "team" };
 
 // A normal WhatsApp message from the owner: answer it, or produce a draft.
 export async function chat(
@@ -576,6 +585,7 @@ export async function chat(
     lookUpForecastTool,
     changeDetailsTool,
     localEventTool,
+    teamTool,
   ];
   const system = systemPrompt(ctx, learning, activeDraft, "chat", await campaignContext(ctx));
   const isLookUp = (b: Anthropic.Beta.BetaContentBlock): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use" && LOOK_UP_TOOLS.has(b.name);
@@ -631,6 +641,7 @@ export async function chat(
     if (event) return { type: "local_event", event };
     return { type: "text", text: "Which day is it on? Tell me the date and I'll add it to your calendar." };
   }
+  if (toolUse?.name === "update_team_or_rota") return { type: "team" };
   if (toolUse?.name === "change_restaurant_details") {
     const changes = (toolUse.input as { changes?: unknown }).changes;
     if (Array.isArray(changes) && changes.length) return { type: "profile_changes", changes: changes.slice(0, 20) as ProfileChange[] };

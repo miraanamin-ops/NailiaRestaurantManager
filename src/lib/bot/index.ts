@@ -10,6 +10,7 @@ import { handleConversation } from "./conversation";
 import { photoPost } from "./flows";
 import { staffCommand as runStaffCommand } from "./rota-commands";
 import { parseStaffCommand, type StaffCommand } from "@/lib/rota/staff-input";
+import { handleTeamMessage } from "@/lib/rota/understand";
 import { parseCommand } from "./parse";
 import { salesFromMedia, salesReply } from "@/lib/sales/whatsapp";
 import { ownerSender } from "./sales-commands";
@@ -65,7 +66,11 @@ export async function handleMessage(input: {
       if (outcome !== "handled") await photoPost(ctx, input.media, body, send);
     } else if (command) await runCommand(command, turn);
     // The rota team: TEAM, "add Ali, kitchen, £13, weekdays", "remove Ali from the team".
-    else if (!input.buttonPayload && (staffCommand = parseStaffCommand(body))) await runStaffCommand(turn, staffCommand);
+    // A clean one is saved at once; anything else about the team (any wording) Claude reads.
+    else if (!input.buttonPayload && (staffCommand = parseStaffCommand(body)) && staffCommand.name !== "staff_unclear") await runStaffCommand(turn, staffCommand);
+    else if (staffCommand?.name === "staff_unclear" && (await handleTeamMessage(ctx.restaurant, body, { now: ctx.now, send }))) {
+      // read by Claude and saved
+    }
     // YES / REPLACE / a date, answering a till report or sales file question.
     else if (!input.buttonPayload && (await salesReply(ownerSender(turn), body, ctx.now))) {
       // answered

@@ -12,8 +12,9 @@ import type { Problems } from "./schema";
 
 // gm.md's routing table, plus two rows code needs: "profile_question" (a simple
 // question the profile answers: the composer replies) and "chat" (general chat and
-// look-ups, still answered by today's assistant until the GM covers them).
-export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "ambiguous"] as const;
+// look-ups, still answered by today's assistant until the GM covers them), and
+// "team" (the staff team and the rota: lib/rota/understand.ts).
+export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "ambiguous"] as const;
 export type Route = (typeof ROUTES)[number];
 
 export const RouterOutput = z.object({
@@ -60,6 +61,7 @@ export const ROUTE_WORDS: Record<Route, string> = {
   one_off: "Visibility (one-off writing)",
   profile_question: "the composer (answered from the profile)",
   chat: "today's assistant",
+  team: "the rota (staff team and rota changes)",
   ambiguous: "a question with buttons",
 };
 

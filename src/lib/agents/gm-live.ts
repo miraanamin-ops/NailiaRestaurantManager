@@ -109,6 +109,11 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
       else return false;
       return true;
     }
+    // The staff team and the rota, in the owner's own words.
+    case "team": {
+      const { handleTeamMessage } = await import("@/lib/rota/understand");
+      return handleTeamMessage(r, body, { now: ctx.now, send });
+    }
     // Reviews and complaints, general chat and look-ups: today's assistant
     // (which uses Reputation live for pasted reviews).
     default:

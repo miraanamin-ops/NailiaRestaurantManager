@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { logAction, type Actor } from "@/lib/audit";
 import { londonTime, londonYmd } from "@/lib/clock";
-import { createDraft, updateDraft, type Draft } from "@/lib/drafts";
+import { createDraft, focusDraft, getDraft, updateDraft, type Draft } from "@/lib/drafts";
 import { getWeekAhead } from "@/lib/forecast/week-ahead";
 import { addDaysYmd, weekDays, weekdayOf } from "@/lib/forecast/week-ahead-rules";
 import type { Send } from "@/lib/google-jobs";
@@ -249,28 +249,63 @@ export async function reviseRota(r: Restaurant, draft: Draft, message: string, o
     await opts.send(`${names}Tell me what to change, e.g. _Ali can't do Friday_, _Mo can do Sunday_ or _swap Sara and Bilal on Sunday_.`);
     return true;
   }
+  if (parsed.unknownNames.length) await opts.send(`(I don't know *${[...new Set(parsed.unknownNames)].join(", ")}*, so I left that out.)`);
+  await applyToWeek(r, week, parsed.adjustments, { now: opts.now, send: opts.send, note: message, draft });
+  return true;
+}
+
+// The week's rota (or the one a person means, "this Friday"), made if it doesn't exist yet.
+export async function weekFor(r: Restaurant, weekStart: string) {
+  return (await rotaWeek(r.id, weekStart, "model")) as RotaWeek;
+}
+
+// Changes to a week's rota, however they were said (typed edits, or Claude's
+// reading of a message: ./understand.ts): kept on the week, the whole week
+// re-filled, and the new draft sent. A week not suggested yet just keeps them
+// for Thursday; an approved week becomes a new draft to approve again.
+export async function applyToWeek(r: Restaurant, week: RotaWeek, added: Adjustment[], opts: { now: Date; send: Send; note: string; draft?: Draft | null }) {
+  const inputs = await getRotaInputs(r.id, week.week_start);
+  const understood = added.map((a) => describeAdjustment(a, inputs.staff));
   const before = week.adjustments ?? [];
-  const adjustments = mergeAdjustments(before, parsed.adjustments);
+  const adjustments = mergeAdjustments(before, added);
+  if (!week.summary && week.week_start <= londonYmd(opts.now)) {
+    // A week already under way with no rota from us: nothing to change.
+    await opts.send(`There's no rota from me for ${weekLabel(week.week_start)}, so there's nothing to change there. (The first one I make is next week's, suggested on Thursday.)`);
+    return;
+  }
+  if (!week.summary) {
+    // Not suggested yet: remember the change for Thursday.
+    must(await db().from("rota_weeks").update({ adjustments, updated_at: new Date().toISOString() }).eq("restaurant_id", r.id).eq("id", week.id), "save rota edits");
+    await logAction({ restaurantId: r.id, actor: "owner", action: "rota_settings", detail: `Noted for the rota of ${weekLabel(week.week_start)}: ${understood.join("; ")}`, data: { rota_week_id: week.id, before_adjustments: before } });
+    await opts.send(`📝 Noted for ${weekLabel(week.week_start)}: ${understood.join("; ")}. I'll use it when I suggest that week's rota (Thursday 10am the week before).`);
+    return;
+  }
   const built = await planWeek(r, week.week_start, opts.now, adjustments);
   if ("error" in built) {
     await opts.send(built.error);
-    return true;
+    return;
   }
+  const wasPublished = week.status === "published" || week.status === "approved";
   await saveWeek(r, week, built.plan, adjustments);
-  const understood = parsed.adjustments.map((a) => describeAdjustment(a, inputs.staff));
   const card = rotaDraftText(week.week_start, built.plan, { previous: built.previous, understood });
-  await updateDraft(draft.id, { content: card, version: draft.version + 1, status: "pending", waiting_for: "decision" });
+  let draft = opts.draft ?? (week.draft_id ? await getDraft(week.draft_id).catch(() => null) : null);
+  if (draft && draft.restaurant_id === r.id && draft.status === "pending") {
+    draft = await updateDraft(draft.id, { content: card, version: draft.version + 1, status: "pending", waiting_for: "decision" });
+    await focusDraft(draft, "decision");
+  } else {
+    draft = await createDraft({ restaurantId: r.id, kind: "rota", content: card, audience: `w/c ${weekLabel(week.week_start).split(" – ")[0]}`, request: opts.note.slice(0, 200), checks: {}, mode: "present", actor: "owner", agentInput: { rota_week_id: week.id, week_start: week.week_start } });
+    must(await db().from("rota_weeks").update({ draft_id: draft.id }).eq("restaurant_id", r.id).eq("id", week.id), "link rota draft");
+  }
   await logAction({
     restaurantId: r.id,
     draftId: draft.id,
     actor: "owner",
     action: "edited",
     detail: `Edited the rota for ${weekLabel(week.week_start)}: ${understood.join("; ")}`,
-    data: { rota_week_id: week.id, before_adjustments: before, note: message.slice(0, 200) },
+    data: { rota_week_id: week.id, before_adjustments: before, note: opts.note.slice(0, 200) },
   });
-  if (parsed.unknownNames.length) await opts.send(`(I don't know *${[...new Set(parsed.unknownNames)].join(", ")}*, so I left that out.)`);
+  if (wasPublished) await opts.send(`ℹ️ That week's rota was already approved. Here's the new version: its link is switched off until you approve this one.`);
   await sendDraft(opts.send, week, built.plan, card);
-  return true;
 }
 
 // UNDO of a rota edit: the edits as they were, re-filled and sent again.
