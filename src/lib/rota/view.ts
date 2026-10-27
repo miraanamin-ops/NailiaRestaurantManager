@@ -2,13 +2,14 @@
 // works when. Never pay, costs, labour % or the owner's flags: the link is for
 // forwarding to staff. Pure (type imports only): unit-tested (tests/rota-fill.test.ts).
 import type { RotaPlan } from "./fill";
-import { roleLabel, shortSpan, clockText } from "./rules";
+import { roleLabel } from "./rules";
+import { span12 } from "./rules";
 
 export type RotaView = {
   title: string; // "Test Kitchen"
   week: string; // "Mon 2 – Sun 8 Nov"
   days: { date: string; label: string; open: string; shifts: { time: string; name: string; role: string }[] }[];
-  people: { name: string; cells: string[]; hours: number }[]; // cells: one per day, "12–22" or ""
+  people: { name: string; cells: string[]; hours: number }[]; // cells: one per day, "12pm–5:30pm" or ""
   openShifts: number;
   dayHeads: string[]; // "Mon 2"
 };
@@ -32,15 +33,15 @@ export function rotaView(plan: Pick<RotaPlan, "days">, names: { restaurant: stri
         continue;
       }
       const p = people.get(s.staffId) ?? { name: s.name, cells: plan.days.map(() => ""), minutes: 0 };
-      p.cells[i] = p.cells[i] ? `${p.cells[i]}, ${shortSpan(s.start, s.end)}` : shortSpan(s.start, s.end);
+      p.cells[i] = p.cells[i] ? `${p.cells[i]}, ${span12(s.start, s.end)}` : span12(s.start, s.end);
       p.minutes += s.end - s.start;
       people.set(s.staffId, p);
     }
     return {
       date: d.date,
       label: dateWords(d.date, d.weekday),
-      open: d.open.length ? d.open.map((o) => `${clockText(o.start)}–${clockText(o.end)}`).join(", ") : "Closed",
-      shifts: d.shifts.map((s) => ({ time: `${clockText(s.start)}–${clockText(s.end)}`, name: s.name ?? "Open shift (not filled yet)", role: roleLabel(s.role) })),
+      open: d.open.length ? d.open.map((o) => span12(o.start, o.end)).join(", ") : "Closed",
+      shifts: d.shifts.map((s) => ({ time: span12(s.start, s.end), name: s.name ?? "Open shift (not filled yet)", role: roleLabel(s.role) })),
     };
   });
   return {

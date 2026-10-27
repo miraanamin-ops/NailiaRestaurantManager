@@ -128,9 +128,9 @@ describe("rota suggester flow", () => {
     // UTC times: Monday 12:00 London (GMT in November) = 12:00Z
     expect(shiftsOn("2026-11-02").find((s) => s.staff_id === idOf("Ali"))!.starts_at).toBe("2026-11-02T12:00:00.000Z");
     expect(sent.map((m) => m.buttons)).toEqual([false, true]);
-    expect(sent[0].text).toContain("Who's on");
-    expect(sent[1].text).toContain("Rota for next week");
-    expect(sent[1].text).toMatch(/Labour \*£[\d,]+\* · \*\d+\.\d%\* of forecast sales/);
+    expect(sent[0].text).toContain("*Next week's rota*");
+    expect(sent[0].text).toContain("*Mon 2* · £");
+    expect(sent[1].text).toMatch(/£[\d,]+ labour · \d+% of forecast sales/);
     // the Thursday job doesn't redo a week that already has a draft
     expect(await build.suggestRota(restaurant as never, { now: NOW, send, mode: "urgent", actor: "scheduled job", rebuild: false })).toEqual({ skipped: `the rota for ${WEEK} is already drafted` });
   });
@@ -216,6 +216,24 @@ describe("rota suggester flow", () => {
       const at = (iso: string, role: string) => shiftsOn(d).filter((s) => s.role === role && String(s.starts_at) <= iso && iso < String(s.ends_at)).length;
       expect(at(`${d}T15:00:00.000Z`, "kitchen")).toBe(1);
       expect(at(`${d}T15:00:00.000Z`, "front")).toBe(1);
+    }
+  });
+
+  test("the draft's 'full rota grid' link: only with a valid signature, before it's approved", async () => {
+    process.env.LINK_SECRET = "test-link-secret";
+    try {
+      const { build, staff } = await load();
+      await team(staff);
+      await build.suggestRota(restaurant as never, { now: NOW, send, mode: "present", actor: "owner", rebuild: true });
+      const link = sent.at(-1)!.text.match(/📊 Full rota grid: (\S+)/)![1];
+      const url = new URL(link);
+      const token = url.pathname.split("/")[2];
+      expect(url.origin).toBe("https://app.test");
+      expect((await build.rotaForPreview(token, url.searchParams.get("preview")))?.status).toBe("draft");
+      expect(await build.rotaForPreview(token, "123.forged")).toBeNull();
+      expect(await build.rotaByToken(token)).toBeNull(); // the team can't see a draft
+    } finally {
+      delete process.env.LINK_SECRET;
     }
   });
 

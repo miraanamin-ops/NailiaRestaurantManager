@@ -148,7 +148,18 @@ export function clockText(minutes: number) {
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
 
-// "12–22", "17:30–23", "20–24" (until midnight), "18–1" (past midnight), for WhatsApp.
+// What owners and staff read: 720 -> "12pm", 1050 -> "5:30pm", 1440 -> "12am", 690 -> "11:30am".
+export function time12(minutes: number) {
+  const m = ((minutes % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}${min ? `:${String(min).padStart(2, "0")}` : ""}${h < 12 ? "am" : "pm"}`;
+}
+
+export const span12 = (start: number, end: number) => `${time12(start)}–${time12(end)}`;
+
+// "12–22", "17:30–23", "20–24" (until midnight), "18–1" (past midnight): compact 24-hour, for logs.
 export function shortSpan(start: number, end: number) {
   const t = (m: number) => {
     const w = ((m % 1440) + 1440) % 1440;

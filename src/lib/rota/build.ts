@@ -14,7 +14,8 @@ import { appUrl, type Restaurant } from "@/lib/supabase";
 import { describeAdjustment, mergeAdjustments, parseRotaEdits } from "./edits";
 import { buildPlan, usualFromHistory, type Adjustment, type FillInput, type RotaPlan } from "./fill";
 import { getRotaInputs } from "./inputs";
-import { publishedText, rotaDetailText, rotaDraftText, weekLabel, type Previous } from "./message";
+import { publishedText, rotaDraftText, rotaWeekMessages, weekLabel, type Previous } from "./message";
+import { signLink } from "@/lib/signed-links";
 import { effectiveRules, openingFor, rotaSettings } from "./rules";
 import type { RotaStaff, Weekday } from "./types";
 
@@ -172,7 +173,8 @@ async function saveWeek(r: Restaurant, week: RotaWeek, plan: StoredPlan, adjustm
   return must(
     await db()
       .from("rota_weeks")
-      .update({ adjustments, summary: plan, status: "draft", source: "model", updated_at: new Date().toISOString() })
+      // The link exists from the first draft (the owner's preview); the team can open it once it's approved.
+      .update({ adjustments, summary: plan, status: "draft", source: "model", share_token: week.share_token ?? newToken(), updated_at: new Date().toISOString() })
       .eq("restaurant_id", r.id)
       .eq("id", week.id)
       .select("*")
@@ -185,8 +187,21 @@ async function weekById(restaurantId: string, id: string) {
   return must(await db().from("rota_weeks").select("*").eq("restaurant_id", restaurantId).eq("id", id).maybeSingle(), "rota week") as RotaWeek | null;
 }
 
+const newToken = () => randomBytes(18).toString("base64url");
+
+// The owner's preview of a draft: the full grid with costs, for 14 days.
+export const PREVIEW_PURPOSE = "rota-preview";
+export function previewUrl(week: Pick<RotaWeek, "share_token">) {
+  if (!week.share_token) return null;
+  try {
+    return `${rotaUrl(week.share_token)}?preview=${signLink(PREVIEW_PURPOSE, week.share_token, 14 * 86_400_000)}`;
+  } catch {
+    return null; // no LINK_SECRET (tests): the card goes without the link
+  }
+}
+
 async function sendDraft(send: Send, week: RotaWeek, plan: StoredPlan, card: string) {
-  await send(rotaDetailText(week.week_start, plan));
+  for (const text of rotaWeekMessages(week.week_start, plan)) await send(text);
   await send(card, true);
 }
 
@@ -208,7 +223,7 @@ export async function suggestRota(r: Restaurant, opts: { now: Date; send: Send; 
     if (old?.status === "pending") await updateDraft(old.id, { status: "superseded", waiting_for: null });
   }
   const saved = await saveWeek(r, week, built.plan, []);
-  const card = rotaDraftText(weekStart, built.plan, { previous: built.previous });
+  const card = rotaDraftText(weekStart, built.plan, { previous: built.previous, previewUrl: previewUrl(saved) });
   const draft = await createDraft({
     restaurantId: r.id,
     kind: "rota",
@@ -286,8 +301,8 @@ export async function applyToWeek(r: Restaurant, week: RotaWeek, added: Adjustme
     return;
   }
   const wasPublished = week.status === "published" || week.status === "approved";
-  await saveWeek(r, week, built.plan, adjustments);
-  const card = rotaDraftText(week.week_start, built.plan, { previous: built.previous, understood });
+  const saved = await saveWeek(r, week, built.plan, adjustments);
+  const card = rotaDraftText(week.week_start, built.plan, { previous: built.previous, understood, previewUrl: previewUrl(saved) });
   let draft = opts.draft ?? (week.draft_id ? await getDraft(week.draft_id).catch(() => null) : null);
   if (draft && draft.restaurant_id === r.id && draft.status === "pending") {
     draft = await updateDraft(draft.id, { content: card, version: draft.version + 1, status: "pending", waiting_for: "decision" });
@@ -315,8 +330,8 @@ export async function restoreRotaEdit(r: Restaurant, draft: Draft, beforeAdjustm
   if (!week) return "That rota no longer exists.";
   const built = await planWeek(r, week.week_start, now, beforeAdjustments);
   if ("error" in built) return built.error;
-  await saveWeek(r, week, built.plan, beforeAdjustments);
-  await updateDraft(draft.id, { content: rotaDraftText(week.week_start, built.plan, { previous: built.previous }), version: draft.version + 1, status: "pending", waiting_for: "decision" });
+  const saved = await saveWeek(r, week, built.plan, beforeAdjustments);
+  await updateDraft(draft.id, { content: rotaDraftText(week.week_start, built.plan, { previous: built.previous, previewUrl: previewUrl(saved) }), version: draft.version + 1, status: "pending", waiting_for: "decision" });
   return `↩️ Undone: the rota for ${weekLabel(week.week_start)} is back as it was before that change. Text NEXT to see it.`;
 }
 
@@ -331,7 +346,7 @@ export async function approveRota(r: Restaurant, draft: Draft, send: Send, chann
     return;
   }
   const now = new Date().toISOString();
-  const token = week.share_token ?? randomBytes(18).toString("base64url");
+  const token = week.share_token ?? newToken();
   must(
     await db()
       .from("rota_weeks")
@@ -365,4 +380,13 @@ export async function rotaByToken(token: string) {
   if (!/^[A-Za-z0-9_-]{20,40}$/.test(token)) return null;
   const week = must(await db().from("rota_weeks").select("*").eq("share_token", token).maybeSingle(), "rota by link") as RotaWeek | null;
   return week && week.status === "published" && week.summary ? week : null;
+}
+
+// Any rota (a draft too) for a link, for the owner's signed preview.
+export async function rotaForPreview(token: string, signature: string | null | undefined) {
+  if (!/^[A-Za-z0-9_-]{20,40}$/.test(token)) return null;
+  const { verifyLink } = await import("@/lib/signed-links");
+  if (!verifyLink(PREVIEW_PURPOSE, token, signature)) return null;
+  const week = must(await db().from("rota_weeks").select("*").eq("share_token", token).maybeSingle(), "rota preview") as RotaWeek | null;
+  return week?.summary ? week : null;
 }

@@ -8,7 +8,7 @@
 // nobody fits, the shift stays open. Then the owner's swaps, then cost, labour %
 // and anything to flag. No imports beyond ./rules and ./types: unit-tested
 // (tests/rota-fill.test.ts).
-import { ALL_DAY, availabilitySpan, needFor, roleKey, roleLabel, shortSpan, SLOT, type RotaSettings, type Span } from "./rules";
+import { ALL_DAY, availabilitySpan, needFor, roleKey, roleLabel, SLOT, span12, type RotaSettings, type Span } from "./rules";
 import type { RotaRule, RotaStaff, TimeSpan, Weekday } from "./types";
 
 // The owner's edits, kept on the rota week and applied on every re-fill.
@@ -144,14 +144,18 @@ export function fill(input: FillInput): PlannedShift[] {
         };
 
         // The shift for the first short half hour at or after `from`: the short run
-        // from there, stretched to the minimum length (or cut to the maximum),
-        // kept inside the opening hours.
+        // from there, stretched to the minimum length, kept inside the opening
+        // hours. A run longer than the longest shift is shared out evenly (an
+        // 11-hour day is an opening and a closing shift of 5.5 hours, not 10 + 4).
         const spanLen = span.end - span.start;
         const shortest = Math.min(minLen, spanLen);
         const shiftFrom = (s0: number, short: (i: number) => boolean) => {
           let e = s0;
           while (e < n && short(e)) e++;
-          const len = Math.min(Math.max((e - s0) * SLOT, shortest), maxLen, spanLen);
+          const run = (e - s0) * SLOT;
+          const pieces = Math.ceil(run / maxLen);
+          const even = pieces > 1 ? Math.ceil(run / pieces / SLOT) * SLOT : run;
+          const len = Math.min(Math.max(even, shortest), maxLen, spanLen);
           let start = slotAt(s0);
           let end = start + len;
           if (end > span.end) {
@@ -321,7 +325,7 @@ export function flagsFor(shifts: CostedShift[], input: FillInput): RotaFlag[] {
   const { settings } = input;
   const index = new Map(input.days.map((d, i) => [d.date, i]));
   const weekday = (date: string) => input.days[index.get(date) ?? 0]?.weekday ?? 1;
-  const when = (s: PlannedShift) => `${dayShort(weekday(s.date))} ${shortSpan(s.start, s.end)}`;
+  const when = (s: PlannedShift) => `${dayShort(weekday(s.date))} ${span12(s.start, s.end)}`;
 
   for (const s of shifts) {
     if (s.staffId === null) {

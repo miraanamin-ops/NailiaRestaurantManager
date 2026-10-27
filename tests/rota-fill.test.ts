@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { buildPlan, fill, labourPct, summarise, usualFromHistory, type FillDay, type FillInput, type PlannedShift } from "@/lib/rota/fill";
 import { DEFAULT_SETTINGS, effectiveRules, openSpans } from "@/lib/rota/rules";
 import { DUMMY_RULES, DUMMY_STAFF, noAvailability, type RotaStaff, type Weekday } from "@/lib/rota/types";
-import { MINIMUM_NOTE, rotaDetailText, rotaDraftText, weekLabel } from "@/lib/rota/message";
+import { MINIMUM_NOTE, rotaDraftText, rotaWeekMessages, span12, time12, weekLabel } from "@/lib/rota/message";
 import { DUMMY_PROFILE, dummyWeekAhead } from "@/lib/forecast/week-ahead-rules";
 
 const WEEK = "2026-11-02"; // a Monday
@@ -78,12 +78,23 @@ describe("greedy fill", () => {
     expect(shifts).toHaveLength(1);
   });
 
-  test("shifts are 4 to 10 hours: a long day is two overlapping shifts", () => {
-    const staff = [person("a", ["kitchen"], 1200, ALL), person("b", ["kitchen"], 1300, ALL)];
+  test("shifts are 4 to 10 hours: a long day is an opening and a closing shift, shared evenly", () => {
+    const staff = [person("a", ["kitchen"], 1200, ALL), person("b", ["kitchen"], 1300, ALL), person("c", ["kitchen"], 1400, ALL)];
     const shifts = fill(input({ staff, days: [day(0, "11:00 – 23:00")] }));
     expect(shifts.map((s) => [s.staffId, s.start / 60, s.end / 60])).toEqual([
-      ["a", 11, 21],
-      ["b", 19, 23],
+      ["a", 11, 17],
+      ["b", 17, 23],
+    ]);
+    // 11 hours: 5.5 + 5.5; 22 hours: three shifts of 7.5 (the last one 7)
+    expect(fill(input({ staff, days: [day(0, "12:00 – 23:00")] })).map((s) => [s.start / 60, s.end / 60])).toEqual([
+      [12, 17.5],
+      [17.5, 23],
+    ]);
+    const anyTime = ["x", "y", "z"].map((id, i) => person(id, ["kitchen"], 1200 + i, ALL, "00:00", "23:59"));
+    expect(fill(input({ staff: anyTime, days: [day(0, "02:00 – 24:00")] })).map((s) => [s.start / 60, s.end / 60])).toEqual([
+      [2, 9.5],
+      [9.5, 17],
+      [17, 24],
     ]);
   });
 
@@ -172,8 +183,8 @@ describe("greedy fill", () => {
       ["kitchen", "bilal"],
     ]);
     expect(plan.flags.filter((f) => f.kind === "wrong_role").map((f) => f.text)).toEqual([
-      "Sara isn't set up for kitchen (Sun 12–22)",
-      "Bilal isn't set up for front of house (Sun 12–22)",
+      "Sara isn't set up for kitchen (Sun 12pm–10pm)",
+      "Bilal isn't set up for front of house (Sun 12pm–10pm)",
     ]);
   });
 
@@ -280,14 +291,23 @@ describe("Test Kitchen's dummy week makes a sensible rota", () => {
     expect(at(19 * 60)).toBeGreaterThan(at(15 * 60));
   });
 
-  test("the WhatsApp card fits the 1024-character button limit; the detail fits 1600", () => {
-    const card = rotaDraftText(WEEK, plan, { previous: { weekStart: "2026-10-26", costPence: plan.totals.costPence - 5000, hours: 100 } });
+  test("WhatsApp: the week day by day (each message under 1600), then the card under 1024 with the grid link", () => {
+    const card = rotaDraftText(WEEK, plan, { previous: { weekStart: "2026-10-26", costPence: plan.totals.costPence - 5000, hours: 100 }, previewUrl: "https://app.test/rota/tok?preview=sig" });
     expect(card.length).toBeLessThanOrEqual(1024);
-    expect(card).toContain("Rota for next week");
-    expect(card).toMatch(/\d%\* of forecast sales/);
+    expect(card).toMatch(/^💷 \*£[\d,]+ labour · \d+% of forecast sales\* for Mon 2 – Sun 8 Nov/);
     expect(card).toContain("(+£50)");
-    expect(rotaDetailText(WEEK, plan).length).toBeLessThanOrEqual(1600);
-    expect(rotaDetailText(WEEK, plan)).toMatch(/\*Mon\* K .+ · F /);
+    expect(card).toContain("📊 Full rota grid: https://app.test/rota/tok?preview=sig");
+    const week = rotaWeekMessages(WEEK, plan);
+    for (const m of week) expect(m.length).toBeLessThanOrEqual(1600);
+    const all = week.join("\n\n");
+    expect(all).toContain("🗓️ *Next week's rota* · Mon 2 – Sun 8 Nov _(draft)_");
+    expect(all).toMatch(/\*Mon 2\* · £[\d,]+ · \d+%\n👨‍🍳 .+\n🍽️ /);
+    expect(all).not.toMatch(/\b\d{1,2}–\d{1,2}\b/); // no 24-hour "12–22"
+  });
+
+  test("12-hour times", () => {
+    expect([time12(0), time12(690), time12(720), time12(1050), time12(1380), time12(1440), time12(1500)]).toEqual(["12am", "11:30am", "12pm", "5:30pm", "11pm", "12am", "1am"]);
+    expect(span12(720, 1050)).toBe("12pm–5:30pm");
   });
 
   test("under 8 weeks of history, the draft says it's minimum staffing only", () => {
