@@ -43,6 +43,8 @@ describe("the app", () => {
   test("the site's privacy notice and terms work on the app domain and previews too", () => {
     expect(route("app.dinerai.co.uk", "/privacy")).toEqual({ kind: "site", rewrite: "/site/privacy" });
     expect(route("nailiarestaurantmanager-git-site-x.vercel.app", "/terms")).toEqual({ kind: "site", rewrite: "/site/terms" });
+    expect(route("app.dinerai.co.uk", "/dpa")).toEqual({ kind: "site", rewrite: "/site/dpa" });
+    expect(route("dinerai.co.uk", "/dpa")).toEqual({ kind: "site", rewrite: "/site/dpa" });
     expect(route("app.dinerai.co.uk", "/r/ember-spice/privacy")).toEqual({ kind: "app" });
   });
   test("the site's share picture, robots.txt and sitemap load on the main domain", () => {
@@ -51,7 +53,7 @@ describe("the app", () => {
     expect(route("dinerai.co.uk", "/sitemap.xml")).toEqual({ kind: "app" });
   });
   test("owner pages need a login; customer pages don't", () => {
-    for (const p of ["/", "/log", "/settings", "/settings/email-preview", "/report/abc", "/onboarding", "/onboarding/setup", "/feeds", "/feeds/terms"]) expect(needsLogin(p)).toBe(true);
+    for (const p of ["/", "/log", "/settings", "/settings/email-preview", "/report/abc", "/onboarding", "/onboarding/setup", "/onboarding/in", "/onboarding/chat", "/feeds", "/feeds/terms"]) expect(needsLogin(p)).toBe(true);
     for (const p of ["/r/ember-spice", "/reward/x", "/start", "/login", "/export/download", "/api/whatsapp", "/site", "/reports"]) expect(needsLogin(p)).toBe(false);
   });
 });

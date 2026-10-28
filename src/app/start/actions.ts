@@ -3,9 +3,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { logAction } from "@/lib/audit";
-import { emailLoginLink, looksLikeEmail } from "@/lib/auth";
+import { emailLoginLink, looksLikeEmail, startSignupSession } from "@/lib/auth";
 import { createTrialCheckout } from "@/lib/billing/checkout";
-import { publicSignupOpen, TERMS_VERSION } from "@/lib/billing/config";
+import { DPA_VERSION, onboardingRequiresPayment, PRIVACY_VERSION, publicSignupOpen, TERMS_VERSION } from "@/lib/billing/config";
+import { startOnboarding } from "@/lib/onboarding/sessions";
 import { claimInvite, cleanInviteCode } from "@/lib/billing/invites";
 import { planSignup } from "@/lib/billing/signup-plan";
 import { normaliseWhatsApp } from "@/lib/onboarding/steps";
@@ -17,6 +18,8 @@ import { verifyTurnstile } from "@/lib/turnstile";
 // The sign-up form ("Start free trial").
 //   - An email that already has a running (or paid-for) restaurant just gets a login
 //     link: nothing about billing, invites or terms is touched (lib/billing/signup-plan.ts).
+//   - While ONBOARDING_REQUIRES_PAYMENT is off (the default): an invite code is
+//     required, and sign-up goes straight into onboarding with Dina ("You're in").
 //   - A valid pilot invite code skips Stripe: straight to a login link into onboarding.
 //   - Otherwise the restaurant is made (inactive) and the owner goes to Stripe Checkout
 //     for the free trial; /start/return sends the login link afterwards.
@@ -67,7 +70,30 @@ export async function startSignup(form: FormData) {
   // Pressing the button twice, or coming back after cancelling Checkout, carries on
   // with the same unfinished restaurant rather than making another.
   const restaurant = plan.kind === "continue" ? await getRestaurant(plan.restaurantId) : await createRestaurantFromSignup({ ownerName, email, restaurantName, whatsapp });
-  const accepted = { terms_accepted_at: new Date().toISOString(), terms_version: TERMS_VERSION };
+  const accepted = { terms_accepted_at: new Date().toISOString(), terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, dpa_version: DPA_VERSION };
+
+  // No paywall while onboarding is being tested (ONBOARDING_REQUIRES_PAYMENT off):
+  // every sign-up has an invite code (checked above) and goes straight into
+  // onboarding with Dina. TODO(stripe): with payment on, the code below this block
+  // runs instead, and the Stripe webhook calls startOnboarding once the trial starts.
+  if (!onboardingRequiresPayment() && invite) {
+    await updateRestaurantFields(restaurant.id, { ...accepted, pilot_invite_code: invite });
+    await startOnboarding(restaurant.id, { channel: "web" });
+    await logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: `Signed up with invite code ${invite}: straight into setup`, data: { invite } });
+    const next = `/onboarding/in?r=${restaurant.id}`;
+    // A brand-new owner (no restaurant with this email before, and a login account
+    // Supabase makes just now) is logged straight in, limited to this restaurant
+    // (lib/auth.ts). Anyone else gets a login link by email, as before.
+    if (plan.kind === "new" && !existing.length && (await startSignupSession(email, restaurant.id)).ok) {
+      // The login email still goes, in the background: it's how they get back in on another device.
+      after(async () => {
+        const error = await emailLoginLink(email, next, base);
+        if (error) console.warn("The sign-up login email didn't go", error);
+      });
+      redirect(next);
+    }
+    return sendLogin(email, next, base);
+  }
 
   if (invite) {
     await updateRestaurantFields(restaurant.id, { ...accepted, pilot_invite_code: invite });

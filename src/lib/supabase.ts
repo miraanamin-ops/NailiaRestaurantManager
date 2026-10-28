@@ -80,6 +80,9 @@ export type Restaurant = {
   pilot_invite_code?: string | null;
   terms_accepted_at?: string | null;
   terms_version?: string | null;
+  // The privacy notice and data processing agreement accepted with the terms (048).
+  privacy_version?: string | null;
+  dpa_version?: string | null;
   // Show forecasts from runs that didn't pass, labelled TEST (042; demo restaurants with TEST_TOOLS only).
   forecast_unvalidated?: boolean;
   // The owner's labour target, % of sales; the builder's forecast error limit, % (046).

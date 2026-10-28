@@ -54,7 +54,13 @@ describe("the settings banner", () => {
 });
 
 describe("configuration", () => {
-  const stripe = { STRIPE_SECRET_KEY: "sk_test_1", STRIPE_PRICE_ID: "price_1" };
+  const stripe = { STRIPE_SECRET_KEY: "sk_test_1", STRIPE_PRICE_ID: "price_1", ONBOARDING_REQUIRES_PAYMENT: "true" };
+  test("with payment off (the default) sign-up is invite-only everywhere and Stripe is never opened", () => {
+    const keysOnly = { STRIPE_SECRET_KEY: stripe.STRIPE_SECRET_KEY, STRIPE_PRICE_ID: stripe.STRIPE_PRICE_ID };
+    for (const env of [{ ...keysOnly }, { ...keysOnly, VERCEL_ENV: "production", PUBLIC_SIGNUP: "true" }, { ...stripe, ONBOARDING_REQUIRES_PAYMENT: "yes" }]) {
+      expect(publicSignupOpen(env)).toBe(false);
+    }
+  });
   test("the live site stays invite-only until PUBLIC_SIGNUP=true, even with Stripe keys", () => {
     expect(publicSignupOpen({ ...stripe, VERCEL_ENV: "production" })).toBe(false);
     expect(publicSignupOpen({ ...stripe, VERCEL_ENV: "production", PUBLIC_SIGNUP: "true" })).toBe(true);

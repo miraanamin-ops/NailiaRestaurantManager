@@ -57,7 +57,7 @@ export const STEP_DEFS: Record<FlowStepKey, StepDef> = {
   rewards: step("rewards", "Rewards and limits", "Set your rewards and limits and I'll run offers without ever going over budget.", { available: false }),
   customers_qr: step("customers_qr", "Customers and QR codes", "Import your customers and print your QR codes and I'll start growing your list.", { available: false }),
   languages_dates: step("languages_dates", "Languages and key dates", "Tell me your languages and key dates and I'll plan campaigns around them.", { available: false }),
-  approvals_timing: step("approvals_timing", "Approvals and timing", "Choose who approves and when you hear from me, and I'll fit around your day.", { available: false }),
+  approvals_timing: step("approvals_timing", "Approvals and timing", "Tell me who approves and when to message you, and I’ll fit around your day.", { available: false }),
 };
 
 export const isFlowStep = (key: string): key is FlowStepKey => (FLOW_STEPS as readonly string[]).includes(key);

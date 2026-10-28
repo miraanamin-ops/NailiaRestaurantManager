@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { isFreshUser, scopeToSignup, sessionIdFromToken } from "@/lib/auth-rules";
 import { builderEmails } from "@/lib/builder-emails";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
@@ -47,13 +48,63 @@ export async function accessFor(email: string) {
 
 export type Owner = Awaited<ReturnType<typeof accessFor>>;
 
-// The logged-in, allowed person, or null.
+// The logged-in, allowed person, or null. A login made at sign-up sees only the
+// restaurant it signed up (lib/auth-rules.ts).
 export async function currentOwner(): Promise<Owner | null> {
   if (!authConfigured()) return null;
-  const { data } = await (await authClient()).auth.getUser();
+  const client = await authClient();
+  const token = (await client.auth.getSession()).data.session?.access_token;
+  if (!token) return null;
+  // Supabase checks this exact token; only then is its session id read from it.
+  const { data } = await client.auth.getUser(token);
   if (!data.user?.email) return null;
-  const access = await accessFor(data.user.email);
+  const access = scopeToSignup(await accessFor(data.user.email), await signupRestaurantOf(sessionIdFromToken(token)));
   return access.allowed ? access : null;
+}
+
+// The restaurant a sign-up login is limited to (null: an ordinary login). If the
+// list can't be read, nobody gets in, except before supabase/049 has run (no such
+// logins can exist then).
+async function signupRestaurantOf(sessionId: string | null) {
+  if (!sessionId) return null;
+  const { data, error } = await getSupabase().from("signup_sessions").select("restaurant_id").eq("session_id", sessionId).maybeSingle<{ restaurant_id: string }>();
+  if (error?.code === "42P01") return null;
+  if (error) throw new Error(`Couldn't check the login: ${error.message}`);
+  return data?.restaurant_id ?? null;
+}
+
+export type SignupSession = { ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" };
+
+// Logs a brand-new owner straight in after sign-up, with the same Supabase login
+// a login link gives (the cookies verifyOtp sets, as on /auth/verify), but made
+// on the server without sending the email. Only for a login account Supabase
+// made just now; that session is then limited to this restaurant. Anything odd:
+// not logged in, and the caller emails a login link instead.
+export async function startSignupSession(email: string, restaurantId: string): Promise<SignupSession> {
+  if (!authConfigured()) return { ok: false, reason: "not_configured" };
+  const { data, error } = await getSupabase().auth.admin.generateLink({ type: "magiclink", email });
+  if (error || !data.properties?.hashed_token) {
+    console.error("Couldn't make the sign-up login", error?.message);
+    return { ok: false, reason: "failed" };
+  }
+  if (!isFreshUser(data.user)) return { ok: false, reason: "existing_user" };
+  const client = await authClient();
+  const verified = await client.auth.verifyOtp({ token_hash: data.properties.hashed_token, type: "email" });
+  const sessionId = verified.data.session ? sessionIdFromToken(verified.data.session.access_token) : null;
+  if (verified.error || !sessionId) {
+    console.error("Couldn't start the sign-up login", verified.error?.message ?? "no session id");
+    // A login that can't be limited to this restaurant must not stay.
+    if (verified.data.session) await client.auth.signOut({ scope: "local" });
+    return { ok: false, reason: "failed" };
+  }
+  const { error: recordError } = await getSupabase().from("signup_sessions").insert({ session_id: sessionId, restaurant_id: restaurantId });
+  if (recordError) {
+    // Never leave a sign-up login that isn't limited to its restaurant.
+    console.error("Couldn't record the sign-up login; logging out", recordError.message);
+    await client.auth.signOut({ scope: "local" });
+    return { ok: false, reason: "failed" };
+  }
+  return { ok: true };
 }
 
 // For owner pages: sends anyone not logged in (or not allowed) to the login page.

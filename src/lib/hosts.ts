@@ -13,7 +13,7 @@ export const SITE_HOSTS = ["dinerai.co.uk", "www.dinerai.co.uk"];
 export const OLD_HOSTS = ["nailiarestaurantmanager.vercel.app"];
 
 // The public site's pages, and where they live in the app (src/app/site/...).
-export const SITE_PAGES: Record<string, string> = { "/": "/site", "/privacy": "/site/privacy", "/terms": "/site/terms" };
+export const SITE_PAGES: Record<string, string> = { "/": "/site", "/privacy": "/site/privacy", "/terms": "/site/terms", "/dpa": "/site/dpa" };
 
 export type HostRoute =
   | { kind: "app" }
@@ -40,8 +40,8 @@ export function hostRoute(input: { host: string | null; path: string; search: st
   if (OLD_HOSTS.includes(host) && !path.startsWith("/api/") && (input.method === "GET" || input.method === "HEAD")) {
     return { kind: "redirect", to: `${input.appUrl}${path}${search}` };
   }
-  // The site's privacy notice and terms also work on the app domain (and previews).
-  if (path === "/privacy" || path === "/terms") return { kind: "site", rewrite: SITE_PAGES[path] };
+  // The site's privacy notice, terms and data processing agreement also work on the app domain (and previews).
+  if (path === "/privacy" || path === "/terms" || path === "/dpa") return { kind: "site", rewrite: SITE_PAGES[path] };
   return { kind: "app" };
 }
 

@@ -24,3 +24,12 @@ alter table pilot_invites drop column if exists type;
 delete from schema_migrations where name = '048_onboarding_dina.sql';
 
 commit;
+
+-- 049 (logged in straight after sign-up), if it ran. Only these sessions' limit
+-- goes: anyone still logged in from a sign-up then sees every restaurant with
+-- their email, so sign them out in Supabase > Authentication first if that matters.
+begin;
+drop table if exists signup_sessions;
+drop index if exists onboarding_pending_whatsapp_idx;
+delete from schema_migrations where name = '049_signup_sessions.sql';
+commit;

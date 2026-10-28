@@ -5,7 +5,7 @@ import { findLinkCode } from "@/lib/onboarding/steps";
 import { handleOnboardingMessage, linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
 import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
-import { replyUnregistered } from "@/lib/unregistered";
+import { linkSignupNumber, pendingSignupsFor } from "@/lib/onboarding/entry";
 import { getSupabase } from "@/lib/supabase";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { handleBuilderCommand } from "@/lib/feeds/builder";
@@ -76,6 +76,8 @@ export async function POST(req: NextRequest) {
   // Not an owner: maybe a staff number the owner registered (ADD STAFF), which
   // can only send till reports and sales files for that one restaurant.
   const staff = restaurant || linkCode ? null : await findStaff(owner);
+  // Not an owner or staff: maybe the number typed on a Dina sign-up, sending its first message.
+  const signups = restaurant || linkCode || staff ? [] : await pendingSignupsFor(owner).catch((err) => (console.error("Couldn't look up sign-ups", err), []));
   // The builder's own commands (BUILDER ...), from BUILDER_WHATSAPP only. The same
   // phone can also be a demo restaurant's owner: anything else it sends goes there as usual.
   const builderCommand = !media && isBuilderNumber(owner, process.env.BUILDER_WHATSAPP) && isBuilderCommand(body);
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
-    error: restaurant || linkCode || staff || builderCommand ? null : "Ignored: not a registered owner number",
+    error: restaurant || linkCode || staff || signups.length || builderCommand ? null : "Ignored: not a registered owner number",
   });
   // Twilio sometimes delivers the same message twice. Each message id can only be
   // logged once (unique index), so a second copy is a duplicate: do nothing.
@@ -126,11 +128,16 @@ export async function POST(req: NextRequest) {
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
-  // Anyone else can't trigger anything: they get one polite "not registered" reply
-  // (at most once a day) and nothing else.
+  // The number given at sign-up: its first message links it (never one that's
+  // already someone's: those were found above as an owner or staff number).
+  if (!restaurant && signups.length) {
+    after(() => linkSignupNumber(owner, sandbox, signups));
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
+
+  // Anyone else can't trigger anything, and gets no reply at all (logged above as ignored).
   if (!restaurant) {
     console.warn("WhatsApp message from an unregistered number");
-    after(() => replyUnregistered(owner, sandbox));
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 

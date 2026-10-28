@@ -20,8 +20,20 @@ export function trialDays() {
   return process.env.TRIAL_DAYS && Number.isInteger(n) && n >= 0 && n <= 90 ? n : DEFAULT_TRIAL_DAYS;
 }
 
-// The terms an owner ticks at sign-up (the "Last updated" date on /terms).
+// The terms an owner ticks at sign-up (the "Last updated" date on /terms), and the
+// privacy notice and data processing agreement ticked with them (/privacy, /dpa).
 export const TERMS_VERSION = "10 October 2026";
+export const PRIVACY_VERSION = "10 October 2026";
+export const DPA_VERSION = "28 October 2026";
+
+// Does onboarding wait for payment? Off (the default) while the whole flow is
+// being tested: every sign-up needs an invite code, Stripe is never opened, and
+// sign-up goes straight into onboarding. TODO(stripe): "true" brings back the
+// free trial, and startOnboarding (lib/onboarding/sessions.ts) moves to the
+// Stripe webhook, after the trial starts.
+export function onboardingRequiresPayment(env: Record<string, string | undefined> = process.env) {
+  return env.ONBOARDING_REQUIRES_PAYMENT === "true";
+}
 
 // Tags our Checkout sessions in Stripe's dashboard.
 export const CHECKOUT_TAG = "dinerai_trial_qkzmwpre";
@@ -30,9 +42,11 @@ export function stripeConfigured() {
   return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID);
 }
 
-// Can someone sign up and pay without an invite code? Needs Stripe set up, and on
-// the live site also PUBLIC_SIGNUP=true. Previews and local copies only need Stripe.
+// Can someone sign up and pay without an invite code? Needs payment switched on
+// (ONBOARDING_REQUIRES_PAYMENT), Stripe set up, and on the live site also
+// PUBLIC_SIGNUP=true. Previews and local copies don't need PUBLIC_SIGNUP.
 export function publicSignupOpen(env: Record<string, string | undefined> = process.env) {
+  if (!onboardingRequiresPayment(env)) return false;
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) return false;
   return env.VERCEL_ENV !== "production" || env.PUBLIC_SIGNUP === "true";
 }

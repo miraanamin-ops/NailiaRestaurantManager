@@ -10,6 +10,9 @@ const ACTIVE_ID = "33333333-3333-4333-8333-333333333333";
 const emailLoginLink = vi.fn<(email: string, next: string, base: string) => Promise<null | "wait" | "send">>(async () => null);
 const createTrialCheckout = vi.fn<(r: { id: string }, base: string) => Promise<string>>(async () => "https://checkout.stripe.test/c/pay");
 const logAction = vi.fn<(entry: unknown) => Promise<void>>(async () => {});
+const startSignupSession = vi.fn<(email: string, restaurantId: string) => Promise<{ ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" }>>(
+  async () => ({ ok: true }),
+);
 let db: ReturnType<typeof memoryDb>;
 
 function seed(extra: Record<string, unknown>[] = []) {
@@ -17,6 +20,7 @@ function seed(extra: Record<string, unknown>[] = []) {
     {
       restaurants: [...extra],
       onboarding: [],
+      onboarding_sessions: [],
       pilot_invites: [
         { code: "PILOT-ONE", max_uses: 1, used_count: 0, active: true, expires_at: null },
         { code: "OLD", max_uses: 5, used_count: 0, active: true, expires_at: "2020-01-01T00:00:00Z" },
@@ -41,14 +45,17 @@ beforeEach(() => {
   process.env.STRIPE_SECRET_KEY = "sk_test_123";
   process.env.STRIPE_PRICE_ID = "price_123";
   process.env.VERCEL_ENV = "preview";
+  // The paid sign-up (the Stripe free trial), as before. "no paywall" below turns it off.
+  process.env.ONBOARDING_REQUIRES_PAYMENT = "true";
   delete process.env.PUBLIC_SIGNUP;
   delete process.env.TURNSTILE_SECRET_KEY;
   emailLoginLink.mockClear();
   createTrialCheckout.mockClear();
   logAction.mockClear();
+  startSignupSession.mockClear();
   seed();
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
-  vi.doMock("@/lib/auth", async (orig) => ({ ...(await orig<object>()), emailLoginLink }));
+  vi.doMock("@/lib/auth", async (orig) => ({ ...(await orig<object>()), emailLoginLink, startSignupSession }));
   vi.doMock("@/lib/billing/checkout", () => ({ createTrialCheckout }));
   vi.doMock("@/lib/audit", () => ({ logAction }));
   vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => false }));
@@ -63,6 +70,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const m of ["@/lib/supabase", "@/lib/auth", "@/lib/billing/checkout", "@/lib/audit", "@/lib/rate-limit", "next/server", "next/headers", "next/navigation"]) vi.doUnmock(m);
   delete process.env.VERCEL_ENV;
+  delete process.env.ONBOARDING_REQUIRES_PAYMENT;
   vi.resetModules();
 });
 
@@ -178,6 +186,58 @@ describe("paid sign-up", () => {
   test("the terms box must be ticked", async () => {
     expect(await submit({ terms: "" })).toBe("/start?error=terms");
     expect(db.tables.restaurants).toHaveLength(0);
+  });
+});
+
+describe("no paywall (ONBOARDING_REQUIRES_PAYMENT off, the default)", () => {
+  beforeEach(() => {
+    delete process.env.ONBOARDING_REQUIRES_PAYMENT;
+  });
+
+  test("an invite code is required everywhere, and Stripe is never opened", async () => {
+    process.env.PUBLIC_SIGNUP = "true";
+    for (const env of ["preview", "production"]) {
+      process.env.VERCEL_ENV = env;
+      expect(await submit({})).toBe("/start?error=invite_only");
+    }
+    expect(db.tables.restaurants).toHaveLength(0);
+    expect(createTrialCheckout).not.toHaveBeenCalled();
+  });
+
+  test("a brand-new owner is logged straight in and lands on 'You're in'; onboarding has started; the login email still goes", async () => {
+    const to = await submit({ invite: "PILOT-ONE" });
+    const r = db.tables.restaurants[0];
+    expect(to).toBe(`/onboarding/in?r=${r.id}`);
+    expect(startSignupSession).toHaveBeenCalledWith("aisha@grill.test", r.id);
+    expect(createTrialCheckout).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ pilot_invite_code: "PILOT-ONE", active: false, terms_version: expect.any(String), privacy_version: expect.any(String), dpa_version: expect.any(String) });
+    expect(db.tables.onboarding_sessions).toEqual([expect.objectContaining({ restaurant_id: r.id, current_step: "hello", channel_last_used: "web" })]);
+    expect(db.tables.onboarding[0]).toMatchObject({ restaurant_id: r.id, pending_whatsapp: "whatsapp:+447700900123" });
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/in?r=${r.id}`, expect.any(String));
+  });
+
+  test("if Supabase already had a login for that email, no automatic login: a login link instead", async () => {
+    startSignupSession.mockResolvedValueOnce({ ok: false, reason: "existing_user" });
+    const to = await submit({ invite: "PILOT-ONE" });
+    const r = db.tables.restaurants[0];
+    expect(to).toBe("/start?sent=1");
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/in?r=${r.id}`, expect.any(String));
+    expect(db.tables.onboarding_sessions).toHaveLength(1);
+  });
+
+  test("an email with an earlier unfinished sign-up is never logged in automatically", async () => {
+    seed([{ id: ACTIVE_ID, name: "Ember Grill", owner_email: "aisha@grill.test", active: false, created_at: new Date().toISOString() }]);
+    db.tables.onboarding.push({ restaurant_id: ACTIVE_ID });
+    expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
+    expect(startSignupSession).not.toHaveBeenCalled();
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/in?r=${ACTIVE_ID}`, expect.any(String));
+  });
+
+  test("an email with a running restaurant only gets a login link, as before", async () => {
+    seed([{ id: ACTIVE_ID, name: "Ember Grill", owner_email: "aisha@grill.test", active: true, billing_exempt: true, created_at: "2026-01-01T00:00:00Z" }]);
+    expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
+    expect(startSignupSession).not.toHaveBeenCalled();
+    expect(db.tables.onboarding_sessions).toHaveLength(0);
   });
 });
 
