@@ -8,7 +8,6 @@
 // linked its location on /settings/google. Plain TypeScript that Node runs as is
 // (no imports from src/, which needs Next.js).
 import { createDecipheriv } from "node:crypto";
-// @ts-expect-error: a plain .mjs helper without types
 import { guardLive } from "./lib/live-guard.mjs";
 
 // Real Google locations are linked on the live database: run it with the live settings and --live.
