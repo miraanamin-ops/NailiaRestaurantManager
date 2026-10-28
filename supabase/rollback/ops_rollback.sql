@@ -11,6 +11,17 @@
 
 begin;
 
+-- 0e. 048 (onboarding with Dina): its owner read policies use ops_owns_restaurant.
+--     Only the policies go: the setup data stays, readable by the app's server
+--     only. See onboarding_dina_rollback.sql to undo 048 itself.
+do $$
+declare t text;
+begin
+  foreach t in array array['onboarding_sessions', 'onboarding_steps', 'onboarding_messages', 'setup_gaps'] loop
+    if to_regclass(t) is not null then execute format('drop policy if exists ops_read on %I', t); end if;
+  end loop;
+end $$;
+
 -- 0d. What 046 (finance forecast and calendar lines) built on these tables, first
 --     (its policies use ops_owns_restaurant). See also
 --     finance_calendar_rollback.sql, which undoes 046 alone.

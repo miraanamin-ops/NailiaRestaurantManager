@@ -134,7 +134,12 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   // 3. Simulation, as a gate step: GOOGLE_MODE=simulated posts nothing to Google,
   //    EMAIL_REDIRECT keeps emails away from customers (lib/switches.ts).
   //    (WhatsApp to customers stays off until Meta verification.)
-  const testStep = simulationStep({ channel: channelFor(draft.kind), google: googleSwitch(process.env).mode, emailRedirect: emailRedirectSwitch(process.env).on });
+  const testStep = simulationStep({
+    channel: channelFor(draft.kind),
+    google: googleSwitch(process.env).mode,
+    emailRedirect: emailRedirectSwitch(process.env).on,
+    testSite: restaurant.is_test === true,
+  });
   const testCheck = checkResult(testStep.outcome === "simulate" ? [testStep.detail] : [], [], "pass");
   const reachesPlatform = testStep.outcome === "ok";
 

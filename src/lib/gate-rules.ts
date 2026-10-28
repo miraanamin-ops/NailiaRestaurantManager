@@ -12,16 +12,31 @@ export type SimulationStep =
 // with EMAIL_REDIRECT on, everyone else goes to the builder: lib/email/route.ts).
 // GOOGLE_MODE=simulated reads live Google but posts nothing. WhatsApp to
 // customers is off until Meta verification, whatever the switches say.
-export function simulationStep(input: { channel: SendChannel; google: "dummy" | "simulated" | "live"; emailRedirect: boolean }): SimulationStep {
+// A test site (restaurants.is_test) never reaches anyone real on any channel,
+// whatever the switches say: no live Google, emails only to the builder and owner.
+export function simulationStep(input: { channel: SendChannel; google: "dummy" | "simulated" | "live"; emailRedirect: boolean; testSite?: boolean }): SimulationStep {
   if (input.channel === "whatsapp") return { outcome: "simulate", detail: "WhatsApp to customers is off until Meta verification, so nothing was sent." };
   if (input.channel === "google") {
+    if (input.testSite && input.google !== "dummy") return { outcome: "simulate", detail: "Test site: never posted to the live Google listing." };
     if (input.google === "simulated") return { outcome: "simulate", detail: "Google is simulated: not posted to the live Google listing." };
     return { outcome: "ok", detail: input.google === "dummy" ? "Dummy Google only." : "Live Google." };
   }
-  return input.emailRedirect
-    ? { outcome: "ok", detail: "Emails go only to the builder and owner (everyone else is redirected)." }
+  return input.emailRedirect || input.testSite
+    ? { outcome: "ok", detail: `${input.testSite ? "Test site: e" : "E"}mails go only to the builder and owner (everyone else is redirected).` }
     : { outcome: "ok", detail: "Emails go to the customers." };
 }
+
+// The last wall before Google: a test site never changes anything on live Google
+// (reads are fine). A write that doesn't say which restaurant it's for is refused too.
+export function googleWriteRefused(method: string, restaurant: { is_test?: boolean | null } | null | undefined) {
+  if (method.toUpperCase() === "GET") return null;
+  if (!restaurant) return "A Google write must say which restaurant it's for";
+  return restaurant.is_test ? "Test sites never write to live Google" : null;
+}
+
+// Emails from a test site are always redirected (to the builder; the builder and
+// the owner still get their own), whatever EMAIL_REDIRECT says.
+export const redirectEmails = (switchOn: boolean, restaurant: { is_test?: boolean | null }) => switchOn || restaurant.is_test === true;
 
 export function channelFor(kind: string): SendChannel {
   if (kind === "review_reply" || kind === "google_post" || kind === "hours_update" || kind === "menu_update") return "google";

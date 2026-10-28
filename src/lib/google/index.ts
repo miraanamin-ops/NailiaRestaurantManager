@@ -18,18 +18,26 @@ export type { GoogleConnector, GooglePost, GoogleReview, PostTopic } from "./typ
 
 export type GoogleMode = "dummy" | "simulated" | "live";
 
-async function linked(restaurantId: string) {
+// ("*" rather than named columns, so this keeps working before supabase/048 adds is_test.)
+async function linkState(restaurantId: string) {
   const r = check(
-    await getSupabase().from("restaurants").select("google_connection_id, google_location_id").eq("id", restaurantId).maybeSingle<{ google_connection_id: string | null; google_location_id: string | null }>(),
+    await getSupabase()
+      .from("restaurants")
+      .select("*")
+      .eq("id", restaurantId)
+      .maybeSingle<{ google_connection_id: string | null; google_location_id: string | null; is_test?: boolean }>(),
   );
-  return Boolean(r?.google_connection_id && r.google_location_id);
+  return { linked: Boolean(r?.google_connection_id && r.google_location_id), testSite: r?.is_test === true };
 }
 
-// What Google means for this restaurant right now.
+// What Google means for this restaurant right now. A test site reads live Google
+// at most: "live" counts as "simulated" for it (and api.ts refuses its writes too).
 export async function googleModeFor(restaurantId: string): Promise<GoogleMode> {
   const mode = googleSwitch(process.env).mode;
   if (mode === "dummy") return "dummy";
-  return (await linked(restaurantId)) ? mode : "dummy";
+  const { linked, testSite } = await linkState(restaurantId);
+  if (!linked) return "dummy";
+  return testSite ? "simulated" : mode;
 }
 
 export async function googleFor(restaurantId: string): Promise<GoogleConnector> {

@@ -130,6 +130,25 @@ describe("the simulation gate step", () => {
     expect(channelFor("promotion")).toBe("whatsapp");
     expect(simulationStep({ google: "live", channel: "whatsapp", emailRedirect: false })).toMatchObject({ outcome: "simulate" });
   });
+
+  test("a test site never reaches anyone real on any channel, whatever the switches say", async () => {
+    const { googleWriteRefused, redirectEmails, simulationStep } = await import("@/lib/gate-rules");
+    const { routeEmail } = await import("@/lib/email/route");
+    // Google: simulated even with GOOGLE_MODE=live; dummy Google stays dummy (our own database).
+    expect(simulationStep({ google: "live", channel: "google", emailRedirect: false, testSite: true })).toMatchObject({ outcome: "simulate", detail: expect.stringMatching(/Test site/) });
+    expect(simulationStep({ google: "dummy", channel: "google", emailRedirect: false, testSite: true })).toMatchObject({ outcome: "ok" });
+    // WhatsApp to customers: off.
+    expect(simulationStep({ google: "live", channel: "whatsapp", emailRedirect: false, testSite: true })).toMatchObject({ outcome: "simulate" });
+    // Email: redirected even with EMAIL_REDIRECT off.
+    const redirect = redirectEmails(false, { is_test: true });
+    expect(redirect).toBe(true);
+    expect(routeEmail("real.customer@gmail.com", { redirect, allowed: ["owner@x.co.uk"], builder: "builder@x.co.uk" })).toMatchObject({ to: "builder@x.co.uk" });
+    expect(redirectEmails(false, { is_test: false })).toBe(false);
+    // The last wall in front of Google's API: writes refused, reads allowed.
+    expect(googleWriteRefused("POST", { is_test: true })).toMatch(/Test sites/);
+    expect(googleWriteRefused("GET", { is_test: true })).toBeNull();
+    expect(googleWriteRefused("PUT", { is_test: false })).toBeNull();
+  });
 });
 
 describe("Google simulation inside attemptSend", () => {

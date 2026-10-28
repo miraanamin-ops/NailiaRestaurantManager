@@ -233,7 +233,7 @@ describe("customer emails with the real sender", () => {
     vi.doUnmock("@/lib/email/templates");
   });
 
-  async function deliver(env: Record<string, string>) {
+  async function deliver(env: Record<string, string>, restaurant: Record<string, unknown> = {}) {
     vi.resetModules();
     for (const k of ["TEST_MODE", "EMAIL_REDIRECT", "VERCEL_ENV", "TEST_EMAIL_ALLOW"]) vi.stubEnv(k, "");
     for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
@@ -248,7 +248,7 @@ describe("customer emails with the real sender", () => {
     vi.doMock("@/lib/email/templates", () => ({ renderEmail: async () => ({ html: "<p>Hi</p>", text: "Hi" }) }));
     const { sendCustomerEmail } = await import("@/lib/email");
     const delivery = await sendCustomerEmail({
-      restaurant: { name: "Ember & Spice Grill", owner_email: "owner@grill.co.uk", reply_to_email: null } as never,
+      restaurant: { name: "Ember & Spice Grill", owner_email: "owner@grill.co.uk", reply_to_email: null, ...restaurant } as never,
       to: "ayesha@gmail.com",
       content: { kind: "campaign", subject: "A Thursday treat" } as never,
       oneClickUrl: null,
@@ -271,6 +271,15 @@ describe("customer emails with the real sender", () => {
   test("preview with EMAIL_REDIRECT=false: still redirected to the builder", async () => {
     const { delivery } = await deliver({ VERCEL_ENV: "preview", EMAIL_REDIRECT: "false" });
     expect(delivery).toMatchObject({ to: "builder@dinerai.co.uk", redirectedFrom: "ayesha@gmail.com" });
+  });
+
+  test("a test site's email is redirected to the builder even with EMAIL_REDIRECT=false in production; its owner still gets their own", async () => {
+    const testSite = { is_demo: true, is_test: true };
+    const { delivery, sends } = await deliver({ VERCEL_ENV: "production", EMAIL_REDIRECT: "false" }, testSite);
+    expect(delivery).toMatchObject({ to: "builder@dinerai.co.uk", redirectedFrom: "ayesha@gmail.com" });
+    expect(sends.map((s) => s.to)).toEqual(["builder@dinerai.co.uk"]);
+    const owner = await deliver({ VERCEL_ENV: "production", EMAIL_REDIRECT: "false" }, { ...testSite, owner_email: "ayesha@gmail.com" });
+    expect(owner.delivery).toMatchObject({ to: "ayesha@gmail.com", redirectedFrom: null });
   });
 
   test("TEST_EMAIL_ALLOW addresses still get their own while redirecting", async () => {

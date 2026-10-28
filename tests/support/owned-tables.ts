@@ -11,4 +11,6 @@ export const OWNED_TABLES = [
   "google_connections", "google_writes",
   // Finance forecast and calendar lines (supabase/046)
   "forecast_backtests", "calendar_suggestions",
+  // Onboarding with Dina (supabase/048)
+  "onboarding_sessions", "onboarding_steps", "onboarding_messages", "setup_gaps",
 ];

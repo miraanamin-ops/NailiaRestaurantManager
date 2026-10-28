@@ -87,33 +87,45 @@ WhatsApp  ─┘  (render, parse)     │  state machine in code (steps, order, 
 - `restaurants`: `is_test` (check: implies `is_demo`), `owner_role` (owner/manager), `faqs` jsonb, `customer_languages` text[], `key_dates` text[], `brief_hour`, `privacy_version`, `dpa_version`, `complaint_handler`, `redeem_limit`.
 - All new tables: `ops_apply_policies('owned')`, in `owned-tables.ts`, in the clear-out, with PGlite RLS tests.
 
-## 4. Build plan
+## 4. Decisions (28 Oct 2026)
+
+1. Stripe stays in the code, switched off: with `ONBOARDING_REQUIRES_PAYMENT=false` (the default) every sign-up needs an invite code and never sees Stripe.
+2. A brand-new owner is logged straight in after sign-up, so "You're in" opens the web chat directly; the login email still goes in the background. An email that already has a restaurant never gets logged in this way (login link only, as today).
+3. The first WhatsApp message from the sign-up number links it (if no other restaurant or staff member has it); the one-time code stays as a fallback. Unknown numbers get no reply.
+4. Accounts and memberships are out of scope. The site manager is a team member with role manager and no login.
+5. A test site is `is_test = true` and always `is_demo = true`. On top of the demo rules, a hard wall in code, whatever the switches say: emails only ever reach the builder or the owner (everyone else is redirected), nothing is ever written to live Google (refused in `gbp()`, the one place every Google call goes through), and WhatsApp to customers stays off (it is off for everyone until Meta). Checked: before this, demo restaurants followed the site-wide switches for email and Google, so a demo with a linked Google location could post for real. Ember & Spice (demo, not a test site) keeps its live Google test.
+6. Allergen suggestions stay, clearly marked "suggested". The owner confirms each dish one by one (no "accept all"). Unconfirmed = unknown everywhere: never shown to customers and never in Dina's answers.
+7. Finishing needs WhatsApp linked.
+8. Brief time: whole hours, 7am to 11am.
+9. Work on branch `onboarding-dina`, pushed after each phase; the current onboarding stays live on main until you merge.
+
+## 5. Build plan (revised)
 
 Each phase ends committed, tested, and with a short note of what you need to do.
 
-| Phase | What | Reuses | Rough effort |
-|---|---|---|---|
-| 1. Foundation | Migration 048; pure state machine with unit tests (order, skips, partials, re-entry, editing a done step, gap creation and dismissal); `startOnboarding(siteId)`; RLS and isolation tests | `steps.ts` patterns, `ops_apply_policies`, PGlite | 1 session |
-| 2. Sign-up and entry | `/start` changes (DPA, versions, invite type), `ONBOARDING_REQUIRES_PAYMENT` flag with the `TODO(stripe)` point, "You're in" screen, WhatsApp number match | `startSignup`, `channel.ts`, `linkWhatsApp` | 1 session |
-| 3. Dina engine | `agents/dina.md` (persona rules, no em-dashes, one question at a time), typed message components, write tools with server-side validation, Haiku step router, conversation storage | `loadAgent`, `callAgentWithTools` (extended for write tools), `engine.ts` actions | 2 sessions |
-| 4. Web chat | Mobile-first chat in the dark DinerAI style: header with Dina, progress bar with step list, quick replies, tone cards, uploads, editable cards, summary, "Skip for now", typing indicator | `AppShell`, `.dai-app` tokens, `editors.tsx`, `sales-upload.tsx` | 2 sessions |
-| 5. WhatsApp adapter | Buttons (max 3), list messages (max 10, tested in the sandbox), numbered fallback, photos, PDFs, CSV/Excel | `whatsapp.ts` templates, the webhook's media handling | 1 session |
-| 6. Steps 1 to 6 | Hello, Google (questions, Path A button behind a flag, Path B steps with placeholder screenshots, email the steps, pending status, dummy acceptance, 24h nudge), Tone (4 tones, your defaults in `src/lib/onboarding/tone-defaults.ts`, real review picking, queue real replies via `createDraft`), Make it right, Menu (with confidence questions), Hours and FAQs | Places, Google import, `extractMenu`, `saveMenu`, `profile_examples`, `recovery_offers` | 2 to 3 sessions |
-| 7. Steps 7 to 12 | Sales (confirm months, 8-week rule), Team and labour (upload or chat, labour % default 30 flagged), Rewards and cap, Customer import (consent basis, double opt-in) and QR kit by email and WhatsApp, Languages and dates, Approvals and timing (per-restaurant brief time) | POS import, `understand.ts`, `qr-pack`, `sendConfirmEmail` | 2 to 3 sessions |
-| 8. Finish, gaps, resume | Summary card with edit links, activation (nothing runs before step 1 is done), setup gaps (one nudge in the brief by priority, Do it now / Later / Not relevant, auto-dismiss after 3), `/settings/setup` gaps page, 24h resume email and WhatsApp | section registry, `emailLoginLink`, queue job types | 1 to 2 sessions |
-| 9. Admin console | `/admin/onboarding`: progress, step, channel, gaps, Google status with "mark accepted", 48h stall alert; test controls (start test onboarding, reset, jump to step, delete, link my number); test sites listed apart | builder auth, `resetOnboarding`, `builder-alerts.ts` | 1 session |
-| 10. Tests, fixtures, retire old | Fixtures (3 menu images made by script, review sets), end-to-end runs on the in-memory database with a scripted Dina (CI), opt-in live run, "test site never sends" test, remove the old wizard and WhatsApp flow, CLAUDE.md | `tests/e2e`, `make-sample-z-reports.mjs` approach | 1 to 2 sessions |
+### Milestone A: a pilot-usable Dina
+Sign-up, channel choice, steps 1 to 6, the summary, setup gaps stored (no nudges yet). Steps 7 to 12 aren't asked yet: their safe defaults apply (discount cap 15%, 9am brief, 9am to 9pm sending, sign-up reward suggested from the menu) and the summary says so.
 
-About 14 to 18 build sessions. You can test the web flow by hand from the end of phase 6 (steps 1 to 6), and WhatsApp from phase 6 too.
+| Phase | What | Rough effort |
+|---|---|---|
+| 1. Foundation | Migration 048 (sessions, steps, chat messages, setup gaps, invite type, `is_test`, the new restaurant fields for steps 1 to 6); the 12-step state machine in pure code with unit tests (order, skips, partials, re-entry, editing a done step, waiting steps, gap creation, snooze and dismissal); `startOnboarding(siteId)`; the test-site wall (email, Google, WhatsApp) with tests; RLS and isolation tests | 1 session |
+| 2. Sign-up and entry | `/start`: data processing agreement in the tick box, versions stored, invite type, `ONBOARDING_REQUIRES_PAYMENT` with the `TODO(stripe)` point; new owner logged in; "You're in" (web chat or WhatsApp with join phrase and copy button); number-match linking | 1 session |
+| 3. Dina engine | `agents/dina.md`, typed message components, write tools validated in code, Haiku step router, chat history | 2 sessions |
+| 4. Web chat | Mobile-first chat in the DinerAI style, progress bar with the step list, every message component, typing indicator | 2 sessions |
+| 5. WhatsApp adapter | Buttons, list messages (tried in the sandbox), numbered fallback, photos and files | 1 session |
+| 6. Steps 1 to 3 | Hello, Google (questions, Path A behind a flag, Path B with placeholder screenshots, email the steps, pending, simulated acceptance, 24h nudge), Tone (4 tones and your defaults in a config file, real reviews, real replies queued through the approval loop) | 1 to 2 sessions |
+| 7. Steps 4 to 6 | Make it right (offers checked against the cap), Menu (questions only where unsure, allergens suggested and confirmed dish by dish), Hours and FAQs | 1 to 2 sessions |
+| 8. Summary and test controls | Summary card with edit links, activation (nothing runs before step 1), gaps stored for skipped and partial steps; builder test controls (start test onboarding, reset, jump to step, delete, link my number, mark Google accepted); end-to-end tests for the milestone | 1 to 2 sessions |
 
-## 5. Conflicts and questions (need your answers before phase 1)
+### Milestone B
+| Phase | What | Rough effort |
+|---|---|---|
+| 9. Steps 7, 8, 9, 12 and the QR kit | Sales history, team and labour, rewards and cap, approvals and timing (per-restaurant brief hour), QR kit by email and WhatsApp | 2 sessions |
+| 10. Gap nudges | One nudge in the brief by priority, Do it now / Later / Not relevant, auto-dismiss after 3, gaps page in settings | 1 session |
 
-1. **Stripe is already built.** `/start` today: invite code = no card; no code = Stripe Checkout (preview) or "invite only" (live). Proposal: with `ONBOARDING_REQUIRES_PAYMENT=false` (default), `/start` always needs an invite code and never opens Stripe; the existing Stripe code stays in place, unused, behind the flag, and the later prompt flips it. Not deleted.
-2. **Logging in after sign-up.** The web chat needs a login, and today that's the emailed magic link (sign-up never logs anyone in, by an earlier decision). Proposal: after sign-up, the "You're in" screen shows "Continue on WhatsApp" straight away (WhatsApp proves the number) and "Carry on here" says "We've emailed you a link to open the chat". Alternative: log the new owner straight in on sign-up (only for a brand-new restaurant, never an existing email).
-3. **Linking WhatsApp by number.** Proposal: the first message from the sign-up number links it (WhatsApp itself verifies numbers, and Twilio's signature is checked), but only if that number isn't already an owner or staff number; the one-time code stays as a fallback for a different phone. Unknown numbers: silence, as you asked (today they get one polite reply a day; that would stop everywhere).
-4. **Accounts and memberships.** Not built, and I can't find the Oct 22 spec. Proposal: `account_id` nullable now, site manager stored as a staff member with role manager (no login), invite flow later. If you have the spec, send it and I'll match its names.
-5. **`is_test` vs `is_demo`.** Proposal: a test site is `is_test = true` and always `is_demo = true`, so every existing guard (test tools, email redirect to you, reset, clear-out) applies without new rules.
-6. **Allergens.** Today the AI suggests allergens per dish (saved as unconfirmed, never shown to customers). Your prompt says never invent them. Proposal: Dina doesn't suggest; she asks "Any dishes with nuts, gluten...?" only if the owner wants to do allergens now, otherwise all stay unknown. Or keep the unconfirmed suggestions to save typing.
-7. **Finishing without WhatsApp.** Today finishing needs the WhatsApp number linked (the brief lives there). Proposal: keep that rule; Dina asks for it at the end if they used the web only.
-8. **Brief time.** Per-restaurant brief time touches the queue's 9am gate and the 9:30 lateness alert. Proposal: allow whole hours 7am to 11am only.
-9. **Branch and pushing.** The pilot sprint pushed straight to main. Proposal for this: work on branch `onboarding-dina`, push after each phase, you merge when you're ready to test on the live site (main keeps working meanwhile, old onboarding included).
+### Milestone C (later)
+| Phase | What | Rough effort |
+|---|---|---|
+| 11. Customer list import and languages | CSV import with consent basis and double opt-in; languages and key dates | 1 to 2 sessions |
+| 12. Resume and admin view | 24h "carry on" email and WhatsApp; `/admin/onboarding` with progress, gaps, Google status and the 48h stall alert | 1 to 2 sessions |
+| 13. Retire the old onboarding | Remove the old wizard and WhatsApp flow, full test suite, CLAUDE.md | 1 session |

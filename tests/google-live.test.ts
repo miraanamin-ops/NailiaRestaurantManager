@@ -229,6 +229,34 @@ describe("which Google a restaurant uses", () => {
   });
 });
 
+describe("test sites never write to live Google", () => {
+  const makeTestSite = () => Object.assign(db.tables.restaurants.find((r) => r.id === R)!, { is_demo: true, is_test: true });
+
+  test("a linked test site counts as simulated: it reads Google, and every write is refused before Google is called", async () => {
+    makeTestSite();
+    const { google, googleFor, googleModeFor } = await import("@/lib/google");
+    expect(await googleModeFor(R)).toBe("simulated");
+    // Reading is fine (the tone step needs real reviews).
+    await google().claimNewReviews(R);
+    const review = db.tables.reviews.find((r) => r.google_review_id === "g1")!;
+    const writes = () => calls.filter((c) => c.method !== "GET" && c.path !== "/token");
+
+    await expect(google().replyToReview(R, String(review.id), "Thank you!")).rejects.toThrow(/Test sites never write to live Google/);
+    await expect(google().publishPost(R, { id: "post-1", topic: "update", text: "Lamb chops are back", photo_url: null } as never)).rejects.toThrow(/Test sites/);
+    await expect((await googleFor(R)).updateHours!(R, "job-1")).rejects.toThrow(/Test sites/);
+    await expect(google().removeReply(R, String(review.id))).rejects.toThrow(/Test sites/);
+    expect(writes()).toEqual([]);
+  });
+
+  test("a write that doesn't name its restaurant is refused", async () => {
+    const { gbp } = await import("@/lib/google/api");
+    const { getConnection } = await import("@/lib/google/connections");
+    const conn = (await getConnection(CONN))!;
+    await expect(gbp(conn, "POST", "https://mybusiness.googleapis.com/v4/accounts/1/locations/2/localPosts", {})).rejects.toThrow(/must say which restaurant/);
+    expect(calls.filter((c) => c.method === "POST" && c.path.endsWith("/localPosts"))).toEqual([]);
+  });
+});
+
 describe("reviews", () => {
   test("new Google reviews are copied in once and claimed; ones already replied to count as handled", async () => {
     const { google } = await import("@/lib/google");

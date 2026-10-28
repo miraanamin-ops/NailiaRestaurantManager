@@ -62,6 +62,9 @@ export type Restaurant = {
   morning_failed_on: string | null;
   // A demo restaurant: everything belonging to it is dummy data (step 10).
   is_demo: boolean;
+  // A test site (048; always a demo too): never emails customers or writes to
+  // live Google, whatever the switches say (lib/gate-rules.ts). Missing before 048 ran.
+  is_test?: boolean;
   // Scheduled jobs only run for active restaurants (step 11).
   active: boolean;
   // Billing (025_billing.sql, lib/billing/). Optional so older rows and test fixtures still fit.

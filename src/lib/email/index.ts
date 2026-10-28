@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { builderEmails } from "@/lib/builder-emails";
+import { redirectEmails } from "@/lib/gate-rules";
 import { emailRedirectSwitch } from "@/lib/switches";
 import type { Restaurant } from "@/lib/supabase";
 import { brandFor } from "./brand";
@@ -41,7 +42,7 @@ export async function sendCustomerEmail(input: {
 }): Promise<Delivery> {
   const { restaurant, content } = input;
   const route = routeEmail(input.to, {
-    redirect: emailRedirectSwitch(process.env).on,
+    redirect: redirectEmails(emailRedirectSwitch(process.env).on, restaurant),
     allowed: [...builderEmails(), restaurant.owner_email ?? "", ...(process.env.TEST_EMAIL_ALLOW ?? "").split(",")].filter(Boolean),
     builder: builderEmails()[0] ?? null,
     seed: input.seed,
