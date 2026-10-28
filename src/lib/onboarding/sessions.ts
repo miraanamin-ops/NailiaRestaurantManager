@@ -78,7 +78,9 @@ export async function loadFlow(restaurantId: string) {
 }
 
 // Saves one step's new state, where the owner is now, and the gaps that follow.
-async function save(restaurantId: string, key: flow.FlowStepKey, state: flow.FlowState, gaps: flow.Gap[], channel?: Channel) {
+// Where the owner is: the step they went to (focus), or else the first step not
+// dealt with yet, so going back to edit a finished step puts Dina on that step.
+async function save(restaurantId: string, key: flow.FlowStepKey, state: flow.FlowState, gaps: flow.Gap[], channel?: Channel, focus?: flow.FlowStepKey) {
   const supabase = getSupabase();
   const s = flow.stepState(state, key);
   const now = new Date().toISOString();
@@ -101,7 +103,7 @@ async function save(restaurantId: string, key: flow.FlowStepKey, state: flow.Flo
   const session = checkRow(
     await supabase
       .from("onboarding_sessions")
-      .update({ current_step: flow.currentStep(state), updated_at: now, ...(channel ? { channel_last_used: channel } : {}) })
+      .update({ current_step: focus ?? flow.currentStep(state), updated_at: now, ...(channel ? { channel_last_used: channel } : {}) })
       .eq("restaurant_id", restaurantId)
       .select("*")
       .single<Session>(),
@@ -122,13 +124,14 @@ async function save(restaurantId: string, key: flow.FlowStepKey, state: flow.Flo
 
 type Opts = { channel?: Channel; now?: Date };
 
-async function change(restaurantId: string, key: flow.FlowStepKey, opts: Opts, fn: (state: flow.FlowState, now: string) => flow.FlowState) {
+async function change(restaurantId: string, key: flow.FlowStepKey, opts: Opts, fn: (state: flow.FlowState, now: string) => flow.FlowState, focus?: flow.FlowStepKey) {
   const { state, gaps } = await loadFlow(restaurantId);
   const next = fn(state, (opts.now ?? new Date()).toISOString());
-  return save(restaurantId, key, next, gaps, opts.channel);
+  return save(restaurantId, key, next, gaps, opts.channel, focus);
 }
 
-export const enterStep = (restaurantId: string, key: flow.FlowStepKey, opts: Opts = {}) => change(restaurantId, key, opts, (s, now) => flow.enter(s, key, now));
+// Going to a step makes it the one Dina is on, even a finished one being edited.
+export const enterStep = (restaurantId: string, key: flow.FlowStepKey, opts: Opts = {}) => change(restaurantId, key, opts, (s, now) => flow.enter(s, key, now), key);
 
 export const skipStep = (restaurantId: string, key: flow.FlowStepKey, opts: Opts = {}) => change(restaurantId, key, opts, (s, now) => flow.skip(s, key, now));
 

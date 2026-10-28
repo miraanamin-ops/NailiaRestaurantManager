@@ -62,6 +62,6 @@ try {
 } finally {
   if (userId) {
     const { error } = await admin.auth.admin.deleteUser(userId);
-    error ? fail(`couldn't remove the test account ${email}: ${error.message}`) : ok("removed the test account");
+    expectThat(!error, "removed the test account", `couldn't remove the test account ${email}: ${error?.message}`);
   }
 }

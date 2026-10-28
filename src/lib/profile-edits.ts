@@ -18,6 +18,9 @@ import type { Restaurant } from "@/lib/supabase";
 export type EditableFields = ProfileFields &
   Pick<
     Restaurant,
+    // Onboarding with Dina's Hello step
+    | "name"
+    | "cuisine"
     | "logo_url"
     | "brand_color"
     | "brand_dark"
@@ -45,6 +48,8 @@ export type EditableFields = ProfileFields &
   >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
+  name: "restaurant name",
+  cuisine: "cuisine",
   opening_hours: "opening hours",
   menu: "menu",
   signup_reward: "sign-up reward",

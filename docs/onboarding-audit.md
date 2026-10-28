@@ -113,7 +113,7 @@ Sign-up, channel choice, steps 1 to 6, the summary, setup gaps stored (no nudges
 |---|---|---|
 | 1. Foundation (done) | Migration 048 (sessions, steps, chat messages, setup gaps, invite type, `is_test`, the new restaurant fields for steps 1 to 6); the 12-step state machine in pure code with unit tests (order, skips, partials, re-entry, editing a done step, waiting steps, gap creation, snooze and dismissal); `startOnboarding(siteId)`; the test-site wall (email, Google, WhatsApp) with tests; RLS and isolation tests | 1 session |
 | 2. Sign-up and entry (done) | `/start`: data processing agreement in the tick box, versions stored, invite type, `ONBOARDING_REQUIRES_PAYMENT` with the `TODO(stripe)` point; new owner logged in; "You're in" (web chat or WhatsApp with join phrase and copy button); number-match linking | 1 session |
-| 3. Dina engine | `agents/dina.md`, typed message components, write tools validated in code, Haiku step router, chat history | 2 sessions |
+| 3. Dina engine (done) | `agents/dina.md`, typed message components, write tools validated in code, Haiku step router, chat history | 2 sessions |
 | 4. Web chat | Mobile-first chat in the DinerAI style, progress bar with the step list, every message component, typing indicator | 2 sessions |
 | 5. WhatsApp adapter | Buttons, list messages (tried in the sandbox), numbered fallback, photos and files | 1 session |
 | 6. Steps 1 to 3 | Hello, Google (questions, Path A behind a flag, Path B with placeholder screenshots, email the steps, pending, simulated acceptance, 24h nudge), Tone (4 tones and your defaults in a config file, real reviews, real replies queued through the approval loop) | 1 to 2 sessions |

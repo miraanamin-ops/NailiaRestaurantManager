@@ -1,0 +1,18 @@
+{
+  "_about": "Settings for Dina, the onboarding manager (src/lib/onboarding/dina/config.ts checks them). max_tokens includes Claude's thinking, so leave room. A step with no limit of its own uses default.",
+  "model": "claude-sonnet-5-5",
+  "router_model": "claude-haiku-5-5",
+  "effort": "low",
+  "max_tool_rounds": 4,
+  "history_messages": 16,
+  "max_tokens": {
+    "default": 6000,
+    "router": 1500,
+    "hello": 6000,
+    "google": 6000,
+    "tone": 8000,
+    "make_it_right": 6000,
+    "menu": 12000,
+    "hours_faqs": 8000
+  }
+}

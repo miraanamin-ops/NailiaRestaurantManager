@@ -47,6 +47,10 @@ const SETTINGS = [
   "recovery_offers",
   "words_to_avoid",
   "emoji_allowed",
+  // Onboarding with Dina's Hello step
+  "name",
+  "cuisine",
+  "owner_name",
 ];
 
 export const GOOGLE_KINDS = ["review_reply", "google_post", "hours_update", "menu_update"];

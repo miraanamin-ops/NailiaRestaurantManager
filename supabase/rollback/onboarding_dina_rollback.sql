@@ -33,3 +33,9 @@ drop table if exists signup_sessions;
 drop index if exists onboarding_pending_whatsapp_idx;
 delete from schema_migrations where name = '049_signup_sessions.sql';
 commit;
+
+-- 050 (onboarding cost log), if it ran.
+begin;
+drop table if exists onboarding_ai_usage;
+delete from schema_migrations where name = '050_onboarding_ai_usage.sql';
+commit;
