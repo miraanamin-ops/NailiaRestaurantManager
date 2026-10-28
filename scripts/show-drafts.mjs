@@ -1,8 +1,10 @@
 // Prints drafts, feedback and the simulated sent log, newest last.
 // Usage: node --env-file=.env.local scripts/show-drafts.mjs [since ISO timestamp]
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
-const since = process.argv[2] ?? "1970-01-01";
+guardLive(process.env, "show-drafts");
+const since = withoutLiveFlag(process.argv.slice(2))[0] ?? "1970-01-01";
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 
 const [drafts, feedback, sent] = await Promise.all([

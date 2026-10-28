@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hostRoute, LIVE_APP_URL, needsLogin } from "@/lib/hosts";
+import { liveDatabaseRefusal } from "@/lib/live-guard";
 
 // Runs before every page. Two jobs:
 // 1. Which website: dinerai.co.uk shows the holding site, the old vercel.app address
@@ -21,6 +22,9 @@ export async function proxy(req: NextRequest) {
   if (route.kind === "redirect") return NextResponse.redirect(route.to, 308);
   if (route.kind === "site") return NextResponse.rewrite(new URL(route.rewrite, req.url));
   if (!needsLogin(req.nextUrl.pathname)) return NextResponse.next();
+  // On this computer: the dev project, never live by accident (lib/live-guard.ts).
+  const refusal = liveDatabaseRefusal(process.env);
+  if (refusal) return new NextResponse(refusal, { status: 503 });
 
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;

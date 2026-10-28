@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isFreshUser, scopeToSignup, sessionIdFromToken } from "@/lib/auth-rules";
 import { builderEmails } from "@/lib/builder-emails";
+import { assertNotLiveByAccident } from "@/lib/live-guard";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 
@@ -20,6 +21,7 @@ export function authConfigured() {
 
 // A Supabase client that reads and writes the login cookies of this request.
 export async function authClient() {
+  assertNotLiveByAccident();
   const store = await cookies();
   return createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     cookies: {

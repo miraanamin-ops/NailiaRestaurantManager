@@ -1,8 +1,10 @@
 // Deletes messages to/from the fake test number used by test-webhook.mjs.
 // Usage: node --env-file=.env.local scripts/clear-test-messages.mjs
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
 const TEST_NUMBER = "whatsapp:+447700900999";
+guardLive(process.env, "clear-test-messages");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const { count, error } = await supabase
   .from("messages")

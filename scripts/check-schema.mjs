@@ -3,10 +3,12 @@
 // Usage: node --env-file=.env.local scripts/check-schema.mjs
 import { readdirSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
 // Files that must wait until the matching code is live on Vercel.
 const AFTER_DEPLOY = { "010_drop_unused.sql": "run after the step 9 code is live", "028_queue_schedule.sql": "run after the job queue code is live", "037_ops_menu_guard.sql": "run after the ops-schema code is live" };
 
+guardLive(process.env, "check-schema");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const files = readdirSync(new URL("../supabase/", import.meta.url))
   .filter((f) => f.endsWith(".sql"))

@@ -11,7 +11,9 @@
 //     and prayer times, and every row marked 'synthetic' in any restaurant or shared table.
 // Usage: node --env-file=.env.local scripts/clear-dummy-data.mjs [--yes]
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
+guardLive(process.env, "clear-dummy-data");
 const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const YES = process.argv.includes("--yes");
 const TEST_NUMBER = "whatsapp:+447700900999";

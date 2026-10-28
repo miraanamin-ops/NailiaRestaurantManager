@@ -6,10 +6,12 @@
 // so a restaurant in shadow shows what it would cost live. The old assistant's own
 // calls aren't recorded per call, so they aren't in here.
 // A month with only part of it gone is also shown scaled up to a full month ("full month at this rate").
-// Note .env.local points at the LIVE database (this only reads).
+// Runs against the dev project; add --live (with the live settings file) to read live.
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
-const [slug, monthsArg] = process.argv.slice(2);
+guardLive(process.env, "agent-costs");
+const [slug, monthsArg] = withoutLiveFlag(process.argv.slice(2));
 const months = Math.max(1, Math.min(12, Number(monthsArg ?? 3) || 3));
 const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 

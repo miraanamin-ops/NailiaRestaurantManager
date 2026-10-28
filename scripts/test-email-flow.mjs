@@ -9,8 +9,10 @@
 // It removes everything it made at the end (pass --keep to look around afterwards).
 import { createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
-const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+guardLive(process.env, "test-email-flow");
+const args = withoutLiveFlag(process.argv.slice(2)).filter((a) => !a.startsWith("--"));
 const KEEP = process.argv.includes("--keep");
 const BASE = args[0] ?? "http://localhost:3000";
 const EMAIL = (args[1] ?? "delivered@resend.dev").toLowerCase();

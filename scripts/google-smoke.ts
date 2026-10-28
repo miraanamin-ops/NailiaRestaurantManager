@@ -8,6 +8,11 @@
 // linked its location on /settings/google. Plain TypeScript that Node runs as is
 // (no imports from src/, which needs Next.js).
 import { createDecipheriv } from "node:crypto";
+// @ts-expect-error: a plain .mjs helper without types
+import { guardLive } from "./lib/live-guard.mjs";
+
+// Real Google locations are linked on the live database: run it with the live settings and --live.
+guardLive(process.env, "google-smoke");
 
 const env = (k: string) => {
   const v = process.env[k];
@@ -51,8 +56,8 @@ async function step(name: string, run: () => Promise<string>) {
 }
 
 async function main() {
-  const who = process.argv[2];
-  if (!who) throw new Error("Usage: node --env-file=.env.local scripts/google-smoke.ts <restaurant slug or id>");
+  const who = process.argv.slice(2).find((a) => a !== "--live");
+  if (!who) throw new Error("Usage: node --env-file=.env.live.local scripts/google-smoke.ts <restaurant slug or id> --live");
   const filter = /^[0-9a-f-]{36}$/.test(who) ? `id=eq.${who}` : `slug=eq.${encodeURIComponent(who)}`;
   const [r] = await db<Restaurant[]>(`restaurants?${filter}&select=id,name,google_connection_id,google_account_id,google_location_id,google_location_title`);
   if (!r) throw new Error(`No restaurant ${who}`);

@@ -5,9 +5,11 @@
 // Usage: node --env-file=.env.local scripts/settings-snapshot.mjs save|test|restore <file> [restaurant slug, default ember-spice]
 import { readFileSync, writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
 const TEST_NUMBER = "whatsapp:+447700900999";
-const [mode, file, slug = "ember-spice"] = process.argv.slice(2);
+guardLive(process.env, "settings-snapshot");
+const [mode, file, slug = "ember-spice"] = withoutLiveFlag(process.argv.slice(2));
 if (!["save", "test", "restore"].includes(mode) || !file) throw new Error("Usage: save|test|restore <file>");
 const FIELDS =
   "id, discount_cap_percent, paused, paused_at, fake_now, owner_whatsapp, whatsapp_from, signup_reward, owner_email, email_test_mode, last_birthday_campaign_on, last_post_draft_on, last_brief_on, last_brief_at, brief_waiting_since, last_report_on";

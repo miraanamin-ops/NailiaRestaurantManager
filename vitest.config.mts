@@ -22,6 +22,11 @@ export default defineConfig({
     // The first test in a file also loads the app's code, which can take a few
     // seconds on a cold start (e.g. on GitHub); don't fail on that.
     testTimeout: 30_000,
+    // Several files build a whole Postgres (PGlite) in beforeAll (the queue, the
+    // queue simulation, the schema tests). On a busy machine that took over the
+    // 10 s default and failed the file before any test ran (seen on the queue tests;
+    // each passes on its own every time, so it was load, not a race).
+    hookTimeout: 120_000,
     restoreMocks: true,
   },
 });

@@ -1,7 +1,9 @@
 // Shows the draft on screen (waiting for the owner) and the queue behind it.
 // Usage: node --env-file=.env.local scripts/show-queue.mjs
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
+guardLive(process.env, "show-queue");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const { data, error } = await supabase
   .from("drafts")

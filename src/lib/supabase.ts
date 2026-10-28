@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { LIVE_APP_URL } from "@/lib/hosts";
+import { assertNotLiveByAccident } from "@/lib/live-guard";
 import { testToolsOn } from "@/lib/test-mode";
 
 // Server-side Supabase client. Uses the secret key, so it must never be
@@ -13,6 +14,8 @@ export function getSupabase() {
       "Missing SUPABASE_URL or SUPABASE_SECRET_KEY environment variable.",
     );
   }
+  // On this computer: the dev project, never live by accident (lib/live-guard.ts).
+  assertNotLiveByAccident();
   return createClient(url, key, { auth: { persistSession: false } });
 }
 

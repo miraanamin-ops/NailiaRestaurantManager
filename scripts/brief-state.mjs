@@ -1,7 +1,9 @@
 // Shows the morning-brief state: new columns present, brief/report dates, and drafts waiting.
 // Usage: node --env-file=.env.local scripts/brief-state.mjs
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
+guardLive(process.env, "brief-state");
 const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const reports = await s.from("reports").select("id, headline, created_at").order("created_at", { ascending: false }).limit(3);
 const r = await s

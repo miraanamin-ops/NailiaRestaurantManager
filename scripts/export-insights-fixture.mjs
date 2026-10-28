@@ -7,9 +7,11 @@
 // expected answers must then be checked again (npm test does that).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
+guardLive(process.env, "export-insights-fixture");
 const s = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
-const slugs = process.argv.slice(2).length ? process.argv.slice(2) : ["ember-spice", "cardamom-corner"];
+const slugs = withoutLiveFlag(process.argv.slice(2)).length ? withoutLiveFlag(process.argv.slice(2)) : ["ember-spice", "cardamom-corner"];
 const ok = (res, what) => {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
   return res.data;
