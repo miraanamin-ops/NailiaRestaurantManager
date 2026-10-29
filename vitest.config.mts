@@ -6,6 +6,8 @@ import { defineConfig } from "vitest/config";
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url)).replaceAll("\\", "/");
 
 export default defineConfig({
+  // Component tests (tests/chat/*.test.tsx, jsdom) use the automatic JSX runtime.
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: [
       { find: /^@\//, replacement: `${here("./src/")}` },
@@ -14,7 +16,7 @@ export default defineConfig({
     ],
   },
   test: {
-    include: ["tests/**/*.test.{ts,mts}"],
+    include: ["tests/**/*.test.{ts,mts,tsx}"],
     environment: "node",
     // Clears the switches Vercel's build would otherwise pass in, and answers
     // "start a queue worker" calls without the network (see the files).
