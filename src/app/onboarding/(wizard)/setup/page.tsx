@@ -5,10 +5,10 @@ import { redirect } from "next/navigation";
 import * as engine from "@/lib/onboarding/engine";
 import { placesAvailable } from "@/lib/onboarding/places";
 import { formatPrice, menuItemCount } from "@/lib/onboarding/profile-data";
-import { finishSales, finishSetup, noWebsite, pickGoogle, pickVoice, redraftVoices, saveAllergens, saveMenu, saveReplies, saveReward, saveWebsite, searchGoogle, skipStep, startMenuAgain } from "../actions";
+import { finishSales, finishSetup, noWebsite, pickGoogle, pickVoice, redraftVoices, saveAllergens, saveMenu, saveReplies, saveReward, saveWebsite, searchGoogle, skipStep, startMenuAgain } from "@/app/onboarding/actions";
 import { SalesUpload } from "./sales-upload";
-import { linkCodeFor, loadOnboarding } from "../load";
-import { button, Card, Frame, input, LinkWhatsApp, Progress, secondary, SwitchToWhatsApp } from "../ui";
+import { linkCodeFor, loadOnboarding } from "@/app/onboarding/load";
+import { button, Card, Frame, input, LinkWhatsApp, Progress, secondary, SwitchToWhatsApp } from "@/app/onboarding/ui";
 import { AllergenEditor, MenuEditor, MenuPhotos } from "./editors";
 import type { StepId } from "@/lib/onboarding/steps";
 

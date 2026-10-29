@@ -1,15 +1,21 @@
 import { DinaAvatar } from "./message-bubble";
 
-// While Dina thinks: three dots in a bubble, announced to screen readers.
-export function TypingIndicator({ label = "Dina is typing" }: { label?: string }) {
+// While Dina thinks: three dots in a bubble, announced to screen readers. While one
+// of her tools runs, a short line says what she's doing ("Saving your basics…").
+export function TypingIndicator({ status }: { status?: string | null }) {
   return (
     <div className="flex items-end gap-2" role="status" aria-live="polite">
       <DinaAvatar />
-      <span className="flex h-11 items-center gap-1.5 rounded-2xl rounded-bl-md border border-ink-700 bg-ink-850 px-4">
-        <span className="sr-only">{label}</span>
+      <span className="flex min-h-11 items-center gap-1.5 rounded-2xl rounded-bl-md border border-ink-700 bg-ink-850 px-4">
+        <span className="sr-only">{status ? `Dina: ${status}` : "Dina is typing"}</span>
         {[0, 1, 2].map((i) => (
           <span key={i} aria-hidden className="dai-typing-dot h-2 w-2 rounded-full bg-fog" style={{ animationDelay: `${i * 0.18}s` }} />
         ))}
+        {status && (
+          <span aria-hidden className="ml-2 text-[14px] text-fog">
+            {status}
+          </span>
+        )}
       </span>
     </div>
   );

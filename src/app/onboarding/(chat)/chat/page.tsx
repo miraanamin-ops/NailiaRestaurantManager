@@ -1,0 +1,24 @@
+import { PageSkeleton } from "@/components/app-shell";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { loadOnboarding } from "@/app/onboarding/load";
+import { loadChat } from "@/lib/onboarding/dina/chat";
+import { ChatClient } from "./chat-client";
+
+export const metadata: Metadata = { title: "Set up with Dina · DinerAI", robots: { index: false, follow: false } };
+
+// The web chat with Dina. Logged in, and only for the owner's own restaurant
+// (loadOnboarding). The conversation so far is drawn here; new turns stream in.
+export default function ChatPage({ searchParams }: PageProps<"/onboarding/chat">) {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Chat searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function Chat({ searchParams }: Pick<PageProps<"/onboarding/chat">, "searchParams">) {
+  const { restaurantId } = await loadOnboarding(searchParams, "/onboarding/chat");
+  const chat = await loadChat(restaurantId);
+  return <ChatClient restaurantId={restaurantId} {...chat} />;
+}

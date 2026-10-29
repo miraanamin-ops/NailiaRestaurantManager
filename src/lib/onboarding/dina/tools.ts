@@ -11,12 +11,15 @@ import { getRestaurant } from "../store";
 // owner. A step's status only ever changes here, never because Dina says so.
 // The allow-list is the tools line in agents/dina.md (checked in agent.ts).
 
-export type ToolContext = { restaurantId: string; channel: Channel };
+// onStatus: a short line for the owner while a tool runs ("Saving your basics…"), streamed by the web chat.
+export type ToolContext = { restaurantId: string; channel: Channel; onStatus?: (text: string) => void };
 export type ToolResult = { ok: true; text: string } | { ok: false; text: string };
 
 export type DinaTool<S extends z.ZodType = z.ZodType> = {
   name: string;
   description: string;
+  // What the owner sees while it runs.
+  status: string;
   schema: S;
   run: (ctx: ToolContext, input: z.infer<S>) => Promise<ToolResult>;
 };
@@ -29,6 +32,7 @@ const words = (max: number) => z.string().transform(clean).pipe(z.string().min(1
 export const TOOLS: DinaTool[] = [
   tool({
     name: "save_hello",
+    status: "Saving your basics…",
     description:
       "Save step 1 (Hello) once the owner has confirmed all five: their name, the restaurant's name, its address, its cuisine, and whether they're the owner or a manager. Only values the owner confirmed in this chat.",
     schema: z.object({
@@ -49,6 +53,7 @@ export const TOOLS: DinaTool[] = [
   }),
   tool({
     name: "skip_step",
+    status: "Noting that for later…",
     description: "Skip a step the owner wants to leave for later (only skippable steps; never Hello). It becomes a setup gap to come back to.",
     schema: z.object({ step: stepKey }),
     async run(ctx, input) {
@@ -58,6 +63,7 @@ export const TOOLS: DinaTool[] = [
   }),
   tool({
     name: "go_to_step",
+    status: "Opening that step…",
     description: "Go to a step because the owner asked to (go back, change an earlier answer, or do a skipped step now).",
     schema: z.object({ step: stepKey }),
     async run(ctx, input) {
@@ -79,6 +85,7 @@ export async function runTool(ctx: ToolContext, tools: DinaTool[], name: string,
   if (!t) return { ok: false, text: `There's no tool called ${name}.` };
   const parsed = t.schema.safeParse(input);
   if (!parsed.success) return { ok: false, text: `Not saved: ${parsed.error.issues.map((i) => `${i.path.join(".") || "input"} ${i.message}`).join("; ")}.` };
+  ctx.onStatus?.(t.status);
   try {
     return await t.run(ctx, parsed.data);
   } catch (err) {

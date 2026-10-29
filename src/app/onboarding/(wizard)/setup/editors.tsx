@@ -3,7 +3,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { MenuCategory } from "@/lib/onboarding/profile-data";
 import { UK_ALLERGENS } from "@/lib/onboarding/profile-data";
-import { readMenu, uploadMenuPhoto } from "../actions";
+import { readMenu, uploadMenuPhoto } from "@/app/onboarding/actions";
 
 const button = "block w-full rounded-xl bg-stone-900 px-4 py-4 text-center text-base font-semibold text-white disabled:opacity-50";
 const secondary = "block w-full rounded-xl bg-white px-4 py-4 text-center text-base font-semibold text-stone-900 ring-1 ring-stone-300 disabled:opacity-50";

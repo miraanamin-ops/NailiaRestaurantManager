@@ -7,9 +7,9 @@ import { STEPS } from "@/lib/onboarding/steps";
 import { testToolsOn } from "@/lib/test-mode";
 import { billingStanding } from "@/lib/billing/access";
 import { PRICE_GBP, trialDays } from "@/lib/billing/config";
-import { resetSetup, startTrial } from "./actions";
-import { loadOnboarding } from "./load";
-import { button, Card, Frame, secondary } from "./ui";
+import { resetSetup, startTrial } from "@/app/onboarding/actions";
+import { loadOnboarding } from "@/app/onboarding/load";
+import { button, Card, Frame, secondary } from "@/app/onboarding/ui";
 
 export const metadata: Metadata = { title: "Set up Naila", robots: { index: false, follow: false } };
 

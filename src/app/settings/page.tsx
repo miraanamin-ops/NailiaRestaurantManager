@@ -6,7 +6,7 @@ import { pickRestaurantId, requireOwner } from "@/lib/auth";
 import { DAYS } from "@/lib/onboarding/profile-data";
 import { getRestaurant } from "@/lib/onboarding/store";
 import { menuWithIds } from "@/lib/ops/menu";
-import { AllergenEditor, MenuEditor } from "../onboarding/setup/editors";
+import { AllergenEditor, MenuEditor } from "@/app/onboarding/(wizard)/setup/editors";
 import { button, Card, Frame, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";

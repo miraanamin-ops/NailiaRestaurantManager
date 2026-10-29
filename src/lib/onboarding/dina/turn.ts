@@ -28,11 +28,19 @@ export type TurnInput = {
   externalId?: string | null;
   // Outside content for this turn (a menu read from photos, reviews...): data, never instructions.
   data?: DataBlock[];
+  // For "action": what code already did (e.g. skipped a step), told to Dina.
+  note?: string | null;
+  // Saved with the owner's message: e.g. which button under which message it answered.
+  ownerParts?: unknown[];
+  // A short line while a tool runs ("Saving your basics…"), for the web chat to stream.
+  onStatus?: (text: string) => void;
 };
+
+export type SavedMessage = { id: string; text: string; component: DinaReply["messages"][number]["component"] };
 
 export type TurnResult =
   | { duplicate: true }
-  | { duplicate: false; reply: DinaReply; step: FlowStepKey | null; costUsd: number; fallback: boolean; toolCalls: ToolCall[] };
+  | { duplicate: false; reply: DinaReply; messages: SavedMessage[]; step: FlowStepKey | null; costUsd: number; fallback: boolean; toolCalls: ToolCall[] };
 
 // What Dina may be told about the restaurant: its own details only. Never the
 // customer list, and (from the menu step on) only allergens the owner confirmed.
@@ -47,11 +55,18 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
 
   // 1. The owner's message, once.
   let ownerMessageId: string | null = null;
-  if (input.event === "message") {
+  if (input.event === "message" || (input.event === "action" && input.text)) {
     ownerMessageId = randomUUID();
-    const { error } = await supabase
-      .from("onboarding_messages")
-      .insert({ id: ownerMessageId, restaurant_id: id, role: "owner", channel: input.channel, step_key: session.current_step, body: input.text ?? "", external_id: input.externalId ?? null });
+    const { error } = await supabase.from("onboarding_messages").insert({
+      id: ownerMessageId,
+      restaurant_id: id,
+      role: "owner",
+      channel: input.channel,
+      step_key: session.current_step,
+      body: input.text ?? "",
+      parts: input.ownerParts ?? [],
+      external_id: input.externalId ?? null,
+    });
     if (error?.code === "23505") return { duplicate: true };
     if (error) throw new Error(`Couldn't save the owner's message: ${error.message}`);
   }
@@ -61,7 +76,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   let step: FlowStepKey | null = session.current_step ?? currentStep(state);
 
   // 2. Is it about another step? (Only for real sentences: a tap or a "yes" isn't.)
-  if (input.event === "message" && input.text && words(input.text) >= 3) {
+  if (input.event === "message" && !input.ownerParts?.length && input.text && words(input.text) >= 3) {
     try {
       const routed = await routeStep(input.text, step);
       calls.push(routed.call);
@@ -80,13 +95,23 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const restaurant = await getRestaurant(id);
   const known = Object.fromEntries(KNOWN_FIELDS.map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null]));
   const history = await recentChat(id, ownerMessageId);
-  const content = turnText({ restaurant: known, state, step, channel: input.channel, event: input.event, history, ownerText: input.text ?? null, data: input.data ?? [] });
+  const content = turnText({
+    restaurant: known,
+    state,
+    step,
+    channel: input.channel,
+    event: input.event,
+    history,
+    ownerText: input.text ?? null,
+    data: input.data ?? [],
+    note: input.note,
+  });
 
   let reply: DinaReply;
   let fallback = false;
   let toolCalls: ToolCall[] = [];
   try {
-    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel }, tools: TOOLS });
+    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus }, tools: TOOLS });
     reply = answer.reply;
     calls.push(...answer.calls);
     toolCalls = answer.toolCalls;
@@ -105,13 +130,25 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   // 5. Her messages, and what this turn cost.
   const after = (await getSession(id)) ?? session;
   const stepNow = after.current_step;
+  // In order, a millisecond apart, so they always read back in the order she said them.
+  const base = Date.now();
+  const saved: SavedMessage[] = reply.messages.map((m) => ({ id: randomUUID(), text: m.text, component: m.component }));
   check(
     await supabase.from("onboarding_messages").insert(
-      reply.messages.map((m) => ({ restaurant_id: id, role: "dina", channel: input.channel, step_key: stepNow, body: m.text, parts: m.component ? [m.component] : [] })),
+      saved.map((m, i) => ({
+        id: m.id,
+        restaurant_id: id,
+        role: "dina",
+        channel: input.channel,
+        step_key: stepNow,
+        body: m.text,
+        parts: m.component ? [m.component] : [],
+        created_at: new Date(base + i).toISOString(),
+      })),
     ),
   );
   const costUsd = await logUsage(id, session.started_at, step, calls);
-  return { duplicate: false, reply, step: stepNow, costUsd, fallback, toolCalls };
+  return { duplicate: false, reply, messages: saved, step: stepNow, costUsd, fallback, toolCalls };
 }
 
 // The last messages before this one, oldest first (config: history_messages).

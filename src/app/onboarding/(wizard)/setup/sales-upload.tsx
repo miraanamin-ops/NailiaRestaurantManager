@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { importStoredSales, salesUploadTarget } from "../actions";
+import { importStoredSales, salesUploadTarget } from "@/app/onboarding/actions";
 
 // Onboarding's sales upload. A year of sales can be bigger than a normal form
 // upload allows, so the file goes from the browser straight into the restaurant's

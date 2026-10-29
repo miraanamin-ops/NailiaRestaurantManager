@@ -36,6 +36,8 @@ export function ChatLayout({
   chosen = {},
   uploadStatus = {},
   stepsOpen = false,
+  status = null,
+  error = null,
   handlers,
 }: {
   restaurantName: string;
@@ -48,6 +50,10 @@ export function ChatLayout({
   uploadStatus?: Record<string, string>;
   // The phone step list starts open (previews).
   stepsOpen?: boolean;
+  // While Dina works: what she is doing (shown next to the typing dots).
+  status?: string | null;
+  // A problem to show above the typing box (e.g. she could not be reached).
+  error?: string | null;
   handlers: ChatHandlers;
 }) {
   // The newest message in view: straight there when the chat opens, smoothly as new ones arrive.
@@ -94,12 +100,17 @@ export function ChatLayout({
             })}
             {typing && (
               <li>
-                <TypingIndicator />
+                <TypingIndicator status={status} />
               </li>
             )}
           </ol>
           <div ref={end} />
           <div className="sticky bottom-0 -mx-4 border-t border-ink-800 bg-ink-950/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-2 backdrop-blur-md">
+            {error && (
+              <p role="alert" className="mb-2 rounded-xl border border-ember/50 bg-ember/10 px-3 py-2 text-[14px] text-mist">
+                {error}
+              </p>
+            )}
             {skippable && (
               <div className="flex justify-center">
                 <SkipButton onSkip={handlers.onSkip} disabled={typing} />

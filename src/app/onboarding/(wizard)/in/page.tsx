@@ -5,8 +5,8 @@ import Link from "next/link";
 import { isSandbox, ourWhatsAppNumber, sandboxJoinPhrase } from "@/lib/onboarding/channel";
 import { CONFLICT_REASON, whatsappConflict } from "@/lib/onboarding/entry";
 import { showNumber, whatsAppLink } from "@/lib/onboarding/steps";
-import { linkCodeFor, loadOnboarding } from "../load";
-import { button, Card, Frame, LinkWhatsApp, secondary } from "../ui";
+import { linkCodeFor, loadOnboarding } from "@/app/onboarding/load";
+import { button, Card, Frame, LinkWhatsApp, secondary } from "@/app/onboarding/ui";
 import { CopyButton } from "./copy-button";
 
 export const metadata: Metadata = { title: "You're in · DinerAI", robots: { index: false, follow: false } };

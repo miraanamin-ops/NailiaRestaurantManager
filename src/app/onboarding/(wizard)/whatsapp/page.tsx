@@ -4,8 +4,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
 import { showNumber, whatsAppLink } from "@/lib/onboarding/steps";
-import { linkCodeFor, loadOnboarding } from "../load";
-import { button, Card, Frame, LinkWhatsApp, Progress } from "../ui";
+import { linkCodeFor, loadOnboarding } from "@/app/onboarding/load";
+import { button, Card, Frame, LinkWhatsApp, Progress } from "@/app/onboarding/ui";
 
 export const metadata: Metadata = { title: "Set up on WhatsApp", robots: { index: false, follow: false } };
 
