@@ -145,6 +145,15 @@ export function complete(state: FlowState, key: FlowStepKey, outcome: "done" | "
   });
 }
 
+// Keeps what the owner has said so far (e.g. a draft to show on a card for them to
+// check), without finishing anything: a step not started yet becomes in progress.
+export function note(state: FlowState, key: FlowStepKey, data: Record<string, unknown>, now: string, defs = STEP_DEFS): FlowState {
+  mustBeAvailable(key, defs);
+  const s = stepState(state, key);
+  const status = s.status === "not_started" || s.status === "skipped" ? "in_progress" : s.status;
+  return put(state, key, { ...s, status, data: { ...s.data, ...data }, startedAt: s.startedAt ?? now, skippedAt: status === "in_progress" ? null : s.skippedAt });
+}
+
 // Saved what the owner can do; the rest is up to someone else (e.g. Google).
 export function wait(state: FlowState, key: FlowStepKey, waitingOn: string, data: Record<string, unknown>, now: string, defs = STEP_DEFS): FlowState {
   mustBeAvailable(key, defs);

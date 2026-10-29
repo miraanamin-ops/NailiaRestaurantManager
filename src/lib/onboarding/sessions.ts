@@ -139,5 +139,9 @@ export const skipStep = (restaurantId: string, key: flow.FlowStepKey, opts: Opts
 export const completeStep = (restaurantId: string, key: flow.FlowStepKey, outcome: "done" | "partial", data: Record<string, unknown>, opts: Opts = {}) =>
   change(restaurantId, key, opts, (s, now) => flow.complete(s, key, outcome, data, now));
 
+// A draft of what the owner said, kept on the step (never a status change beyond "in progress").
+export const noteStep = (restaurantId: string, key: flow.FlowStepKey, data: Record<string, unknown>, opts: Opts = {}) =>
+  change(restaurantId, key, opts, (s, now) => flow.note(s, key, data, now), key);
+
 export const waitOnStep = (restaurantId: string, key: flow.FlowStepKey, waitingOn: string, data: Record<string, unknown>, opts: Opts = {}) =>
   change(restaurantId, key, opts, (s, now) => flow.wait(s, key, waitingOn, data, now));

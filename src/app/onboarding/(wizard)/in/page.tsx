@@ -2,6 +2,7 @@ import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { isSandbox, ourWhatsAppNumber, sandboxJoinPhrase } from "@/lib/onboarding/channel";
 import { CONFLICT_REASON, whatsappConflict } from "@/lib/onboarding/entry";
 import { showNumber, whatsAppLink } from "@/lib/onboarding/steps";
@@ -26,6 +27,7 @@ export default function YoureInPage({ searchParams }: PageProps<"/onboarding/in"
 const HELLO = "Hi Dina";
 
 async function YoureIn({ searchParams }: Pick<PageProps<"/onboarding/in">, "searchParams">) {
+  await connection(); // the WhatsApp code's expiry is checked against the time of each visit
   const { s, restaurantId } = await loadOnboarding(searchParams, "/onboarding/in");
   const r = s.restaurant;
   const firstName = r.owner_name?.trim().split(/\s+/)[0];

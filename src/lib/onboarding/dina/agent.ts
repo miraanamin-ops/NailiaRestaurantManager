@@ -24,6 +24,8 @@ export function dinaDefinition(text: string): DinaDefinition {
 
 let cached: DinaDefinition | null = null;
 export function loadDina(): DinaDefinition {
+  // A local copy re-reads the file each time, so edits show without a restart.
+  if (process.env.NODE_ENV === "development") cached = null;
   cached ??= dinaDefinition(readFileSync(join(process.cwd(), "agents", "dina.md"), "utf8"));
   return cached;
 }

@@ -25,6 +25,14 @@ describe("what the chat draws", () => {
     ]);
   });
 
+  test("before Hello is done the card shows what the owner has told Dina (her checked draft); afterwards only what's saved", () => {
+    const noted = { draft: { address: "45 Mile End Road, London E1 4TT", cuisine: "Halal grill", role: "owner" } };
+    const drafting = { hello: { status: "in_progress" as const, data: noted, waitingOn: null, startedAt: T, completedAt: null, skippedAt: null } };
+    expect(basicsCard({ restaurant, state: drafting }).fields.map((f) => f.value)).toEqual(["Amina Khan", "Ember & Spice Grill", "45 Mile End Road, London E1 4TT", "Halal grill", "Owner"]);
+    const done = complete(drafting, "hello", "done", { role: "owner" }, T);
+    expect(basicsCard({ restaurant: { ...restaurant, cuisine: "Grill" }, state: done }).fields.map((f) => f.value)).toEqual(["Amina Khan", "Ember & Spice Grill", "12 High Street, London E1 6AN", "Grill", "Owner"]);
+  });
+
   test("a question counts as answered once the owner has said anything after it; a tap's choice is remembered", () => {
     const rows = [
       row("d1", "dina", "Do you have a Google profile?", [{ type: "quick_replies", options: [{ id: "yes", label: "Yes" }] }]),

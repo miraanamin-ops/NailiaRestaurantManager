@@ -18,16 +18,20 @@ export type CardSources = {
   state: FlowState;
 };
 
-// "Your basics": what Hello confirms.
+// "Your basics": what Hello confirms. Until Hello is done, what the owner has said
+// so far (the draft Dina noted through her checked tool) shows over what's saved,
+// so they check what they just told her; once done, only what's saved.
 export function basicsCard({ restaurant, state }: CardSources): ConfirmationData {
-  const role = stepState(state, "hello").data.role;
+  const hello = stepState(state, "hello");
+  const draft = (hello.status === "done" ? {} : (hello.data.draft ?? {})) as Partial<Record<"owner_name" | "restaurant_name" | "address" | "cuisine" | "role", string>>;
+  const role = draft.role ?? hello.data.role;
   return {
     title: "Your basics",
     fields: [
-      { key: "owner_name", label: "Your name", value: restaurant.owner_name ?? null },
-      { key: "name", label: "Restaurant", value: restaurant.name ?? null },
-      { key: "address", label: "Address", value: restaurant.address ?? null },
-      { key: "cuisine", label: "Cuisine", value: restaurant.cuisine ?? null },
+      { key: "owner_name", label: "Your name", value: draft.owner_name ?? restaurant.owner_name ?? null },
+      { key: "name", label: "Restaurant", value: draft.restaurant_name ?? restaurant.name ?? null },
+      { key: "address", label: "Address", value: draft.address ?? restaurant.address ?? null },
+      { key: "cuisine", label: "Cuisine", value: draft.cuisine ?? restaurant.cuisine ?? null },
       { key: "role", label: "Your role", value: role === "owner" ? "Owner" : role === "manager" ? "Manager" : null },
     ],
   };

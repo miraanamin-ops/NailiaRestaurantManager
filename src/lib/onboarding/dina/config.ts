@@ -57,6 +57,7 @@ let cached: DinaConfig | null = null;
 
 // Read once per server instance (the file is bundled into every function: next.config.ts).
 export function dinaConfig(): DinaConfig {
+  if (process.env.NODE_ENV === "development") cached = null;
   cached ??= parseDinaConfig(JSON.parse(readFileSync(join(process.cwd(), "agents", "dina.config.json"), "utf8")));
   return cached;
 }

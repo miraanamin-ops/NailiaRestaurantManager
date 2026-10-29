@@ -1,6 +1,7 @@
 import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { loadOnboarding } from "@/app/onboarding/load";
 import { loadChat } from "@/lib/onboarding/dina/chat";
 import { ChatClient } from "./chat-client";
@@ -18,6 +19,7 @@ export default function ChatPage({ searchParams }: PageProps<"/onboarding/chat">
 }
 
 async function Chat({ searchParams }: Pick<PageProps<"/onboarding/chat">, "searchParams">) {
+  await connection(); // always the conversation as it is now
   const { restaurantId } = await loadOnboarding(searchParams, "/onboarding/chat");
   const chat = await loadChat(restaurantId);
   return <ChatClient restaurantId={restaurantId} {...chat} />;

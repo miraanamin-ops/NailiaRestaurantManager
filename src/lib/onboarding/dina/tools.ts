@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { saveProfileFields } from "@/lib/profile-edits";
 import { FlowError, FLOW_STEPS, isFlowStep, STEP_DEFS, type FlowStepKey } from "../flow";
-import { completeStep, enterStep, skipStep, type Channel } from "../sessions";
+import { completeStep, enterStep, loadFlow, noteStep, skipStep, type Channel } from "../sessions";
 import { getRestaurant } from "../store";
 
 // Dina's tools: the only way anything she hears is saved. Each checks its input in
@@ -30,6 +30,27 @@ const clean = (s: string) => s.replace(/\s+/g, " ").trim();
 const words = (max: number) => z.string().transform(clean).pipe(z.string().min(1, "is empty").max(max, `is longer than ${max} characters`));
 
 export const TOOLS: DinaTool[] = [
+  tool({
+    name: "note_hello",
+    status: "Noting that down…",
+    description:
+      "Note any of the Hello basics the owner has just told you (only what they said; leave the rest out). Nothing is saved for real: it fills the basics card for them to check. Call it before showing the basics card.",
+    schema: z
+      .object({
+        owner_name: words(80).optional(),
+        restaurant_name: words(80).optional(),
+        address: words(200).optional(),
+        cuisine: words(80).optional(),
+        role: z.enum(["owner", "manager"]).optional(),
+      })
+      .refine((v) => Object.values(v).some((x) => x !== undefined), { message: "has nothing to note" }),
+    async run(ctx, input) {
+      const { state } = await loadFlow(ctx.restaurantId);
+      const before = (state.hello?.data.draft ?? {}) as Record<string, unknown>;
+      await noteStep(ctx.restaurantId, "hello", { draft: { ...before, ...input } }, { channel: ctx.channel });
+      return { ok: true, text: `Noted (not saved yet): ${Object.keys(input).join(", ")}. Show the basics card so the owner can check it.` };
+    },
+  }),
   tool({
     name: "save_hello",
     status: "Saving your basics…",

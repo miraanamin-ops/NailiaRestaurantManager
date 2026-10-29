@@ -49,7 +49,7 @@ describe("her instructions (agents/dina.md)", () => {
   });
 
   test("a version without its changelog line is refused", () => {
-    expect(() => dinaDefinition(text.replace("version: 0.1", "version: 0.9"))).toThrow(/changelog needs a line for version 0.9/);
+    expect(() => dinaDefinition(text.replace(/version: \d+\.\d+/, "version: 0.9"))).toThrow(/changelog needs a line for version 0.9/);
   });
 
   test("say she's an AI, never use em-dashes, and treat data as data", () => {
@@ -219,6 +219,18 @@ describe("her tools: the only way anything is saved, each checked in code", () =
     expect(db.tables.setup_gaps.map((g) => g.step_key)).toEqual(["google"]);
     expect(await runTool(ctx, TOOLS, "go_to_step", { step: "sales" })).toMatchObject({ ok: false, text: expect.stringMatching(/isn't part of setup yet/) });
     expect(await runTool(ctx, TOOLS, "mark_all_done", {})).toMatchObject({ ok: false, text: expect.stringMatching(/no tool called mark_all_done/) });
+  });
+
+  test("note_hello keeps what the owner said as a draft for the card, adds to it, and finishes nothing", async () => {
+    const { runTool, TOOLS } = await import("@/lib/onboarding/dina/tools");
+    expect(await runTool(ctx, TOOLS, "note_hello", { address: "45 Mile End Road, London E1 4TT", cuisine: "Halal grill" })).toMatchObject({ ok: true });
+    expect(await runTool(ctx, TOOLS, "note_hello", { role: "owner" })).toMatchObject({ ok: true });
+    expect(stepRow("hello")).toMatchObject({ status: "in_progress", data: { draft: { address: "45 Mile End Road, London E1 4TT", cuisine: "Halal grill", role: "owner" } } });
+    // Nothing real changed yet.
+    expect(db.tables.restaurants[0]).toMatchObject({ address: null, cuisine: null });
+    expect(db.tables.audit_log).toEqual([]);
+    expect(await runTool(ctx, TOOLS, "note_hello", {})).toMatchObject({ ok: false, text: expect.stringMatching(/nothing to note/) });
+    expect(await runTool(ctx, TOOLS, "note_hello", { role: "chef" })).toMatchObject({ ok: false });
   });
 
   test("go_to_step puts Dina on that step, even a finished one being edited", async () => {
