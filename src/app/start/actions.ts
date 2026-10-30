@@ -80,7 +80,7 @@ export async function startSignup(form: FormData) {
     await updateRestaurantFields(restaurant.id, { ...accepted, pilot_invite_code: invite });
     await startOnboarding(restaurant.id, { channel: "web" });
     await logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: `Signed up with invite code ${invite}: straight into setup`, data: { invite } });
-    const next = `/onboarding/in?r=${restaurant.id}`;
+    const next = `/onboarding/chat?r=${restaurant.id}`;
     // A brand-new owner (no restaurant with this email before, and a login account
     // Supabase makes just now) is logged straight in, limited to this restaurant
     // (lib/auth.ts). Anyone else gets a login link by email, as before.

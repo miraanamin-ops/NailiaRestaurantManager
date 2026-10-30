@@ -204,16 +204,16 @@ describe("no paywall (ONBOARDING_REQUIRES_PAYMENT off, the default)", () => {
     expect(createTrialCheckout).not.toHaveBeenCalled();
   });
 
-  test("a brand-new owner is logged straight in and lands on 'You're in'; onboarding has started; the login email still goes", async () => {
+  test("a brand-new owner is logged straight in and lands in the chat with Dina; onboarding has started; the login email still goes", async () => {
     const to = await submit({ invite: "PILOT-ONE" });
     const r = db.tables.restaurants[0];
-    expect(to).toBe(`/onboarding/in?r=${r.id}`);
+    expect(to).toBe(`/onboarding/chat?r=${r.id}`);
     expect(startSignupSession).toHaveBeenCalledWith("aisha@grill.test", r.id);
     expect(createTrialCheckout).not.toHaveBeenCalled();
     expect(r).toMatchObject({ pilot_invite_code: "PILOT-ONE", active: false, terms_version: expect.any(String), privacy_version: expect.any(String), dpa_version: expect.any(String) });
     expect(db.tables.onboarding_sessions).toEqual([expect.objectContaining({ restaurant_id: r.id, current_step: "hello", channel_last_used: "web" })]);
     expect(db.tables.onboarding[0]).toMatchObject({ restaurant_id: r.id, pending_whatsapp: "whatsapp:+447700900123" });
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/in?r=${r.id}`, expect.any(String));
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/chat?r=${r.id}`, expect.any(String));
   });
 
   test("if Supabase already had a login for that email, no automatic login: a login link instead", async () => {
@@ -221,7 +221,7 @@ describe("no paywall (ONBOARDING_REQUIRES_PAYMENT off, the default)", () => {
     const to = await submit({ invite: "PILOT-ONE" });
     const r = db.tables.restaurants[0];
     expect(to).toBe("/start?sent=1");
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/in?r=${r.id}`, expect.any(String));
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/chat?r=${r.id}`, expect.any(String));
     expect(db.tables.onboarding_sessions).toHaveLength(1);
   });
 
@@ -230,7 +230,7 @@ describe("no paywall (ONBOARDING_REQUIRES_PAYMENT off, the default)", () => {
     db.tables.onboarding.push({ restaurant_id: ACTIVE_ID });
     expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
     expect(startSignupSession).not.toHaveBeenCalled();
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/in?r=${ACTIVE_ID}`, expect.any(String));
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/chat?r=${ACTIVE_ID}`, expect.any(String));
   });
 
   test("an email with a running restaurant only gets a login link, as before", async () => {

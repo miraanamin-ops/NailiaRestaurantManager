@@ -38,6 +38,7 @@ export function ChatLayout({
   stepsOpen = false,
   status = null,
   error = null,
+  whatsappHref = null,
   handlers,
 }: {
   restaurantName: string;
@@ -54,6 +55,8 @@ export function ChatLayout({
   status?: string | null;
   // A problem to show above the typing box (e.g. she could not be reached).
   error?: string | null;
+  // Where "Continue on WhatsApp" goes (the same setup, carried on there).
+  whatsappHref?: string | null;
   handlers: ChatHandlers;
 }) {
   // The newest message in view: straight there when the chat opens, smoothly as new ones arrive.
@@ -71,8 +74,18 @@ export function ChatLayout({
           <DinaAvatar size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-semibold leading-tight text-mist">Dina</p>
-            <p className="truncate text-[13px] text-fog">Your DinerAI manager · AI · setting up {restaurantName}</p>
+            <p className="truncate text-[13px] text-fog">Your DinerAI manager · setting up {restaurantName}</p>
           </div>
+          {whatsappHref && (
+            <a
+              href={whatsappHref}
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-ink-700 px-3 text-[14px] font-medium text-mist transition hover:border-fog focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+            >
+              <span aria-hidden className="size-2 rounded-full bg-[#25D366]" />
+              <span className="sm:hidden">WhatsApp</span>
+              <span className="hidden sm:inline">Continue on WhatsApp</span>
+            </a>
+          )}
         </div>
         <div className="mx-auto w-full max-w-5xl px-4 pb-2 lg:hidden">
           <ProgressBar progress={progress} onJump={handlers.onJump} defaultOpen={stepsOpen} />

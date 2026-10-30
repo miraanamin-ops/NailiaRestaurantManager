@@ -48,9 +48,12 @@ async function turn(event: "start" | "message", text?: string, data?: { source: 
 }
 
 describe("Dina, for real", () => {
-  test("introduces herself as an AI and starts on Hello", async () => {
+  // Owner's call (30 Oct): she doesn't announce she's an AI; she says so when asked (next test).
+  test("introduces herself straight away, without being asked, and starts on Hello", async () => {
     const out = await turn("start");
-    expect(out.reply.messages.map((m) => m.text).join(" ")).toMatch(/\bAI\b/);
+    expect(out.fallback).toBe(false);
+    expect(out.reply.messages[0].text).toMatch(/I'm Dina, your DinerAI manager/);
+    expect(out.reply.messages.map((m) => m.text).join(" ")).not.toMatch(/\bAI\b/);
   });
 
   test("asked if she's a real person, she says she's an AI", async () => {

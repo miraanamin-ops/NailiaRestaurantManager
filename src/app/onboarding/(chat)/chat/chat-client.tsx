@@ -98,6 +98,7 @@ export function ChatClient(props: {
       error={error}
       skippable={skippable}
       chosen={chosen}
+      whatsappHref={`/onboarding/in?r=${props.restaurantId}`}
       handlers={{
         onSend: (text) => void send({ kind: "message", text }, text),
         onPick: (messageId, o) => {

@@ -61,17 +61,27 @@ describe("MessageBubble, TypingIndicator and Composer", () => {
 
 describe("ChatLayout", () => {
   const messages: ChatMessage[] = [
-    { id: "m1", role: "dina", text: "Hi, I'm Dina, your DinerAI manager. I'm an AI." },
+    { id: "m1", role: "dina", text: "Hi, I'm Dina, your DinerAI manager." },
     { id: "m2", role: "dina", text: "Do you have a Google profile?", component: { type: "quick_replies", options: [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }] } },
     { id: "m3", role: "owner", text: "Yes" },
   ];
 
-  test("shows the conversation in order, with Dina's name, that she's an AI, and the progress", () => {
+  test("shows the conversation in order, with Dina's name and the progress (no 'AI' label: owner's call, 30 Oct)", () => {
     render(<ChatLayout restaurantName="Ember & Spice Grill" progress={progress} messages={messages} typing={false} skippable={false} handlers={handlers()} />);
-    expect(screen.getByText(/Your DinerAI manager · AI · setting up Ember & Spice Grill/)).toBeTruthy();
+    expect(screen.getByText("Your DinerAI manager · setting up Ember & Spice Grill")).toBeTruthy();
     const items = screen.getByRole("list", { name: "Conversation with Dina" }).querySelectorAll(":scope > li");
-    expect([...items].map((li) => li.textContent)).toEqual([expect.stringMatching(/I'm an AI/), expect.stringMatching(/Google profile\?YesNo/), "Yes"]);
+    expect([...items].map((li) => li.textContent)).toEqual([expect.stringMatching(/your DinerAI manager/), expect.stringMatching(/Google profile\?YesNo/), "Yes"]);
     expect(screen.getAllByText("Setup 2 of 6").length).toBeGreaterThan(0);
+  });
+
+  test("the header has 'Continue on WhatsApp' when there's somewhere to go, and not otherwise", () => {
+    const { unmount } = render(
+      <ChatLayout restaurantName="R" progress={progress} messages={messages} typing={false} skippable={false} whatsappHref="/onboarding/in?r=abc" handlers={handlers()} />,
+    );
+    expect(screen.getByRole("link", { name: /WhatsApp/ }).getAttribute("href")).toBe("/onboarding/in?r=abc");
+    unmount();
+    render(<ChatLayout restaurantName="R" progress={progress} messages={messages} typing={false} skippable={false} handlers={handlers()} />);
+    expect(screen.queryByRole("link", { name: /WhatsApp/ })).toBeNull();
   });
 
   test("a tap on a quick reply says which message it answered", () => {

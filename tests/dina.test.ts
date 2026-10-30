@@ -10,7 +10,7 @@ import { complete, skip } from "@/lib/onboarding/flow";
 import { dinaDefinition } from "@/lib/onboarding/dina/agent";
 import { parseDinaConfig } from "@/lib/onboarding/dina/config";
 import { asData, neutralise, turnText } from "@/lib/onboarding/dina/prompt";
-import { dinaReplyProblems, fallbackReply, type DinaReply } from "@/lib/onboarding/dina/reply";
+import { DinaReply as DinaReplyShape, dinaReplyProblems, fallbackReply, replyText, type DinaReply } from "@/lib/onboarding/dina/reply";
 import { memoryDb } from "./support/memory-db";
 
 const say = (...texts: string[]): DinaReply => ({ messages: texts.map((text) => ({ text, component: null })) });
@@ -62,7 +62,7 @@ describe("her instructions (agents/dina.md)", () => {
 
 describe("the coded checks on every reply", () => {
   test("a good reply passes", () => {
-    expect(dinaReplyProblems(say("Hi Amina, I'm Dina, your DinerAI manager. I'm an AI, and I'll get Ember & Spice Grill set up with you.", "Is your address still 12 High Street, E1 6AN?"))).toEqual([]);
+    expect(dinaReplyProblems(say("Hi Amina, I'm Dina, your DinerAI manager. I'll get Ember & Spice Grill set up with you.", "Is your address still 12 High Street, E1 6AN?"))).toEqual([]);
   });
 
   test("em-dashes and en-dashes used as dashes are caught, in text and in labels", () => {
@@ -104,10 +104,44 @@ describe("the coded checks on every reply", () => {
     expect(dinaReplyProblems(say("a".repeat(650)))).toEqual([expect.stringMatching(/650 characters/)]);
   });
 
-  test("code's fallback line passes the same checks, on every step", () => {
-    for (const step of ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs", null] as const) expect(dinaReplyProblems(fallbackReply(step))).toEqual([]);
+  test("labels and cards over their limits are problems to fix, not parse failures (the 29 Oct opening failed on one)", () => {
+    const long: DinaReply = {
+      messages: [
+        { text: "Which are you?", component: { type: "quick_replies", options: [{ id: "o", label: "I'm the owner of the place" }, { id: "m", label: "Manager" }] } },
+        { text: "Pick a tone.", component: { type: "choice_cards", cards: [{ id: "a", title: "T".repeat(41), body: "b" }, { id: "b", title: "Short", body: "b".repeat(501) }] } },
+        { text: "Send it here.", component: { type: "upload", accept: "photo", multiple: true, label: "U".repeat(41) } },
+      ],
+    };
+    // The reply still reads (so it can go back to Dina) ...
+    expect(DinaReplyShape.safeParse(long).success).toBe(true);
+    // ... and every over-long part is named.
+    expect(dinaReplyProblems(long)).toEqual([
+      expect.stringMatching(/button label "I'm the owner of the place" is 26 characters; the most is 24/),
+      expect.stringMatching(/card title .* 41 characters; the most is 40/),
+      expect.stringMatching(/card text .* 501 characters; the most is 500/),
+      expect.stringMatching(/upload label .* 41 characters; the most is 40/),
+    ]);
+  });
+
+  test("code's fallback passes the same checks, on every step and every event", () => {
+    for (const step of ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs", null] as const)
+      for (const event of [undefined, "start", "resume", "message"] as const) expect(dinaReplyProblems(fallbackReply(step, { event, ownerName: "Amina Khan", restaurantName: "Ember Grill" }))).toEqual([]);
     expect(fallbackReply("hello").messages[0].component).toBeNull(); // Hello can't be skipped
     expect(fallbackReply("menu").messages[0].component).toMatchObject({ type: "quick_replies", options: [{ id: "skip" }] });
+  });
+
+  test("arriving gets a proper hello, never an apology for something the owner didn't say", () => {
+    const hi = fallbackReply("hello", { event: "start", ownerName: "Amina Khan", restaurantName: "Ember Grill" });
+    expect(hi.messages.map((m) => m.text)).toEqual([
+      "Hi Amina, I'm Dina, your DinerAI manager. I'll get Ember Grill set up with you, and it takes about 20 minutes.",
+      "To start, are you the owner or the manager?",
+    ]);
+    expect(hi.messages[1].component).toMatchObject({ type: "quick_replies", options: [{ label: "Owner" }, { label: "Manager" }] });
+    expect(fallbackReply("hello", { event: "start" }).messages[0].text).toMatch(/^Hi, I'm Dina.*get your restaurant set up/);
+    expect(fallbackReply("menu", { event: "resume" }).messages[0].text).toMatch(/^Welcome back, it's Dina\. Let's carry on with/);
+    expect(fallbackReply("menu", { event: "start", ownerName: "Amina" }).messages[0].text).toMatch(/^Hi Amina, it's Dina/);
+    for (const event of ["start", "resume"] as const) expect(replyText(fallbackReply("hello", { event }))).not.toMatch(/Sorry/);
+    expect(fallbackReply("hello", { event: "message" }).messages[0].text).toMatch(/^Sorry, I didn't quite manage that/);
   });
 });
 
@@ -295,6 +329,17 @@ describe("the Claude loop", () => {
     expect(requests[0].model).toBe("claude-sonnet-5-5");
   });
 
+  test("a button label over the limit goes back to Dina once to shorten, instead of failing the turn", async () => {
+    const tooLong: DinaReply = { messages: [{ text: "Which are you?", component: { type: "quick_replies", options: [{ id: "o", label: "I'm the owner of the place" }] } }] };
+    const fixed: DinaReply = { messages: [{ text: "Which are you?", component: { type: "quick_replies", options: [{ id: "o", label: "Owner" }] } }] };
+    const requests = scriptClaude([final(tooLong), final(fixed)]);
+    const { callDina } = await import("@/lib/onboarding/dina/call");
+    const { TOOLS } = await import("@/lib/onboarding/dina/tools");
+    const out = await callDina({ content: "turn", step: "hello", ctx, tools: TOOLS });
+    expect(out).toMatchObject({ attempts: 2, reply: fixed });
+    expect(JSON.stringify(requests[1].messages)).toMatch(/rejected by the system.*button label/);
+  });
+
   test("two failing replies: DinaReplyError, carrying the calls so their cost still counts", async () => {
     scriptClaude([final(say("I'm a real person.")), final(say("Honestly — I am human."))]);
     const { callDina, DinaReplyError } = await import("@/lib/onboarding/dina/call");
@@ -363,18 +408,21 @@ describe("a turn", () => {
     const { DinaReplyError } = await import("@/lib/onboarding/dina/call");
     callDina.mockRejectedValue(new DinaReplyError(["em-dash"], [turnCost as never, turnCost as never], []));
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
-    const out = await dinaTurn({ restaurantId: R, channel: "web", event: "start" });
+    const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "Looks right" });
     expect(out).toMatchObject({ fallback: true, reply: { messages: [{ text: expect.stringMatching(/^Sorry, I didn't quite manage that/) }] } });
     expect(alerts).toEqual([expect.stringMatching(/Dina couldn't answer/)]);
     expect(db.tables.onboarding_ai_usage).toHaveLength(2);
   });
 
-  test("Claude can't be reached at all: still the fallback, never a crash", async () => {
+  test("Claude can't be reached when the owner arrives: they still get Dina's hello with their names, never a crash or an apology", async () => {
     mockCall();
     callDina.mockRejectedValue(new Error("connection reset"));
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
     const out = await dinaTurn({ restaurantId: R, channel: "web", event: "start" });
     expect(out).toMatchObject({ fallback: true });
-    expect(db.tables.onboarding_messages.filter((m) => m.role === "dina")).toHaveLength(1);
+    expect(db.tables.onboarding_messages.filter((m) => m.role === "dina").map((m) => m.body)).toEqual([
+      "Hi Amina, I'm Dina, your DinerAI manager. I'll get Ember Grill set up with you, and it takes about 20 minutes.",
+      "To start, are you the owner or the manager?",
+    ]);
   });
 });

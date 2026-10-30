@@ -123,7 +123,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     }
     console.error("Dina's turn failed; sending the fallback", err);
     await alertBuilder(`dina-failed:${id}`, `Dina couldn't answer during setup (${step ?? "end"}): ${err instanceof Error ? err.message : String(err)}. The owner got the fallback line.`).catch(() => {});
-    reply = fallbackReply((await getSession(id))?.current_step ?? step);
+    reply = fallbackReply((await getSession(id))?.current_step ?? step, { event: input.event, ownerName: restaurant.owner_name, restaurantName: restaurant.name });
     fallback = true;
   }
 

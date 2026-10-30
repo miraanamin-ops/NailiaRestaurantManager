@@ -10,23 +10,24 @@ import { linkCodeFor, loadOnboarding } from "@/app/onboarding/load";
 import { button, Card, Frame, LinkWhatsApp, secondary } from "@/app/onboarding/ui";
 import { CopyButton } from "./copy-button";
 
-export const metadata: Metadata = { title: "You're in · DinerAI", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Continue on WhatsApp · DinerAI", robots: { index: false, follow: false } };
 
-// Straight after sign-up: where to set up with Dina. Here in the browser, or on
-// WhatsApp (same progress, so the owner can switch later). The number given at
-// sign-up is linked by its first message; if that number is already someone
-// else's on DinerAI it's never linked automatically: the one-time code instead.
-export default function YoureInPage({ searchParams }: PageProps<"/onboarding/in">) {
+// Moving the setup chat to WhatsApp, from the button in the web chat's header
+// (sign-up opens the web chat itself: owner's call, 30 Oct). Same progress, so
+// the owner can switch back. The number given at sign-up is linked by its first
+// message; if that number is already someone else's on DinerAI it's never
+// linked automatically: the one-time code instead.
+export default function ContinueOnWhatsAppPage({ searchParams }: PageProps<"/onboarding/in">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <YoureIn searchParams={searchParams} />
+      <ContinueOnWhatsApp searchParams={searchParams} />
     </Suspense>
   );
 }
 
 const HELLO = "Hi Dina";
 
-async function YoureIn({ searchParams }: Pick<PageProps<"/onboarding/in">, "searchParams">) {
+async function ContinueOnWhatsApp({ searchParams }: Pick<PageProps<"/onboarding/in">, "searchParams">) {
   await connection(); // the WhatsApp code's expiry is checked against the time of each visit
   const { s, restaurantId } = await loadOnboarding(searchParams, "/onboarding/in");
   const r = s.restaurant;
@@ -38,23 +39,17 @@ async function YoureIn({ searchParams }: Pick<PageProps<"/onboarding/in">, "sear
 
   return (
     <Frame>
-      <h1 className="text-3xl font-bold tracking-tight">You&apos;re in{firstName ? `, ${firstName}` : ""} 🎉</h1>
+      <Link href={`/onboarding/chat?r=${restaurantId}`} className="text-sm font-medium text-stone-600 underline-offset-4 hover:underline">
+        ← Back to the chat
+      </Link>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight">Continue on WhatsApp</h1>
       <p className="mt-2 text-stone-600">
-        I&apos;m Dina, your DinerAI manager (I&apos;m an AI). Let&apos;s set up {r.name} together: about 20 minutes, one question at a time. Where would
-        you like to chat?
+        {firstName ? `${firstName}, we` : "We"} can carry on setting up {r.name} on WhatsApp, right where we are. Nothing is lost, and you can come back
+        here whenever you like.
       </p>
 
       <div className="mt-6 space-y-4">
         <Card>
-          <h2 className="text-lg font-semibold">Carry on here</h2>
-          <p className="text-sm text-stone-600">Chat with me in this browser. Good on a laptop, or if you&apos;d rather keep WhatsApp for later.</p>
-          <Link href={`/onboarding/chat?r=${restaurantId}`} className={button}>
-            Start chatting here
-          </Link>
-        </Card>
-
-        <Card>
-          <h2 className="text-lg font-semibold">Continue on WhatsApp</h2>
           {s.whatsappLinked ? (
             <>
               <p className="text-sm text-stone-600">Your WhatsApp ({showNumber(r.owner_whatsapp)}) is linked. Say hi and I&apos;ll carry on from where we are.</p>
