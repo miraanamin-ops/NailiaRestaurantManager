@@ -20,7 +20,7 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.117.3",
     "adhan": "4.4.6",
-    "next": "16.4.0",
+    "next": "16.4.3",
     "qrcode": "^1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -39,7 +39,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7"
