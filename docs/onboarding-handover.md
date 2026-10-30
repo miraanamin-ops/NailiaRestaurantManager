@@ -18,8 +18,11 @@ Read with:
 | Between 2 and 3 | Local work on the dev project by default, live only on purpose; setup-hook timeout for the PGlite test files; migrations 046 to 050 applied to dev | 8bda1dd, b9e68dc |
 | 3. Dina | `agents/dina.md` and `agents/dina.config.json`, `dinaTurn` (one turn for both channels), checked tools, coded reply checks, data kept as data, cost per run (migration 050) | c16d40b, dd0fd5d |
 | 4. Web chat | Components (each tested), the look signed off from screenshots, the streaming endpoint, the real `/onboarding/chat`, then fixes from the first real browser run on dev | b6c3adb, 80fd7a6, 6364a1d |
+| Next.js fix (30 Oct) | 16.4.0 to 16.4.3 (three advisories, one of which we were exposed to: Server Actions denial of service), on its own branch, merged to main as PR #29 and live; this branch rebased onto it | d20e626 |
+| After your browser test (30 Oct) | Sign-up goes straight into the web chat, with "Continue on WhatsApp" in its header; Dina introduces herself on her own (the opening had failed on a too-long button label); no "I'm an AI" unless asked | 255cc05 |
+| 5. WhatsApp | Dina on WhatsApp through the same turn: buttons, lists and the numbered fallback, replies read back, photos/PDF/CSV/Excel into a private bucket (16 MB, checked by content), one reply per burst of photos, linking hands over to Dina at the exact step, the sandbox check script, migration 051 | see git log |
 
-Milestone A (pilot-usable Dina) still needs phases 5 to 8: WhatsApp, steps 1 to 3 in full, steps 4 to 6, summary and test controls.
+Milestone A (pilot-usable Dina) still needs phases 6 to 8: steps 1 to 3 in full, steps 4 to 6, summary and test controls.
 
 ## 2. Every decision you made
 
@@ -94,15 +97,16 @@ Checked on live on 29 Oct (`check-schema --live`): 046 and 047 ran on 27 Oct; th
 1. `supabase/048_onboarding_dina.sql`
 2. `supabase/049_signup_sessions.sql`
 3. `supabase/050_onboarding_ai_usage.sql`
+4. `supabase/051_onboarding_uploads.sql` (phase 5: the private bucket for setup files)
 
-Rollback for all three: `supabase/rollback/onboarding_dina_rollback.sql`.
+Rollback for all of them: `supabase/rollback/onboarding_dina_rollback.sql`.
 
 ## 6. Open items
 
 - **Your own test of the web chat** (in progress): `http://localhost:3123/start?invite=TRY-DINA-2SOSX` (up to 5 sign-ups, a made-up email each time, a made-up 07700 900xxx number). Only Hello is fully built; steps 2 to 6 say they aren't ready.
 - **Next.js security upgrade**: Next.js reports a known vulnerability in 16.4.0 (live too). You haven't answered whether to run the upgrade, on its own branch.
 - **Steps 2 to 6 are placeholders**: Dina says she'll leave them, but doesn't always call `skip_step`; the "Skip for now" button always works. This goes away when phases 6 and 7 build the steps.
-- **After linking by number, WhatsApp still runs the old onboarding**: the webhook sends a restaurant with an unfinished `onboarding` row to the old WhatsApp flow. Phase 5 routes Dina sign-ups to Dina.
+- **WhatsApp sandbox check on your phone** (phase 5): run `node --env-file=.env.local scripts/whatsapp-sandbox-check.mjs +44…` from the worktree, then the switch test from web to WhatsApp. Run `supabase/051_onboarding_uploads.sql` on live before merging (dev has it).
 - **The data processing agreement is a draft** (`/dpa`): have someone qualified check it with the terms and privacy notice before the first real restaurant (also in `docs/before-launch.md`).
 - **The sandbox join phrase** isn't in the dev settings (`TWILIO_SANDBOX_JOIN`), so "You're in" on a local copy doesn't show the join step. Live has it.
 - **The login email at sign-up** goes through Supabase's built-in email: a few an hour, and only to team members on the dev project. Signing in doesn't depend on it (the owner is already logged in).

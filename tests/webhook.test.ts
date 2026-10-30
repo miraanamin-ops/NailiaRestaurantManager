@@ -150,7 +150,7 @@ describe("the WhatsApp webhook", () => {
         key: "owner_message:SMq1",
         priority: 0,
         concurrencyKey: "whatsapp:r1",
-        payload: { kind: "owner", owner: OWNER, sandbox: "whatsapp:+14155238886", body: "APPROVE ALL", buttonPayload: undefined, media: [] },
+        payload: { kind: "owner", owner: OWNER, sandbox: "whatsapp:+14155238886", body: "APPROVE ALL", buttonPayload: undefined, listId: undefined, messageSid: "SMq1", media: [] },
       },
     ]);
     expect(kicks).toBe(1);

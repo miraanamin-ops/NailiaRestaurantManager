@@ -39,3 +39,9 @@ begin;
 drop table if exists onboarding_ai_usage;
 delete from schema_migrations where name = '050_onboarding_ai_usage.sql';
 commit;
+
+-- 051 (the private bucket for setup files). Supabase doesn't let SQL delete
+-- stored files, so the bucket and anything in it stay (private, harmless).
+-- To remove them too: Supabase > Storage > onboarding-uploads > select all > Delete,
+-- then the bucket's menu > Delete bucket.
+delete from schema_migrations where name = '051_onboarding_uploads.sql';

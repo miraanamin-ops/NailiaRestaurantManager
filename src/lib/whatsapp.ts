@@ -137,6 +137,78 @@ function templateSid(kind: TemplateKind) {
   return sid;
 }
 
+// ---------- Dina's setup chat ----------
+// Her buttons and lists say different things every time, so their titles and
+// ids are variables (allowed in a live chat, no Meta approval). One template per
+// number of choices, made in the Twilio account the first time it's needed.
+// The message bodies already end with the numbered choices, so if Twilio can't
+// draw the buttons or list, the same body goes as plain text and numbers work.
+// (Drawing and reading them: lib/onboarding/dina/whatsapp.ts.)
+
+const contentSids = new Map<string, Promise<string>>();
+
+function contentSid(name: string, definition: () => Record<string, unknown>) {
+  let sid = contentSids.get(name);
+  if (!sid) {
+    sid = (async () => {
+      const client = getTwilio();
+      const existing = (await client.content.v1.contents.list({ pageSize: 100 })).find((c) => c.friendlyName === name);
+      if (existing) return existing.sid;
+      // The SDK posts this object as-is, so it uses Twilio's wire format.
+      return (await client.content.v1.contents.create({ friendly_name: name, language: "en", ...definition() } as never)).sid;
+    })().catch((err) => {
+      contentSids.delete(name); // try again next time
+      throw err;
+    });
+    contentSids.set(name, sid);
+  }
+  return sid;
+}
+
+type DinaChoices = { kind: "buttons" | "list"; body: string; button?: string; options: { id: string; title: string; description: string }[] };
+
+// Variables: buttons {{1}} body, then each button's title and id; lists {{1}} body,
+// {{2}} the menu button, then each row's title, id and description.
+function dinaTemplate(kind: "buttons" | "list", n: number) {
+  const name = `dina_${kind}_${n}_v1`;
+  return contentSid(name, () => {
+    const variables: Record<string, string> = { 1: "Which one?" };
+    const rows = Array.from({ length: n }, (_, i) => {
+      const base = kind === "buttons" ? 2 + i * 2 : 3 + i * 3;
+      variables[base] = `Option ${i + 1}`;
+      variables[base + 1] = `dina:00000000-0000-0000-0000-000000000000:o${i + 1}`;
+      if (kind === "list") variables[base + 2] = `Or reply ${i + 1}`;
+      return base;
+    });
+    if (kind === "list") variables[2] = "See the options";
+    const types =
+      kind === "buttons"
+        ? { "twilio/quick-reply": { body: "{{1}}", actions: rows.map((b) => ({ title: `{{${b}}}`, id: `{{${b + 1}}}` })) } }
+        : { "twilio/list-picker": { body: "{{1}}", button: "{{2}}", items: rows.map((b) => ({ item: `{{${b}}}`, id: `{{${b + 1}}}`, description: `{{${b + 2}}}` })) } };
+    return { variables, types: { ...types, "twilio/text": { body: "{{1}}" } } };
+  });
+}
+
+export async function sendDinaChoices(from: string, to: string, msg: DinaChoices) {
+  const body = clip(msg.body, BUTTON_BODY_MAX);
+  try {
+    const contentSid = await dinaTemplate(msg.kind, msg.options.length);
+    const vars: Record<string, string> = { 1: body };
+    msg.options.forEach((o, i) => {
+      const base = msg.kind === "buttons" ? 2 + i * 2 : 3 + i * 3;
+      vars[base] = o.title;
+      vars[base + 1] = o.id;
+      if (msg.kind === "list") vars[base + 2] = o.description;
+    });
+    if (msg.kind === "list") vars[2] = msg.button ?? "See the options";
+    const sent = await getTwilio().messages.create({ from, to, contentSid, contentVariables: JSON.stringify(vars) });
+    return { sid: sent.sid, body, usedButtons: true };
+  } catch (err) {
+    console.error(`Dina's ${msg.kind} failed, sending the numbered text instead`, err);
+    return { ...(await sendText(from, to, msg.body)), usedButtons: false };
+  }
+}
+
 // A picture (e.g. the email preview), with an optional caption. Twilio fetches it from mediaUrl, which must be public.
 export async function sendImage(from: string, to: string, mediaUrl: string, caption = "") {
   const msg = await getTwilio().messages.create({ from, to, mediaUrl: [mediaUrl], ...(caption ? { body: clip(caption, TEXT_MAX) } : {}) });

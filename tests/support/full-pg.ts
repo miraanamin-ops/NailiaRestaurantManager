@@ -26,7 +26,7 @@ export const SUPABASE_STANDINS = `
     $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
   grant usage on schema auth to anon, authenticated, service_role;
   create schema if not exists storage;
-  create table if not exists storage.buckets (id text primary key, name text, public boolean);
+  create table if not exists storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
   create schema if not exists cron;
   create table if not exists cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text);
   create table if not exists cron.job_run_details (end_time timestamptz);

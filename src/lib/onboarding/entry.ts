@@ -69,10 +69,17 @@ export async function linkSignupNumber(number: string, ourNumber: string, restau
     check(await getSupabase().from("onboarding").update({ link_code: null, link_code_expires_at: null }).eq("restaurant_id", restaurantId));
     await startOnboarding(restaurantId, { channel: "whatsapp" });
     await logAction({ restaurantId, actor: "owner", action: "setting", detail: `Linked WhatsApp ${showNumber(number)} (the number given at sign-up)` });
-    await messageOwner(
-      { restaurantId, from: ourNumber, to: number },
-      `✅ Linked! This WhatsApp is now connected to *${data.name}*. We'll carry on setting up here, or on the web whenever you like.`,
-    );
+    // Dina takes it from here: hello, or carrying on at the step they reached on the web.
+    try {
+      const { greetOnWhatsApp } = await import("./dina/whatsapp-turn");
+      await greetOnWhatsApp(restaurantId, number, ourNumber);
+    } catch (err) {
+      console.error("Dina couldn't greet a newly linked number", err);
+      await messageOwner(
+        { restaurantId, from: ourNumber, to: number },
+        `✅ Linked! This WhatsApp is now connected to *${data.name}*. We'll carry on setting up here, or on the web whenever you like.`,
+      );
+    }
   } catch (err) {
     console.error("Linking a sign-up's WhatsApp number failed", err);
   }

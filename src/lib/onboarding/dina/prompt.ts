@@ -60,5 +60,7 @@ export function turnText(input: {
         : input.event === "resume"
         ? "# Now\nThe owner is back after a break (maybe on another channel). Welcome them back in one line and carry on with the step you're on."
         : `# Now\nThe owner wrote:\n<owner_message>\n${neutralise(input.ownerText ?? "")}\n</owner_message>`,
+    // What code did alongside (e.g. linked their WhatsApp, saved the files they sent).
+    ...(input.note && input.event !== "action" ? [`# Also\n${input.note}`] : []),
   ].join("\n\n");
 }

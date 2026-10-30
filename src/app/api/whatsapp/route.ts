@@ -3,6 +3,7 @@ import twilio from "twilio";
 import { handleMessage } from "@/lib/bot";
 import { findLinkCode } from "@/lib/onboarding/steps";
 import { handleOnboardingMessage, linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
+import { dinaSetupInProgress, handleDinaWhatsApp } from "@/lib/onboarding/dina/whatsapp-turn";
 import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
 import { linkSignupNumber, pendingSignupsFor } from "@/lib/onboarding/entry";
@@ -145,7 +146,11 @@ export async function POST(req: NextRequest) {
   // slow work and sends answers as separate WhatsApp messages. Everything from
   // here on works with this one restaurant only. A restaurant still being set up
   // gets the onboarding conversation instead (decided by the worker).
-  await queueMessage({ kind: "owner", owner, sandbox, body, buttonPayload: params.ButtonPayload, media: allMedia }, restaurant.id, params.MessageSid, async () => {
+  const payload: OwnerMessagePayload = { kind: "owner", owner, sandbox, body, buttonPayload: params.ButtonPayload, listId: params.ListId, messageSid: params.MessageSid, media: allMedia };
+  await queueMessage(payload, restaurant.id, params.MessageSid, async () => {
+    if (await dinaSetupInProgress(restaurant.id)) {
+      return handleDinaWhatsApp({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, listId: params.ListId, media: allMedia, messageSid: params.MessageSid });
+    }
     if (await onboardingInProgress(restaurant.id)) {
       return handleOnboardingMessage({ restaurantId: restaurant.id, owner, sandbox, body, media: allMedia });
     }

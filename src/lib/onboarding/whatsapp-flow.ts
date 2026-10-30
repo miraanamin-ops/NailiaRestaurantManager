@@ -73,6 +73,9 @@ export async function linkFromWhatsApp(code: string, number: string, ourNumber: 
       await replyUnregistered(number, ourNumber, LINK_FAILED[result.reason], 3);
       return;
     }
+    // A restaurant setting up with Dina: she greets them at the step they're on.
+    const dina = await import("./dina/whatsapp-turn");
+    if (await dina.dinaSetupInProgress(result.restaurant.id)) return await dina.greetOnWhatsApp(result.restaurant.id, number, ourNumber);
     const ctx = channelFor(result.restaurant.id, ourNumber, number);
     await ctx.send(`✅ Linked! This WhatsApp is now connected to *${result.restaurant.name}*.`);
     if (result.onboarding.completed_at) return;

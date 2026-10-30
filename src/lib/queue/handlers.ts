@@ -42,6 +42,10 @@ export type OwnerMessagePayload = {
   sandbox: string; // our number they wrote to
   body: string;
   buttonPayload?: string;
+  // A row picked from a list message (Dina's setup chat).
+  listId?: string;
+  // Twilio's id for the message: Dina saves it, so a repeat is answered once.
+  messageSid?: string;
   media?: { url: string; contentType: string }[];
 };
 
@@ -55,7 +59,12 @@ const ownerMessage: JobHandler = {
       await handleStaffMessage({ restaurantId, staffNumber: p.owner, sandbox: p.sandbox, body: p.body, media: media[0] ?? null });
       return { handled: "staff" };
     }
-    // A restaurant still being set up gets the onboarding conversation instead.
+    // A restaurant setting up with Dina gets Dina; one on the older setup gets that.
+    const { dinaSetupInProgress, handleDinaWhatsApp } = await import("@/lib/onboarding/dina/whatsapp-turn");
+    if (await dinaSetupInProgress(restaurantId)) {
+      await handleDinaWhatsApp({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, buttonPayload: p.buttonPayload, listId: p.listId, media, messageSid: p.messageSid });
+      return { handled: "dina" };
+    }
     const { handleOnboardingMessage, onboardingInProgress } = await import("@/lib/onboarding/whatsapp-flow");
     if (await onboardingInProgress(restaurantId)) {
       await handleOnboardingMessage({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, media });
