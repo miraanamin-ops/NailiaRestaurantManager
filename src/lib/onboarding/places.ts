@@ -1,4 +1,5 @@
 import "server-only";
+import { limitKey } from "@/lib/rate-limit";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { hoursFromGoogle } from "./profile-data";
 import type { GoogleCandidate } from "./store";
@@ -14,7 +15,24 @@ export function placesAvailable() {
   return Boolean(process.env.GOOGLE_PLACES_API_KEY);
 }
 
+// Our own daily cap on Places calls, on top of Google's quotas (which are per
+// minute, and a budget only alerts): at most PLACES_DAILY_MAX a day (default
+// 100, a few dollars at most), counted in rate_limits. If the count can't be
+// read, the call isn't made: a missed pre-fill is fine, a surprise bill isn't.
+export class PlacesCapReached extends Error {}
+
+async function withinDailyCap(now = new Date()) {
+  const max = Number(process.env.PLACES_DAILY_MAX ?? 100);
+  const key = limitKey("google-places", now.toISOString().slice(0, 10));
+  const supabase = getSupabase();
+  const { count, error } = await supabase.from("rate_limits").select("id", { count: "exact", head: true }).eq("key", key);
+  if (error || (count ?? 0) >= max) return false;
+  const { error: insertError } = await supabase.from("rate_limits").insert({ key });
+  return !insertError;
+}
+
 async function places<T>(path: string, init: RequestInit & { fieldMask: string }): Promise<T> {
+  if (!(await withinDailyCap())) throw new PlacesCapReached("Google Places: today's cap is used up (PLACES_DAILY_MAX)");
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
