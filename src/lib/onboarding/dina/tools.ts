@@ -79,7 +79,20 @@ export const TOOLS: DinaTool[] = [
     schema: z.object({ step: stepKey }),
     async run(ctx, input) {
       const { session } = await skipStep(ctx.restaurantId, input.step, { channel: ctx.channel });
+      const { afterSkip } = await import("./answers");
+      await afterSkip(ctx.restaurantId, input.step);
       return { ok: true, text: `Skipped ${STEP_DEFS[input.step].title}. The next step is ${session.current_step ?? "none: every step is dealt with"}.` };
+    },
+  }),
+  tool({
+    name: "save_tone",
+    status: "Saving your tone…",
+    description:
+      "Save the owner's own reply as their tone for the good (praise) or bad (complaint) review: when they chose \"Write my own\" and typed it, or asked to change a reply they picked. Their words exactly, at least a sentence. A tap on a tone card is saved by code: don't call this for those.",
+    schema: z.object({ voice: z.enum(["praise", "complaint"]), own_reply: words(1200).refine((t) => t.split(" ").length >= 4, "is too short for a reply") }),
+    async run(ctx, input) {
+      const { saveToneChoice } = await import("./tone-step");
+      return { ok: true, text: await saveToneChoice(ctx.restaurantId, input.voice, { own: input.own_reply }, ctx.channel) };
     },
   }),
   tool({
@@ -99,12 +112,12 @@ export function toolDefinitions(tools: DinaTool[]) {
   return tools.map((t) => ({ name: t.name, description: t.description, input_schema: z.toJSONSchema(t.schema, { io: "input" }) as { type: "object" } }));
 }
 
-// Runs one tool call: unknown tools, bad input and refused actions all come back
-// as a problem for Dina, never as a crash.
 // What Claude is offered. note_hello isn't: Dina notes the basics in her reply's
 // hello_notes instead (one Claude call, not two), and code runs note_hello on them.
 export const OFFERED_TOOLS: DinaTool[] = TOOLS.filter((t) => t.name !== "note_hello");
 
+// Runs one tool call: unknown tools, bad input and refused actions all come back
+// as a problem for Dina, never as a crash.
 export async function runTool(ctx: ToolContext, tools: DinaTool[], name: string, input: unknown): Promise<ToolResult> {
   const t = tools.find((x) => x.name === name);
   if (!t) return { ok: false, text: `There's no tool called ${name}.` };

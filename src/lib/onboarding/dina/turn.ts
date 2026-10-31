@@ -9,6 +9,10 @@ import { getRestaurant } from "../store";
 import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from "./call";
 import { mightBeAnotherStep, turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
 import { fallbackReply, type DinaReply } from "./reply";
+import { applyGoogleNotes } from "./google-step";
+import { helloPlacesData } from "./hello-step";
+import { googleConnectOn } from "./setup-config";
+import { prepareToneOptions } from "./tone-step";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
 
 // One turn of the setup conversation, whichever channel it came from (the web
@@ -104,7 +108,13 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     moved ? loadFlow(id).then((f) => f.state) : Promise.resolve(state),
   ]);
   state = stateNow;
-  const known = Object.fromEntries(KNOWN_FIELDS.map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null]));
+  // Hello: Google Maps matches for the name, so she can ask "Is this you?" (when we can search).
+  const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
+  const known = {
+    ...Object.fromEntries(KNOWN_FIELDS.map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
+    // Path A: the owner can connect Google directly (google_connect) instead of the manager steps.
+    ...(googleConnectOn() ? { google_connect: "available: offer google_connect in the Google step" } : {}),
+  };
   const content = turnText({
     restaurant: known,
     state,
@@ -113,9 +123,12 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     event: input.event,
     history,
     ownerText: input.text ?? null,
-    data: input.data ?? [],
+    data: [...(input.data ?? []), ...(places ? [places] : [])],
     note: input.note,
   });
+
+  // Step 3's choices, prepared alongside her answer (the first time only: the cards need them, she doesn't).
+  const preparing = step === "tone" ? prepareToneOptions(id).catch((err) => console.error("Couldn't prepare the tone choices", err)) : null;
 
   let reply: DinaReply;
   let fallback = false;
@@ -125,12 +138,21 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     reply = answer.reply;
     calls.push(...answer.calls);
     toolCalls = answer.toolCalls;
+    // Notes only count on the step they're for, while it's the step this turn is on:
+    // a note repeated after that step is finished would otherwise put the owner back
+    // on it (the first real run of steps 2 and 3 did, 31 Oct).
     // The basics she noted with her reply: checked like a tool call, kept as a draft.
+    // (And not once her own tool finished it in this same turn.)
+    const stillOpen = async (key: FlowStepKey) => step === key && !["done", "skipped"].includes(statusOf((await loadFlow(id)).state, key));
     const notes = Object.fromEntries(Object.entries(reply.hello_notes ?? {}).filter(([, v]) => typeof v === "string" && v.trim()));
-    if (Object.keys(notes).length) {
+    if (Object.keys(notes).length && (await stillOpen("hello"))) {
       const noted = await runTool({ restaurantId: id, channel: input.channel }, TOOLS, "note_hello", notes);
       toolCalls.push({ name: "note_hello", ok: noted.ok, text: noted.text });
       if (!noted.ok) console.warn("Dina's hello notes weren't kept", noted.text);
+    }
+    // The owner's answers to the Google questions, the same way (code decides what they change).
+    if (reply.google_notes && Object.values(reply.google_notes).some(Boolean) && (await stillOpen("google"))) {
+      await applyGoogleNotes(id, reply.google_notes, input.channel).catch((err) => console.warn("Dina's Google notes weren't kept", err));
     }
   } catch (err) {
     // 4. Never leave the owner without an answer, or show an unchecked one.
@@ -142,6 +164,12 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     await alertBuilder(`dina-failed:${id}`, `Dina couldn't answer during setup (${step ?? "end"}): ${err instanceof Error ? err.message : String(err)}. The owner got the fallback line.`).catch(() => {});
     reply = fallbackReply((await getSession(id))?.current_step ?? step, { event: input.event, ownerName: restaurant.owner_name, restaurantName: restaurant.name });
     fallback = true;
+  }
+
+  await preparing;
+  // She moved on to the tone step in this reply and showed its choices: prepare them now.
+  if (!preparing && reply.messages.some((m) => m.component?.type === "tone_choices")) {
+    await prepareToneOptions(id).catch((err) => console.error("Couldn't prepare the tone choices", err));
   }
 
   // 5. Her messages, and what this turn cost.

@@ -55,6 +55,7 @@ export const keys = {
   agent: (jobKey: string) => `agent:${jobKey}`,
   health: (day: string) => `health_check:${day}:brief`,
   cleanup: (day: string) => `cleanup:${day}`,
+  setupNudges: (now: Date) => `setup_nudges:${now.toISOString().slice(0, 13)}`,
   model: (model: string, restaurantId: string, day: string) => `${model}:${restaurantId}:${day}`,
   rota: (restaurantId: string, weekStart: string) => `rota_week:${restaurantId}:${weekStart}`,
 };

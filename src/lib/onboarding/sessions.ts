@@ -145,3 +145,11 @@ export const noteStep = (restaurantId: string, key: flow.FlowStepKey, data: Reco
 
 export const waitOnStep = (restaurantId: string, key: flow.FlowStepKey, waitingOn: string, data: Record<string, unknown>, opts: Opts = {}) =>
   change(restaurantId, key, opts, (s, now) => flow.wait(s, key, waitingOn, data, now));
+
+// Adds to a step's saved data without changing its status or where the owner is
+// (e.g. when a nudge went). Only for a step that has a row already.
+export async function patchStepData(restaurantId: string, key: flow.FlowStepKey, data: Record<string, unknown>) {
+  const { state } = await loadFlow(restaurantId);
+  const merged = { ...flow.stepState(state, key).data, ...data };
+  check(await getSupabase().from("onboarding_steps").update({ data: merged, updated_at: new Date().toISOString() }).eq("restaurant_id", restaurantId).eq("step_key", key));
+}

@@ -20,9 +20,11 @@ Read with:
 | 4. Web chat | Components (each tested), the look signed off from screenshots, the streaming endpoint, the real `/onboarding/chat`, then fixes from the first real browser run on dev | b6c3adb, 80fd7a6, 6364a1d |
 | Next.js fix (30 Oct) | 16.4.0 to 16.4.3 (three advisories, one of which we were exposed to: Server Actions denial of service), on its own branch, merged to main as PR #29 and live; this branch rebased onto it | d20e626 |
 | After your browser test (30 Oct) | Sign-up goes straight into the web chat, with "Continue on WhatsApp" in its header; Dina introduces herself on her own (the opening had failed on a too-long button label); no "I'm an AI" unless asked | 255cc05 |
+| Speed (31 Oct) | One Claude call per turn (notes in the reply), the router only when needed, the hour-long cache: a WhatsApp reply's Claude time from 4 to 6 s to 1.3 to 2 s | 55a2230 |
+| 6. Steps 1 to 3 | Hello's Google Maps pre-fill; Google (three questions, steps card with screenshots, forward message, Connect Google behind a switch, invited, simulated or builder acceptance, the 24-hour nudge, email the steps); tone (config file, real reviews, replies written and checked, taps saved by code, write my own, skip = warm, queue replies as held drafts); migration 052 | see git log |
 | 5. WhatsApp | Dina on WhatsApp through the same turn: buttons, lists and the numbered fallback, replies read back, photos/PDF/CSV/Excel into a private bucket (16 MB, checked by content), one reply per burst of photos, linking hands over to Dina at the exact step, the sandbox check script, migration 051 | see git log |
 
-Milestone A (pilot-usable Dina) still needs phases 6 to 8: steps 1 to 3 in full, steps 4 to 6, summary and test controls.
+Milestone A (pilot-usable Dina) still needs phases 7 and 8: steps 4 to 6, summary and test controls.
 
 ## 2. Every decision you made
 
@@ -98,10 +100,16 @@ Checked on live on 29 Oct (`check-schema --live`): 046 and 047 ran on 27 Oct; th
 2. `supabase/049_signup_sessions.sql`
 3. `supabase/050_onboarding_ai_usage.sql`
 4. `supabase/051_onboarding_uploads.sql` (phase 5: the private bucket for setup files)
+5. `supabase/052_setup_nudges.sql` (phase 6: the hourly setup nudges job)
 
 Rollback for all of them: `supabase/rollback/onboarding_dina_rollback.sql`.
 
 ## 6. Open items
+
+- **Google screenshots**: placeholders in `public/onboarding/google/` (phone-1.png to laptop-4.png). Replace with real screenshots, same names. A short video slot is ready (`VIDEO_SLOT` in `src/lib/onboarding/dina/google-content.ts`).
+- **GOOGLE_MANAGER_EMAIL**: set it on Vercel (and in the dev settings) so the steps show our manager email; without it they fall back to the manager login's email, or say it's being set up.
+- **Marking Google accepted (real mode)**: WhatsApp `BUILDER GOOGLE ACCEPTED <link name>` until phase 8's admin page.
+- **Steps 4 to 6 aren't built**: in the real run Dina started asking "making it right" questions instead of leaving it (phase 7 builds it).
 
 - **Your own test of the web chat** (in progress): `http://localhost:3123/start?invite=TRY-DINA-2SOSX` (up to 5 sign-ups, a made-up email each time, a made-up 07700 900xxx number). Only Hello is fully built; steps 2 to 6 say they aren't ready.
 - **Next.js security upgrade**: Next.js reports a known vulnerability in 16.4.0 (live too). You haven't answered whether to run the upgrade, on its own branch.

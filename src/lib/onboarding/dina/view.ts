@@ -1,5 +1,7 @@
 import type { ChatComponent, ChatMessage, ConfirmationData, ProgressData, StepStatus, SummaryData } from "@/components/chat/types";
 import { availableSteps, gapsFor, progress, STEP_DEFS, stepState, type FlowState, type FlowStepKey } from "../flow";
+import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
+import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 
 // What the web chat draws, made from what's saved: the conversation (with which
 // question each tap answered), the step list, and the cards. Plain code, so it's
@@ -16,7 +18,21 @@ const isAnswer = (p: unknown): p is AnswerPart => typeof p === "object" && p !==
 export type CardSources = {
   restaurant: { owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null };
   state: FlowState;
+  // For the Google and tone cards (chat.ts fills these in): our manager email,
+  // where "Connect Google" goes (null while Path A is off), the tone config.
+  setup?: { managerEmail: string | null; googleConnectHref: string | null; tones: ToneConfig };
 };
+
+export const GOOGLE_ACTIONS = { invited: "invited", emailSteps: "email_steps" } as const;
+export const QUEUE_ACTIONS = { yes: "queue_yes", no: "queue_no" } as const;
+const NO_MANAGER_EMAIL = "our manager email (being set up: ask the DinerAI team)";
+
+// The review and replies the owner picks a tone from: prepared ones (real reviews)
+// kept on the tone step, else the defaults.
+export function toneOptionsFor(sources: CardSources, voice: Voice): ToneOptions | null {
+  const prepared = (stepState(sources.state, "tone").data.options as Partial<Record<Voice, ToneOptions>> | undefined)?.[voice];
+  return prepared ?? (sources.setup ? defaultOptions(sources.setup.tones, voice) : null);
+}
 
 // "Your basics": what Hello confirms. Until Hello is done, what the owner has said
 // so far (the draft Dina noted through her checked tool) shows over what's saved,
@@ -72,6 +88,37 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     return card ? { type: "confirmation", card } : null;
   }
   if (p.type === "summary") return { type: "summary", summary: summaryFrom(sources) };
+  const setup = sources.setup;
+  const email = setup?.managerEmail ?? NO_MANAGER_EMAIL;
+  if (p.type === "google_steps") {
+    const device = (part as { device?: string }).device === "laptop" ? "laptop" : "phone";
+    return {
+      type: "steps",
+      title: "Adding DinerAI on Google",
+      steps: managerSteps(device, email),
+      note: REASSURANCE,
+      video: VIDEO_SLOT[device],
+      actions: [
+        { id: GOOGLE_ACTIONS.invited, label: "Done, I've invited you", short: "Done, invited you" },
+        { id: GOOGLE_ACTIONS.emailSteps, label: "Email me these steps", short: "Email me the steps" },
+      ],
+    };
+  }
+  if (p.type === "google_forward") return { type: "forward", intro: "Forward this to whoever set up your Google profile:", text: forwardMessage(sources.restaurant.name ?? "the restaurant", email) };
+  if (p.type === "google_connect") return setup?.googleConnectHref ? { type: "link", label: "Connect Google", href: setup.googleConnectHref, hint: SIGN_IN_HINT } : null;
+  if (p.type === "tone_choices" && setup) {
+    const voice: Voice = (part as { voice?: string }).voice === "complaint" ? "complaint" : "praise";
+    const options = toneOptionsFor(sources, voice)!;
+    return { type: "choice_cards", quote: { ...options.review, real: options.real }, cards: toneCards(setup.tones, options) };
+  }
+  if (p.type === "queue_replies")
+    return {
+      type: "quick_replies",
+      options: [
+        { id: QUEUE_ACTIONS.yes, label: "Queue my replies" },
+        { id: QUEUE_ACTIONS.no, label: "No thanks" },
+      ],
+    };
   return null;
 }
 

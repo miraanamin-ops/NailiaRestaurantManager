@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { currentOwner } from "@/lib/auth";
 import { FlowError, isFlowStep, STEP_DEFS } from "@/lib/onboarding/flow";
+import { afterSkip, handleAnswer } from "@/lib/onboarding/dina/answers";
 import { chatSources } from "@/lib/onboarding/dina/chat";
 import { dinaTurn, type TurnInput } from "@/lib/onboarding/dina/turn";
 import { cardFor, chatMessage, confirmText, progressFrom, skippableNow } from "@/lib/onboarding/dina/view";
@@ -92,8 +93,11 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Omit<
     }
     case "message":
       return { event: "message", text: action.text, externalId: action.clientId };
-    case "answer":
-      return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceId }] };
+    case "answer": {
+      // Some taps are acted on by code first (Google's buttons, a tone): Dina is told what happened.
+      const note = await handleAnswer({ restaurantId: r, messageId: action.messageId, choiceId: action.choiceId, channel: "web", externalId: action.clientId });
+      return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceId }], note };
+    }
     case "confirm": {
       const sources = await chatSources(r);
       const card = cardFor("basics", sources);
@@ -104,6 +108,7 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Omit<
       const step = session?.current_step;
       if (!step) return null;
       await skipStep(r, step, { channel: "web" });
+      await afterSkip(r, step);
       return {
         event: "action",
         text: "Skip for now",

@@ -2,9 +2,10 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { sendAndLog, type OwnerChannel } from "@/lib/notify";
 import { appUrl, getSupabase } from "@/lib/supabase";
-import { sendDinaChoices, sendText } from "@/lib/whatsapp";
+import { sendDinaChoices, sendImage, sendText } from "@/lib/whatsapp";
 import { STEP_DEFS, type FlowStepKey } from "../flow";
 import { getSession, skipStep } from "../sessions";
+import { afterSkip, handleAnswer } from "./answers";
 import { chatSources } from "./chat";
 import { dinaTurn, type SavedMessage, type TurnInput } from "./turn";
 import { describeFiles, refusedText } from "./uploads";
@@ -61,6 +62,7 @@ export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
   let turn: Omit<TurnInput, "restaurantId" | "channel">;
   if (reply.kind === "skip" && step) {
     await skipStep(input.restaurantId, step, { channel: "whatsapp" });
+    await afterSkip(input.restaurantId, step);
     turn = {
       event: "action",
       text: "Skip for now",
@@ -70,7 +72,10 @@ export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
   } else if (reply.kind === "confirm") {
     turn = { event: "message", text: confirmText(cardFor("basics", sources), {}), externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: "confirm" }], note: switched };
   } else if (reply.kind === "answer") {
-    turn = { event: "message", text: reply.label, externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: reply.choiceId }], note: switched };
+    // Some taps are acted on by code first (Google's buttons, a tone): Dina is told what happened.
+    const done = await handleAnswer({ restaurantId: input.restaurantId, messageId: reply.messageId, choiceId: reply.choiceId, channel: "whatsapp", externalId });
+    const note = [done, switched].filter(Boolean).join(" ") || null;
+    turn = { event: "message", text: reply.label, externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: reply.choiceId }], note };
   } else {
     turn = { event: "message", text: reply.kind === "text" ? reply.text : input.body, externalId, note: switched };
   }
@@ -217,6 +222,7 @@ async function sendTurn(channel: OwnerChannel, messages: SavedMessage[]) {
   const outs = renderForWhatsApp(shown, {
     skippable: skippableNow(sources.focus?.current_step ?? null),
     chatUrl: `${appUrl()}/onboarding/chat?r=${channel.restaurantId}`,
+    appUrl: appUrl(),
   });
   for (const [i, out] of outs.entries()) {
     if (i) await sleep(GAP_MS);
@@ -225,5 +231,11 @@ async function sendTurn(channel: OwnerChannel, messages: SavedMessage[]) {
 }
 
 function sendOut(channel: OwnerChannel, out: WaOut) {
-  return sendAndLog(channel, () => (out.kind === "text" ? sendText(channel.from, channel.to, out.body) : sendDinaChoices(channel.from, channel.to, out)), out.body);
+  const deliver = () =>
+    out.kind !== "text"
+      ? sendDinaChoices(channel.from, channel.to, out)
+      : out.mediaUrl
+        ? sendImage(channel.from, channel.to, out.mediaUrl, out.body)
+        : sendText(channel.from, channel.to, out.body);
+  return sendAndLog(channel, deliver, out.body);
 }

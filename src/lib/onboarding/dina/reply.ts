@@ -25,6 +25,14 @@ export const Component = z.discriminatedUnion("type", [
   z.object({ type: z.literal("upload"), accept: z.enum(["photo", "document", "spreadsheet", "any"]), multiple: z.boolean(), label: z.string().min(1) }),
   z.object({ type: z.literal("editable_card"), card: z.enum(["basics", "menu", "hours", "faqs"]) }),
   z.object({ type: z.literal("summary") }),
+  // Step 2 (Google): code fills these from google-content.ts.
+  z.object({ type: z.literal("google_steps"), device: z.enum(["phone", "laptop"]) }),
+  z.object({ type: z.literal("google_forward") }),
+  z.object({ type: z.literal("google_connect") }),
+  // Step 3 (tone): one review and a reply in each tone (code: tones.ts), and the
+  // offer to queue the owner's picked replies to their real reviews.
+  z.object({ type: z.literal("tone_choices"), voice: z.enum(["praise", "complaint"]) }),
+  z.object({ type: z.literal("queue_replies") }),
 ]);
 export type Component = z.infer<typeof Component>;
 
@@ -42,7 +50,16 @@ export const HelloNotes = z
   .object({ owner_name: z.string(), restaurant_name: z.string(), address: z.string(), cuisine: z.string(), role: z.enum(["owner", "manager"]) })
   .partial();
 
-export const DinaReply = z.object({ messages: z.array(DinaMessage).min(1).max(3), hello_notes: HelloNotes.nullable().optional() });
+// google_notes: the owner's answers to the Google step's three questions, the same way.
+export const GoogleNotes = z
+  .object({ has_profile: z.enum(["yes", "no", "not_sure"]), is_owner: z.enum(["yes", "no", "not_sure"]), device: z.enum(["phone", "laptop"]) })
+  .partial();
+
+export const DinaReply = z.object({
+  messages: z.array(DinaMessage).min(1).max(3),
+  hello_notes: HelloNotes.nullable().optional(),
+  google_notes: GoogleNotes.nullable().optional(),
+});
 export type DinaReply = z.infer<typeof DinaReply>;
 
 // Every piece of text the owner would see: the messages and every label.

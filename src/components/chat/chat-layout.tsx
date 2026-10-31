@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { ChoiceCards } from "./choice-cards";
 import { Composer } from "./composer";
 import { ConfirmationCard } from "./confirmation-card";
+import { ForwardCard, LinkCard, StepsCard } from "./how-to-cards";
 import { DinaAvatar, MessageBubble } from "./message-bubble";
 import { ProgressBar } from "./progress-bar";
 import { QuickReplies } from "./quick-replies";
@@ -79,7 +80,7 @@ export function ChatLayout({
           {whatsappHref && (
             <a
               href={whatsappHref}
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-ink-700 px-3 text-[14px] font-medium text-mist transition hover:border-fog focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember"
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-ink-700 px-3 text-[14px] font-medium text-mist transition hover:border-fog focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
             >
               <span aria-hidden className="size-2 rounded-full bg-[#25D366]" />
               <span className="sm:hidden">WhatsApp</span>
@@ -144,12 +145,29 @@ function Component({ message, chosen, uploadStatus, handlers }: { message: ChatM
     case "quick_replies":
       return <QuickReplies options={c.options} disabled={done} chosenId={chosen} onPick={(o) => handlers.onPick(message.id, o)} />;
     case "choice_cards":
-      return <ChoiceCards cards={c.cards} disabled={done} chosenId={chosen} onPick={(card) => handlers.onChoose(message.id, card)} />;
+      return <ChoiceCards cards={c.cards} quote={c.quote} disabled={done} chosenId={chosen} onPick={(card) => handlers.onChoose(message.id, card)} />;
     case "upload":
       return <UploadCard accept={c.accept} multiple={c.multiple} label={c.label} disabled={done} status={uploadStatus} onFiles={(f) => handlers.onFiles(message.id, f)} />;
     case "confirmation":
       return <ConfirmationCard card={c.card} disabled={done} onConfirm={(ch) => handlers.onConfirm(message.id, ch)} />;
     case "summary":
       return <SummaryCard summary={c.summary} />;
+    case "steps":
+      return (
+        <StepsCard
+          title={c.title}
+          steps={c.steps}
+          note={c.note}
+          video={c.video}
+          actions={c.actions}
+          disabled={done}
+          chosenId={chosen}
+          onAction={(o) => handlers.onPick(message.id, o)}
+        />
+      );
+    case "forward":
+      return <ForwardCard intro={c.intro} text={c.text} />;
+    case "link":
+      return <LinkCard label={c.label} href={c.href} hint={c.hint} />;
   }
 }

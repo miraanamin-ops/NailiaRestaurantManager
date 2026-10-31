@@ -164,6 +164,17 @@ const healthCheck: JobHandler = {
   },
 };
 
+// Hourly: nudges for restaurants still setting up with Dina (the 24-hour Google nudge).
+const setupNudges: JobHandler = {
+  run: async () => {
+    const { runGoogleNudges } = await import("@/lib/onboarding/dina/google-step");
+    const google = await runGoogleNudges(new Date());
+    const failed = google.filter((g) => g.error);
+    if (failed.length) await alertBuilder("setup-nudges-failed", `${failed.length} setup nudge(s) failed: ${failed.map((f) => f.error).join("; ").slice(0, 300)}`);
+    return { google };
+  },
+};
+
 // Daily: old finished and dead jobs (lib/queue/config.ts RETENTION).
 const cleanupJob: JobHandler = {
   run: async () => ({ removed: await cleanup(), feedCache: await clearFeedCache() }),
@@ -193,6 +204,7 @@ export const HANDLERS: Record<string, JobHandler> = {
   weather,
   health_check: healthCheck,
   cleanup: cleanupJob,
+  setup_nudges: setupNudges,
   ...FEED_JOB_HANDLERS,
   feed_backfill: backfillJob,
 };

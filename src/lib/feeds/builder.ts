@@ -153,6 +153,18 @@ export async function handleBuilderCommand(body: string, now = new Date()): Prom
       const changes = await confirmDate(row.id, day, "builder (WhatsApp)");
       return `✅ ${row.name}${row.authority ? ` (${AUTHORITY_LABEL[row.authority as Authority]})` : ""} confirmed for ${day}.${changes.length > 1 ? ` Also moved: ${changes.slice(1).map((c) => `${c.name} to ${c.after}`).join(", ")}.` : ""} The 07:00 forecast refresh uses it.`;
     }
+    case "google_accepted": {
+      const { getSupabase } = await import("@/lib/supabase");
+      const q = cmd.restaurant;
+      const bySlug = await getSupabase().from("restaurants").select("id, name, slug").eq("slug", q.toLowerCase()).returns<{ id: string; name: string; slug: string }[]>();
+      const found = bySlug.data?.length ? bySlug.data : ((await getSupabase().from("restaurants").select("id, name, slug").ilike("name", q.replace(/[%_]/g, "")).returns<{ id: string; name: string; slug: string }[]>()).data ?? []);
+      if (!found.length) return `I can't find a restaurant called "${q}". Use its link name (e.g. ember-spice) or its exact name.`;
+      if (found.length > 1) return `More than one restaurant is called "${q}": use its link name (${found.map((f) => f.slug).join(", ")}).`;
+      const { markGoogleAccepted } = await import("@/lib/onboarding/dina/google-step");
+      const text = await markGoogleAccepted(found[0].id, { by: "builder" });
+      await log(`BUILDER GOOGLE ACCEPTED ${found[0].name}`, { restaurant: found[0].id });
+      return `✅ ${found[0].name}: Google step done. Dina told the owner: "${text}"`;
+    }
     default:
       await log("BUILDER (not understood)");
       return `I didn't understand that builder command.\n\n${BUILDER_HELP}`;

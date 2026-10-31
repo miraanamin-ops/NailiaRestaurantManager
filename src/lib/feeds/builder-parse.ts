@@ -10,6 +10,8 @@
 //   BUILDER RAMADAN STARTS WEDNESDAY       named), Ramadan's start, Diwali; for the East
 //   BUILDER DIWALI CONFIRMED 8 NOV         London Mosque unless "UK" / "UK MOONSIGHTING"
 //   BUILDER EID CONFIRMED TUE UK           says otherwise
+//   BUILDER GOOGLE ACCEPTED ember-spice    Google accepted our manager invite for a
+//                                          restaurant setting up (its link name, or its name)
 
 export type ConfirmKind = "eid" | "eid_fitr" | "eid_adha" | "ramadan" | "diwali";
 export type DateWord = { kind: "weekday"; weekday: number } | { kind: "relative"; days: number } | { kind: "date"; day: number; month: number; year: number | null };
@@ -19,6 +21,7 @@ export type BuilderCommand =
   | { kind: "feeds" }
   | { kind: "run"; feed: string }
   | { kind: "confirm"; what: ConfirmKind; date: DateWord; authority: "east-london-mosque" | "uk-moonsighting" }
+  | { kind: "google_accepted"; restaurant: string }
   | { kind: "unknown"; text: string };
 
 export const BUILDER_PREFIX = /^\s*builder\b[:\s]*/i;
@@ -58,6 +61,8 @@ export function parseBuilderCommand(body: string): BuilderCommand {
   const t = text.toLowerCase().replace(/\s+/g, " ").trim();
   if (!t || t === "help" || t === "?") return { kind: "help" };
   if (t === "feeds" || t === "feed" || t === "status") return { kind: "feeds" };
+  const accepted = text.match(/^google (?:invite )?accepted(?: for)?\s+(.+)$/i);
+  if (accepted) return { kind: "google_accepted", restaurant: accepted[1].trim() };
   const run = t.match(/^run (\w+)$/);
   if (run) return FEEDS[run[1]] ? { kind: "run", feed: FEEDS[run[1]] } : { kind: "unknown", text };
 
@@ -106,4 +111,5 @@ export const BUILDER_HELP = [
   "FEEDS: each outside data feed's last success and any problem",
   "RUN WEATHER (or CALENDAR, PRAYER, FOOTBALL, EVENTS, DISRUPTION, TERMS, ALL): run a feed now",
   "EID CONFIRMED FOR TUESDAY: confirm the next Eid's date (also EID AL-ADHA, RAMADAN STARTS, DIWALI; add UK for UK moon sighting)",
+  "GOOGLE ACCEPTED ember-spice: Google accepted our manager invite for a restaurant setting up (its link name or its name)",
 ].join("\n");

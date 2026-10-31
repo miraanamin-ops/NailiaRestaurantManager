@@ -12,7 +12,7 @@ import { payloadFor, readWhatsAppReply, renderForWhatsApp, WA } from "@/lib/onbo
 import { memoryDb } from "./support/memory-db";
 
 const M1 = "11111111-1111-4111-8111-111111111111";
-const opts = { skippable: false, chatUrl: "https://app.test/onboarding/chat?r=x" };
+const opts = { skippable: false, chatUrl: "https://app.test/onboarding/chat?r=x", appUrl: "https://app.test" };
 const dina = (text: string, component: ChatMessage["component"] = null, id = M1): ChatMessage => ({ id, role: "dina", text, component });
 const quick = (...labels: string[]) => ({ type: "quick_replies" as const, options: labels.map((label, i) => ({ id: `o${i + 1}`, label })) });
 

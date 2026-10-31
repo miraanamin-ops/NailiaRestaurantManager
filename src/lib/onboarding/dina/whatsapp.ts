@@ -18,7 +18,8 @@ export const WA = { buttons: 3, buttonTitle: 20, rows: 10, rowTitle: 24, rowDesc
 
 export type WaOption = { id: string; title: string; description: string };
 export type WaOut =
-  | { kind: "text"; body: string }
+  // mediaUrl: a picture sent with the text (a screenshot), from our public address.
+  | { kind: "text"; body: string; mediaUrl?: string }
   | { kind: "buttons"; body: string; options: WaOption[] }
   | { kind: "list"; body: string; button: string; options: WaOption[] };
 
@@ -35,8 +36,9 @@ type Choice = { id: string; label: string; description?: string };
 // The choices a message offers, in order (a confirmation card's are its two buttons).
 export function choicesOf(c: ChatComponent | null | undefined): Choice[] {
   if (!c) return [];
-  if (c.type === "quick_replies") return c.options.map((o) => ({ id: o.id, label: o.label }));
-  if (c.type === "choice_cards") return c.cards.map((card) => ({ id: card.id, label: card.title, description: card.body }));
+  if (c.type === "quick_replies") return c.options.map((o) => ({ id: o.id, label: o.short ?? o.label }));
+  if (c.type === "choice_cards") return c.cards.map((card) => ({ id: card.id, label: card.short ?? card.title, description: card.body }));
+  if (c.type === "steps") return c.actions.map((a) => ({ id: a.id, label: a.short ?? a.label }));
   if (c.type === "confirmation")
     return [
       { id: "confirm", label: "Looks right" },
@@ -78,7 +80,9 @@ const UPLOAD_HOW: Record<Extract<ChatComponent, { type: "upload" }>["accept"], s
 
 // Dina's messages from one turn, as WhatsApp messages. skippable: the step she's
 // on can be skipped, so the last question also offers "Skip for now".
-export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: boolean; chatUrl: string }): WaOut[] {
+// appUrl: our public address, for screenshots and links (Twilio fetches pictures from it).
+export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: boolean; chatUrl: string; appUrl: string }): WaOut[] {
+  const abs = (path: string) => (/^https?:\/\//.test(path) ? path : `${opts.appUrl}${path}`);
   const out: WaOut[] = [];
   const lastAsking = [...messages].reverse().find((m) => choicesOf(m.component).length);
   const lastAskingIndex = lastAsking ? messages.indexOf(lastAsking) : -1;
@@ -94,8 +98,27 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
     if (c?.type === "choice_cards") {
       // One card per message (never a wall of text), then the choice itself.
       if (m.text) out.push({ kind: "text", body: clip(m.text, WA.text) });
+      if (c.quote) {
+        const stars = "★".repeat(c.quote.rating) + "☆".repeat(5 - c.quote.rating);
+        const typical = c.quote.real ? "" : "\n\n_A typical review, to set your tone._";
+        out.push({ kind: "text", body: clip(`*${c.quote.author}* ${stars}\n"${c.quote.text}"${typical}`, WA.text) });
+      }
       c.cards.forEach((card, n) => out.push({ kind: "text", body: clip(`*${n + 1}. ${card.title}*\n${card.body}`, WA.text) }));
       out.push(withChoices("Which one?", m.id, choices));
+    } else if (c?.type === "steps") {
+      // Each step on its own with its screenshot, then the buttons.
+      if (m.text) out.push({ kind: "text", body: clip(m.text, WA.text) });
+      for (const st of c.steps) out.push({ kind: "text", body: clip(`*${st.n}.* ${st.text}`, WA.text), mediaUrl: abs(st.image) });
+      // The email on its own too, so it's easy to copy.
+      for (const st of c.steps) if (st.copy) out.push({ kind: "text", body: st.copy });
+      out.push(withChoices(`${c.note}\n\nTell me when it's done.`, m.id, choices));
+    } else if (c?.type === "forward") {
+      // The message alone, so it can be forwarded as it is.
+      out.push({ kind: "text", body: clip(`${m.text}\n\n${c.intro}`, WA.text) });
+      out.push({ kind: "text", body: clip(c.text, WA.text) });
+    } else if (c?.type === "link") {
+      const hint = c.hint ? `\n\n${c.hint}` : "";
+      out.push({ kind: "text", body: clip(`${m.text}${hint}\n\n${c.label}: ${abs(c.href)}`, WA.text) });
     } else if (c?.type === "confirmation") {
       const rows = c.card.fields.map((f) => `${f.label}: ${f.value?.trim() ? f.value : "not given yet"}`).join("\n");
       out.push(withChoices(`${m.text}\n\n*${c.card.title}*\n${rows}`, m.id, choices));
