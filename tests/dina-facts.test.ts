@@ -6,7 +6,7 @@
 // to customers or Dina), and hours and FAQs (halal only in the owner's words),
 // plus files from the web chat. Claude is a stand-in.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { allergenProgress, dishKey, faqsLeft, hoursCard, hoursFromNotes, menuCard, nextAllergenDish, offerProblems } from "@/lib/onboarding/dina/facts-content";
+import { allergenProgress, dishKey, faqGapLine, faqsLeft, hoursCard, hoursFromNotes, menuCard, nextAllergenDish, offerProblems } from "@/lib/onboarding/dina/facts-content";
 import { stepDataForPrompt } from "@/lib/onboarding/dina/prompt";
 import { dinaReplyProblems } from "@/lib/onboarding/dina/reply";
 import { renderForWhatsApp } from "@/lib/onboarding/dina/whatsapp";
@@ -54,6 +54,10 @@ describe("the rules", () => {
 
   test("seven common questions; the ones left", () => {
     expect(faqsLeft({ halal: "Yes, HMC certified", parking: "(not answered)" }).map((t) => t.id)).toEqual(["delivery", "bookings", "accessibility", "kids", "private_hire"]);
+    // Passed-on questions become one setup gap line; none passed on, no gap.
+    expect(faqGapLine({ halal: "Yes", parking: "(not answered)" })).toBe("Tell me about parking and I'll answer that question for your customers.");
+    expect(faqGapLine({ parking: "(not answered)", kids: "(not answered)", private_hire: " (not answered) " })).toBe("Tell me about parking, children and private hire and I'll answer those questions for your customers.");
+    expect(faqGapLine({ halal: "Yes", parking: "Car park" })).toBeNull();
   });
 
   test("Dina sees the draft menu as a count and its sections: no dishes, no allergen guesses", () => {
@@ -269,8 +273,20 @@ describe("step 6, hours and FAQs", () => {
       answer([{ text: "Thanks, that's everything." }], { faq_notes: { parking: "Free car park behind us", delivery: "Deliveroo and collection", bookings: "(not answered)", accessibility: "Step-free", kids: "High chairs", private_hire: "Upstairs room for 30" } }),
     );
     await turn("parking behind, deliveroo, step free, high chairs, room upstairs for 30");
-    expect(step("hours_faqs")?.status).toBe("done");
     expect(Object.keys(r().faqs)).toHaveLength(7);
+
+    // Bookings was passed on: the step is half done, and a setup gap asks for it later.
+    expect(step("hours_faqs")?.status).toBe("partial");
+    const gap = () => (db.tables.setup_gaps as { step_key: string; unlock_text: string; resolved_at: string | null }[]).find((g) => g.step_key === "hours_faqs");
+    expect(gap()).toMatchObject({ unlock_text: "Tell me about bookings and I'll answer that question for your customers." });
+    expect(gap()?.resolved_at).toBeFalsy();
+
+    // Later ("Do it now" on the gap), they answer it: the step is done and the gap closed.
+    onStep("hours_faqs");
+    callDina.mockResolvedValueOnce(answer([{ text: "Lovely, thanks." }], { faq_notes: { bookings: "Phone or walk in" } }));
+    await turn("we take bookings by phone, walk-ins welcome");
+    expect(step("hours_faqs")?.status).toBe("done");
+    expect(gap()?.resolved_at).toBeTruthy();
   });
 
   test("an unclear day isn't saved; notes after the step is finished change nothing", async () => {

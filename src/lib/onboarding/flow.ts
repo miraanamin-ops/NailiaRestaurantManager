@@ -197,21 +197,32 @@ export type Gap = {
 export const MAX_IGNORED_NUDGES = 3;
 export const SNOOZE_DAYS = 7;
 
-// Every skipped or half-done step is a gap, with its unlock line.
+// Every skipped or half-done step is a gap, with its unlock line. A half-done
+// step can name what is still missing in its data (gap_unlock, set by code),
+// e.g. the common questions the owner didn't answer.
 export function gapsFor(state: FlowState, defs = STEP_DEFS) {
   return availableSteps(defs)
     .filter((k) => defs[k].unlock && ["skipped", "partial"].includes(statusOf(state, k)))
-    .map((k) => ({ step_key: k, unlock_text: defs[k].unlock! }));
+    .map((k) => {
+      const own = stepState(state, k).data.gap_unlock;
+      return { step_key: k, unlock_text: statusOf(state, k) === "partial" && typeof own === "string" && own.trim() ? own : defs[k].unlock! };
+    });
 }
 
 // What to change in the saved gaps after a step changed: new gaps to add, and
-// open gaps whose step is now done (or is being done again) to close. A gap the
-// owner dismissed stays dismissed; skipping the same step again doesn't bring it back.
-export function syncGaps(saved: Pick<Gap, "id" | "step_key" | "resolved_at">[], state: FlowState, defs = STEP_DEFS) {
-  const wanted = new Set<string>(gapsFor(state, defs).map((g) => g.step_key));
+// open gaps whose step is now done (or is being done again) to close, and gaps
+// whose unlock line changed (fewer questions left). A gap the owner dismissed
+// stays dismissed; skipping the same step again doesn't bring it back.
+export function syncGaps(saved: Pick<Gap, "id" | "step_key" | "resolved_at" | "unlock_text">[], state: FlowState, defs = STEP_DEFS) {
+  const gaps = gapsFor(state, defs);
+  const wanted = new Set<string>(gaps.map((g) => g.step_key));
   const byStep = new Map(saved.map((g) => [g.step_key, g]));
   return {
-    add: gapsFor(state, defs).filter((g) => !byStep.has(g.step_key)),
+    add: gaps.filter((g) => !byStep.has(g.step_key)),
+    retext: gaps.flatMap((g) => {
+      const old = byStep.get(g.step_key);
+      return old && old.unlock_text !== g.unlock_text ? [{ id: old.id, unlock_text: g.unlock_text }] : [];
+    }),
     reopen: saved.filter((g) => g.resolved_at && wanted.has(g.step_key)).map((g) => g.id),
     resolve: saved.filter((g) => !g.resolved_at && !wanted.has(g.step_key)).map((g) => g.id),
   };

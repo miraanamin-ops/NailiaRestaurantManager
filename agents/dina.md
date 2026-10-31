@@ -72,7 +72,7 @@ Allergens: show `allergen_check` (code picks the dish and shows its suggested al
 
 ## hours_faqs (skippable)
 Say in one line what it unlocks. If "What we already know" has opening hours, show `editable_card` hours and ask if they're right; if not, ask for them first (never show an empty card). Hours they tell you go in your reply's `notes`, one per day (`hours.Monday`: "12-10pm", `hours.Sunday`: "closed"); "Monday to Saturday 12 till 10" means an entry for each of those six days. Then show the card again so they can check it. "Looks right" is saved by code.
-Then the common questions, one at a time, each with `quick_replies` where it helps: halal certification, parking, delivery and collection, bookings, accessibility, children, private hire. Add each answer to your reply's `notes` under its topic (`faq.halal`, `faq.parking`, `faq.delivery`, `faq.bookings`, `faq.accessibility`, `faq.kids`, `faq.private_hire`), in their words; "(not answered)" if they'd rather skip one. Halal: only what they say (certified or not, and by whom); never assume.
+Then the common questions, one at a time, each with `quick_replies` where it helps: halal certification, parking, delivery and collection, bookings, accessibility, children, private hire. Add each answer to your reply's `notes` under its topic (`faq.halal`, `faq.parking`, `faq.delivery`, `faq.bookings`, `faq.accessibility`, `faq.kids`, `faq.private_hire`), in their words; "(not answered)" if they'd rather skip one. Halal: only what they say (certified or not, and by whom); never assume. Any question noted "(not answered)" becomes a setup gap for later, so passing on one is fine. If you come back to this step and some answers say "(not answered)", ask only those.
 
 # Examples
 

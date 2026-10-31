@@ -4,7 +4,7 @@ import { stepState } from "../flow";
 import type { Hours } from "../profile-data";
 import { completeStep, loadFlow, noteStep, type Channel } from "../sessions";
 import { getRestaurant } from "../store";
-import { FAQ_IDS, FAQ_SKIPPED, faqsLeft, hoursFromNotes, offerProblems } from "./facts-content";
+import { FAQ_IDS, FAQ_SKIPPED, faqGapLine, faqsLeft, hoursFromNotes, offerProblems } from "./facts-content";
 
 // Steps 4 and 6: what's saved, checked in code. Dina asks; these save.
 //   4. save_make_it_right (her tool): the offers (none over the discount cap) and
@@ -12,7 +12,8 @@ import { FAQ_IDS, FAQ_SKIPPED, faqsLeft, hoursFromNotes, offerProblems } from ".
 //   6. her hours_notes -> a draft for the hours card; "Looks right" saves the
 //      hours; her faq_notes -> the answers, saved as they come (halal also as the
 //      halal statement, in the owner's words). Done once the hours are confirmed
-//      and all seven questions are answered (or passed on).
+//      and all seven questions are answered; partial if some were passed on
+//      ("(not answered)"), which makes a setup gap naming those questions.
 
 const DEFAULT_CAP = 15;
 
@@ -68,6 +69,7 @@ async function maybeFinish(restaurantId: string, channel: Channel, data: HoursFa
   const left = faqsLeft(data.answers);
   if (!data.hours_confirmed) return "";
   if (left.length) return `Next, the common questions: ${left.length} left (${left.map((t) => t.label).join(", ")}).`;
-  await completeStep(restaurantId, "hours_faqs", "done", { hours_confirmed: true, answers: data.answers }, { channel });
-  return "Hours and FAQs are done.";
+  const gap = faqGapLine(data.answers);
+  await completeStep(restaurantId, "hours_faqs", gap ? "partial" : "done", { hours_confirmed: true, answers: data.answers, gap_unlock: gap }, { channel });
+  return gap ? "Hours and FAQs are saved; the questions they passed on are a setup gap for later." : "Hours and FAQs are done.";
 }

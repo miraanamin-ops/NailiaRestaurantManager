@@ -191,21 +191,31 @@ describe("setup gaps", () => {
 
   test("syncing: new gaps are added once, finished ones close, and skipping again re-opens a closed one", () => {
     let s = skip(hello(), "google", T);
-    expect(syncGaps([], s)).toEqual({ add: [{ step_key: "google", unlock_text: STEP_DEFS.google.unlock }], reopen: [], resolve: [] });
+    expect(syncGaps([], s)).toEqual({ retext: [], add: [{ step_key: "google", unlock_text: STEP_DEFS.google.unlock }], reopen: [], resolve: [] });
     const saved = [gap("google")];
-    expect(syncGaps(saved, s)).toEqual({ add: [], reopen: [], resolve: [] });
+    expect(syncGaps(saved, s)).toEqual({ retext: [], add: [], reopen: [], resolve: [] });
     s = complete(enter(s, "google", LATER), "google", "done", {}, LATER);
-    expect(syncGaps(saved, s)).toEqual({ add: [], reopen: [], resolve: ["gap-google"] });
+    expect(syncGaps(saved, s)).toEqual({ retext: [], add: [], reopen: [], resolve: ["gap-google"] });
     // Re-entered but not finished yet: still closed (it's being worked on).
     const reentered = enter(skip(hello(), "menu", T), "menu", LATER);
     expect(syncGaps([gap("menu")], reentered).resolve).toEqual(["gap-menu"]);
     const closed = [gap("menu", { resolved_at: LATER })];
-    expect(syncGaps(closed, skip(reentered, "menu", LATER))).toEqual({ add: [], reopen: ["gap-menu"], resolve: [] });
+    expect(syncGaps(closed, skip(reentered, "menu", LATER))).toEqual({ retext: [], add: [], reopen: ["gap-menu"], resolve: [] });
+  });
+
+  test("a half-done step can name what's missing; the saved gap's line follows it", () => {
+    const line = "Tell me about parking and I'll answer that question for your customers.";
+    let s = complete(hello(), "hours_faqs", "partial", { gap_unlock: line }, T);
+    expect(gapsFor(s)).toEqual([{ step_key: "hours_faqs", unlock_text: line }]);
+    expect(syncGaps([gap("hours_faqs")], s)).toEqual({ add: [], retext: [{ id: "gap-hours_faqs", unlock_text: line }], reopen: [], resolve: [] });
+    // Skipped instead: the step's own line, whatever is left in its data.
+    s = skip(enter(s, "hours_faqs", LATER), "hours_faqs", LATER);
+    expect(gapsFor(s)).toEqual([{ step_key: "hours_faqs", unlock_text: STEP_DEFS.hours_faqs.unlock }]);
   });
 
   test("a dismissed gap stays dismissed when the step is skipped again", () => {
     const s = skip(hello(), "tone", T);
-    expect(syncGaps([gap("tone", { dismissed: true, dismissed_reason: "not_relevant" })], s)).toEqual({ add: [], reopen: [], resolve: [] });
+    expect(syncGaps([gap("tone", { dismissed: true, dismissed_reason: "not_relevant" })], s)).toEqual({ retext: [], add: [], reopen: [], resolve: [] });
   });
 
   test("the nudge goes to the most valuable gap: Google, then sales history, then menu, then the rest in order", () => {

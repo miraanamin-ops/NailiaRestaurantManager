@@ -39,6 +39,19 @@ export const FAQ_IDS = FAQ_TOPICS.map((t) => t.id) as FaqTopic[];
 // "skip" for a topic: asked, and they'd rather not say (it isn't asked again).
 export const FAQ_SKIPPED = "(not answered)";
 
+// The questions passed on ("(not answered)"), and the setup gap line that asks
+// for them later (null: every question has a real answer).
+export function faqsNotAnswered(answers: Record<string, string> | null | undefined) {
+  return FAQ_TOPICS.filter((t) => answers?.[t.id]?.trim() === FAQ_SKIPPED);
+}
+
+export function faqGapLine(answers: Record<string, string> | null | undefined) {
+  const open = faqsNotAnswered(answers).map((t) => t.label.toLowerCase());
+  if (!open.length) return null;
+  const list = open.length === 1 ? open[0] : `${open.slice(0, -1).join(", ")} and ${open[open.length - 1]}`;
+  return `Tell me about ${list} and I'll answer ${open.length === 1 ? "that question" : "those questions"} for your customers.`;
+}
+
 export function faqsLeft(answers: Record<string, string> | null | undefined) {
   return FAQ_TOPICS.filter((t) => !answers?.[t.id]?.trim());
 }

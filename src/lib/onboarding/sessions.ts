@@ -115,6 +115,7 @@ async function save(restaurantId: string, key: flow.FlowStepKey, state: flow.Flo
     const { error } = await supabase.from("setup_gaps").insert(change.add.map((g) => ({ restaurant_id: restaurantId, ...g })));
     if (error && error.code !== "23505") throw new Error(error.message);
   }
+  for (const g of change.retext) check(await supabase.from("setup_gaps").update({ unlock_text: g.unlock_text }).eq("restaurant_id", restaurantId).eq("id", g.id));
   if (change.resolve.length) check(await supabase.from("setup_gaps").update({ resolved_at: now }).eq("restaurant_id", restaurantId).in("id", change.resolve));
   if (change.reopen.length) {
     check(await supabase.from("setup_gaps").update({ resolved_at: null, nudge_count: 0, snoozed_until: null }).eq("restaurant_id", restaurantId).in("id", change.reopen));
