@@ -49,14 +49,13 @@ export type DinaWhatsAppInput = {
 
 export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
   const channel: OwnerChannel = { restaurantId: input.restaurantId, from: input.sandbox, to: input.owner };
-  const step = (await getSession(input.restaurantId))?.current_step ?? null;
-  const recent = await recentMessages(input.restaurantId);
+  const [sources, recent] = await Promise.all([chatSources(input.restaurantId), recentMessages(input.restaurantId)]);
+  const step = sources.focus?.current_step ?? null;
   // Coming over from the web chat: Dina is told, so she picks up right where they were.
   const switched = recent[0]?.channel === "web" ? "The owner has just switched from the web chat to WhatsApp. Carry on exactly where you were, without starting the step again." : null;
 
   if (input.media.length) return files(channel, input, step, switched);
 
-  const sources = await chatSources(input.restaurantId);
   const reply = readWhatsAppReply(input, askingNow(recent, sources), skippableNow(step));
   const externalId = input.messageSid ?? null;
   let turn: Omit<TurnInput, "restaurantId" | "channel">;

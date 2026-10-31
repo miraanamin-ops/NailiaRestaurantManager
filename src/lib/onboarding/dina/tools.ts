@@ -101,6 +101,10 @@ export function toolDefinitions(tools: DinaTool[]) {
 
 // Runs one tool call: unknown tools, bad input and refused actions all come back
 // as a problem for Dina, never as a crash.
+// What Claude is offered. note_hello isn't: Dina notes the basics in her reply's
+// hello_notes instead (one Claude call, not two), and code runs note_hello on them.
+export const OFFERED_TOOLS: DinaTool[] = TOOLS.filter((t) => t.name !== "note_hello");
+
 export async function runTool(ctx: ToolContext, tools: DinaTool[], name: string, input: unknown): Promise<ToolResult> {
   const t = tools.find((x) => x.name === name);
   if (!t) return { ok: false, text: `There's no tool called ${name}.` };

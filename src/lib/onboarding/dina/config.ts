@@ -18,6 +18,9 @@ const Schema = z
     model,
     router_model: model,
     effort: z.enum(["low", "medium", "high"]),
+    // "adaptive": Claude thinks when it helps. "off": no thinking before a reply
+    // (Sonnet 5.5's between_tools mode), for speed. Optional; adaptive if missing.
+    thinking: z.enum(["adaptive", "off"]).optional(),
     max_tool_rounds: z.number().int().min(1).max(10),
     history_messages: z.number().int().min(2).max(60),
     max_tokens: z
@@ -33,6 +36,7 @@ export type DinaConfig = {
   model: string;
   routerModel: string;
   effort: "low" | "medium" | "high";
+  thinking: "adaptive" | "off";
   maxToolRounds: number;
   historyMessages: number;
   maxTokens: (step: FlowStepKey | "router") => number;
@@ -47,6 +51,7 @@ export function parseDinaConfig(raw: unknown): DinaConfig {
     model: c.model,
     routerModel: c.router_model,
     effort: c.effort,
+    thinking: c.thinking ?? "adaptive",
     maxToolRounds: c.max_tool_rounds,
     historyMessages: c.history_messages,
     maxTokens: (step) => limits[step] ?? limits.default,

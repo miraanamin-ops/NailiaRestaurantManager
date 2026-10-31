@@ -16,6 +16,14 @@ export type HistoryLine = { role: "dina" | "owner" | "system"; text: string };
 // list); note says what code did, so Dina carries on from there.
 export type TurnEvent = "start" | "message" | "resume" | "action";
 
+// Could this message be about another step ("go back to the menu", "change Sunday
+// hours")? Only then is the Haiku router asked (about a second saved on every
+// other message). A miss only means Dina answers on the step she's on, where she
+// can still move with go_to_step. (Not "halal": owners say it to describe their cuisine.)
+const ROUTE_HINT =
+  /\b(back|go ?to|goto|chang|update|edit|fix|correct|wrong|instead|earlier|previous|menu|dish|price|allerg|hour|open|clos|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekend|google|review|tone|repl|complain|make it right|staff|team|rota|labour|labor|sales|till|epos|reward|discount|offer|qr|customer|language|ramadan|eid|holiday|brief|approv|quiet|parking|deliver|booking)/i;
+export const mightBeAnotherStep = (text: string) => ROUTE_HINT.test(text);
+
 // "<" in outside text becomes "‹", so nothing inside can open or close a tag.
 export const neutralise = (text: string) => text.replace(/</g, "‹").replace(/>/g, "›");
 

@@ -37,7 +37,10 @@ export async function callDina(input: { content: string; step: FlowStepKey | nul
   const config = dinaConfig();
   const def = loadDina();
   assertDinaTools(def, input.tools.map((t) => t.name));
-  const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: def.systemPrompt, cache_control: { type: "ephemeral" } }];
+  // Cached for an hour, not five minutes: her instructions are the same for every
+  // restaurant, so anyone setting up within the hour starts warm (a cold start
+  // measured about 6.5 s against 1.9 s warm, 31 Oct).
+  const system: Anthropic.Beta.BetaTextBlockParam[] = [{ type: "text", text: def.systemPrompt, cache_control: { type: "ephemeral", ttl: "1h" } }];
   const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: [{ type: "text", text: input.content }] }];
   const calls: Call[] = [];
   const toolCalls: ToolCall[] = [];
@@ -51,6 +54,7 @@ export async function callDina(input: { content: string; step: FlowStepKey | nul
       model: config.model,
       max_tokens: config.maxTokens(input.step ?? "hello"),
       output_config: { effort: config.effort, format: betaZodOutputFormat(DinaReply) },
+      ...(config.thinking === "off" ? { thinking: { type: "between_tools" as const } } : {}),
       system,
       tools: toolDefinitions(input.tools),
       ...(lastRound ? { tool_choice: { type: "none" as const } } : {}),

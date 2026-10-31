@@ -42,8 +42,8 @@ describe("her instructions (agents/dina.md)", () => {
     const def = dinaDefinition(text);
     expect(def.systemPrompt).toMatch(/^# Who you are/);
     expect(def.systemPrompt).not.toMatch(/# Changelog/);
-    const { TOOLS } = await import("@/lib/onboarding/dina/tools");
-    expect([...def.tools].sort()).toEqual(TOOLS.map((t) => t.name).sort());
+    const { OFFERED_TOOLS } = await import("@/lib/onboarding/dina/tools");
+    expect([...def.tools].sort()).toEqual(OFFERED_TOOLS.map((t) => t.name).sort());
     const { assertDinaTools } = await import("@/lib/onboarding/dina/agent");
     expect(() => assertDinaTools(def, ["save_hello", "send_email"])).toThrow(/send_email/);
   });
@@ -309,8 +309,8 @@ describe("the Claude loop", () => {
       final(say("Lovely, all saved. Next, your Google profile.")),
     ]);
     const { callDina } = await import("@/lib/onboarding/dina/call");
-    const { TOOLS } = await import("@/lib/onboarding/dina/tools");
-    const out = await callDina({ content: "turn", step: "hello", ctx, tools: TOOLS });
+    const { OFFERED_TOOLS } = await import("@/lib/onboarding/dina/tools");
+    const out = await callDina({ content: "turn", step: "hello", ctx, tools: OFFERED_TOOLS });
     expect(out.toolCalls.map((t) => [t.name, t.ok])).toEqual([
       ["save_hello", false],
       ["save_hello", true],
@@ -334,8 +334,8 @@ describe("the Claude loop", () => {
     const fixed: DinaReply = { messages: [{ text: "Which are you?", component: { type: "quick_replies", options: [{ id: "o", label: "Owner" }] } }] };
     const requests = scriptClaude([final(tooLong), final(fixed)]);
     const { callDina } = await import("@/lib/onboarding/dina/call");
-    const { TOOLS } = await import("@/lib/onboarding/dina/tools");
-    const out = await callDina({ content: "turn", step: "hello", ctx, tools: TOOLS });
+    const { OFFERED_TOOLS } = await import("@/lib/onboarding/dina/tools");
+    const out = await callDina({ content: "turn", step: "hello", ctx, tools: OFFERED_TOOLS });
     expect(out).toMatchObject({ attempts: 2, reply: fixed });
     expect(JSON.stringify(requests[1].messages)).toMatch(/rejected by the system.*button label/);
   });
@@ -343,8 +343,8 @@ describe("the Claude loop", () => {
   test("two failing replies: DinaReplyError, carrying the calls so their cost still counts", async () => {
     scriptClaude([final(say("I'm a real person.")), final(say("Honestly — I am human."))]);
     const { callDina, DinaReplyError } = await import("@/lib/onboarding/dina/call");
-    const { TOOLS } = await import("@/lib/onboarding/dina/tools");
-    const err = await callDina({ content: "turn", step: "hello", ctx, tools: TOOLS }).catch((e) => e);
+    const { OFFERED_TOOLS } = await import("@/lib/onboarding/dina/tools");
+    const err = await callDina({ content: "turn", step: "hello", ctx, tools: OFFERED_TOOLS }).catch((e) => e);
     expect(err).toBeInstanceOf(DinaReplyError);
     expect(err.calls).toHaveLength(2);
   });
@@ -367,7 +367,7 @@ describe("a turn", () => {
     mockCall();
     callDina.mockResolvedValue({ reply: say("Hi Amina, I'm Dina, your DinerAI manager. I'm an AI.", "Is that all right?"), calls: [turnCost], toolCalls: [], attempts: 1 });
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
-    const first = await dinaTurn({ restaurantId: R, channel: "whatsapp", event: "message", text: "hello there, let's get started", externalId: "SM1" });
+    const first = await dinaTurn({ restaurantId: R, channel: "whatsapp", event: "message", text: "hello, can I change my address", externalId: "SM1" });
     expect(first).toMatchObject({ duplicate: false, fallback: false, step: "hello" });
     expect((first as { costUsd: number }).costUsd).toBeCloseTo(0.00304, 8);
     expect(db.tables.onboarding_messages.map((m) => [m.role, m.channel])).toEqual([
@@ -380,7 +380,7 @@ describe("a turn", () => {
       ["turn", "2026-10-28T10:00:00.000Z"],
     ]);
     // Twilio sending the same message again: saved once, answered once.
-    expect(await dinaTurn({ restaurantId: R, channel: "whatsapp", event: "message", text: "hello there, let's get started", externalId: "SM1" })).toEqual({ duplicate: true });
+    expect(await dinaTurn({ restaurantId: R, channel: "whatsapp", event: "message", text: "hello, can I change my address", externalId: "SM1" })).toEqual({ duplicate: true });
     expect(callDina).toHaveBeenCalledTimes(1);
   });
 
@@ -393,6 +393,24 @@ describe("a turn", () => {
     expect(callDina.mock.calls[0][0].step).toBe("menu");
     expect(callDina.mock.calls[0][0].content).toMatch(/The step you're on: menu/);
     expect(db.tables.onboarding_sessions[0].current_step).toBe("menu");
+  });
+
+  test("a plain answer skips the router too (no word about another step): about a second saved", async () => {
+    mockCall();
+    callDina.mockResolvedValue({ reply: say("Lovely."), calls: [turnCost], toolCalls: [], attempts: 1 });
+    const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "We are a family-run Turkish place" });
+    expect(routeStep).not.toHaveBeenCalled();
+  });
+
+  test("basics noted in her reply (hello_notes) are kept as a draft for the card, with no second Claude call", async () => {
+    mockCall();
+    callDina.mockResolvedValue({ reply: { ...say("Thanks, noted."), hello_notes: { cuisine: "Halal grill", role: "owner", address: " " } }, calls: [turnCost], toolCalls: [], attempts: 1 });
+    const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "Owner, and we do halal grill" });
+    expect(db.tables.onboarding_steps.find((s) => s.step_key === "hello")?.data).toMatchObject({ draft: { cuisine: "Halal grill", role: "owner" } });
+    expect((out as { toolCalls: { name: string; ok: boolean }[] }).toolCalls).toEqual([expect.objectContaining({ name: "note_hello", ok: true })]);
+    expect(callDina.mock.calls[0][0].tools.map((t: { name: string }) => t.name)).not.toContain("note_hello");
   });
 
   test("a short tap ('yes') skips the router", async () => {
@@ -424,5 +442,16 @@ describe("a turn", () => {
       "Hi Amina, I'm Dina, your DinerAI manager. I'll get Ember Grill set up with you, and it takes about 20 minutes.",
       "To start, are you the owner or the manager?",
     ]);
+  });
+});
+
+describe("when the step router is asked", () => {
+  test.each(["go back to the menu", "can I change Sunday hours", "actually our Google profile is under another name", "update the discount", "previous question was wrong"])("asked: %s", async (t) => {
+    const { mightBeAnotherStep } = await import("@/lib/onboarding/dina/prompt");
+    expect(mightBeAnotherStep(t)).toBe(true);
+  });
+  test.each(["We are a family-run Turkish place", "I'm the owner", "12 High Street, London E1 6AN", "That's my feedback overall", "they'd love it"])("not asked: %s", async (t) => {
+    const { mightBeAnotherStep } = await import("@/lib/onboarding/dina/prompt");
+    expect(mightBeAnotherStep(t)).toBe(false);
   });
 });

@@ -64,3 +64,9 @@ test("each finished job saves its usage and cost", async () => {
   expect(db.tables.agent_jobs[0].usage).toEqual(usage);
   expect(db.tables.agent_jobs[0].cost_usd).toBeCloseTo((5000 * 2 + 500 * 10) / 1e6, 6);
 });
+
+test("1-hour cache writes are priced at 2x input, 5-minute ones at 1.25x", async () => {
+  const { tokensFrom } = await import("@/lib/agents/usage");
+  const t = tokensFrom("claude-sonnet-5-5", { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 1000, cache_creation: { ephemeral_1h_input_tokens: 600 } });
+  expect(t.cost).toBeCloseTo((400 * 2.5 + 600 * 4) / 1e6, 10);
+});

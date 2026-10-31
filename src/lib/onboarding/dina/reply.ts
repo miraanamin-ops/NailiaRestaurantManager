@@ -34,7 +34,15 @@ export const DinaMessage = z.object({
 });
 export type DinaMessage = z.infer<typeof DinaMessage>;
 
-export const DinaReply = z.object({ messages: z.array(DinaMessage).min(1).max(3) });
+// hello_notes: what the owner just told her of the Hello basics, noted with her
+// reply instead of through a tool call (a tool call costs a second Claude call,
+// about 1.5 to 2 seconds). Code checks it with note_hello's rules and keeps it as
+// a draft for the basics card (turn.ts); nothing is saved for real until save_hello.
+export const HelloNotes = z
+  .object({ owner_name: z.string(), restaurant_name: z.string(), address: z.string(), cuisine: z.string(), role: z.enum(["owner", "manager"]) })
+  .partial();
+
+export const DinaReply = z.object({ messages: z.array(DinaMessage).min(1).max(3), hello_notes: HelloNotes.nullable().optional() });
 export type DinaReply = z.infer<typeof DinaReply>;
 
 // Every piece of text the owner would see: the messages and every label.

@@ -18,12 +18,21 @@ const FALLBACK_PRICE = PRICES["claude-sonnet-5-5"];
 
 export const NO_TOKENS: Tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
 
-type ApiUsage = { input_tokens?: number | null; output_tokens?: number | null; cache_read_input_tokens?: number | null; cache_creation_input_tokens?: number | null };
+type ApiUsage = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  // The split of cache writes: 1-hour writes (Dina's instructions) cost 2x input, not 1.25x.
+  cache_creation?: { ephemeral_1h_input_tokens?: number | null } | null;
+};
 
 export function tokensFrom(model: string, u: ApiUsage | null | undefined): Tokens {
   const t = { input: u?.input_tokens ?? 0, output: u?.output_tokens ?? 0, cacheRead: u?.cache_read_input_tokens ?? 0, cacheWrite: u?.cache_creation_input_tokens ?? 0 };
   const p = PRICES[model] ?? FALLBACK_PRICE;
-  return { ...t, cost: (t.input * p.input + t.output * p.output + t.cacheRead * p.cacheRead + t.cacheWrite * p.cacheWrite) / 1_000_000 };
+  const hourWrites = Math.min(u?.cache_creation?.ephemeral_1h_input_tokens ?? 0, t.cacheWrite);
+  const writes = (t.cacheWrite - hourWrites) * p.cacheWrite + hourWrites * p.input * 2;
+  return { ...t, cost: (t.input * p.input + t.output * p.output + t.cacheRead * p.cacheRead + writes) / 1_000_000 };
 }
 
 const addTokens = (a: Tokens, b: Tokens): Tokens => ({

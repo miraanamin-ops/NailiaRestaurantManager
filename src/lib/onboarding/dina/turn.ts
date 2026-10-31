@@ -7,9 +7,9 @@ import { currentStep, STEP_DEFS, statusOf, type FlowStepKey } from "../flow";
 import { enterStep, getSession, loadFlow, startOnboarding, type Channel } from "../sessions";
 import { getRestaurant } from "../store";
 import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from "./call";
-import { turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
+import { mightBeAnotherStep, turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
 import { fallbackReply, type DinaReply } from "./reply";
-import { TOOLS } from "./tools";
+import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
 
 // One turn of the setup conversation, whichever channel it came from (the web
 // chat and WhatsApp call this, and only draw the result differently):
@@ -74,27 +74,37 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const calls: Call[] = [];
   let { state } = await loadFlow(id);
   let step: FlowStepKey | null = session.current_step ?? currentStep(state);
+  let moved = false;
 
-  // 2. Is it about another step? (Only for real sentences: a tap or a "yes" isn't.)
-  if (input.event === "message" && !input.ownerParts?.length && input.text && words(input.text) >= 3) {
+  // 2. Is it about another step? (Only for real sentences that mention another step's
+  // subject or going back: a tap, a "yes" or a plain answer isn't.)
+  if (input.event === "message" && !input.ownerParts?.length && input.text && words(input.text) >= 3 && mightBeAnotherStep(input.text)) {
     try {
       const routed = await routeStep(input.text, step);
       calls.push(routed.call);
       if (routed.step && STEP_DEFS[routed.step].available) {
         await enterStep(id, routed.step, { channel: input.channel });
         step = routed.step;
+        moved = true;
       }
     } catch (err) {
       console.warn("The setup router failed; staying on the current step", err instanceof Error ? err.message : err);
     }
   }
-  if (step && statusOf(state, step) === "not_started") await enterStep(id, step, { channel: input.channel });
-  state = (await loadFlow(id)).state;
+  if (step && statusOf(state, step) === "not_started") {
+    await enterStep(id, step, { channel: input.channel });
+    moved = true;
+  }
 
-  // 3. Dina, with what we know, where we are and the recent chat.
-  const restaurant = await getRestaurant(id);
+  // 3. Dina, with what we know, where we are and the recent chat (read side by side:
+  // every database round trip is time the owner waits).
+  const [restaurant, history, stateNow] = await Promise.all([
+    getRestaurant(id),
+    recentChat(id, ownerMessageId),
+    moved ? loadFlow(id).then((f) => f.state) : Promise.resolve(state),
+  ]);
+  state = stateNow;
   const known = Object.fromEntries(KNOWN_FIELDS.map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null]));
-  const history = await recentChat(id, ownerMessageId);
   const content = turnText({
     restaurant: known,
     state,
@@ -111,10 +121,17 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   let fallback = false;
   let toolCalls: ToolCall[] = [];
   try {
-    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus }, tools: TOOLS });
+    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus }, tools: OFFERED_TOOLS });
     reply = answer.reply;
     calls.push(...answer.calls);
     toolCalls = answer.toolCalls;
+    // The basics she noted with her reply: checked like a tool call, kept as a draft.
+    const notes = Object.fromEntries(Object.entries(reply.hello_notes ?? {}).filter(([, v]) => typeof v === "string" && v.trim()));
+    if (Object.keys(notes).length) {
+      const noted = await runTool({ restaurantId: id, channel: input.channel }, TOOLS, "note_hello", notes);
+      toolCalls.push({ name: "note_hello", ok: noted.ok, text: noted.text });
+      if (!noted.ok) console.warn("Dina's hello notes weren't kept", noted.text);
+    }
   } catch (err) {
     // 4. Never leave the owner without an answer, or show an unchecked one.
     if (err instanceof DinaReplyError) {
