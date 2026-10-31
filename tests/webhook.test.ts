@@ -185,3 +185,54 @@ describe("the WhatsApp webhook", () => {
     expect(call.media.map((x) => x.url)).toEqual(["https://x/0", "https://x/1"]);
   });
 });
+
+describe("builder commands only from the builder's own number", () => {
+  const BUILDER = "whatsapp:+447700900999";
+  const handleBuilderCommand = vi.fn(async () => "✅ done");
+  const sendText = vi.fn(async () => ({ sid: "SMb", body: "" }));
+  beforeEach(() => {
+    handleBuilderCommand.mockClear();
+    sendText.mockClear();
+    vi.doMock("@/lib/feeds/builder", () => ({ handleBuilderCommand }));
+    vi.doMock("@/lib/whatsapp", async (orig) => ({ ...(await orig<object>()), sendText }));
+  });
+  afterEach(() => {
+    vi.doUnmock("@/lib/feeds/builder");
+    vi.doUnmock("@/lib/whatsapp");
+    delete process.env.BUILDER_WHATSAPP;
+  });
+  const builderMessage = (from: string) => ({ ...message(from, `SMb${Math.random()}`), Body: "BUILDER GOOGLE ACCEPTED ember-spice" });
+
+  test("a restaurant owner sending BUILDER ...: not run, not passed to their assistant, no reply at all", async () => {
+    process.env.BUILDER_WHATSAPP = BUILDER;
+    const m = builderMessage(OWNER);
+    const res = await post(m, sign(m));
+    expect(await res.text()).toContain("<Response></Response>");
+    expect(handleBuilderCommand).not.toHaveBeenCalled();
+    expect(handleMessage).not.toHaveBeenCalled();
+    expect(sendText).not.toHaveBeenCalled();
+    expect(sentToOwner).toEqual([]);
+    const logged = db.calls.find((c) => c.table === "messages" && c.op === "insert");
+    expect((logged?.payload as { error: string }).error).toMatch(/builder command from a number that isn't the builder's/);
+  });
+
+  test("a stranger, or anyone at all when no builder number is set: nothing", async () => {
+    process.env.BUILDER_WHATSAPP = BUILDER;
+    const stranger = builderMessage("whatsapp:+447700900555");
+    await post(stranger, sign(stranger));
+    delete process.env.BUILDER_WHATSAPP;
+    const anyone = builderMessage(BUILDER);
+    await post(anyone, sign(anyone));
+    expect(handleBuilderCommand).not.toHaveBeenCalled();
+    expect(sendText).not.toHaveBeenCalled();
+    expect(handleMessage).not.toHaveBeenCalled();
+  });
+
+  test("the builder's own number: run, and the answer goes back to the builder only", async () => {
+    process.env.BUILDER_WHATSAPP = BUILDER;
+    const m = builderMessage(BUILDER);
+    await post(m, sign(m));
+    expect(handleBuilderCommand).toHaveBeenCalledWith("BUILDER GOOGLE ACCEPTED ember-spice");
+    expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", BUILDER, "✅ done");
+  });
+});

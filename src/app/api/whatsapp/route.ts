@@ -82,6 +82,9 @@ export async function POST(req: NextRequest) {
   // The builder's own commands (BUILDER ...), from BUILDER_WHATSAPP only. The same
   // phone can also be a demo restaurant's owner: anything else it sends goes there as usual.
   const builderCommand = !media && isBuilderNumber(owner, process.env.BUILDER_WHATSAPP) && isBuilderCommand(body);
+  // "BUILDER ..." from any other number (an owner's included) does nothing and gets
+  // no reply at all: it never reaches the assistant or Dina as a chat message.
+  const builderAttempt = !media && !builderCommand && isBuilderCommand(body);
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? staff?.restaurant_id ?? null,
     direction: "inbound",
@@ -90,7 +93,11 @@ export async function POST(req: NextRequest) {
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
-    error: restaurant || linkCode || staff || signups.length || builderCommand ? null : "Ignored: not a registered owner number",
+    error: builderAttempt
+      ? "Ignored: a builder command from a number that isn't the builder's"
+      : restaurant || linkCode || staff || signups.length || builderCommand
+        ? null
+        : "Ignored: not a registered owner number",
   });
   // Twilio sometimes delivers the same message twice. Each message id can only be
   // logged once (unique index), so a second copy is a duplicate: do nothing.
@@ -100,6 +107,11 @@ export async function POST(req: NextRequest) {
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
+
+  if (builderAttempt) {
+    console.warn("Ignored a builder command from a number that isn't the builder's");
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
 
   if (builderCommand) {
     after(async () => {
