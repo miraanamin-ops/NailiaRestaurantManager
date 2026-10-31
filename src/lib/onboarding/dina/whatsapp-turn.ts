@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { sendAndLog, type OwnerChannel } from "@/lib/notify";
+import { bypassUrl } from "@/lib/preview-bypass";
 import { appUrl, getSupabase } from "@/lib/supabase";
 import { sendDinaChoices, sendImage, sendText } from "@/lib/whatsapp";
 import { STEP_DEFS, type FlowStepKey } from "../flow";
@@ -257,7 +258,7 @@ function sendOut(channel: OwnerChannel, out: WaOut) {
     out.kind !== "text"
       ? sendDinaChoices(channel.from, channel.to, out)
       : out.mediaUrl
-        ? sendImage(channel.from, channel.to, out.mediaUrl, out.body)
+        ? sendImage(channel.from, channel.to, bypassUrl(out.mediaUrl), out.body)
         : sendText(channel.from, channel.to, out.body);
   return sendAndLog(channel, deliver, out.body);
 }

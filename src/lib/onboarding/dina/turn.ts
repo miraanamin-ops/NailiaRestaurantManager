@@ -51,7 +51,8 @@ export type TurnResult =
 
 // What Dina may be told about the restaurant: its own details only. Never the
 // customer list, and (from the menu step on) only allergens the owner confirmed.
-const KNOWN_FIELDS = ["owner_name", "name", "address", "cuisine", "phone", "website", "google_rating", "google_rating_count"] as const;
+// (opening_hours too: the full run of 31 Oct showed an empty hours card because she couldn't tell there were none.)
+const KNOWN_FIELDS = ["owner_name", "name", "address", "cuisine", "phone", "website", "google_rating", "google_rating_count", "opening_hours"] as const;
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 // Code's note says it saved something this turn (so "that's saved" can be true without her tool).
@@ -116,7 +117,13 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   // Hello: Google Maps matches for the name, so she can ask "Is this you?" (when we can search).
   const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
   const known = {
-    ...Object.fromEntries(KNOWN_FIELDS.map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
+    // (An empty value, like hours of {}, counts as not known.)
+    ...Object.fromEntries(
+      KNOWN_FIELDS.map((k) => {
+        const v = restaurant[k as keyof typeof restaurant] ?? null;
+        return [k, v && typeof v === "object" && !Object.keys(v).length ? null : v];
+      }),
+    ),
     // Path A: the owner can connect Google directly (google_connect) instead of the manager steps.
     ...(googleConnectOn() ? { google_connect: "available: offer google_connect in the Google step" } : {}),
   };

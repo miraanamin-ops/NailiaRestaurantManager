@@ -23,9 +23,10 @@ Read with:
 | Speed (31 Oct) | One Claude call per turn (notes in the reply), the router only when needed, the hour-long cache: a WhatsApp reply's Claude time from 4 to 6 s to 1.3 to 2 s | 55a2230 |
 | 6. Steps 1 to 3 | Hello's Google Maps pre-fill; Google (three questions, steps card with screenshots, forward message, Connect Google behind a switch, invited, simulated or builder acceptance, the 24-hour nudge, email the steps); tone (config file, real reviews, replies written and checked, taps saved by code, write my own, skip = warm, queue replies as held drafts); migration 052 | see git log |
 | 7. Steps 4 to 6 | Making it right (offers within the cap), menu (read from photos or a PDF on both channels, checked card, allergens dish by dish with code's own cards, no accept-all), hours and FAQs (halal in the owner's words), web uploads straight to the private bucket, notes as a list (API limits), the "saved" check, the Places daily cap, builder commands locked to the builder's number; migration 053 | see git log |
+| 8. Summary and test controls | Finishing (WhatsApp linked, both setup records closed, switched on by the access rule), the summary card with Change links, `/onboarding/admin` test controls incl. Mark Google accepted, the full real run ($0.18), the Vercel test-mode build fix, the preview bypass, `docs/phone-test.md`, `docs/merge-checklist.md` | see git log |
 | 5. WhatsApp | Dina on WhatsApp through the same turn: buttons, lists and the numbered fallback, replies read back, photos/PDF/CSV/Excel into a private bucket (16 MB, checked by content), one reply per burst of photos, linking hands over to Dina at the exact step, the sandbox check script, migration 051 | see git log |
 
-Milestone A (pilot-usable Dina) still needs phase 8: the summary and the test controls.
+Milestone A (pilot-usable Dina) is built. Before merging: your phone test (`docs/phone-test.md`) and the merge checklist (`docs/merge-checklist.md`).
 
 ## 2. Every decision you made
 

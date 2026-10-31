@@ -105,7 +105,8 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
   hello: ({ restaurant }) => [restaurant.name, restaurant.cuisine, restaurant.address].filter(Boolean).join(", "),
   google: (s) => {
     const reviews = data(s, "google").reviews as { count: number; average: number | null } | undefined;
-    return reviews ? `Connected: ${reviews.count} review${reviews.count === 1 ? "" : "s"}${reviews.average ? `, rated ${reviews.average.toFixed(1)}` : ""}` : "Connected";
+    if (!reviews?.count) return reviews ? "Connected (no reviews yet)" : "Connected";
+    return `Connected: ${reviews.count} review${reviews.count === 1 ? "" : "s"}${reviews.average ? `, rated ${reviews.average.toFixed(1)}` : ""}`;
   },
   tone: (s) => {
     const picks = data(s, "tone").picks as Partial<Record<"praise" | "complaint", { tone: string | null; own: boolean }>> | undefined;
