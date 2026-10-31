@@ -176,3 +176,14 @@ export function switchChanges(previous: Record<string, unknown> | null | undefin
     .filter((k) => previous[k] !== current[k])
     .map((k) => `${k}: ${String(previous[k] ?? "unset")} → ${String(current[k])}`);
 }
+
+// Preview deployments share production's Twilio account, so a preview may only
+// send WhatsApp to the builder's own number (BUILDER_WHATSAPP, Preview's own
+// value). Anyone else is refused, and so is everyone if it isn't set.
+// Production and local development are unaffected.
+export function whatsAppSendAllowed(env: Env, to: string) {
+  if (environmentOf(env) !== "preview") return true;
+  const digits = (n: string | undefined) => (n ?? "").replace(/\D/g, "");
+  const builder = digits(env.BUILDER_WHATSAPP);
+  return builder !== "" && digits(to) === builder;
+}

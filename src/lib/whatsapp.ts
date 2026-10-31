@@ -2,6 +2,7 @@ import "server-only";
 import twilio from "twilio";
 import { BUTTON_IDS, HOURS_IDS, QUESTION_IDS } from "@/lib/bot/parse";
 import { clip } from "@/lib/text";
+import { whatsAppSendAllowed } from "@/lib/switches";
 
 // Quick-reply template with Approve / Edit / Skip buttons. Created in the
 // Twilio account automatically the first time it's needed.
@@ -38,6 +39,17 @@ export function getTwilio() {
   const token = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !token) throw new Error("Missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN");
   return twilio(sid, token);
+}
+
+// Every outbound WhatsApp goes through here. On a preview deployment only the
+// builder's number gets real messages; the rest are skipped with a made-up id.
+type MessageParams = Parameters<ReturnType<typeof getTwilio>["messages"]["create"]>[0];
+async function createMessage(params: MessageParams) {
+  if (!whatsAppSendAllowed(process.env, params.to)) {
+    console.warn(`Preview: WhatsApp to ${params.to} not sent (only BUILDER_WHATSAPP gets messages on previews)`);
+    return { sid: `preview-skipped-${Date.now()}` };
+  }
+  return getTwilio().messages.create(params);
 }
 
 const templateSids = new Map<string, Promise<string>>();
@@ -201,7 +213,7 @@ export async function sendDinaChoices(from: string, to: string, msg: DinaChoices
       if (msg.kind === "list") vars[base + 2] = o.description;
     });
     if (msg.kind === "list") vars[2] = msg.button ?? "See the options";
-    const sent = await getTwilio().messages.create({ from, to, contentSid, contentVariables: JSON.stringify(vars) });
+    const sent = await createMessage({ from, to, contentSid, contentVariables: JSON.stringify(vars) });
     return { sid: sent.sid, body, usedButtons: true };
   } catch (err) {
     console.error(`Dina's ${msg.kind} failed, sending the numbered text instead`, err);
@@ -211,12 +223,12 @@ export async function sendDinaChoices(from: string, to: string, msg: DinaChoices
 
 // A picture (e.g. the email preview), with an optional caption. Twilio fetches it from mediaUrl, which must be public.
 export async function sendImage(from: string, to: string, mediaUrl: string, caption = "") {
-  const msg = await getTwilio().messages.create({ from, to, mediaUrl: [mediaUrl], ...(caption ? { body: clip(caption, TEXT_MAX) } : {}) });
+  const msg = await createMessage({ from, to, mediaUrl: [mediaUrl], ...(caption ? { body: clip(caption, TEXT_MAX) } : {}) });
   return { sid: msg.sid, body: caption ? `${caption} [image]` : "[image]" };
 }
 
 export async function sendText(from: string, to: string, body: string) {
-  const msg = await getTwilio().messages.create({ from, to, body: clip(body, TEXT_MAX) });
+  const msg = await createMessage({ from, to, body: clip(body, TEXT_MAX) });
   return { sid: msg.sid, body: clip(body, TEXT_MAX) };
 }
 
@@ -238,7 +250,7 @@ export async function sendWithApprovalButtons(from: string, to: string, body: st
               : "approval";
       const contentSid = await templateSid(kind);
       const options = Object.fromEntries((target?.options ?? []).slice(0, 3).map((o, i) => [i + 3, o]));
-      const msg = await getTwilio().messages.create({
+      const msg = await createMessage({
         from,
         to,
         contentSid,
@@ -275,6 +287,6 @@ Reply *PUBLIC*${n ? ` ${n}` : ""} · *PRIVATE*${n ? ` ${n}` : ""} · *BOTH*${n ?
     : n
     ? `${clip(body, TEXT_MAX - 70)}\n\nReply *APPROVE ${n}* · *EDIT ${n}* · *SKIP ${n}*`
     : `${clip(body, TEXT_MAX - 60)}\n\nReply *1* Approve · *2* Edit · *3* Skip`;
-  const msg = await getTwilio().messages.create({ from, to, body: text });
+  const msg = await createMessage({ from, to, body: text });
   return { sid: msg.sid, body: text, usedButtons: false };
 }

@@ -17,6 +17,7 @@ import {
   switchesRecord,
   testToolsFor,
   testToolsSwitch,
+  whatsAppSendAllowed,
 } from "@/lib/switches";
 
 const PROD = { VERCEL_ENV: "production" };
@@ -285,5 +286,23 @@ describe("customer emails with the real sender", () => {
   test("TEST_EMAIL_ALLOW addresses still get their own while redirecting", async () => {
     const { delivery } = await deliver({ VERCEL_ENV: "production", EMAIL_REDIRECT: "true", TEST_EMAIL_ALLOW: "ayesha@gmail.com" });
     expect(delivery).toMatchObject({ to: "ayesha@gmail.com", redirectedFrom: null });
+  });
+});
+
+describe("WhatsApp on previews", () => {
+  const BUILDER = "whatsapp:+447700900123";
+  test("a preview only messages the builder number", () => {
+    const env = { ...PREVIEW, BUILDER_WHATSAPP: BUILDER };
+    expect(whatsAppSendAllowed(env, BUILDER)).toBe(true);
+    expect(whatsAppSendAllowed(env, "+44 7700 900123")).toBe(true);
+    expect(whatsAppSendAllowed(env, "whatsapp:+447700900999")).toBe(false);
+  });
+  test("a preview without BUILDER_WHATSAPP messages nobody", () => {
+    expect(whatsAppSendAllowed(PREVIEW, BUILDER)).toBe(false);
+    expect(whatsAppSendAllowed({ ...PREVIEW, BUILDER_WHATSAPP: " " }, "whatsapp:+")).toBe(false);
+  });
+  test("production and local development are unchanged", () => {
+    expect(whatsAppSendAllowed(PROD, "whatsapp:+447700900999")).toBe(true);
+    expect(whatsAppSendAllowed({}, "whatsapp:+447700900999")).toBe(true);
   });
 });
