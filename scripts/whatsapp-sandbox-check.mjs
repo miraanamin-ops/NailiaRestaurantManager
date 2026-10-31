@@ -5,7 +5,8 @@
 //
 // Your phone must have joined the sandbox and messaged it in the last 24 hours
 // (WhatsApp only allows buttons and lists inside that window).
-// Usage: node --env-file=.env.local scripts/whatsapp-sandbox-check.mjs +447...
+// Usage: node --env-file=.env.local scripts/whatsapp-sandbox-check.mjs +447... [buttons|list|text]
+// (the last word sends just that one; without it, all three)
 //
 // It makes (or reuses) the same templates the app uses, dina_buttons_3_v1 and
 // dina_list_5_v1, so keep their shapes in step with dinaTemplate() in src/lib/whatsapp.ts.
@@ -43,6 +44,10 @@ async function template(kind, n) {
   return created.sid;
 }
 
+const only = process.argv[3] ?? null;
+// WhatsApp refuses a list whose row titles are over 24 characters (error 21656),
+// so rows are shortened the way the app does (renderForWhatsApp in src/lib/onboarding/dina/whatsapp.ts).
+const clip = (t, max) => (t.length <= max ? t : `${t.slice(0, max - 1).trimEnd()}…`);
 const sent = [];
 async function send(label, params) {
   try {
@@ -56,7 +61,7 @@ async function send(label, params) {
 }
 
 const buttons = ["Owner", "Manager", "Skip for now"];
-await send("1. three buttons", {
+if (!only || only === "buttons") await send("1. three buttons", {
   contentSid: await template("buttons", 3),
   contentVariables: JSON.stringify({
     1: "Sandbox check 1 of 3: three buttons. Are you the owner or the manager?\n\nReply 1, 2 or 3",
@@ -65,16 +70,16 @@ await send("1. three buttons", {
 });
 
 const tones = ["Warm and personal", "Polished and professional", "Fun and chatty", "Short and simple", "Skip for now"];
-await send("2. a list with 5 rows", {
+if (!only || only === "list") await send("2. a list with 5 rows", {
   contentSid: await template("list", 5),
   contentVariables: JSON.stringify({
     1: `Sandbox check 2 of 3: a list. Which tone sounds like you?\n\n${tones.map((t, i) => `*${i + 1}* ${t}`).join("\n")}\n\nReply with a number, or tap *See the options*.`,
     2: "See the options",
-    ...Object.fromEntries(tones.flatMap((t, i) => [[3 + i * 3, t], [4 + i * 3, `dina:${ZERO}:t${i + 1}`], [5 + i * 3, `Or reply ${i + 1}`]])),
+    ...Object.fromEntries(tones.flatMap((t, i) => [[3 + i * 3, clip(t, 24)], [4 + i * 3, `dina:${ZERO}:t${i + 1}`], [5 + i * 3, `Or reply ${i + 1}`]])),
   }),
 });
 
-await send("3. plain numbered text", { body: "Sandbox check 3 of 3: plain text, the fallback.\n\nWhich are you?\n*1* Owner\n*2* Manager\n\nReply 1 or 2" });
+if (!only || only === "text") await send("3. plain numbered text", { body: "Sandbox check 3 of 3: plain text, the fallback.\n\nWhich are you?\n*1* Owner\n*2* Manager\n\nReply 1 or 2" });
 
 console.log("\nWaiting 20 seconds for WhatsApp to report back...");
 await new Promise((r) => setTimeout(r, 20000));
