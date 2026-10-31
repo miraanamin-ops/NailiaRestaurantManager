@@ -10,6 +10,7 @@ import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from ".
 import { mightBeAnotherStep, turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
 import { dinaReplyProblems, fallbackReply, type DinaReply } from "./reply";
 import { applyFaqNotes, applyHoursNotes } from "./facts-step";
+import { finishIfDone } from "./finish";
 import { applyGoogleNotes } from "./google-step";
 import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
@@ -183,10 +184,25 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     await prepareToneOptions(id).catch((err) => console.error("Couldn't prepare the tone choices", err));
   }
 
-  // 5. Her messages, and what this turn cost.
-  const { saved, stepNow } = await saveDinaMessages(id, input.channel, reply.messages);
+  // 5. Her messages (and, at the very end, the summary and the WhatsApp link), and what this turn cost.
+  const { saved, stepNow } = await saveDinaMessages(id, input.channel, [...reply.messages, ...(await endOfSetup(id, reply.messages))]);
   const costUsd = await logUsage(id, session.started_at, step, calls);
   return { duplicate: false, reply, messages: saved, step: stepNow, costUsd, fallback, toolCalls };
+}
+
+// Once every step is dealt with: setup finishes (with WhatsApp linked), and code
+// adds the summary if she didn't show it; without WhatsApp, one message asking to
+// link it (not repeated if it was asked in the last few messages).
+async function endOfSetup(id: string, messages: DinaReply["messages"]): Promise<DinaReply["messages"]> {
+  const outcome = await finishIfDone(id);
+  if (!outcome) return [];
+  const has = (type: string) => messages.some((m) => m.component?.type === type);
+  const summary = has("summary") ? [] : [{ text: outcome.finished ? "Here's everything we've set up together." : "Here's where setup stands.", component: { type: "summary" as const } }];
+  if (outcome.finished) return summary;
+  const { data: recent } = await getSupabase().from("onboarding_messages").select("parts").eq("restaurant_id", id).eq("role", "dina").order("created_at", { ascending: false }).limit(6);
+  const askedRecently = (recent ?? []).some((r) => ((r.parts as { type?: string }[] | null) ?? []).some((p) => p?.type === "whatsapp_link"));
+  if (askedRecently || has("whatsapp_link")) return [];
+  return [...summary, { text: "One last thing: link your WhatsApp, so your morning brief and alerts can reach you. Then setup is finished.", component: { type: "whatsapp_link" as const } }];
 }
 
 // Dina's messages saved, in order (a millisecond apart, so they always read back
@@ -234,8 +250,9 @@ export async function codeTurn(input: { restaurantId: string; channel: Channel; 
     .insert({ id: randomUUID(), restaurant_id: input.restaurantId, role: "owner", channel: input.channel, step_key: session.current_step, body: input.text, parts: input.ownerParts ?? [], external_id: input.externalId ?? null });
   if (error?.code === "23505") return { duplicate: true };
   if (error) throw new Error(`Couldn't save the owner's message: ${error.message}`);
-  const { saved, stepNow } = await saveDinaMessages(input.restaurantId, input.channel, input.messages);
-  return { duplicate: false, reply: { messages: input.messages }, messages: saved, step: stepNow, costUsd: 0, fallback: false, toolCalls: [] };
+  const messages = [...input.messages, ...(await endOfSetup(input.restaurantId, input.messages))];
+  const { saved, stepNow } = await saveDinaMessages(input.restaurantId, input.channel, messages);
+  return { duplicate: false, reply: { messages }, messages: saved, step: stepNow, costUsd: 0, fallback: false, toolCalls: [] };
 }
 
 // The last messages before this one, oldest first (config: history_messages).

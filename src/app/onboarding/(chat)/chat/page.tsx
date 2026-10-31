@@ -22,5 +22,7 @@ async function Chat({ searchParams }: Pick<PageProps<"/onboarding/chat">, "searc
   await connection(); // always the conversation as it is now
   const { restaurantId } = await loadOnboarding(searchParams, "/onboarding/chat");
   const chat = await loadChat(restaurantId);
-  return <ChatClient restaurantId={restaurantId} {...chat} />;
+  // "Change" on the summary card opens the chat at that step (?step=menu).
+  const step = (await searchParams).step;
+  return <ChatClient restaurantId={restaurantId} {...chat} jumpTo={typeof step === "string" && /^[a-z_]{2,30}$/.test(step) ? step : null} />;
 }

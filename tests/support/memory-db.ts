@@ -214,6 +214,10 @@ export function memoryDb(seed: Record<string, Row[]>, options: Options = {}) {
         const f = files.get(`${bucket}/${path}`);
         return f ? { data: new Blob([new Uint8Array(f.bytes)]), error: null } : { data: null, error: { message: "Object not found" } };
       },
+      list: async (folder: string) => ({
+        data: [...files.keys()].filter((k) => k.startsWith(`${bucket}/${folder}/`)).map((k) => ({ name: k.slice(`${bucket}/${folder}/`.length) })).filter((x) => !x.name.includes("/")),
+        error: null,
+      }),
       remove: async (paths: string[]) => {
         for (const p of paths) files.delete(`${bucket}/${p}`);
         return { data: paths.map((name) => ({ name })), error: null };

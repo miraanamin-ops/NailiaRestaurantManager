@@ -51,6 +51,8 @@ export function ChatClient(props: {
   progress: ProgressData;
   skippable: boolean;
   needsStart: boolean;
+  // A step to open straight away ("Change" on the summary card).
+  jumpTo?: string | null;
 }) {
   const [messages, setMessages] = useState(props.messages);
   const [chosen, setChosen] = useState(props.chosen);
@@ -106,14 +108,19 @@ export function ChatClient(props: {
     [props.restaurantId],
   );
 
-  // The very first visit: Dina says hello.
+  // The very first visit: Dina says hello. Or, from the summary's "Change", that step.
   const started = useRef(false);
   useEffect(() => {
-    if (props.needsStart && !started.current) {
+    if (started.current) return;
+    if (props.needsStart) {
       started.current = true;
       void send({ kind: "start" });
+    } else if (props.jumpTo) {
+      started.current = true;
+      void send({ kind: "jump", step: props.jumpTo }, "Let's change that");
+      window.history.replaceState(null, "", `/onboarding/chat?r=${props.restaurantId}`);
     }
-  }, [props.needsStart, send]);
+  }, [props.needsStart, props.jumpTo, props.restaurantId, send]);
 
   return (
     <ChatLayout

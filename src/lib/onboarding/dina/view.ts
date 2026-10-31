@@ -18,7 +18,7 @@ export type AnswerPart = { type: "answer"; to: string; choice: string };
 const isAnswer = (p: unknown): p is AnswerPart => typeof p === "object" && p !== null && (p as AnswerPart).type === "answer" && typeof (p as AnswerPart).to === "string";
 
 export type CardSources = {
-  restaurant: { owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null };
+  restaurant: { id?: string; slug?: string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null };
   state: FlowState;
   // For the Google and tone cards (chat.ts fills these in): our manager email,
   // where "Connect Google" goes (null while Path A is off), the tone config.
@@ -99,24 +99,65 @@ function dishCheck(dishKeyValue: string | undefined, sources: CardSources): Chat
   return null;
 }
 
+// What each finished step holds, in a few words (from what's saved, never Dina's words).
+const data = (s: CardSources, k: FlowStepKey) => stepState(s.state, k).data as Record<string, unknown>;
 const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> = {
   hello: ({ restaurant }) => [restaurant.name, restaurant.cuisine, restaurant.address].filter(Boolean).join(", "),
+  google: (s) => {
+    const reviews = data(s, "google").reviews as { count: number; average: number | null } | undefined;
+    return reviews ? `Connected: ${reviews.count} review${reviews.count === 1 ? "" : "s"}${reviews.average ? `, rated ${reviews.average.toFixed(1)}` : ""}` : "Connected";
+  },
+  tone: (s) => {
+    const picks = data(s, "tone").picks as Partial<Record<"praise" | "complaint", { tone: string | null; own: boolean }>> | undefined;
+    const name = (p?: { tone: string | null; own: boolean }) => (p?.own ? "your own words" : (s.setup?.tones.tones.find((t) => t.id === p?.tone)?.name ?? "set"));
+    if (picks?.praise && picks.complaint) return `Good reviews: ${name(picks.praise)}. Bad reviews: ${name(picks.complaint)}.`;
+    return data(s, "tone").defaulted ? "Warm and personal, for now" : "";
+  },
+  make_it_right: (s) => {
+    const d = data(s, "make_it_right") as { offers?: string[]; handler?: string };
+    return d.offers ? `${d.offers.join("; ")}. Complaints go to ${d.handler}.` : "Set";
+  },
+  menu: (s) => {
+    const a = data(s, "menu").allergens as { total: number; confirmed: number; unknown: number } | undefined;
+    return a ? `${a.total} dishes; allergens confirmed for ${a.confirmed}${a.unknown ? `, ${a.unknown} still to check` : ""}` : "Saved";
+  },
+  hours_faqs: (s) => {
+    const answers = Object.values((data(s, "hours_faqs").answers ?? {}) as Record<string, string>).filter((v) => v && v !== "(not answered)").length;
+    return `Opening hours set; ${answers} common question${answers === 1 ? "" : "s"} answered`;
+  },
 };
+
+// Where "Change" goes: the step in the chat, so Dina picks it up there.
+const editHref = (s: CardSources, k: FlowStepKey) => (s.restaurant.id ? `/onboarding/chat?r=${s.restaurant.id}&step=${k}` : undefined);
 
 export function summaryFrom(sources: CardSources): SummaryData {
   const steps = availableSteps();
   const items = steps
-    .filter((k) => ["done", "partial"].includes(stepState(sources.state, k).status))
+    .filter((k) => ["done", "partial"].includes(stepState(sources.state, k).status) || (stepState(sources.state, k).status === "in_progress" && stepState(sources.state, k).waitingOn))
     .map((k) => {
-      const status = stepState(sources.state, k).status as "done" | "partial";
-      return { key: k, title: STEP_DEFS[k].title, status, detail: SUMMARY_DETAIL[k]?.(sources) || (status === "done" ? "Done" : "Half done") };
+      const st = stepState(sources.state, k);
+      const waiting = st.status === "in_progress" && st.waitingOn;
+      const status = waiting ? ("waiting" as const) : (st.status as "done" | "partial");
+      const detail = waiting
+        ? st.waitingOn === "google"
+          ? "Invited: waiting for Google to accept"
+          : "Waiting for the profile's owner to add us"
+        : SUMMARY_DETAIL[k]?.(sources) || (status === "done" ? "Done" : "Half done");
+      return { key: k, title: STEP_DEFS[k].title, status, detail, editHref: editHref(sources, k) };
     });
+  const queued = Number(data(sources, "tone").queued ?? 0);
+  const qr = sources.restaurant.slug ? `/r/${sources.restaurant.slug}/qr-pack` : null;
   return {
     done: steps.filter((k) => stepState(sources.state, k).status === "done").length,
     total: steps.length,
     items,
     locked: gapsFor(sources.state).map((g) => ({ key: g.step_key, title: STEP_DEFS[g.step_key].title, unlock: g.unlock_text })),
-    next: ["Your first morning brief arrives on WhatsApp the morning after you finish.", "Your Monday report comes on Monday morning.", "Your QR codes will be ready to print."],
+    next: [
+      "Your first morning brief arrives on WhatsApp at 9am, the morning after you finish.",
+      "Your first Monday report comes on Monday morning.",
+      ...(queued ? [`${queued} review repl${queued === 1 ? "y is" : "ies are"} waiting for your approval in that first brief.`] : []),
+      qr ? `Your QR codes are ready to print: ${qr}` : "Your QR codes will be ready to print.",
+    ],
   };
 }
 
@@ -153,6 +194,7 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     return { type: "choice_cards", quote: { ...options.review, real: options.real }, cards: toneCards(setup.tones, options) };
   }
   if (p.type === "allergen_check") return dishCheck((part as { dish?: string }).dish, sources);
+  if (p.type === "whatsapp_link") return { type: "link", label: "Link my WhatsApp", href: `/onboarding/in?r=${sources.restaurant.id ?? ""}`, hint: null };
   if (p.type === "queue_replies")
     return {
       type: "quick_replies",

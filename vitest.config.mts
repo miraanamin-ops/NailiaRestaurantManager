@@ -5,6 +5,12 @@ import { defineConfig } from "vitest/config";
 // Supabase, Twilio or Claude is replaced with a stand-in inside each test.
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url)).replaceAll("\\", "/");
 
+// Vercel's build runs the tests with NODE_ENV=production, where React leaves out
+// act() and every component test fails ("React.act is not a function"): every
+// preview build of onboarding-dina failed that way from phase 4 until 31 Oct, and
+// it would have stopped the production deploy too. Tests always run as tests.
+(process.env as Record<string, string>).NODE_ENV = "test";
+
 export default defineConfig({
   // Component tests (tests/chat/*.test.tsx, jsdom) use the automatic JSX runtime.
   esbuild: { jsx: "automatic" },

@@ -33,6 +33,8 @@ export const Component = z.discriminatedUnion("type", [
   // offer to queue the owner's picked replies to their real reviews.
   z.object({ type: z.literal("tone_choices"), voice: z.enum(["praise", "complaint"]) }),
   z.object({ type: z.literal("queue_replies") }),
+  // The end: linking WhatsApp, which finishing needs (decision 7).
+  z.object({ type: z.literal("whatsapp_link") }),
   // Step 5: the next dish's suggested allergens to check (code picks the dish).
   // (dish: set by code when the card is saved, whatever she sends.)
   z.object({ type: z.literal("allergen_check"), dish: z.string().optional() }),
