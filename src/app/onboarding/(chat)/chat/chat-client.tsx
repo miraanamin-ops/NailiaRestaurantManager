@@ -114,11 +114,13 @@ export function ChatClient(props: {
     if (started.current) return;
     if (props.needsStart) {
       started.current = true;
-      void send({ kind: "start" });
+      queueMicrotask(() => void send({ kind: "start" }));
     } else if (props.jumpTo) {
       started.current = true;
-      void send({ kind: "jump", step: props.jumpTo }, "Let's change that");
+      const step = props.jumpTo;
       window.history.replaceState(null, "", `/onboarding/chat?r=${props.restaurantId}`);
+      // Next tick, not inside the effect itself (React's rule against cascading renders).
+      queueMicrotask(() => void send({ kind: "jump", step }, "Let's change that"));
     }
   }, [props.needsStart, props.jumpTo, props.restaurantId, send]);
 
