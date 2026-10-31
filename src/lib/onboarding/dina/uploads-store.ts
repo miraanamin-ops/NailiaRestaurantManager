@@ -37,35 +37,83 @@ async function downloadTwilio(url: string) {
   return Buffer.concat(chunks);
 }
 
-// Saves every acceptable file from one WhatsApp message. The path comes from the
-// message id, so a repeated delivery overwrites the same files (never doubles them).
+type Saved = { saved: (FilePart & Received)[]; refused: Refused[] };
+
+// Checks and saves one file's bytes. The path comes from the message id (and the
+// file's place in it), so sending the same message again overwrites the same file.
+async function saveOne(out: Saved, input: { restaurantId: string; step: string | null; messageId: string }, n: number, label: string, bytes: Buffer) {
+  if (bytes.length > MAX_UPLOAD_BYTES) return void out.refused.push({ reason: "size", label });
+  const kind = uploadKind(label, bytes);
+  if (!kind) return void out.refused.push({ reason: "type", label });
+  const safeId = input.messageId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64) || "file";
+  const path = `${input.restaurantId}/${input.step ?? "setup"}/${safeId}-${n + 1}.${kind.ext}`;
+  const { error } = await getSupabase().storage.from(BUCKET).upload(path, bytes, { contentType: kind.contentType, upsert: true });
+  if (error) {
+    console.error("Couldn't save a file the owner sent", error.message);
+    return void out.refused.push({ reason: "failed", label });
+  }
+  out.saved.push({ type: "file", path, kind: kind.kind, contentType: kind.contentType, bytes: bytes.length });
+}
+
+// Every acceptable file from one WhatsApp message.
 export async function saveWhatsAppFiles(input: { restaurantId: string; step: string | null; messageId: string; media: { url: string; contentType: string }[] }) {
-  const saved: (FilePart & Received)[] = [];
-  const refused: Refused[] = [];
-  const storage = getSupabase().storage.from(BUCKET);
+  const out: Saved = { saved: [], refused: [] };
   for (const [n, m] of input.media.slice(0, MAX_FILES_PER_MESSAGE).entries()) {
     let bytes: Buffer;
     try {
       bytes = await downloadTwilio(m.url);
     } catch (err) {
-      refused.push({ reason: err instanceof TooBig ? "size" : "failed", label: m.contentType });
+      out.refused.push({ reason: err instanceof TooBig ? "size" : "failed", label: m.contentType });
       if (!(err instanceof TooBig)) console.error("Couldn't download a file the owner sent", err);
       continue;
     }
-    const kind = uploadKind(m.contentType, bytes);
-    if (!kind) {
-      refused.push({ reason: "type", label: m.contentType });
-      continue;
-    }
-    const safeId = input.messageId.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64) || "file";
-    const path = `${input.restaurantId}/${input.step ?? "setup"}/${safeId}-${n + 1}.${kind.ext}`;
-    const { error } = await storage.upload(path, bytes, { contentType: kind.contentType, upsert: true });
-    if (error) {
-      console.error("Couldn't save a file the owner sent", error.message);
-      refused.push({ reason: "failed", label: m.contentType });
-      continue;
-    }
-    saved.push({ type: "file", path, kind: kind.kind, contentType: kind.contentType, bytes: bytes.length });
+    await saveOne(out, input, n, m.contentType, bytes);
   }
-  return { saved, refused };
+  return out;
+}
+
+// Every acceptable file from one web chat upload (already read by the upload route).
+export async function saveUploadedFiles(input: { restaurantId: string; step: string | null; messageId: string; files: { type: string; bytes: Buffer }[] }) {
+  const out: Saved = { saved: [], refused: [] };
+  for (const [n, f] of input.files.slice(0, MAX_FILES_PER_MESSAGE).entries()) await saveOne(out, input, n, f.type, f.bytes);
+  return out;
+}
+
+// A saved file's bytes, for reading it (a menu). Only from this restaurant's own folder.
+export async function readSavedFile(restaurantId: string, path: string) {
+  if (!path.startsWith(`${restaurantId}/`)) throw new Error("That file isn't this restaurant's");
+  const { data, error } = await getSupabase().storage.from(BUCKET).download(path);
+  if (error || !data) throw new Error(`Couldn't read a saved file: ${error?.message ?? "missing"}`);
+  return Buffer.from(await data.arrayBuffer());
+}
+
+// Files the web chat sent straight to the bucket (api/onboarding/upload): only from
+// this restaurant's incoming folder, each checked by its own bytes; anything else
+// is removed and refused. Kept where they are (the paths are already unguessable).
+export async function checkUploadedFiles(restaurantId: string, paths: string[]): Promise<Saved> {
+  const out: Saved = { saved: [], refused: [] };
+  const storage = getSupabase().storage.from(BUCKET);
+  for (const path of paths.slice(0, MAX_FILES_PER_MESSAGE)) {
+    if (!path.startsWith(`${restaurantId}/incoming/`) || path.includes("..")) {
+      out.refused.push({ reason: "failed", label: "not this restaurant's" });
+      continue;
+    }
+    let bytes: Buffer;
+    try {
+      bytes = await readSavedFile(restaurantId, path);
+    } catch {
+      out.refused.push({ reason: "failed", label: path });
+      continue;
+    }
+    const ext = path.split(".").pop() ?? "";
+    const label = ext === "xlsx" || ext === "xls" ? "application/vnd.ms-excel" : ext === "csv" ? "text/csv" : "";
+    const kind = bytes.length <= MAX_UPLOAD_BYTES ? uploadKind(label, bytes) : null;
+    if (!kind) {
+      await storage.remove([path]);
+      out.refused.push({ reason: bytes.length > MAX_UPLOAD_BYTES ? "size" : "type", label: ext });
+      continue;
+    }
+    out.saved.push({ type: "file", path, kind: kind.kind, contentType: kind.contentType, bytes: bytes.length });
+  }
+  return out;
 }

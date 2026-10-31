@@ -3,6 +3,7 @@ import { z } from "zod";
 import { saveProfileFields } from "@/lib/profile-edits";
 import { FlowError, FLOW_STEPS, isFlowStep, STEP_DEFS, type FlowStepKey } from "../flow";
 import { completeStep, enterStep, loadFlow, noteStep, skipStep, type Channel } from "../sessions";
+import { UK_ALLERGENS } from "../profile-data";
 import { getRestaurant } from "../store";
 
 // Dina's tools: the only way anything she hears is saved. Each checks its input in
@@ -93,6 +94,39 @@ export const TOOLS: DinaTool[] = [
     async run(ctx, input) {
       const { saveToneChoice } = await import("./tone-step");
       return { ok: true, text: await saveToneChoice(ctx.restaurantId, input.voice, { own: input.own_reply }, ctx.channel) };
+    },
+  }),
+  tool({
+    name: "save_make_it_right",
+    status: "Saving how you make it right…",
+    description:
+      "Save step 4 (making it right) once the owner has told you what you may offer unhappy customers and who handles complaints. Offers in their words (e.g. 'Invite them back for a free dessert', 'Ask them to call us so we can sort it out'); nothing over their discount cap (code checks). handler: who handles complaints (name and role); contact: how customers reach them, if given.",
+    schema: z.object({ offers: z.array(words(120)).min(1).max(5), handler: words(80), contact: words(120).nullable().optional() }),
+    async run(ctx, input) {
+      const { saveMakeItRight } = await import("./facts-step");
+      return saveMakeItRight(ctx.restaurantId, input, ctx.channel);
+    },
+  }),
+  tool({
+    name: "correct_menu",
+    status: "Updating your menu…",
+    description:
+      "Change the menu (the draft they're checking, or the saved one) the way the owner says, in their words: e.g. 'Lamb chops are £14', 'remove the samosa', 'add Mango Lassi £3.50 to Drinks'. Not for allergens (set_allergens).",
+    schema: z.object({ instruction: words(600) }),
+    async run(ctx, input) {
+      const { correctMenu } = await import("./menu-step");
+      return correctMenu(ctx.restaurantId, input.instruction);
+    },
+  }),
+  tool({
+    name: "set_allergens",
+    status: "Saving the allergens…",
+    description:
+      "After the owner chose 'Change it' on an allergen card and told you a dish's allergens: save exactly those (of the UK's 14; an empty list means none). Their words only: never add one they didn't say. The dish's name as on the card.",
+    schema: z.object({ dish: words(120), allergens: z.array(z.enum(UK_ALLERGENS)).max(14) }),
+    async run(ctx, input) {
+      const { setAllergens } = await import("./menu-step");
+      return setAllergens(ctx.restaurantId, input.dish, input.allergens, ctx.channel);
     },
   }),
   tool({

@@ -33,6 +33,9 @@ export const Component = z.discriminatedUnion("type", [
   // offer to queue the owner's picked replies to their real reviews.
   z.object({ type: z.literal("tone_choices"), voice: z.enum(["praise", "complaint"]) }),
   z.object({ type: z.literal("queue_replies") }),
+  // Step 5: the next dish's suggested allergens to check (code picks the dish).
+  // (dish: set by code when the card is saved, whatever she sends.)
+  z.object({ type: z.literal("allergen_check"), dish: z.string().optional() }),
 ]);
 export type Component = z.infer<typeof Component>;
 
@@ -46,21 +49,77 @@ export type DinaMessage = z.infer<typeof DinaMessage>;
 // reply instead of through a tool call (a tool call costs a second Claude call,
 // about 1.5 to 2 seconds). Code checks it with note_hello's rules and keeps it as
 // a draft for the basics card (turn.ts); nothing is saved for real until save_hello.
-export const HelloNotes = z
-  .object({ owner_name: z.string(), restaurant_name: z.string(), address: z.string(), cuisine: z.string(), role: z.enum(["owner", "manager"]) })
-  .partial();
+const helloShape = { owner_name: z.string(), restaurant_name: z.string(), address: z.string(), cuisine: z.string(), role: z.enum(["owner", "manager"]) };
+export const HelloNotes = z.object(helloShape).partial();
 
 // google_notes: the owner's answers to the Google step's three questions, the same way.
-export const GoogleNotes = z
-  .object({ has_profile: z.enum(["yes", "no", "not_sure"]), is_owner: z.enum(["yes", "no", "not_sure"]), device: z.enum(["phone", "laptop"]) })
-  .partial();
+const googleShape = { has_profile: z.enum(["yes", "no", "not_sure"]), is_owner: z.enum(["yes", "no", "not_sure"]), device: z.enum(["phone", "laptop"]) };
+export const GoogleNotes = z.object(googleShape).partial();
+
+// Step 6: hours the owner just told her, by day ("Monday": "12-10pm" or "closed"),
+// and their answers to the common questions, by topic, in their own words.
+// (Named days, not an open record: the first real run left an open record empty.)
+const hoursShape = { Monday: z.string(), Tuesday: z.string(), Wednesday: z.string(), Thursday: z.string(), Friday: z.string(), Saturday: z.string(), Sunday: z.string() };
+export const HoursNotes = z.object(hoursShape).partial();
+const faqShape = { halal: z.string(), parking: z.string(), delivery: z.string(), bookings: z.string(), accessibility: z.string(), kids: z.string(), private_hire: z.string() };
+export const FaqNotes = z.object(faqShape).partial();
 
 export const DinaReply = z.object({
   messages: z.array(DinaMessage).min(1).max(3),
   hello_notes: HelloNotes.nullable().optional(),
   google_notes: GoogleNotes.nullable().optional(),
+  hours_notes: HoursNotes.nullable().optional(),
+  faq_notes: FaqNotes.nullable().optional(),
 });
 export type DinaReply = z.infer<typeof DinaReply>;
+
+// ---------- What Claude is asked for ----------
+// The API limits an answer shape to 24 optional fields and 16 "this or null"
+// fields (the first real runs of steps 4 to 6 hit both, 31 Oct). So her notes go
+// as one list of { field, value } pairs ("hours.Monday": "12-10pm"): no optional
+// or nullable fields however many notes there are. fromWire turns the list back
+// into the notes above, keeping only values each note allows.
+
+const NOTE_FIELDS = [
+  ...Object.keys(helloShape).map((k) => `hello.${k}`),
+  ...Object.keys(googleShape).map((k) => `google.${k}`),
+  ...Object.keys(hoursShape).map((k) => `hours.${k}`),
+  ...Object.keys(faqShape).map((k) => `faq.${k}`),
+] as [string, ...string[]];
+
+const WireComponent = z.discriminatedUnion("type", [
+  ...Component.options.filter((o) => o.shape.type.value !== "allergen_check"),
+  z.object({ type: z.literal("allergen_check") }),
+] as unknown as [z.ZodObject<{ type: z.ZodLiteral<string> }>, ...z.ZodObject<{ type: z.ZodLiteral<string> }>[]]);
+
+export const DinaReplyWire = z.object({
+  messages: z.array(z.object({ text: z.string().min(1), component: WireComponent.nullable() })).min(1).max(3),
+  notes: z.array(z.object({ field: z.enum(NOTE_FIELDS), value: z.string() })).max(30),
+});
+
+const GROUPS = { hello: HelloNotes, google: GoogleNotes, hours: HoursNotes, faq: FaqNotes } as const;
+
+export function fromWire(w: { messages: unknown[]; notes?: { field: string; value: string }[] | null }): DinaReply {
+  const grouped: Record<keyof typeof GROUPS, Record<string, string>> = { hello: {}, google: {}, hours: {}, faq: {} };
+  for (const n of w.notes ?? []) {
+    const [group, key] = n.field.split(".") as [keyof typeof GROUPS, string];
+    const value = n.value?.trim();
+    if (group in GROUPS && key && value) grouped[group][key] = value;
+  }
+  // Each group checked as a whole; a value the note doesn't allow (a role of "boss") is dropped.
+  const keep = <G extends keyof typeof GROUPS>(g: G) => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(grouped[g])) if (GROUPS[g].safeParse({ [k]: v }).success) out[k] = v;
+    return Object.keys(out).length ? out : null;
+  };
+  return {
+    messages: w.messages as DinaReply["messages"],
+    hello_notes: keep("hello") as DinaReply["hello_notes"],
+    google_notes: keep("google") as DinaReply["google_notes"],
+    hours_notes: keep("hours") as DinaReply["hours_notes"],
+    faq_notes: keep("faq") as DinaReply["faq_notes"],
+  };
+}
 
 // Every piece of text the owner would see: the messages and every label.
 export function visibleText(reply: DinaReply) {
@@ -116,6 +175,20 @@ export function dinaReplyProblems(reply: DinaReply): string[] {
     if (c?.type === "upload") tooLong("upload label", c.label, LIMITS.uploadLabel);
   }
   return problems;
+}
+
+// Saying something is saved when nothing was (the first real run of steps 4 to 6:
+// "I've noted you... with 020 7946 0000", and the number wasn't saved). A claim like
+// this needs a tool that saved something this turn, notes in the reply (code saves
+// those), or code having acted for her (a tap, told under "Also").
+const SAVED_CLAIM = /\b(that'?s saved|(i'?ve|i have) (saved|noted|recorded|updated|got that (saved|down))|(all|now) saved|saved (it|that|those|them|your)|noted (that|it|you|those|down)|that'?s (everything|all) i need)\b/i;
+
+export function unsavedClaim(reply: DinaReply, saved: { toolSaved: boolean; codeActed: boolean }) {
+  if (saved.toolSaved || saved.codeActed) return null;
+  const notes = [reply.hello_notes, reply.google_notes, reply.hours_notes, reply.faq_notes].some((n) => n && Object.values(n).some(Boolean));
+  if (notes) return null;
+  const said = reply.messages.map((m) => m.text).join(" ").match(SAVED_CLAIM);
+  return said ? `It says "${said[0]}", but nothing was saved this turn. Call the step's tool with what the owner told you, or don't say it's saved.` : null;
 }
 
 // When a reply can't be made to pass (or Claude can't be reached): plain words

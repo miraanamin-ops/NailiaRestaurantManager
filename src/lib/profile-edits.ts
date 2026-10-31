@@ -37,6 +37,8 @@ export type EditableFields = ProfileFields &
     | "words_to_avoid"
     | "emoji_allowed"
     | "special_hours"
+    // Dina's step 6 (053)
+    | "faqs"
     // The owner (settings page): name, language, quiet hours
     | "owner_name"
     | "owner_language"
@@ -72,6 +74,7 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   words_to_avoid: "words to avoid",
   emoji_allowed: "emojis",
   special_hours: "special hours",
+  faqs: "answers to common questions",
   owner_name: "your name",
   owner_language: "language",
   quiet_hours_start: "quiet hours start",

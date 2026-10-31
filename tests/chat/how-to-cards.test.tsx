@@ -5,7 +5,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { ChoiceCards } from "@/components/chat/choice-cards";
-import { ForwardCard, LinkCard, StepsCard } from "@/components/chat/how-to-cards";
+import { DishCheckCard, ForwardCard, LinkCard, StepsCard } from "@/components/chat/how-to-cards";
 
 afterEach(cleanup);
 
@@ -81,5 +81,28 @@ describe("ChoiceCards with a review", () => {
     render(<ChoiceCards cards={cards} quote={{ author: "Priya", rating: 2, text: "Cold chips.", real: true }} onPick={() => {}} />);
     expect(screen.queryByText("A typical review, to set your tone.")).toBeNull();
     expect(screen.getByLabelText("2 out of 5 stars")).toBeTruthy();
+  });
+});
+
+describe("DishCheckCard", () => {
+  const actions = [
+    { id: "allergen_ok", label: "That's right" },
+    { id: "allergen_change", label: "Change it" },
+    { id: "allergen_unsure", label: "Not sure" },
+    { id: "allergen_later", label: "Do the rest later" },
+  ];
+  test("the dish, its suggestion marked as not confirmed, and the four answers (no 'accept all')", () => {
+    const onAction = vi.fn();
+    render(<DishCheckCard dish="Lamb chops" section="Grills" suggested={["milk", "mustard"]} position={1} total={40} actions={actions} onAction={onAction} />);
+    expect(screen.getByText("Dish 1 of 40 · Grills")).toBeTruthy();
+    expect(screen.getByText("Suggested, not confirmed")).toBeTruthy();
+    expect(screen.getAllByRole("listitem").map((l) => l.textContent)).toEqual(["milk", "mustard"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["That's right", "Change it", "Not sure", "Do the rest later"]);
+    fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
+    expect(onAction).toHaveBeenCalledWith(actions[2]);
+  });
+  test("no suggested allergens says so", () => {
+    render(<DishCheckCard dish="Chips" section="Sides" suggested={[]} position={3} total={3} actions={actions} onAction={() => {}} />);
+    expect(screen.getByText("None of the 14 allergens")).toBeTruthy();
   });
 });

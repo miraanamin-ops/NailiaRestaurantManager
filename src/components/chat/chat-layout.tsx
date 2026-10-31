@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { ChoiceCards } from "./choice-cards";
 import { Composer } from "./composer";
 import { ConfirmationCard } from "./confirmation-card";
-import { ForwardCard, LinkCard, StepsCard } from "./how-to-cards";
+import { DishCheckCard, ForwardCard, LinkCard, StepsCard } from "./how-to-cards";
 import { DinaAvatar, MessageBubble } from "./message-bubble";
 import { ProgressBar } from "./progress-bar";
 import { QuickReplies } from "./quick-replies";
@@ -169,5 +169,19 @@ function Component({ message, chosen, uploadStatus, handlers }: { message: ChatM
       return <ForwardCard intro={c.intro} text={c.text} />;
     case "link":
       return <LinkCard label={c.label} href={c.href} hint={c.hint} />;
+    case "dish_check":
+      return (
+        <DishCheckCard
+          dish={c.dish}
+          section={c.section}
+          suggested={c.suggested}
+          position={c.position}
+          total={c.total}
+          actions={c.actions}
+          disabled={done}
+          chosenId={chosen}
+          onAction={(o) => handlers.onPick(message.id, o)}
+        />
+      );
   }
 }

@@ -55,6 +55,7 @@ Every restaurant has one profile, stored in the database and versioned. Agents r
 | `halal_statement` | owner's exact wording, certifier if any | Confirm | Rep, Gro, Vis | Yes |
 | `allergen_statement` | owner's exact wording | Confirm | Rep, Gro, Vis | Yes |
 | `complaint_contact` | hello@restaurant.co.uk | Confirm | Rep | Yes |
+| `faqs` | the owner's answers to common questions, by topic: halal, parking, delivery, bookings, accessibility, kids, private hire (set up with Dina, step 6) | Confirm | Rep, Gro, Vis | No |
 | `busy_and_quiet_times` | quiet Mon to Thu before 7pm | Confirm | Gro, Ins | No |
 
 ## 5. Commercial

@@ -313,19 +313,23 @@ describe("Dina on WhatsApp, whole turns", () => {
     expect(callDina.mock.calls[0][0].content).toMatch(/chose "Skip for now" on Google profile/);
   });
 
-  test("a menu photo: saved in the private bucket with the message, and Dina says she has it", async () => {
+  test("a menu photo: saved in the private bucket with the message, read into a menu, and Dina told what was read", async () => {
     db.tables.onboarding_sessions[0].current_step = "menu";
+    const readMenuFiles = vi.fn(async () => "Code read the menu: 12 dishes in 3 sections.");
+    vi.doMock("@/lib/onboarding/dina/menu-step", async (orig) => ({ ...(await orig<object>()), readMenuFiles }));
     vi.stubGlobal("fetch", async () => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]), { headers: { "content-type": "image/jpeg" } }));
     callDina.mockResolvedValueOnce(answer({ text: "Got your menu photo, thanks." }));
     await whatsapp("", { messageSid: "SMphoto1", media: [{ url: "https://api.twilio.com/m/1", contentType: "image/jpeg" }] });
     expect([...db.files.keys()]).toEqual([`onboarding-uploads/${R}/menu/SMphoto1-1.jpg`]);
     expect(ownerRows()).toEqual([expect.objectContaining({ body: "📎 a photo", parts: [expect.objectContaining({ type: "file", kind: "photo", path: `${R}/menu/SMphoto1-1.jpg` })] })]);
-    expect(callDina.mock.calls[0][0].content).toMatch(/has just sent a photo on WhatsApp, saved safely for your menu/);
+    expect(callDina.mock.calls[0][0].content).toMatch(/has just sent a photo on WhatsApp\. Code read the menu: 12 dishes in 3 sections\./);
+    expect(readMenuFiles).toHaveBeenCalledWith(R, [expect.objectContaining({ path: `${R}/menu/SMphoto1-1.jpg`, kind: "photo" })]);
+    vi.doUnmock("@/lib/onboarding/dina/menu-step");
     expect(sent).toEqual([{ kind: "text", body: "Got your menu photo, thanks." }]);
   });
 
   test("several photos at once: kept, and answered once, by the last of them", async () => {
-    db.tables.onboarding_sessions[0].current_step = "menu";
+    db.tables.onboarding_sessions[0].current_step = "hours_faqs"; // a step where files are only kept
     vi.stubGlobal("fetch", async () => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1]), { headers: { "content-type": "image/jpeg" } }));
     // The webhook logged both before either was handled.
     db.tables.messages.push({ restaurant_id: R, direction: "inbound", from_number: OWNER, body: "[📷 photo]", twilio_sid: "SMp1", created_at: "2026-10-30T10:00:00.000Z" });

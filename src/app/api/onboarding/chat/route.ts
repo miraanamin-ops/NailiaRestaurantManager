@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { currentOwner } from "@/lib/auth";
 import { FlowError, isFlowStep, STEP_DEFS } from "@/lib/onboarding/flow";
-import { afterSkip, handleAnswer } from "@/lib/onboarding/dina/answers";
+import { afterSkip, answeredPart, handleAnswer } from "@/lib/onboarding/dina/answers";
 import { chatSources } from "@/lib/onboarding/dina/chat";
-import { dinaTurn, type TurnInput } from "@/lib/onboarding/dina/turn";
+import type { DinaReply } from "@/lib/onboarding/dina/reply";
+import { codeTurn, dinaTurn, type TurnInput } from "@/lib/onboarding/dina/turn";
 import { cardFor, chatMessage, confirmText, progressFrom, skippableNow } from "@/lib/onboarding/dina/view";
 import { enterStep, skipStep } from "@/lib/onboarding/sessions";
 import { limitKey, MINUTE, overLimit } from "@/lib/rate-limit";
@@ -29,6 +30,8 @@ const Action = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("confirm"), messageId: z.string().uuid(), changes: z.record(z.string().max(40), z.string().max(300)), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("skip"), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("jump"), step: z.string(), clientId: z.string().uuid() }),
+  // Files the browser has just put in the bucket (api/onboarding/upload).
+  z.object({ kind: z.literal("files"), paths: z.array(z.string().max(200)).min(1).max(10), clientId: z.string().uuid() }),
 ]);
 const Body = z.object({ r: z.string().uuid(), action: Action });
 
@@ -57,7 +60,10 @@ export async function POST(req: Request) {
           send({ type: "done" });
           return;
         }
-        const result = await dinaTurn({ ...input, restaurantId: r, channel: "web", onStatus: (text) => send({ type: "status", text }) });
+        // A tap code answers itself (the next allergen card): no Claude call.
+        const result = input.codeReply
+          ? await codeTurn({ restaurantId: r, channel: "web", text: input.text ?? "", externalId: input.externalId, ownerParts: input.ownerParts, messages: input.codeReply })
+          : await dinaTurn({ ...input, restaurantId: r, channel: "web", onStatus: (text) => send({ type: "status", text }) });
         if (result.duplicate) {
           send({ type: "done" });
           return;
@@ -83,7 +89,9 @@ export async function POST(req: Request) {
 
 // What each tap or message means for Dina's turn. Skipping and jumping are done by
 // code first (Dina is told what happened); everything else is the owner's answer.
-async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Omit<TurnInput, "restaurantId" | "channel"> | null> {
+type Turn = Omit<TurnInput, "restaurantId" | "channel"> & { codeReply?: DinaReply["messages"] };
+
+async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn | null> {
   switch (action.kind) {
     case "start": {
       // Only the very first time: a reload never makes her say hello twice.
@@ -95,13 +103,24 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Omit<
       return { event: "message", text: action.text, externalId: action.clientId };
     case "answer": {
       // Some taps are acted on by code first (Google's buttons, a tone): Dina is told what happened.
-      const note = await handleAnswer({ restaurantId: r, messageId: action.messageId, choiceId: action.choiceId, channel: "web", externalId: action.clientId });
-      return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceId }], note };
+      const outcome = await handleAnswer({ restaurantId: r, messageId: action.messageId, choiceId: action.choiceId, channel: "web", externalId: action.clientId });
+      const turn: Turn = { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceId }] };
+      return outcome && typeof outcome === "object" ? { ...turn, codeReply: outcome.reply } : { ...turn, note: outcome };
     }
     case "confirm": {
-      const sources = await chatSources(r);
-      const card = cardFor("basics", sources);
-      return { event: "message", text: confirmText(card, action.changes), externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: "confirm" }] };
+      // "Looks right" as it is: code saves the hours or the menu (the basics go to Dina,
+      // who saves them with her tool). Changes go to her in the owner's words.
+      const part = await answeredPart(r, action.messageId);
+      const card = cardFor(part?.card ?? "basics", await chatSources(r));
+      const asIs = !Object.keys(action.changes).length;
+      const done = asIs ? await handleAnswer({ restaurantId: r, messageId: action.messageId, choiceId: "confirm", channel: "web", externalId: action.clientId }) : null;
+      return {
+        event: "message",
+        text: confirmText(card, action.changes),
+        externalId: action.clientId,
+        ownerParts: [{ type: "answer", to: action.messageId, choice: "confirm" }],
+        note: typeof done === "string" ? done : null,
+      };
     }
     case "skip": {
       const { session } = await chatSources(r).then((s) => ({ session: s.focus }));
@@ -115,6 +134,18 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Omit<
         externalId: action.clientId,
         note: `The owner tapped "Skip for now" on ${STEP_DEFS[step].title}. Code has skipped it and kept it as a setup gap, so don't ask about it now.`,
       };
+    }
+    case "files": {
+      const { checkUploadedFiles } = await import("@/lib/onboarding/dina/uploads-store");
+      const { describeFiles, refusedText } = await import("@/lib/onboarding/dina/uploads");
+      const { noteForFiles } = await import("@/lib/onboarding/dina/whatsapp-turn");
+      const { saved, refused } = await checkUploadedFiles(r, action.paths);
+      const step = (await chatSources(r)).focus?.current_step ?? null;
+      const refusal = refusedText(refused);
+      const note = [saved.length ? await noteForFiles(r, step, saved, "in the chat") : null, refusal ? `Some files couldn't be used; tell them in a line: "${refusal}"` : null]
+        .filter(Boolean)
+        .join(" ");
+      return { event: "message", text: saved.length ? `📎 ${describeFiles(saved)}` : "📎 a file I couldn't use", externalId: action.clientId, ownerParts: saved, note };
     }
     case "jump": {
       if (!isFlowStep(action.step)) throw new FlowError("That step doesn't exist", "unavailable");

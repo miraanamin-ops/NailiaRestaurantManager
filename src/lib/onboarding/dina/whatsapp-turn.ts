@@ -5,9 +5,9 @@ import { appUrl, getSupabase } from "@/lib/supabase";
 import { sendDinaChoices, sendImage, sendText } from "@/lib/whatsapp";
 import { STEP_DEFS, type FlowStepKey } from "../flow";
 import { getSession, skipStep } from "../sessions";
-import { afterSkip, handleAnswer } from "./answers";
+import { afterSkip, answeredPart, handleAnswer } from "./answers";
 import { chatSources } from "./chat";
-import { dinaTurn, type SavedMessage, type TurnInput } from "./turn";
+import { codeTurn, dinaTurn, type SavedMessage, type TurnInput } from "./turn";
 import { describeFiles, refusedText } from "./uploads";
 import { isFilePart, saveWhatsAppFiles, type FilePart } from "./uploads-store";
 import { cardFor, chatMessage, confirmText, skippableNow, type StoredMessage } from "./view";
@@ -70,12 +70,23 @@ export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
       note: `The owner chose "Skip for now" on ${STEP_DEFS[step].title}. Code has skipped it and kept it as a setup gap, so don't ask about it now.`,
     };
   } else if (reply.kind === "confirm") {
-    turn = { event: "message", text: confirmText(cardFor("basics", sources), {}), externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: "confirm" }], note: switched };
+    // "Looks right": code saves the hours or the menu; the basics go to Dina's tool.
+    const part = await answeredPart(input.restaurantId, reply.messageId);
+    const done = await handleAnswer({ restaurantId: input.restaurantId, messageId: reply.messageId, choiceId: "confirm", channel: "whatsapp", externalId });
+    const note = [typeof done === "string" ? done : null, switched].filter(Boolean).join(" ") || null;
+    turn = { event: "message", text: confirmText(cardFor(part?.card ?? "basics", sources), {}), externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: "confirm" }], note };
   } else if (reply.kind === "answer") {
     // Some taps are acted on by code first (Google's buttons, a tone): Dina is told what happened.
     const done = await handleAnswer({ restaurantId: input.restaurantId, messageId: reply.messageId, choiceId: reply.choiceId, channel: "whatsapp", externalId });
+    const ownerParts = [{ type: "answer", to: reply.messageId, choice: reply.choiceId }];
+    // The next allergen card: code's own message, no Claude call.
+    if (done && typeof done === "object") {
+      const result = await codeTurn({ restaurantId: input.restaurantId, channel: "whatsapp", text: reply.label, externalId, ownerParts, messages: done.reply });
+      if (!result.duplicate) await sendTurn(channel, result.messages);
+      return;
+    }
     const note = [done, switched].filter(Boolean).join(" ") || null;
-    turn = { event: "message", text: reply.label, externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: reply.choiceId }], note };
+    turn = { event: "message", text: reply.label, externalId, ownerParts, note };
   } else {
     turn = { event: "message", text: reply.kind === "text" ? reply.text : input.body, externalId, note: switched };
   }
@@ -125,10 +136,8 @@ async function files(channel: OwnerChannel, input: DinaWhatsAppInput, step: Flow
 
   if (refusal) await say(channel, step, refusal);
   const all = [...(await filesSinceDina(input.restaurantId)), ...saved];
-  const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
   const note = [
-    `The owner has just sent ${describeFiles(all)} on WhatsApp, saved safely for ${stepName}.`,
-    "Reading files comes in a later version: say in a few words that you've got them, then carry on with the step you're on.",
+    await noteForFiles(input.restaurantId, step, all, "on WhatsApp"),
     refusal ? "Some other files couldn't be used, and code has already told them why: don't repeat it." : "",
     switched ?? "",
   ]
@@ -136,6 +145,19 @@ async function files(channel: OwnerChannel, input: DinaWhatsAppInput, step: Flow
     .join(" ");
   const result = await dinaTurn({ restaurantId: input.restaurantId, channel: "whatsapp", event: "message", text, externalId: input.messageSid ?? null, ownerParts: parts, note });
   if (!result.duplicate) await sendTurn(channel, result.messages);
+}
+
+// What Dina is told about files that arrived (either channel). On the menu step
+// they're read into a menu draft first; on other steps they're kept for later.
+export async function noteForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[], via: string) {
+  const sent = `The owner has just sent ${describeFiles(files)} ${via}.`;
+  if (step === "menu") {
+    const { readMenuFiles } = await import("./menu-step");
+    const read = await readMenuFiles(restaurantId, files).catch((err) => (console.error("Reading the menu failed", err), "The menu couldn't be read this time. Ask them to send it again, flat and in good light, or as a PDF."));
+    return `${sent} ${read}`;
+  }
+  const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
+  return `${sent} They're saved safely for ${stepName}. Reading files for this step comes in a later version: say in a few words that you've got them, then carry on with the step you're on.`;
 }
 
 // The owner's message, kept without a turn (part of a burst, or nothing usable).

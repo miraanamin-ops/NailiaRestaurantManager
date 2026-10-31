@@ -22,9 +22,10 @@ Read with:
 | After your browser test (30 Oct) | Sign-up goes straight into the web chat, with "Continue on WhatsApp" in its header; Dina introduces herself on her own (the opening had failed on a too-long button label); no "I'm an AI" unless asked | 255cc05 |
 | Speed (31 Oct) | One Claude call per turn (notes in the reply), the router only when needed, the hour-long cache: a WhatsApp reply's Claude time from 4 to 6 s to 1.3 to 2 s | 55a2230 |
 | 6. Steps 1 to 3 | Hello's Google Maps pre-fill; Google (three questions, steps card with screenshots, forward message, Connect Google behind a switch, invited, simulated or builder acceptance, the 24-hour nudge, email the steps); tone (config file, real reviews, replies written and checked, taps saved by code, write my own, skip = warm, queue replies as held drafts); migration 052 | see git log |
+| 7. Steps 4 to 6 | Making it right (offers within the cap), menu (read from photos or a PDF on both channels, checked card, allergens dish by dish with code's own cards, no accept-all), hours and FAQs (halal in the owner's words), web uploads straight to the private bucket, notes as a list (API limits), the "saved" check, the Places daily cap, builder commands locked to the builder's number; migration 053 | see git log |
 | 5. WhatsApp | Dina on WhatsApp through the same turn: buttons, lists and the numbered fallback, replies read back, photos/PDF/CSV/Excel into a private bucket (16 MB, checked by content), one reply per burst of photos, linking hands over to Dina at the exact step, the sandbox check script, migration 051 | see git log |
 
-Milestone A (pilot-usable Dina) still needs phases 7 and 8: steps 4 to 6, summary and test controls.
+Milestone A (pilot-usable Dina) still needs phase 8: the summary and the test controls.
 
 ## 2. Every decision you made
 
@@ -101,6 +102,7 @@ Checked on live on 29 Oct (`check-schema --live`): 046 and 047 ran on 27 Oct; th
 3. `supabase/050_onboarding_ai_usage.sql`
 4. `supabase/051_onboarding_uploads.sql` (phase 5: the private bucket for setup files)
 5. `supabase/052_setup_nudges.sql` (phase 6: the hourly setup nudges job)
+6. `supabase/053_restaurant_faqs.sql` (phase 7: the answers to common questions)
 
 Rollback for all of them: `supabase/rollback/onboarding_dina_rollback.sql`.
 
@@ -109,7 +111,8 @@ Rollback for all of them: `supabase/rollback/onboarding_dina_rollback.sql`.
 - **Google screenshots**: placeholders in `public/onboarding/google/` (phone-1.png to laptop-4.png). Replace with real screenshots, same names. A short video slot is ready (`VIDEO_SLOT` in `src/lib/onboarding/dina/google-content.ts`).
 - **GOOGLE_MANAGER_EMAIL**: set it on Vercel (and in the dev settings) so the steps show our manager email; without it they fall back to the manager login's email, or say it's being set up.
 - **Marking Google accepted (real mode)**: WhatsApp `BUILDER GOOGLE ACCEPTED <link name>` until phase 8's admin page.
-- **Steps 4 to 6 aren't built**: in the real run Dina started asking "making it right" questions instead of leaving it (phase 7 builds it).
+- **Allergen suggestions' cost** isn't in the per-run cost log yet (they use the older menu helper).
+- **Menu dietary flags** (vegetarian, vegan, halal per dish) aren't stored: the menu tables have no column for them; halal is the restaurant's own statement.
 
 - **Your own test of the web chat** (in progress): `http://localhost:3123/start?invite=TRY-DINA-2SOSX` (up to 5 sign-ups, a made-up email each time, a made-up 07700 900xxx number). Only Hello is fully built; steps 2 to 6 say they aren't ready.
 - **Next.js security upgrade**: Next.js reports a known vulnerability in 16.4.0 (live too). You haven't answered whether to run the upgrade, on its own branch.

@@ -8,8 +8,10 @@ import { enterStep, getSession, loadFlow, startOnboarding, type Channel } from "
 import { getRestaurant } from "../store";
 import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from "./call";
 import { mightBeAnotherStep, turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
-import { fallbackReply, type DinaReply } from "./reply";
+import { dinaReplyProblems, fallbackReply, type DinaReply } from "./reply";
+import { applyFaqNotes, applyHoursNotes } from "./facts-step";
 import { applyGoogleNotes } from "./google-step";
+import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
 import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
@@ -51,6 +53,8 @@ export type TurnResult =
 const KNOWN_FIELDS = ["owner_name", "name", "address", "cuisine", "phone", "website", "google_rating", "google_rating_count"] as const;
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
+// Code's note says it saved something this turn (so "that's saved" can be true without her tool).
+const CODE_SAVED = /Code (saved|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
 
 export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const supabase = getSupabase();
@@ -134,7 +138,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   let fallback = false;
   let toolCalls: ToolCall[] = [];
   try {
-    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus }, tools: OFFERED_TOOLS });
+    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus }, tools: OFFERED_TOOLS, codeActed: CODE_SAVED.test(input.note ?? "") });
     reply = answer.reply;
     calls.push(...answer.calls);
     toolCalls = answer.toolCalls;
@@ -153,6 +157,13 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     // The owner's answers to the Google questions, the same way (code decides what they change).
     if (reply.google_notes && Object.values(reply.google_notes).some(Boolean) && (await stillOpen("google"))) {
       await applyGoogleNotes(id, reply.google_notes, input.channel).catch((err) => console.warn("Dina's Google notes weren't kept", err));
+    }
+    // Step 6: the hours and the answers to the common questions she heard.
+    if (reply.hours_notes && Object.keys(reply.hours_notes).length && (await stillOpen("hours_faqs"))) {
+      await applyHoursNotes(id, reply.hours_notes, input.channel).catch((err) => console.warn("Dina's hours notes weren't kept", err));
+    }
+    if (reply.faq_notes && Object.values(reply.faq_notes).some(Boolean) && (await stillOpen("hours_faqs"))) {
+      await applyFaqNotes(id, reply.faq_notes as Record<string, string>, input.channel).catch((err) => console.warn("Dina's FAQ notes weren't kept", err));
     }
   } catch (err) {
     // 4. Never leave the owner without an answer, or show an unchecked one.
@@ -173,27 +184,58 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   }
 
   // 5. Her messages, and what this turn cost.
-  const after = (await getSession(id)) ?? session;
-  const stepNow = after.current_step;
-  // In order, a millisecond apart, so they always read back in the order she said them.
-  const base = Date.now();
-  const saved: SavedMessage[] = reply.messages.map((m) => ({ id: randomUUID(), text: m.text, component: m.component }));
-  check(
-    await supabase.from("onboarding_messages").insert(
-      saved.map((m, i) => ({
-        id: m.id,
-        restaurant_id: id,
-        role: "dina",
-        channel: input.channel,
-        step_key: stepNow,
-        body: m.text,
-        parts: m.component ? [m.component] : [],
-        created_at: new Date(base + i).toISOString(),
-      })),
-    ),
-  );
+  const { saved, stepNow } = await saveDinaMessages(id, input.channel, reply.messages);
   const costUsd = await logUsage(id, session.started_at, step, calls);
   return { duplicate: false, reply, messages: saved, step: stepNow, costUsd, fallback, toolCalls };
+}
+
+// Dina's messages saved, in order (a millisecond apart, so they always read back
+// in the order she said them). An allergen card gets the dish it's about now, so
+// a tap on it later answers that dish; with no dish left to check, it's dropped.
+async function saveDinaMessages(id: string, channel: Channel, messages: DinaReply["messages"]) {
+  const stepNow = (await getSession(id))?.current_step ?? null;
+  const base = Date.now();
+  const saved: SavedMessage[] = [];
+  for (const m of messages) {
+    let component = m.component;
+    if (component?.type === "allergen_check") {
+      const dish = await nextDishForCard(id).catch(() => null);
+      component = dish ? { type: "allergen_check", dish: dish.key } : null;
+    }
+    saved.push({ id: randomUUID(), text: m.text, component });
+  }
+  check(
+    await getSupabase()
+      .from("onboarding_messages")
+      .insert(
+        saved.map((m, i) => ({
+          id: m.id,
+          restaurant_id: id,
+          role: "dina",
+          channel,
+          step_key: stepNow,
+          body: m.text,
+          parts: m.component ? [m.component] : [],
+          created_at: new Date(base + i).toISOString(),
+        })),
+      ),
+  );
+  return { saved, stepNow };
+}
+
+// A turn code answers itself, with no Claude call (the next allergen card after a
+// tap): the owner's message once, then code's message, which passes Dina's checks.
+export async function codeTurn(input: { restaurantId: string; channel: Channel; text: string; externalId?: string | null; ownerParts?: unknown[]; messages: DinaReply["messages"] }): Promise<TurnResult> {
+  const problems = dinaReplyProblems({ messages: input.messages });
+  if (problems.length) throw new Error(`Code's setup message failed its checks: ${problems.join("; ")}`);
+  const session = (await getSession(input.restaurantId)) ?? (await startOnboarding(input.restaurantId, { channel: input.channel }));
+  const { error } = await getSupabase()
+    .from("onboarding_messages")
+    .insert({ id: randomUUID(), restaurant_id: input.restaurantId, role: "owner", channel: input.channel, step_key: session.current_step, body: input.text, parts: input.ownerParts ?? [], external_id: input.externalId ?? null });
+  if (error?.code === "23505") return { duplicate: true };
+  if (error) throw new Error(`Couldn't save the owner's message: ${error.message}`);
+  const { saved, stepNow } = await saveDinaMessages(input.restaurantId, input.channel, input.messages);
+  return { duplicate: false, reply: { messages: input.messages }, messages: saved, step: stepNow, costUsd: 0, fallback: false, toolCalls: [] };
 }
 
 // The last messages before this one, oldest first (config: history_messages).

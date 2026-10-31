@@ -68,6 +68,8 @@ export type Restaurant = {
   // A test site (048; always a demo too): never emails customers or writes to
   // live Google, whatever the switches say (lib/gate-rules.ts). Missing before 048 ran.
   is_test?: boolean;
+  // Answers to customers' common questions, by topic, in the owner's words (053; Dina's step 6).
+  faqs?: Record<string, string> | null;
   // Scheduled jobs only run for active restaurants (step 11).
   active: boolean;
   // Billing (025_billing.sql, lib/billing/). Optional so older rows and test fixtures still fit.

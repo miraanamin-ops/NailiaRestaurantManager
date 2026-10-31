@@ -109,3 +109,64 @@ export function LinkCard({ label, href, hint }: { label: string; href: string; h
     </div>
   );
 }
+
+// One dish's allergens to check: the suggestion clearly marked as a guess, and the
+// owner's four answers. There's no "accept all": every dish is checked on its own.
+export function DishCheckCard({
+  dish,
+  section,
+  suggested,
+  position,
+  total,
+  actions,
+  onAction,
+  disabled = false,
+  chosenId,
+}: {
+  dish: string;
+  section: string;
+  suggested: string[];
+  position: number;
+  total: number;
+  actions: ChatOption[];
+  onAction: (o: ChatOption) => void;
+  disabled?: boolean;
+  chosenId?: string;
+}) {
+  return (
+    <div className={`${card} space-y-3 p-4`}>
+      <p className="text-[13px] text-fog">
+        Dish {position} of {total} · {section}
+      </p>
+      <p className="text-[17px] font-semibold text-mist">{dish}</p>
+      <div>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ember">Suggested, not confirmed</p>
+        {suggested.length ? (
+          <ul className="mt-2 flex flex-wrap gap-2" aria-label="Suggested allergens">
+            {suggested.map((a) => (
+              <li key={a} className="rounded-full border border-ink-700 px-3 py-1 text-[14px] text-mist">
+                {a}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-[14px] text-mist">None of the 14 allergens</p>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        {actions.map((a, i) => (
+          <button
+            key={a.id}
+            type="button"
+            disabled={disabled}
+            aria-pressed={chosenId === a.id}
+            onClick={() => onAction(a)}
+            className={`${i === 0 ? primary : secondary} ${chosenId === a.id ? "ring-2 ring-signal" : ""}`}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

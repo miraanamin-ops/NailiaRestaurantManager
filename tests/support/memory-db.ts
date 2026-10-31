@@ -214,6 +214,10 @@ export function memoryDb(seed: Record<string, Row[]>, options: Options = {}) {
         const f = files.get(`${bucket}/${path}`);
         return f ? { data: new Blob([new Uint8Array(f.bytes)]), error: null } : { data: null, error: { message: "Object not found" } };
       },
+      remove: async (paths: string[]) => {
+        for (const p of paths) files.delete(`${bucket}/${p}`);
+        return { data: paths.map((name) => ({ name })), error: null };
+      },
       createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://storage.test/${bucket}/${path}?token=x` }, error: null }),
       getPublicUrl: (path: string) => ({ data: { publicUrl: `https://storage.test/${bucket}/${path}` } }),
     }),

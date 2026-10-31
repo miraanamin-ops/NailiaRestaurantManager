@@ -2,6 +2,8 @@ import type { ChatComponent, ChatMessage, ConfirmationData, ProgressData, StepSt
 import { availableSteps, gapsFor, progress, STEP_DEFS, stepState, type FlowState, type FlowStepKey } from "../flow";
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
+import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
+import type { Hours, MenuCategory } from "../profile-data";
 
 // What the web chat draws, made from what's saved: the conversation (with which
 // question each tap answered), the step list, and the cards. Plain code, so it's
@@ -16,7 +18,7 @@ export type AnswerPart = { type: "answer"; to: string; choice: string };
 const isAnswer = (p: unknown): p is AnswerPart => typeof p === "object" && p !== null && (p as AnswerPart).type === "answer" && typeof (p as AnswerPart).to === "string";
 
 export type CardSources = {
-  restaurant: { owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null };
+  restaurant: { owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null };
   state: FlowState;
   // For the Google and tone cards (chat.ts fills these in): our manager email,
   // where "Connect Google" goes (null while Path A is off), the tone config.
@@ -25,6 +27,7 @@ export type CardSources = {
 
 export const GOOGLE_ACTIONS = { invited: "invited", emailSteps: "email_steps" } as const;
 export const QUEUE_ACTIONS = { yes: "queue_yes", no: "queue_no" } as const;
+export const ALLERGEN_ACTIONS = { ok: "allergen_ok", change: "allergen_change", unsure: "allergen_unsure", later: "allergen_later" } as const;
 const NO_MANAGER_EMAIL = "our manager email (being set up: ask the DinerAI team)";
 
 // The review and replies the owner picks a tone from: prepared ones (real reviews)
@@ -54,8 +57,46 @@ export function basicsCard({ restaurant, state }: CardSources): ConfirmationData
 }
 
 // The cards built so far. A card for a step that isn't built yet shows nothing.
+// Menu: the draft being checked, else the saved menu. Hours: the draft, else what's saved.
 export function cardFor(card: string, sources: CardSources): ConfirmationData | null {
-  return card === "basics" ? basicsCard(sources) : null;
+  if (card === "basics") return basicsCard(sources);
+  if (card === "menu") {
+    const data = stepState(sources.state, "menu").data as { draft?: MenuCategory[] | null; unsure?: Record<string, string> };
+    const menu = data.draft ?? sources.restaurant.menu ?? [];
+    return menu.length ? menuCard(menu, data.draft ? (data.unsure ?? {}) : {}) : null;
+  }
+  if (card === "hours") {
+    const draft = stepState(sources.state, "hours_faqs").data.hours_draft as Hours | undefined;
+    return hoursCard(draft ?? ((sources.restaurant.opening_hours ?? {}) as Hours));
+  }
+  return null;
+}
+
+// An allergen card: the dish it was saved with, as the menu holds it now.
+function dishCheck(dishKeyValue: string | undefined, sources: CardSources): ChatComponent | null {
+  const menu = sources.restaurant.menu ?? [];
+  for (const c of menu)
+    for (const i of c.items)
+      if (dishKey(c.category, i.name) === dishKeyValue) {
+        const notSure = (stepState(sources.state, "menu").data.not_sure as string[] | undefined) ?? [];
+        const p = allergenProgress(menu, notSure);
+        const position = menu.flatMap((x) => x.items.map((y) => dishKey(x.category, y.name))).indexOf(dishKeyValue) + 1;
+        return {
+          type: "dish_check",
+          dish: i.name,
+          section: c.category,
+          suggested: i.allergens ?? [],
+          position,
+          total: p.total,
+          actions: [
+            { id: ALLERGEN_ACTIONS.ok, label: "That's right" },
+            { id: ALLERGEN_ACTIONS.change, label: "Change it" },
+            { id: ALLERGEN_ACTIONS.unsure, label: "Not sure" },
+            { id: ALLERGEN_ACTIONS.later, label: "Do the rest later", short: "Rest later" },
+          ],
+        };
+      }
+  return null;
 }
 
 const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> = {
@@ -111,6 +152,7 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     const options = toneOptionsFor(sources, voice)!;
     return { type: "choice_cards", quote: { ...options.review, real: options.real }, cards: toneCards(setup.tones, options) };
   }
+  if (p.type === "allergen_check") return dishCheck((part as { dish?: string }).dish, sources);
   if (p.type === "queue_replies")
     return {
       type: "quick_replies",

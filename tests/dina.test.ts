@@ -455,3 +455,38 @@ describe("when the step router is asked", () => {
     expect(mightBeAnotherStep(t)).toBe(false);
   });
 });
+
+describe("the answer shape Claude is asked for", () => {
+  // The API refuses more than 24 optional fields, or 16 "this or null" fields, in an
+  // answer shape (31 Oct: 26 of each). Notes go as a list, so neither grows.
+  test("no optional fields, and only one 'this or null' (a message's card)", async () => {
+    const { z } = await import("zod");
+    const { DinaReplyWire } = await import("@/lib/onboarding/dina/reply");
+    const optional: string[] = [];
+    let unions = 0;
+    const walk = (node: unknown, path: string) => {
+      if (!node || typeof node !== "object") return;
+      const n = node as { properties?: Record<string, unknown>; required?: string[]; anyOf?: unknown[]; oneOf?: unknown[]; type?: unknown };
+      if (n.properties) for (const k of Object.keys(n.properties)) if (!(n.required ?? []).includes(k)) optional.push(`${path}.${k}`);
+      if (n.anyOf || n.oneOf || Array.isArray(n.type)) unions++;
+      for (const [k, v] of Object.entries(node)) walk(v, `${path}.${k}`);
+    };
+    walk(z.toJSONSchema(DinaReplyWire), "");
+    expect(optional).toEqual([]);
+    expect(unions).toBeLessThanOrEqual(2);
+  });
+
+  test("the notes list becomes the notes; values a note doesn't allow are dropped", async () => {
+    const { fromWire } = await import("@/lib/onboarding/dina/reply");
+    const r = fromWire({
+      messages: [{ text: "Hi", component: null }],
+      notes: [
+        { field: "hello.address", value: "1 High St" },
+        { field: "hello.role", value: "boss" },
+        { field: "hours.Monday", value: "12-10pm" },
+        { field: "faq.parking", value: " " },
+      ],
+    });
+    expect(r).toEqual({ messages: [{ text: "Hi", component: null }], hello_notes: { address: "1 High St" }, google_notes: null, hours_notes: { Monday: "12-10pm" }, faq_notes: null });
+  });
+});

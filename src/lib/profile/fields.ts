@@ -56,6 +56,7 @@ export const PROFILE_FIELDS = {
   halal_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["halal_statement"], true, "halal statement"),
   allergen_statement: f("facts", "confirm", ["reputation", "growth", "visibility"], ["allergen_statement"], true, "allergen statement"),
   complaint_contact: f("facts", "confirm", ["reputation"], ["complaint_contact"], true, "contact for complaints"),
+  faqs: f("facts", "confirm", ["reputation", "growth", "visibility"], ["faqs"], false, "answers to common questions"),
   // Commercial
   recovery_offers: f("commercial", "confirm", ["reputation"], ["recovery_offers"], true, "recovery offers"),
   signup_offer: f("commercial", "confirm", ["gm", "growth"], ["signup_reward"], true, "sign-up reward"),

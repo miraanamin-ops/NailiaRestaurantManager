@@ -7,7 +7,7 @@ import { claude, WITH_FALLBACK } from "@/lib/claude";
 import { FLOW_STEPS, type FlowStepKey } from "../flow";
 import { assertDinaTools, loadDina } from "./agent";
 import { dinaConfig } from "./config";
-import { DinaReply, dinaReplyProblems } from "./reply";
+import { DinaReplyWire, dinaReplyProblems, fromWire, unsavedClaim, type DinaReply } from "./reply";
 import { runTool, toolDefinitions, type DinaTool, type ToolContext } from "./tools";
 
 // One turn of Dina on Claude: she may call her tools (each checked in code) for a
@@ -33,7 +33,8 @@ export class DinaReplyError extends Error {
 const fallbackFor = (model: string) => (model.startsWith("claude-haiku") ? {} : WITH_FALLBACK);
 const RETRIES = 2;
 
-export async function callDina(input: { content: string; step: FlowStepKey | null; ctx: ToolContext; tools: DinaTool[] }) {
+// codeActed: code did something for this turn already (a tap it handled), so "that's saved" can be true without a tool.
+export async function callDina(input: { content: string; step: FlowStepKey | null; ctx: ToolContext; tools: DinaTool[]; codeActed?: boolean }) {
   const config = dinaConfig();
   const def = loadDina();
   assertDinaTools(def, input.tools.map((t) => t.name));
@@ -53,7 +54,7 @@ export async function callDina(input: { content: string; step: FlowStepKey | nul
       ...fallbackFor(config.model),
       model: config.model,
       max_tokens: config.maxTokens(input.step ?? "hello"),
-      output_config: { effort: config.effort, format: betaZodOutputFormat(DinaReply) },
+      output_config: { effort: config.effort, format: betaZodOutputFormat(DinaReplyWire) },
       ...(config.thinking === "off" ? { thinking: { type: "between_tools" as const } } : {}),
       system,
       tools: toolDefinitions(input.tools),
@@ -77,13 +78,13 @@ export async function callDina(input: { content: string; step: FlowStepKey | nul
       continue;
     }
 
-    const out = response.parsed_output as DinaReply | null;
+    const out: DinaReply | null = response.parsed_output ? fromWire(response.parsed_output as Parameters<typeof fromWire>[0]) : null;
     problems =
       response.stop_reason === "max_tokens"
         ? ["The answer was cut off. Answer more briefly."]
         : response.stop_reason === "refusal" || !out
           ? [`no usable answer (${response.stop_reason})`]
-          : dinaReplyProblems(out);
+          : [...dinaReplyProblems(out), ...[unsavedClaim(out, { toolSaved: toolCalls.some((t) => t.ok), codeActed: Boolean(input.codeActed) })].filter((p): p is string => Boolean(p))];
     if (!problems.length) return { reply: out!, calls, toolCalls, attempts: attempt };
     attempt++;
     if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") messages.pop();

@@ -50,9 +50,13 @@ describe("what the chat draws", () => {
     expect(messages[2].component).toMatchObject({ type: "confirmation", card: { title: "Your basics" } });
   });
 
-  test("a card for a step that isn't built yet, or an unknown part, shows no component", () => {
-    const { messages } = chatFrom([row("d1", "dina", "Your hours.", [{ type: "editable_card", card: "hours" }]), row("d2", "dina", "Hi.", [{ type: "nonsense" }])], { restaurant, state: {} });
-    expect(messages.map((m) => m.component)).toEqual([null, null]);
+  test("a card for a step that isn't built yet, or an unknown part, shows no component; the hours card shows the hours", () => {
+    const { messages } = chatFrom(
+      [row("d1", "dina", "Your FAQs.", [{ type: "editable_card", card: "faqs" }]), row("d2", "dina", "Hi.", [{ type: "nonsense" }]), row("d3", "dina", "Your hours.", [{ type: "editable_card", card: "hours" }])],
+      { restaurant: { ...restaurant, opening_hours: { Monday: "12:00 – 22:00" } }, state: {} },
+    );
+    expect(messages.slice(0, 2).map((m) => m.component)).toEqual([null, null]);
+    expect(messages[2].component).toMatchObject({ type: "confirmation", card: { title: "Your opening hours", fields: expect.arrayContaining([{ key: "Monday", label: "Monday", value: "12:00 – 22:00" }, { key: "Sunday", label: "Sunday", value: null }]) } });
   });
 
   test("the step list: the focus is 'now' (even a skipped step being done again), a step waiting on Google is 'waiting'", () => {

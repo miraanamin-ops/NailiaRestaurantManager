@@ -38,7 +38,7 @@ export function choicesOf(c: ChatComponent | null | undefined): Choice[] {
   if (!c) return [];
   if (c.type === "quick_replies") return c.options.map((o) => ({ id: o.id, label: o.short ?? o.label }));
   if (c.type === "choice_cards") return c.cards.map((card) => ({ id: card.id, label: card.short ?? card.title, description: card.body }));
-  if (c.type === "steps") return c.actions.map((a) => ({ id: a.id, label: a.short ?? a.label }));
+  if (c.type === "steps" || c.type === "dish_check") return c.actions.map((a) => ({ id: a.id, label: a.short ?? a.label }));
   if (c.type === "confirmation")
     return [
       { id: "confirm", label: "Looks right" },
@@ -120,8 +120,27 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
       const hint = c.hint ? `\n\n${c.hint}` : "";
       out.push({ kind: "text", body: clip(`${m.text}${hint}\n\n${c.label}: ${abs(c.href)}`, WA.text) });
     } else if (c?.type === "confirmation") {
-      const rows = c.card.fields.map((f) => `${f.label}: ${f.value?.trim() ? f.value : "not given yet"}`).join("\n");
-      out.push(withChoices(`${m.text}\n\n*${c.card.title}*\n${rows}`, m.id, choices));
+      const rows = c.card.fields.map((f) => `${f.label}: ${f.value?.trim() ? f.value : "not given yet"}`);
+      const all = `${m.text}\n\n*${c.card.title}*\n${rows.join("\n")}`;
+      if (all.length <= WA.interactiveBody - 40) out.push(withChoices(all, m.id, choices));
+      else {
+        // A long card (a whole menu): the rows in as many messages as it takes, then the question with its buttons.
+        let chunk = `*${c.card.title}*`;
+        for (const row of rows) {
+          if (chunk.length + row.length + 1 > WA.text - 20) {
+            out.push({ kind: "text", body: chunk });
+            chunk = "";
+          }
+          chunk += `${chunk ? "\n" : ""}${row}`;
+        }
+        if (chunk) out.push({ kind: "text", body: chunk });
+        out.push(withChoices(m.text, m.id, choices));
+      }
+    } else if (c?.type === "dish_check") {
+      // Code's own allergen cards already say the dish; Dina's first one gets it added.
+      const said = m.text.includes(c.dish);
+      const line = `*${c.dish}* (${c.section}), dish ${c.position} of ${c.total}. Suggested: ${c.suggested.length ? c.suggested.join(", ") : "none of the 14"}.`;
+      out.push(withChoices(said ? m.text : `${m.text}\n\n${line}`, m.id, choices));
     } else if (c?.type === "summary") {
       const s = c.summary;
       const lines = [

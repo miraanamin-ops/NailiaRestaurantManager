@@ -34,7 +34,13 @@ export function asData(block: DataBlock) {
 // A step's saved data as Dina sees it. The tone step's prepared reviews and
 // replies stay out (outside text, and long): she's told only whether each is the
 // owner's real review or a typical one; the cards show the rest.
+// The menu step's draft is summarised too (it's long, and allergen suggestions are
+// guesses she mustn't treat as fact): how many dishes and the sections.
 export function stepDataForPrompt(step: FlowStepKey, data: Record<string, unknown>) {
+  if (step === "menu" && Array.isArray(data.draft)) {
+    const { draft, ...rest } = data as { draft: { category: string; items: unknown[] }[] };
+    return { ...rest, draft: { dishes: draft.reduce((n, c) => n + c.items.length, 0), sections: draft.map((c) => c.category) } };
+  }
   if (step !== "tone" || !data.options) return data;
   const { options, ...rest } = data as { options: Record<string, { real?: boolean }> };
   return { ...rest, reviews: Object.fromEntries(Object.entries(options).map(([v, o]) => [v, o?.real ? "their own review" : "a typical review"])) };

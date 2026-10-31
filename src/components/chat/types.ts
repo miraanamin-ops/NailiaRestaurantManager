@@ -20,6 +20,8 @@ export type ChatComponent =
   | { type: "forward"; intro: string; text: string }
   // A button that opens a page (e.g. Connect Google).
   | { type: "link"; label: string; href: string; hint: string | null }
+  // One dish's suggested allergens to check (marked as suggestions), with its buttons.
+  | { type: "dish_check"; dish: string; section: string; suggested: string[]; position: number; total: number; actions: ChatOption[] }
   | { type: "upload"; accept: "photo" | "document" | "spreadsheet" | "any"; multiple: boolean; label: string }
   | { type: "confirmation"; card: ConfirmationData }
   | { type: "summary"; summary: SummaryData };
