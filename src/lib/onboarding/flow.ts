@@ -208,6 +208,12 @@ export const EXTRA_GAPS: Record<string, { step: FlowStepKey; title: string; unlo
     unlock: "Send an item sales export too and I'll unlock dish-level insights: your best sellers, slow dishes and what to put on offer.",
     gapPriority: 90,
   },
+  order_counts: {
+    step: "sales",
+    title: "Order counts",
+    unlock: "Send your sales with the number of orders each day (transactions or receipts) and I'll make your forecasts more accurate.",
+    gapPriority: 80,
+  },
 };
 
 // A gap's title, whether it's a step or an extra.

@@ -26,7 +26,6 @@ import {
   rewardsProblems,
   ROLE_WORDS,
   MIN_SALES_WEEKS,
-  ORDERS_GAP_LINE,
   SALES_GAP_LINE,
   salesCoverage,
   teamProblems,
@@ -101,7 +100,8 @@ async function finishSales(restaurantId: string, channel: Channel) {
   if (!firsts.length) return "Code found no sales in that file. Ask them to check it's the sales export.";
   const cover = salesCoverage(firsts[0], lasts.at(-1)!);
   const itemsToo = rows.some((r) => Boolean(r.mapping?.item));
-  // Forecasts work from the number of orders each day (then the average spend), so days need it.
+  // Forecasts work from takings alone; the number of orders each day sharpens them
+  // (orders x average spend), so without it there's a low-priority "order counts" gap.
   const { count: withOrders } = await getSupabase()
     .from("sales_days")
     .select("day", { count: "exact", head: true })
@@ -110,11 +110,11 @@ async function finishSales(restaurantId: string, channel: Channel) {
     .lte("day", lasts.at(-1)!)
     .gt("transactions", 0);
   const ordersOk = (withOrders ?? 0) >= MIN_SALES_WEEKS * 7;
-  const forecastable = cover.enough && ordersOk;
+  const extras = [...(itemsToo ? [] : ["sales_items"]), ...(ordersOk ? [] : ["order_counts"])];
   await completeStep(
     restaurantId,
     "sales",
-    forecastable ? "done" : "partial",
+    cover.enough ? "done" : "partial",
     {
       pending_import: null,
       first_day: firsts[0],
@@ -122,19 +122,20 @@ async function finishSales(restaurantId: string, channel: Channel) {
       weeks: cover.weeks,
       days_with_orders: withOrders ?? 0,
       daily_only: !itemsToo,
-      extra_gaps: itemsToo ? [] : ["sales_items"],
-      gap_unlock: forecastable ? null : cover.enough ? ORDERS_GAP_LINE : SALES_GAP_LINE,
+      extra_gaps: extras,
+      gap_unlock: cover.enough ? null : SALES_GAP_LINE,
     },
     { channel },
   );
-  const items = itemsToo
-    ? ""
-    : " These are daily totals. In one short line, mention that an item sales export (sales by product) can also unlock dish-level insights later, whenever suits: it's kept as a low-priority reminder, not something to do now.";
+  // At most one of the two reminders is said now (order counts first: they help forecasts); both are kept as low-priority gaps.
+  const reminder = !ordersOk
+    ? " There's no number of orders for most days, which is fine: forecasts work from the takings. In one line, say that order counts (transactions or receipts) make forecasts more accurate, whenever they can send them: a low-priority reminder, not something to do now."
+    : itemsToo
+      ? ""
+      : " These are daily totals. In one short line, mention that an item sales export (sales by product) can also unlock dish-level insights later, whenever suits: a low-priority reminder, not something to do now.";
   const column = ` Then say in one line which column the takings came from: ${columnUsed(rows)}.`;
-  if (forecastable) return `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${column}${items} Then move on.`;
-  if (cover.enough)
-    return `Code saved their sales (${cover.text}), but the file has no number of orders for most days, and forecasts need it, so the step is half done and a setup gap for later. Say so kindly in a line: a report from their till that also shows the number of orders (transactions or receipts) each day will do it.${column}${items} Then move on.`;
-  return `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${column}${items} Then move on.`;
+  if (cover.enough) return `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${column}${reminder} Then move on.`;
+  return `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${column}${reminder} Then move on.`;
 }
 
 // The column the newest file's takings came from, in words for Dina: the net sales

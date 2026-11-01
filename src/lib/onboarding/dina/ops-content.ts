@@ -24,15 +24,18 @@ export function salesCoverage(firstDay: string, lastDay: string) {
 }
 
 export const SALES_GAP_LINE = `Send me at least ${MIN_SALES_WEEKS} weeks of sales and I'll forecast quiet nights and plan offers before they happen.`;
-// Takings without the number of orders each day: forecasts work from orders x average spend, so they need it.
-export const ORDERS_GAP_LINE = "Send your sales with the number of orders each day (transactions or receipts) and I'll forecast quiet nights and plan offers before they happen.";
 
 // How to export a year of sales from the common UK tills, for Dina to pass on
-// (the owner's click paths, 1 Nov). These give daily takings, which is all the
-// forecasts need; an item sales export also unlocks dish-level insights (a
-// low-priority setup gap when only daily figures came: EXTRA_GAPS.sales_items).
+// (the owner's click paths, 1 Nov). Daily takings are enough for forecasts; the
+// number of orders each day makes them more accurate, and an item sales export
+// unlocks dish-level insights (low-priority setup gaps when they didn't come:
+// EXTRA_GAPS.order_counts, EXTRA_GAPS.sales_items).
 export const POS_TIPS: Record<string, string> = {
-  Square: "Dashboard > Reports > Sales summary. Set the date range to the last 12 months, click the export icon, then Start export (CSV).",
+  // The Transactions export (one row per payment) is the better option: it gives the number of orders as well as net sales.
+  // TO CHECK against a real Square account: the menu path, the column names, and whether a 12-month range exports in one go.
+  // Tested only with a hand-made sample (tests/fixtures/sales/square-transactions.csv).
+  Square:
+    "Best: Dashboard > Transactions. Set the date range to the last 12 months, click Export, then Transactions CSV (one row per payment, so I get your number of orders too). Or: Dashboard > Reports > Sales summary. Set the date range to the last 12 months, click the export icon, then Start export (CSV).",
   "Lightspeed K-Series": "Back Office > Reports > All reports > Monthly Turnover. Set the period with the calendar icon, then Export CSV.",
   "Epos Now": "Back Office > Reporting > Sales Report. Report type \"Time Period\", set the date range, Show by Time Interval: daily, Apply, then export as CSV or Excel.",
 };

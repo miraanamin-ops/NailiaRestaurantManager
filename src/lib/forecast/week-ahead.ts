@@ -13,7 +13,7 @@ import {
   averageOrderValue,
   backtest,
   BASELINE,
-  baselineOrders,
+  dayRange,
   effectKind,
   historyWeeks,
   hourShares,
@@ -35,6 +35,9 @@ import { dayFromForecast, emptyDay, isMonday, weekdayOf, weekDays, type Accuracy
 //     in forecast_backtests, or the nightly model's own) is at or under the
 //     restaurant's limit (forecast_error_limit_pct, default 20%); otherwise held_back.
 // Days before today are empty.
+
+// Days of history read: a year plus the 8 weeks before last year's same point (the takings method's time of year), and a margin.
+const HISTORY_DAYS = 430;
 
 type RestaurantRow = { forecast_error_limit_pct: number | string | null };
 
@@ -123,14 +126,16 @@ export async function getWeekAhead(restaurantId: string, weekStart: string, now 
   const yesterday = addDaysTo(today, -1);
   const from = dates[0] < today ? today : dates[0];
   const [history, loaded, upcoming, past, hours] = await Promise.all([
-    salesHistory(restaurantId, addDaysTo(today, -400), yesterday),
+    salesHistory(restaurantId, addDaysTo(today, -HISTORY_DAYS), yesterday),
     loadForecast(restaurantId, today, dates[6]),
     getUpcomingEvents(restaurantId, from, dates[6]),
     calendarFor(restaurantId, addDaysTo(today, -365), yesterday),
     hourHistory(restaurantId, addDaysTo(today, -7 * BASELINE.weeks), yesterday),
   ]);
   const aov = averageOrderValue(history, today);
-  const effects = learnEffects(history, past.map((c) => ({ date: c.day, kind: effectKind(c.type, c.name) })));
+  const pastKinds = past.map((c) => ({ date: c.day, kind: effectKind(c.type, c.name) }));
+  const effects = learnEffects(history, pastKinds);
+  const salesEffects = learnEffects(history, pastKinds, "sales");
   const test = await ensureBacktest(restaurantId, today, history);
 
   // Hourly orders from the model: the run itself, or (for a refresh) the 05:35 run it was based on.
@@ -162,8 +167,12 @@ export async function getWeekAhead(restaurantId: string, weekStart: string, now 
       fromModel++;
       return dayFromForecast(d, { orders: model.orders, sales: model.sales, aovPence: aov, normal, hours: modelHours.get(d) ?? [] });
     }
-    const orders = baselineOrders(d, today, history, multiplierFor(upcoming.filter((e) => e.date === d), effects));
-    if (!orders) return emptyDay(d);
+    const events = upcoming.filter((e) => e.date === d);
+    const range = dayRange(d, today, history, aov, { orders: multiplierFor(events, effects), sales: multiplierFor(events, salesEffects) });
+    if (!range) return emptyDay(d);
+    // Takings alone (no order counts): the sales range, no orders or hours.
+    if (range.method === "takings") return dayFromForecast(d, { orders: null, sales: range.sales, normal: null, hours: [] });
+    const orders = range.orders;
     return dayFromForecast(d, {
       orders,
       aovPence: aov,
@@ -194,18 +203,19 @@ export async function getWeekAhead(restaurantId: string, weekStart: string, now 
 // knowing only the sales before it, next to what happened (the report's "sales vs forecast").
 export async function weekForecastAsOf(restaurantId: string, weekStart: string) {
   const dates = weekDays(weekStart);
-  const history = await salesHistory(restaurantId, addDaysTo(weekStart, -7 * BASELINE.weeks), dates[6]);
+  // (Back far enough for the takings method's time of year: HISTORY_DAYS.)
+  const history = await salesHistory(restaurantId, addDaysTo(weekStart, -HISTORY_DAYS), dates[6]);
   const aov = averageOrderValue(history, weekStart);
   const actual = new Map(history.map((h) => [h.day, h]));
   return {
     aov,
     days: dates.map((d) => {
-      const o = baselineOrders(d, weekStart, history);
+      const s = dayRange(d, weekStart, history, aov)?.sales;
       return {
         date: d,
-        sales_low: o && aov ? Math.round(o.low * aov) : null,
-        sales_mid: o && aov ? Math.round(o.likely * aov) : null,
-        sales_high: o && aov ? Math.round(o.high * aov) : null,
+        sales_low: s ? Math.round(s.low) : null,
+        sales_mid: s ? Math.round(s.likely) : null,
+        sales_high: s ? Math.round(s.high) : null,
         actual_pence: actual.get(d)?.net_pence ?? null,
         actual_orders: actual.get(d)?.orders ?? null,
       };

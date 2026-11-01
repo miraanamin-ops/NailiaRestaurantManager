@@ -65,7 +65,7 @@ describe("reading each till's daily file", () => {
       "Time → (none)",
       "Item → (none: a daily total for each day)",
       'Takings → "Net Sales" (net sales: excluding VAT, tips and service charge)',
-      "Orders → (none: forecasts need the number of orders each day)",
+      "Orders → (none: forecasts are more accurate with the number of orders each day)",
     ]);
     expect(describeMapping(daily("Date", "Takings", "dmy", "gross", "Transactions")).slice(-2)).toEqual(['Takings → "Takings" (including VAT)', 'Orders → "Transactions"']);
   });
@@ -121,6 +121,22 @@ describe("importing daily takings", () => {
       expect(db.tables.sales_days).toHaveLength(70);
     });
   }
+
+  test("Square's Transactions export (one row per payment): each day's net sales and its number of orders", async () => {
+    // Hand-made in the export's usual layout (not a real export: check one). Refund rows lower the takings but aren't orders.
+    const mapping: PosMapping = { ...daily("Date", "Net Sales", "dmy", "net"), receipt: "Transaction ID" };
+    const table = toTable(parseCsv(file("square-transactions.csv").toString("utf8")))!;
+    expect(table.headers).toHaveLength(31);
+    expect(describeMapping(mapping).at(-1)).toBe('Orders → one per "Transaction ID" each day');
+    suggestMapping.mockResolvedValue({ mapping, posName: "Square", problem: null });
+    const first = await upload("square-transactions.csv");
+    const { confirmImport } = await import("@/lib/sales/pos-import");
+    expect(await confirmImport(R, first.importId!, mapping)).toMatchObject({ status: "imported", message: expect.stringContaining("Imported daily takings for 70 days") });
+    expect(db.tables.sales_days).toHaveLength(70);
+    expect(db.tables.sales_days.find((d) => d.day === "2026-08-01")).toMatchObject({ net_sales: 410, transactions: 10, net_estimated: false });
+    expect(db.tables.sales_days.find((d) => d.day === "2026-08-05")).toMatchObject({ net_sales: 541.5, transactions: 14 });
+    expect(db.tables.sales_items).toEqual([]);
+  });
 
   test("a file with one total for the whole period isn't daily takings", async () => {
     suggestMapping.mockResolvedValue({ mapping: null, posName: "Square", problem: "It has one total for the whole period, not one per day." });

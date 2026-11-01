@@ -334,9 +334,17 @@ async function runDailyImport(row: PosImport, table: Table, mapping: PosMapping,
     await setImport(row, { status: "failed", error: "No readable days", rows_skipped: skipped });
     return { status: "failed", importId: row.id, message: "I couldn't find any days with takings in that file with those columns." };
   }
-  // The orders that day (the quantity column, for a daily summary): forecasts need them.
+  // The orders that day, which sharpen forecasts: a daily summary's orders column
+  // (quantity), or, for a file with one row per payment (Square's Transactions
+  // export), the number of different transaction ids that day (receipt), counting
+  // payments only: a refund row lowers the takings but isn't an order.
   const orders = new Map<string, number>();
   if (mapping.quantity) for (const l of lines) orders.set(l.day, (orders.get(l.day) ?? 0) + l.quantity);
+  else if (mapping.receipt) {
+    const ids = new Map<string, Set<string>>();
+    for (const l of lines) if (l.receipt && l.amount > 0) ids.set(l.day, (ids.get(l.day) ?? new Set()).add(l.receipt));
+    for (const [day, set] of ids) orders.set(day, set.size);
+  }
   const totals = dayTotals(lines.map((l) => ({ day: l.day, hour: null, receipt: null, amount: l.amount }))).map((d) => ({ ...d, transactions: orders.has(d.day) ? Math.round(orders.get(d.day)!) : null }));
   const days = totals.map((d) => d.day).sort();
   const [first, last] = [days[0], days.at(-1)!];

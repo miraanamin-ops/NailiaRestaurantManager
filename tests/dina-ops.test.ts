@@ -143,11 +143,19 @@ describe("step 7, sales history", () => {
     expect(await filesNote("sales")).toMatch(/the item totals in "Line Total" \(including VAT\), with the VAT taken off to get net sales/);
   });
 
-  test("daily takings with no number of orders: half done, with a gap asking for them (forecasts need orders)", async () => {
+  test("daily takings with no number of orders: done (forecasts work from takings), plus low-priority gaps for order counts and item sales", async () => {
     receivePosFile.mockImplementation(async () => (imported("imp-o", "2025-11-01", "2026-10-30", null, false), { status: "imported", importId: "imp-o", message: "ok" }));
-    expect(await filesNote("sales")).toMatch(/no number of orders for most days, and forecasts need it/);
-    expect(step("sales")).toMatchObject({ status: "partial", data: { days_with_orders: 0 } });
-    expect(gap("sales")?.unlock_text).toBe("Send your sales with the number of orders each day (transactions or receipts) and I'll forecast quiet nights and plan offers before they happen.");
+    const note = await filesNote("sales");
+    expect(note).toMatch(/Got it: 12 months of sales[\s\S]*order counts \(transactions or receipts\) make forecasts more accurate[\s\S]*low-priority/);
+    expect(note).not.toMatch(/item sales export/); // one reminder at a time
+    expect(step("sales")).toMatchObject({ status: "done", data: { days_with_orders: 0, extra_gaps: ["sales_items", "order_counts"] } });
+    expect(gap("sales")).toBeUndefined();
+    expect(gap("order_counts")?.unlock_text).toBe("Send your sales with the number of orders each day (transactions or receipts) and I'll make your forecasts more accurate.");
+    expect(gap("sales_items")).toBeTruthy();
+    const { gapTitle, pickNudge } = await import("@/lib/onboarding/flow");
+    expect(gapTitle("order_counts")).toBe("Order counts");
+    const gaps = [gap("sales_items"), gap("order_counts")].map((g) => ({ nudge_count: 0, last_nudged_at: null, snoozed_until: null, dismissed: false, dismissed_reason: null, resolved_at: null, ...g })) as never[];
+    expect(pickNudge(gaps, new Date()).pick).toMatchObject({ step_key: "order_counts" }); // before item sales, after every step gap
   });
 
   test("a new layout asks once; 'Yes, import it' imports; under 8 weeks is half done, with its own gap line", async () => {

@@ -304,10 +304,10 @@ export function describeMapping(m: PosMapping) {
       ? [
           "Item → (none: a daily total for each day)",
           `Takings → "${m.price}" (${basisWords(m)})`,
-          `Orders → ${m.quantity ? `"${m.quantity}"` : "(none: forecasts need the number of orders each day)"}`,
+          `Orders → ${m.quantity ? `"${m.quantity}"` : m.receipt ? `one per "${m.receipt}" each day` : "(none: forecasts are more accurate with the number of orders each day)"}`,
         ]
       : [`Item → "${m.item}"`, `Quantity → ${m.quantity ? `"${m.quantity}"` : "(none: 1 each)"}`, `Price → "${m.price}" (${m.price_is === "unit_price" ? "price each" : "line total"})`]),
   ];
-  if (m.receipt) lines.push(`Receipt → "${m.receipt}"`);
+  if (m.receipt && m.item !== null) lines.push(`Receipt → "${m.receipt}"`);
   return lines;
 }

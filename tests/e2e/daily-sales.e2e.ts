@@ -16,6 +16,8 @@ const SAMPLES = [
   { name: "lightspeed-monthly-turnover.csv", takings: "Turnover excl. VAT", basis: "net", orders: "Receipts" },
   { name: "epos-now-sales-report.csv", takings: "Net Sales", basis: "net", orders: "Transactions" },
   { name: "messy-daily-takings.csv", takings: "Takings", basis: "gross", orders: null },
+  // One row per payment: orders counted by transaction id.
+  { name: "square-transactions.csv", takings: "Net Sales", basis: "net", orders: null, receipt: "Transaction ID" },
 ];
 
 describe("the real column reader on daily takings", () => {
@@ -25,9 +27,9 @@ describe("the real column reader on daily takings", () => {
       const { suggestMapping } = await import("@/lib/sales/ai");
       const out = await suggestMapping(sampleForAi(table));
       console.log(`${s.name}: ${JSON.stringify(out)}`);
-      expect(out.mapping).toMatchObject({ item: null, price: s.takings, amount_basis: s.basis, quantity: s.orders });
+      expect(out.mapping).toMatchObject({ item: null, price: s.takings, amount_basis: s.basis, quantity: s.orders, ...("receipt" in s ? { receipt: s.receipt } : {}) });
       expect(mappingWorks(table, out.mapping!)).toBe(true);
-      expect(applyMapping(table, out.mapping!).lines).toHaveLength(70);
+      expect(new Set(applyMapping(table, out.mapping!).lines.map((l) => l.day)).size).toBe(70);
     });
   }
 });

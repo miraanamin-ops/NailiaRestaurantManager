@@ -45,4 +45,22 @@ writeFileSync(`${out}/messy-daily-takings.csv`, [
   ...rows,
   `Total,,${q(money(days.reduce((s, _, i) => s + gross(i), 0)))}`,
 ].join("\n") + "\n");
+// Square: Transactions export, one row per payment (and one refund), no item column.
+{
+  const head = ["Date","Time","Time Zone","Gross Sales","Discounts","Service Charges","Net Sales","Gift Card Sales","Tax","Tip","Partial Refunds","Total Collected","Source","Card","Card Entry Methods","Cash","Fees","Net Total","Transaction ID","Payment ID","Card Brand","PAN Suffix","Device Name","Staff Name","Details","Description","Event Type","Location","Dining Option","Customer ID","Customer Name"];
+  const rows = [head.map(q).join(",")];
+  days.forEach((d, i) => {
+    const n = 10 + (i % 7);
+    for (let k = 0; k < n; k++) {
+      const net = 18 + ((i * 7 + k * 13) % 40) + 0.5;
+      const tax = Math.round(net * 0.2 * 100) / 100;
+      const tip = k % 4 === 0 ? 2 : 0;
+      const id = `TX${String(i).padStart(3, "0")}${String(k).padStart(2, "0")}AbC`;
+      rows.push([dmy(d), `${String(12 + (k % 10)).padStart(2, "0")}:${String((k * 7) % 60).padStart(2, "0")}:00`, "Europe/London", money(net + tax), "£0.00", "£0.00", money(net), "£0.00", money(tax), money(tip), "£0.00", money(net + tax + tip), "Point of Sale", money(net + tax + tip), "Contactless", "£0.00", `-${money(0.3)}`, money(net + tax + tip - 0.3), id, `P${id}`, "Visa", "4242", "Counter iPad", "Sam", "", k % 2 ? "Mixed Grill, Chips" : "2 x Lamb Chops", "Payment", "Ember & Spice Grill", "Eat in", "", ""].map(q).join(","));
+    }
+    if (i === 4) rows.push([dmy(d), "21:10:00", "Europe/London", "-£15.00", "£0.00", "£0.00", "-£12.50", "£0.00", "-£2.50", "£0.00", "£0.00", "-£15.00", "Point of Sale", "-£15.00", "Contactless", "£0.00", "£0.00", "-£15.00", "RF00400AbC", "PRF00400AbC", "Visa", "4242", "Counter iPad", "Sam", "", "Refund: Mixed Grill", "Refund", "Ember & Spice Grill", "Eat in", "", ""].map(q).join(","));
+  });
+  writeFileSync(`${out}/square-transactions.csv`, rows.join("\r\n") + "\r\n");
+}
+
 console.log("total", days.reduce((s, _, i) => s + gross(i), 0).toFixed(2), "first", gross(0), "days", days.length);
