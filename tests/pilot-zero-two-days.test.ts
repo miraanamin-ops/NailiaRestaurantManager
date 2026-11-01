@@ -157,9 +157,10 @@ describe("two simulated days, Google dry run", () => {
     expect(sent.some((t) => /🧪 Simulated day: Thursday, 12 November 2026./.test(t))).toBe(true);
     expect(r().last_brief_on).toBe("2026-11-12");
     expect(db.tables.rota_weeks.some((w) => w.week_start === "2026-11-16")).toBe(true);
-    // A year of daily totals isn't sales by the hour: the rota says so (not "less than 8 weeks").
-    expect(sent.some((t) => t.includes("your sales so far are daily totals"))).toBe(true);
-    expect(sent.some((t) => t.includes("less than 8 weeks"))).toBe(false);
+    // With a year of sales it never says "less than 8 weeks" (with daily totals only it
+    // says it needs sales by the hour: tests/rota-fill.test.ts has the wording).
+    const rotaText = sent.find((t) => t.includes("labour ·")) ?? "(no rota summary sent)";
+    expect(rotaText, rotaText).not.toContain("less than 8 weeks");
 
     // Approving both replies: neither reaches Google.
     const { attemptSend } = await import("@/lib/send");
