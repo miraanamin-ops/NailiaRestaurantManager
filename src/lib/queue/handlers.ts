@@ -81,6 +81,9 @@ const ownerMessage: JobHandler = {
     if (err instanceof OwnerToldError) return;
     const p = job.payload as OwnerMessagePayload;
     if (!job.restaurant_id || !p?.owner || !p?.sandbox) return;
+    // The owner number may have moved since the message came in (scripts/demo-numbers.mjs):
+    // the old number isn't this restaurant's any more, so it hears nothing.
+    if (p.kind === "owner" && (await restaurantFor(job))?.owner_whatsapp !== p.owner) return;
     await messageOwner({ restaurantId: job.restaurant_id, from: p.sandbox, to: p.owner }, SORRY);
   },
 };

@@ -105,6 +105,12 @@ async function Admin({ searchParams }: Pick<PageProps<"/onboarding/admin">, "sea
         </Link>
         <span className="text-stone-500">: talk to the demo restaurants as their owner, test commands included.</span>
       </p>
+      <p className="mt-1 text-sm">
+        <Link href="/onboarding/admin/pilot-zero" className="underline">
+          Pilot Zero
+        </Link>
+        <span className="text-stone-500">: your own pilot restaurant and its Google dry run.</span>
+      </p>
 
       <h2 className="mt-8 text-xl font-semibold">Test restaurants ({tests.length})</h2>
       <div className="mt-3 space-y-3">{tests.length ? tests.map(row) : <p className="text-sm text-stone-500">None yet.</p>}</div>

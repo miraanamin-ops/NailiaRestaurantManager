@@ -136,6 +136,11 @@ export type Restaurant = {
   google_linked_at?: string | null;
   google_import?: import("@/lib/google/mapping").GoogleImport | null;
   google_imported_at?: string | null;
+  // Pilot Zero (056): the builder's own pilot restaurant, and its Google dry run
+  // switches (lib/gate-rules.ts googleDryRun). Set only in the admin console.
+  pilot_zero?: boolean | null;
+  google_dry_run?: boolean | null;
+  google_profile_writes?: boolean | null;
   // The review replies the owner picked during onboarding (026, lib/onboarding/reply-examples.ts).
   profile_examples?: import("@/lib/onboarding/reply-examples").ProfileExamples | null;
   // Phase 3b (022): the owner's language and quiet hours (UK time, "23:00:00" to "09:00:00").

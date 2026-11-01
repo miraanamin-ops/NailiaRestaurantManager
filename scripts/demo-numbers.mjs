@@ -51,12 +51,38 @@ if (clashes.length) {
   process.exit(2);
 }
 
+// Queued jobs that carry the old number (WhatsApp messages waiting for an answer:
+// the answer, or the queue's "Sorry", goes to the number in the job). Everything
+// else (briefs, nudges, reviews, rota, reminders) reads owner_whatsapp when it
+// sends, so it follows the move by itself.
+const moving = data.filter((r) => r.owner_whatsapp && r.owner_whatsapp !== target[r.slug]);
+const jobs = moving.length
+  ? await s.from("jobs").select("id, type, status, restaurant_id, payload").in("restaurant_id", moving.map((r) => r.id)).in("status", ["queued", "running"])
+  : { data: [], error: null };
+if (jobs.error) throw new Error(jobs.error.message);
+const oldNumber = (j) => moving.find((r) => r.id === j.restaurant_id)?.owner_whatsapp;
+const carrying = jobs.data.filter((j) => j.payload?.owner && j.payload.owner === oldNumber(j));
+const running = carrying.filter((j) => j.status === "running");
+
 console.log("restaurants.owner_whatsapp:");
 for (const r of data) console.log(`  ${r.name} (${r.slug}): ${r.owner_whatsapp ?? "(none)"}  ->  ${target[r.slug] ?? "(none)"}`);
+console.log(`Queued jobs still carrying the old number: ${carrying.length}${carrying.length ? ` (${carrying.map((j) => `${j.type} ${j.status}`).join(", ")}); queued ones are closed unanswered` : ""}.`);
 console.log("Nothing else changes (their customers, drafts, messages and settings stay as they are).");
+if (running.length) {
+  console.error(`\nREFUSED, nothing changed: ${running.length} message(s) are being answered right now. Run it again in a minute.`);
+  process.exit(2);
+}
 if (!YES) {
   console.log("\nShown only. Add --yes to make the change.");
   process.exit(0);
+}
+for (const j of carrying) {
+  const { error: e } = await s
+    .from("jobs")
+    .update({ status: "done", finished_at: new Date().toISOString(), result: { skipped: "owner number moved (scripts/demo-numbers.mjs)" } })
+    .eq("id", j.id)
+    .eq("status", "queued");
+  if (e) throw new Error(`job ${j.id}: ${e.message}`);
 }
 for (const r of data) {
   const { error: e } = await s.from("restaurants").update({ owner_whatsapp: target[r.slug] }).eq("id", r.id).eq("is_demo", true);

@@ -26,12 +26,60 @@ export function simulationStep(input: { channel: SendChannel; google: "dummy" | 
     : { outcome: "ok", detail: "Emails go to the customers." };
 }
 
+// Google writes: dry run (Pilot Zero, migration 056). Per restaurant, set only in
+// the admin console (/onboarding/admin/pilot-zero), never by the owner, WhatsApp,
+// Dina or a profile edit. Two kinds of write:
+//   replies   review replies and posts (and taking them down)
+//   profile   hours and photos
+// google_dry_run: true = replies are dry run, false = they go to Google, empty =
+// the default: dry run for a Pilot Zero restaurant, live for everyone else.
+// Profile writes are dry run whenever replies are, and for a Pilot Zero restaurant
+// also until google_profile_writes is switched on separately.
+// Before 056 the columns aren't there: nothing is dry run, as before.
+// Reviews made by the Pilot Zero simulation (reviews.source): never replied to on
+// Google, whatever the dry run switch says.
+export const SIMULATED_REVIEW_SOURCE = "simulated";
+
+export type DryRunRestaurant = { pilot_zero?: boolean | null; google_dry_run?: boolean | null; google_profile_writes?: boolean | null };
+export type GoogleWriteKind = "replies" | "profile";
+
+export function googleDryRun(restaurant: DryRunRestaurant | null | undefined, what: GoogleWriteKind) {
+  if (!restaurant) return false;
+  const pilot = restaurant.pilot_zero === true;
+  const replies = restaurant.google_dry_run ?? pilot;
+  if (what === "replies") return replies;
+  return replies || !(restaurant.google_profile_writes ?? !pilot);
+}
+
+export const writeKindForDraft = (kind: string): GoogleWriteKind => (kind === "hours_update" || kind === "menu_update" ? "profile" : "replies");
+
+// From an API call: photos (media) and changes to the location itself (hours) are profile writes.
+export const writeKindForCall = (method: string, url: string): GoogleWriteKind => (/\/media(\?|$)/.test(url) || method.toUpperCase() === "PATCH" ? "profile" : "replies");
+
 // The last wall before Google: a test site never changes anything on live Google
-// (reads are fine). A write that doesn't say which restaurant it's for is refused too.
-export function googleWriteRefused(method: string, restaurant: { is_test?: boolean | null } | null | undefined) {
+// (reads are fine), and nor does a restaurant whose writes of that kind are dry run.
+// A write that doesn't say which restaurant it's for is refused too.
+export function googleWriteRefused(method: string, restaurant: ({ is_test?: boolean | null } & DryRunRestaurant) | null | undefined, url = "") {
   if (method.toUpperCase() === "GET") return null;
   if (!restaurant) return "A Google write must say which restaurant it's for";
-  return restaurant.is_test ? "Test sites never write to live Google" : null;
+  if (restaurant.is_test) return "Test sites never write to live Google";
+  return googleDryRun(restaurant, writeKindForCall(method, url)) ? "Google writes are dry run for this restaurant" : null;
+}
+
+// What the owner sees instead of a write that was dry run, or a reply to a
+// simulated review (never posted to Google, whatever the dry run switch says).
+export function dryRunNote(input: { kind: string; content: string; profile?: string | null; simulatedReview?: boolean }) {
+  const where = `on Google${input.profile ? ` (${input.profile})` : ""}`;
+  const quote = (t: string) => `"${t.length > 300 ? `${t.slice(0, 299)}…` : t}"`;
+  const what =
+    input.kind === "review_reply"
+      ? `posted this reply ${where}: ${quote(input.content)}`
+      : input.kind === "google_post"
+        ? `posted this ${where} as a post: ${quote(input.content)}`
+        : `updated your ${input.kind === "menu_update" ? "menu" : "hours"} ${where}`;
+  return input.simulatedReview
+    ? `🧪 Simulated review, so never replied to on Google. Would have ${what}`
+    : `🧪 Dry run: nothing changed on Google. Would have ${what}`;
 }
 
 // Emails from a test site are always redirected (to the builder; the builder and

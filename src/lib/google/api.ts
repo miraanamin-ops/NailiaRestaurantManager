@@ -31,7 +31,7 @@ export class GoogleApiError extends Error {
 export const retryTiming = { wait: (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) };
 
 export async function gbp<T>(conn: GoogleConnection, method: string, url: string, body?: unknown, restaurant?: Restaurant | null): Promise<T> {
-  const refused = googleWriteRefused(method, restaurant);
+  const refused = googleWriteRefused(method, restaurant, url);
   if (refused) throw new GoogleApiError(refused, 403);
   let refreshed = false;
   for (let attempt = 1; ; attempt++) {

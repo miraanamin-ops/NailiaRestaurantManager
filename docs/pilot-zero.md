@@ -27,8 +27,8 @@ Read with `docs/onboarding-handover.md` (section 8: what already existed) and
 | # | What | Status |
 |---|---|---|
 | 1 | Identity: live listing, plus-addresses, demo phone and placeholder numbers | **done** |
-| 2 | Google dry run, simulated reviews never replied to (056 on dev after the phone test) | next |
-| 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | |
+| 2 | Google dry run, simulated reviews never replied to (056 on dev after the phone test) | **done** |
+| 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | next |
 | 4 | Test data in `/pilot-zero`, through the real importers | |
 | 5 | Close account (admin console) | |
 | 6 | #note and its CSV export | |
@@ -90,7 +90,15 @@ Nothing else changes (their customers, drafts, messages and settings stay as the
 Run it with `--yes` only **after the merge** (the code on main has no demo phone, and
 would send Ember's messages to a number Twilio can't deliver to). Undo:
 `--yes --back ember-spice=whatsapp:+447463775130 cardamom-corner=`. It's in the merge
-checklist.
+checklist as step 8, and must run **before** you sign up your Pilot Zero restaurant
+(step 11).
+
+Nothing queued for Ember can reach your phone after the move: every scheduled
+message reads `owner_whatsapp` when it sends. The only jobs carrying a number are
+WhatsApp messages waiting for an answer; the script closes queued ones and refuses
+while one is being answered. The assistant ignores a message whose sender isn't the
+current owner number, and the queue's "Sorry" (`onDead` in `src/lib/queue/handlers.ts`)
+never goes to a number that moved (`tests/queue.test.ts`).
 
 **After the move**:
 - Ember stays active: its scheduled jobs run as before, and their messages only
@@ -100,6 +108,52 @@ checklist.
   restaurant (Pilot Zero). Test onboardings then run in the web chat.
 - Logins: log in as the builder (miraan.amin@gmail.com) and as the Pilot Zero owner
   (your plus-address) in different browser profiles, or one in a private window.
+
+## Phase 2: Google dry run
+
+**Migration 056** (`supabase/056_pilot_zero.sql`, rollback in `supabase/rollback/`) adds three
+columns to `restaurants`: `pilot_zero` (the mark), `google_dry_run` and
+`google_profile_writes`. Later phases may add to the same file before it runs anywhere.
+Before 056 the columns aren't there and nothing is dry run (the code works as before),
+so it isn't needed for your phone test.
+
+**The rules** (`googleDryRun` in `src/lib/gate-rules.ts`, pure and unit-tested):
+- Two kinds of write: review replies and posts; hours and photos.
+- A Pilot Zero restaurant: both dry run until switched. Hours and photos go live only
+  when both switches are live. Everyone else: as before, unless the builder sets
+  `google_dry_run`.
+- A reply to a simulated review (`reviews.source = 'simulated'`, phase 3) never goes
+  to Google, whatever the switches say.
+- A Pilot Zero restaurant's Google writes are never on Auto: each one needs the
+  owner's Approve (`tapOnlyForGoogle` in `src/lib/trust.ts`).
+
+**Where it's enforced**:
+- The send gate (`attemptSend` in `src/lib/send.ts`, step 3b): a dry-run write is
+  marked sent and simulated, Google isn't called, and the owner's WhatsApp reply says
+  `🧪 Dry run: nothing changed on Google. Would have posted this reply on Google
+  (Maison Noor): "…"`. The same line is in the owner's `/log` and on the admin page.
+  The draft keeps it under `checks.send.dry_run`, so UNDO knows nothing reached Google.
+- The wall (`gbp()` in `src/lib/google/api.ts`): any write of a dry-run kind is
+  refused before Google is called, including taking replies and posts down.
+- The live connector refuses a reply to a simulated review.
+- The owner's Settings page says when Google is dry run, and that only DinerAI can
+  switch it.
+
+**The switch** (`/onboarding/admin/pilot-zero`, builder login, `src/lib/pilot-zero.ts`):
+- **Mark**: only a test restaurant or one on your own number (`BUILDER_WHATSAPP`) can
+  be marked. A real pilot's restaurant and the demo pair can't.
+- **Switch to live**: type the Google profile's name exactly (e.g. "Maison Noor"). Needs
+  a connected profile. **Back to dry run**: one tap.
+- Every change is in the audit log (actor builder). UNDO only reverses the owner's own
+  actions, so it can't touch these.
+- `tests/pilot-zero.test.ts` fails if any other file writes these columns. They aren't
+  profile fields, so no message, Dina tool or settings form can set them.
+- The page lists the latest "would have posted" writes for each Pilot Zero restaurant.
+
+Tests: `tests/pilot-zero.test.ts` (rules, switch, never Auto, nothing else writes
+them) and `tests/google-live.test.ts` "Google dry run" (against the mocked Google API:
+nothing written while dry run, replies live but hours still dry, simulated reviews,
+the wall, UNDO, other restaurants unchanged).
 
 ## Open items (deferred by your call)
 - Close account for the owner on the web and WhatsApp (the admin console version

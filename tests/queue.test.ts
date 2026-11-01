@@ -305,9 +305,21 @@ describe("WhatsApp messages on the queue", () => {
     vi.doMock("@/lib/bot", () => ({ handleMessage }));
     vi.doMock("@/lib/onboarding/whatsapp-flow", () => ({ onboardingInProgress: async () => false, handleOnboardingMessage: async () => {} }));
   };
+  beforeEach(() => void Object.assign(mem.tables.restaurants.find((r) => r.id === A)!, { owner_whatsapp: payload().owner }));
   afterEach(() => {
     vi.doUnmock("@/lib/bot");
     vi.doUnmock("@/lib/onboarding/whatsapp-flow");
+  });
+
+  test("an owner number that moved while the message waited never gets the Sorry (the demo pair moving to placeholders)", async () => {
+    withBot(async () => {
+      throw new Error("database unreachable");
+    });
+    Object.assign(mem.tables.restaurants.find((r) => r.id === A)!, { owner_whatsapp: "whatsapp:+447700900401" });
+    await queueMessage();
+    const { runWorker } = await import("@/lib/queue/worker");
+    expect((await runWorker())[0]).toMatchObject({ status: "dead" });
+    expect(toOwner).toEqual([]);
   });
 
   test("a message is answered once, by one worker", async () => {

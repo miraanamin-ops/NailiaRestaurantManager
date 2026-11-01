@@ -12,7 +12,7 @@ through the older setup carry on with it.
 
 ## Before merging
 
-### 1. Database: migrations 048 to 055, in this order
+### 1. Database: migrations 048 to 056, in this order
 
 Supabase > the **live** project (gfrkcvcqmdhdhpcytlkc) > **SQL Editor** > **New
 query**. Paste each file, click **Run**, and wait for "Success" before the next.
@@ -29,6 +29,7 @@ site as it is now keeps working with them.
 | 6 | `supabase/053_restaurant_faqs.sql` | the answers to common questions |
 | 7 | `supabase/054_brief_hour.sql` | the hour each owner's morning brief arrives (9am unless they pick another) |
 | 8 | `supabase/055_forecast_snapshots.sql` | the week forecast saved once a day, so the brief, the Monday report and the rota always show the same numbers |
+| 9 | `supabase/056_pilot_zero.sql` | Pilot Zero: the mark for your own pilot restaurant and its Google dry run switches (off for everyone else) |
 
 **Check:** in the SQL Editor, run:
 
@@ -38,7 +39,7 @@ where name between '048' and '056'
 order by name;
 ```
 
-Eight rows, 048 to 055. Or ask Claude to run
+Nine rows, 048 to 056. Or ask Claude to run
 `node --env-file=.env.live.local scripts/check-schema.mjs --live` (read only).
 
 ### 2. Vercel: production settings
@@ -134,8 +135,23 @@ minutes; the tests run first).
    `node --env-file=.env.live.local scripts/demo-numbers.mjs --live` shows the
    change (Ember & Spice from your number to +44 7700 900401, Cardamom Corner from
    none to +44 7700 900402); add `--yes` to make it. Only after the deploy is
-   Ready: the older code has no demo phone. Your number is then free for your
-   Pilot Zero sign-up.
+   Ready: the older code has no demo phone. **This must be done before step 11**
+   (signing up your Pilot Zero restaurant): until it is, your number belongs to
+   Ember & Spice and the sign-up can't link it.
+
+   Nothing already queued for Ember can reach your phone afterwards:
+   - Briefs, setup nudges, review alerts, the rota and reminders look up the owner
+     number at the moment they send, so they go to the placeholder (where nothing
+     is sent) from then on.
+   - The only jobs that carry a number are WhatsApp messages waiting for an
+     answer. The script lists them, closes any still queued unanswered, and
+     refuses (changing nothing) if one is being answered at that moment: run it
+     again a minute later. On 1 Nov there were none.
+   - A message job retried later from `/log` is ignored: the assistant only
+     answers the restaurant's current owner number, and the queue's "Sorry"
+     never goes to a number that has moved.
+   - To be extra safe, don't message Ember from your phone in the minutes before
+     you run it.
 9. **The demo phone and test tools:** https://app.dinerai.co.uk/onboarding/admin/phone
    (builder login) > **Ember & Spice Grill** > tap **HELP**: the assistant's help
    text appears within a few seconds. Tap **RUN BRIEF**: the brief appears there
@@ -145,6 +161,10 @@ minutes; the tests run first).
 10. **No real restaurant is marked demo:** Supabase > live > **Table Editor** >
    `restaurants`, filter `is_demo` is true. Only Ember & Spice and Cardamom Corner
    (and any test restaurant you've just made) should be there.
+11. **Only now: sign up your Pilot Zero restaurant** with your number (+447463775130)
+   and a plus-address, following `docs/pilot-zero.md`. Check first that step 8 is
+   done: Supabase > live > **Table Editor** > `restaurants`, filter
+   `owner_whatsapp` is `whatsapp:+447463775130`: no rows.
 
 ---
 
@@ -171,7 +191,7 @@ If something is wrong on live after the merge:
    from **before** the merge > **⋯** > **Instant Rollback** (or **Promote to
    Production**). The site is back on the older code straight away, including
    the older sign-up and setup.
-   - The database stays as it is. Migrations 048 to 055 only added things, and
+   - The database stays as it is. Migrations 048 to 056 only added things, and
      the older code ignores them (it ran with them before the merge).
    - Restaurants that signed up with Dina meanwhile keep their details. Their
      sign-up also made the older setup record, so with the older code they carry
