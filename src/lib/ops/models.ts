@@ -151,8 +151,9 @@ export async function forecastRun(restaurantId: string, runId: string) {
 
 // Whether the demo override applies, read from the restaurant row itself (callers can't claim it).
 export async function forecastOverride(restaurantId: string) {
-  const r = must(await db().from("restaurants").select("is_demo, forecast_unvalidated").eq("id", restaurantId).maybeSingle(), "restaurant") as {
+  const r = must(await db().from("restaurants").select("is_demo, forecast_unvalidated, owner_whatsapp").eq("id", restaurantId).maybeSingle(), "restaurant") as {
     is_demo: boolean | null;
+    owner_whatsapp?: string | null;
     forecast_unvalidated?: boolean | null;
   } | null;
   return unvalidatedForecastsAllowed(process.env, r);

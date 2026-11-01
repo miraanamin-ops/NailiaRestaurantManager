@@ -133,9 +133,21 @@ export function agentModeReason(env: Env, agent: LiveAgent, set: string, ready: 
 }
 
 // Test tools only ever act on a demo restaurant: a real one is never affected,
-// whatever TEST_TOOLS says.
-export function testToolsFor(env: Env, restaurant: { is_demo?: boolean | null }) {
-  return testToolsSwitch(env).on && restaurant.is_demo === true;
+// whatever TEST_TOOLS says. On production they're the builder's alone: only a
+// demo restaurant whose owner number is BUILDER_WHATSAPP (so a pilot owner never
+// gets TIME, RUN BRIEF or RESET ONBOARDING, even on a demo restaurant).
+export function testToolsFor(env: Env, restaurant: { is_demo?: boolean | null; owner_whatsapp?: string | null }) {
+  if (!testToolsSwitch(env).on || restaurant.is_demo !== true) return false;
+  if (environmentOf(env) !== "production") return true;
+  const digits = (n: string | null | undefined) => (n ?? "").replace(/D/g, "");
+  return digits(env.BUILDER_WHATSAPP) !== "" && digits(restaurant.owner_whatsapp) === digits(env.BUILDER_WHATSAPP);
+}
+
+// New sign-ups are demo restaurants only with TEST_TOOLS on and never on
+// production: a real pilot must never be treated as dummy data. (Test sites from
+// /onboarding/admin are made demo by the builder's own controls.)
+export function signupsAreDemo(env: Env) {
+  return testToolsSwitch(env).on && environmentOf(env) !== "production";
 }
 
 export function allSwitches(env: Env): Switches {

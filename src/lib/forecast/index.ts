@@ -486,9 +486,9 @@ export async function forecastBriefsOn(day: string, restaurantIds: string[]) {
 // Turns the demo override on or off. Refused unless TEST_TOOLS is on and the
 // restaurant is a demo one (the database also refuses it on a real restaurant).
 export async function setForecastUnvalidated(restaurantId: string, on: boolean) {
-  const r = check(await getSupabase().from("restaurants").select("id, name, is_demo").eq("id", restaurantId).maybeSingle<{ id: string; name: string; is_demo: boolean }>());
+  const r = check(await getSupabase().from("restaurants").select("id, name, is_demo, owner_whatsapp").eq("id", restaurantId).maybeSingle<{ id: string; name: string; is_demo: boolean; owner_whatsapp: string | null }>());
   if (!r) return { ok: false as const, message: "Restaurant not found." };
-  if (on && !unvalidatedForecastsAllowed(process.env, { is_demo: r.is_demo, forecast_unvalidated: true })) {
+  if (on && !unvalidatedForecastsAllowed(process.env, { is_demo: r.is_demo, owner_whatsapp: r.owner_whatsapp, forecast_unvalidated: true })) {
     return { ok: false as const, message: "Unvalidated forecasts can only be shown for a demo restaurant, with TEST_TOOLS on." };
   }
   check(await getSupabase().from("restaurants").update({ forecast_unvalidated: on }).eq("id", restaurantId));

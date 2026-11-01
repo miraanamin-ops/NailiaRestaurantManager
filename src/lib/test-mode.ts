@@ -9,7 +9,7 @@ export function testToolsEnabled() {
 }
 
 // Test tools may act on this restaurant: TEST_TOOLS is on and it's a demo restaurant.
-export function testToolsOn(restaurant: { is_demo?: boolean | null }) {
+export function testToolsOn(restaurant: { is_demo?: boolean | null; owner_whatsapp?: string | null }) {
   return testToolsFor(process.env, restaurant);
 }
 

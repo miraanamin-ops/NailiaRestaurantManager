@@ -16,6 +16,7 @@ import {
   switchChanges,
   switchesRecord,
   testToolsFor,
+  signupsAreDemo,
   testToolsSwitch,
   whatsAppSendAllowed,
 } from "@/lib/switches";
@@ -304,5 +305,26 @@ describe("WhatsApp on previews", () => {
   test("production and local development are unchanged", () => {
     expect(whatsAppSendAllowed(PROD, "whatsapp:+447700900999")).toBe(true);
     expect(whatsAppSendAllowed({}, "whatsapp:+447700900999")).toBe(true);
+  });
+});
+
+describe("test tools on production are the builder's alone", () => {
+  const BUILDER = "whatsapp:+447700900123";
+  const prod = { ...PROD, TEST_TOOLS: "true", BUILDER_WHATSAPP: BUILDER };
+  test("only a demo restaurant whose owner number is the builder's", () => {
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: BUILDER })).toBe(true);
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: "whatsapp:+447700900999" })).toBe(false);
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: null })).toBe(false);
+    expect(testToolsFor(prod, { is_demo: false, owner_whatsapp: BUILDER })).toBe(false);
+    expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "" }, { is_demo: true, owner_whatsapp: "" })).toBe(false);
+  });
+  test("previews and local copies keep the demo-only rule", () => {
+    expect(testToolsFor({ ...PREVIEW, TEST_TOOLS: "true" }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900999" })).toBe(true);
+    expect(testToolsFor({ TEST_TOOLS: "true" }, { is_demo: true })).toBe(true);
+  });
+  test("new sign-ups are never demo restaurants on production", () => {
+    expect(signupsAreDemo(prod)).toBe(false);
+    expect(signupsAreDemo({ ...PREVIEW, TEST_TOOLS: "true" })).toBe(true);
+    expect(signupsAreDemo({ ...PREVIEW })).toBe(false);
   });
 });

@@ -1,14 +1,18 @@
-// Clears ALL dummy data in one go. Shows what it would delete first; add --yes to delete.
-//   - everything belonging to demo restaurants (restaurants.is_demo = true): customers,
+// Clears dummy data in one go. Shows what it would delete first; add --yes to delete.
+// SAFETY NET: it only ever touches test sites (restaurants.is_demo AND is_test, made by
+// the builder's setup test controls). A demo restaurant that isn't a test site (e.g.
+// Ember & Spice, Cardamom Corner) is listed as skipped and nothing of it is touched,
+// so a real restaurant marked demo by mistake can never lose its data here.
+//   - everything belonging to those test sites: customers,
 //     reviews, drafts, campaigns, posts, messages, reports, logs, photos, sales
 //     (till reports, POS files and their saved column layouts, daily/hourly/item
 //     sales). The restaurant itself (name, menu, settings, staff numbers) and its
 //     weather (real, not dummy) are kept, so it can be re-seeded.
-//   - anything test commands or scripts made in any restaurant: NEW REVIEW reviews,
+//   - anything test commands or scripts made in those test sites: NEW REVIEW reviews,
 //     seeded sign-ups and reviews, and messages from the fake test number.
 //   - operations data (staff, rotas, invoices, forecasts...; supabase/036_ops_analytics.sql
-//     clear_ops_dummy_data): everything of the demo restaurants except the menu, weather
-//     and prayer times, and every row marked 'synthetic' in any restaurant or shared table.
+//     clear_ops_dummy_data, one test site at a time): everything except the menu, weather
+//     and prayer times.
 // Usage: node --env-file=.env.local scripts/clear-dummy-data.mjs [--yes]
 import { createClient } from "@supabase/supabase-js";
 import { guardLive } from "./lib/live-guard.mjs";
@@ -22,9 +26,12 @@ const ok = (res, what) => {
   return res;
 };
 
-const { data: demos } = ok(await s.from("restaurants").select("id, name").eq("is_demo", true), "demo restaurants");
-const ids = demos.map((d) => d.id);
-console.log(`Demo restaurants: ${demos.map((d) => d.name).join(", ") || "none"}`);
+const { data: demos } = ok(await s.from("restaurants").select("id, name, is_test").eq("is_demo", true), "demo restaurants");
+const sites = demos.filter((d) => d.is_test === true);
+const skipped = demos.filter((d) => d.is_test !== true);
+const ids = sites.map((d) => d.id);
+console.log(`Test sites (cleared): ${sites.map((d) => d.name).join(", ") || "none"}`);
+if (skipped.length) console.log(`Skipped, demo but not a test site (nothing touched): ${skipped.map((d) => d.name).join(", ")}`);
 
 // Children first, so nothing is left pointing at a deleted row.
 const TABLES = [
@@ -63,11 +70,13 @@ for (const table of TABLES) {
   if (YES && count) ok(await s.from(table).delete().in("restaurant_id", ids), `delete ${table}`);
 }
 
-// Test leftovers anywhere: dummy reviews and seeded rows (and their drafts), and the fake number's messages.
+// Test leftovers in the test sites: dummy reviews and seeded rows (and their drafts), and the fake number's messages.
+// (Mostly already gone with the tables above; kept as a check. An empty list matches nothing.)
+const only = ids.length ? ids : ["00000000-0000-0000-0000-000000000000"];
 const extras = [
-  ["reviews (made by NEW REVIEW or seeding)", s.from("reviews").select("id", { count: "exact", head: true }).in("source", ["dummy_google", "seed_report"])],
-  ["customers (seeded)", s.from("customers").select("id", { count: "exact", head: true }).eq("notes", "report-seed")],
-  ["messages (fake test number)", s.from("messages").select("id", { count: "exact", head: true }).or(`from_number.eq."${TEST_NUMBER}",to_number.eq."${TEST_NUMBER}"`)],
+  ["reviews (made by NEW REVIEW or seeding)", s.from("reviews").select("id", { count: "exact", head: true }).in("source", ["dummy_google", "seed_report"]).in("restaurant_id", only)],
+  ["customers (seeded)", s.from("customers").select("id", { count: "exact", head: true }).eq("notes", "report-seed").in("restaurant_id", only)],
+  ["messages (fake test number)", s.from("messages").select("id", { count: "exact", head: true }).or(`from_number.eq."${TEST_NUMBER}",to_number.eq."${TEST_NUMBER}"`).in("restaurant_id", only)],
 ];
 for (const [label, q] of extras) {
   const { count } = ok(await q, label);
@@ -75,11 +84,11 @@ for (const [label, q] of extras) {
   console.log(`${YES ? "Deleting" : "Would delete"} ${String(count ?? 0).padStart(5)} ${label}`);
 }
 if (YES) {
-  const dummyReviews = ok(await s.from("reviews").select("id").in("source", ["dummy_google", "seed_report"]), "find dummy reviews").data;
-  if (dummyReviews.length) ok(await s.from("drafts").delete().in("review_id", dummyReviews.map((r) => r.id)), "delete their drafts");
-  ok(await s.from("reviews").delete().in("source", ["dummy_google", "seed_report"]), "delete dummy reviews");
-  ok(await s.from("customers").delete().eq("notes", "report-seed"), "delete seeded customers");
-  ok(await s.from("messages").delete().or(`from_number.eq."${TEST_NUMBER}",to_number.eq."${TEST_NUMBER}"`), "delete test messages");
+  const dummyReviews = ok(await s.from("reviews").select("id").in("source", ["dummy_google", "seed_report"]).in("restaurant_id", only), "find dummy reviews").data;
+  if (dummyReviews.length) ok(await s.from("drafts").delete().in("review_id", dummyReviews.map((r) => r.id)).in("restaurant_id", only), "delete their drafts");
+  ok(await s.from("reviews").delete().in("source", ["dummy_google", "seed_report"]).in("restaurant_id", only), "delete dummy reviews");
+  ok(await s.from("customers").delete().eq("notes", "report-seed").in("restaurant_id", only), "delete seeded customers");
+  ok(await s.from("messages").delete().or(`from_number.eq."${TEST_NUMBER}",to_number.eq."${TEST_NUMBER}"`).in("restaurant_id", only), "delete test messages");
 }
 
 // Photos sent for Google posts, stored under each demo restaurant's folder, and
@@ -99,16 +108,18 @@ for (const id of ids) {
   }
 }
 
-// Operations data: one database function does it all (it only counts unless --yes).
-const ops = ok(await s.rpc("clear_ops_dummy_data", { p_dry_run: !YES }), "operations data");
-for (const row of ops.data ?? []) {
-  if (!row.n_rows) continue;
-  total += Number(row.n_rows);
-  console.log(`${YES ? "Deleting" : "Would delete"} ${String(row.n_rows).padStart(5)} from ${row.table_name}`);
+// Operations data: one database function, one test site at a time (it only counts unless --yes).
+for (const id of ids) {
+  const ops = ok(await s.rpc("clear_ops_dummy_data", { p_dry_run: !YES, p_restaurant_id: id }), "operations data");
+  for (const row of ops.data ?? []) {
+    if (!row.n_rows) continue;
+    total += Number(row.n_rows);
+    console.log(`${YES ? "Deleting" : "Would delete"} ${String(row.n_rows).padStart(5)} from ${row.table_name}`);
+  }
 }
 
 if (YES) {
-  // Reset the demo restaurants' daily markers so the brief and report start fresh.
+  // Reset the test sites' daily markers so the brief and report start fresh.
   if (ids.length) {
     ok(
       await s

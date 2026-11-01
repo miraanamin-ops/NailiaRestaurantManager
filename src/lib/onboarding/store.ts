@@ -2,7 +2,8 @@ import "server-only";
 import { check, checkRow } from "@/lib/drafts";
 import { saveMenu } from "@/lib/ops/menu";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { testToolsEnabled, testToolsOn } from "@/lib/test-mode";
+import { signupsAreDemo } from "@/lib/switches";
+import { testToolsOn } from "@/lib/test-mode";
 import { mark, newLinkCode, nextStep, slugFor, type Progress, type StepId, type StepStatus } from "./steps";
 
 // Onboarding progress, saved in one row per restaurant. The web wizard and the
@@ -96,8 +97,8 @@ export async function createRestaurantFromSignup(input: { ownerName: string; ema
         owner_email: input.email,
         slug: await uniqueSlug(input.restaurantName),
         active: false,
-        // With TEST_TOOLS on, every new sign-up is a demo restaurant.
-        is_demo: testToolsEnabled(),
+        // With TEST_TOOLS on, a new sign-up is a demo restaurant, except on production.
+        is_demo: signupsAreDemo(process.env),
         discount_cap_percent: 15,
         email_test_mode: false,
       })
@@ -157,10 +158,11 @@ export async function linkWhatsApp(code: string, number: string, ourNumber: stri
   if (!o) return { ok: false, reason: "no_code" };
   if (o.link_code_expires_at && new Date(o.link_code_expires_at) < new Date()) return { ok: false, reason: "expired" };
 
-  const current = check(await supabase.from("restaurants").select("id, is_demo").eq("owner_whatsapp", number).maybeSingle<{ id: string; is_demo: boolean }>());
+  const current = check(await supabase.from("restaurants").select("id, is_demo, owner_whatsapp").eq("owner_whatsapp", number).maybeSingle<{ id: string; is_demo: boolean; owner_whatsapp: string }>());
   if (current && current.id !== o.restaurant_id) {
     const target = check(await supabase.from("restaurants").select("id, is_demo").eq("id", o.restaurant_id).maybeSingle<{ id: string; is_demo: boolean }>());
-    if (!(testToolsOn(current) && target && testToolsOn(target))) return { ok: false, reason: "number_taken" };
+    // (The target is judged with this number as its owner, as it's about to be: on production only the builder's phone moves.)
+    if (!(testToolsOn(current) && target && testToolsOn({ ...target, owner_whatsapp: number }))) return { ok: false, reason: "number_taken" };
     check(await supabase.from("restaurants").update({ owner_whatsapp: null }).eq("id", current.id));
   }
   const restaurant = await updateRestaurantFields(o.restaurant_id, { owner_whatsapp: number, whatsapp_from: ourNumber });

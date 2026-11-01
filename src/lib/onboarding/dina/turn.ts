@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
-import { currentStep, STEP_DEFS, statusOf, type FlowStepKey } from "../flow";
+import { availableSteps, currentStep, STEP_DEFS, statusOf, type FlowStepKey } from "../flow";
 import { enterStep, getSession, loadFlow, startOnboarding, type Channel } from "../sessions";
 import { getRestaurant } from "../store";
 import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from "./call";
@@ -123,6 +123,8 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   state = stateNow;
   // Hello: Google Maps matches for the name, so she can ask "Is this you?" (when we can search).
   const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
+  const asked = availableSteps();
+  const near: FlowStepKey[] = step ? [step, ...(asked.includes(step) ? asked.slice(asked.indexOf(step) + 1, asked.indexOf(step) + 2) : [])] : [];
   const known = {
     // (An empty value, like hours of {}, counts as not known.)
     ...Object.fromEntries(
@@ -133,11 +135,13 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ),
     // Path A: the owner can connect Google directly (google_connect) instead of the manager steps.
     ...(googleConnectOn() ? { google_connect: "available: offer google_connect in the Google step" } : {}),
-    ...Object.fromEntries((step ? (STEP_FIELDS[step] ?? []) : []).map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
+    // This step's settings and the next one's: she often moves on in the same reply,
+    // and must never guess what's set (the full run of 1 Nov proposed a 20% cap that was 15%).
+    ...Object.fromEntries(near.flatMap((k) => STEP_FIELDS[k] ?? []).map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
     // The cap always has a value (the database default), so she never guesses one.
-    ...(step === "rewards" ? { discount_cap_percent: restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP } : {}),
-    ...(step === "sales" ? { pos_tips: POS_TIPS } : {}),
-    ...(step === "team" ? { labour_hint: LABOUR_HINT } : {}),
+    ...(near.includes("rewards") ? { discount_cap_percent: restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP } : {}),
+    ...(near.includes("sales") ? { pos_tips: POS_TIPS } : {}),
+    ...(near.includes("team") ? { labour_hint: LABOUR_HINT } : {}),
   };
   const content = turnText({
     restaurant: known,

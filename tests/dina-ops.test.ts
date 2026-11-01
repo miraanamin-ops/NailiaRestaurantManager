@@ -225,6 +225,22 @@ describe("step 12, approvals and timing", () => {
   });
 });
 
+describe("what Dina is told", () => {
+  test("on the team step she also gets the rewards step's settings, so moving on she never guesses the cap", async () => {
+    db.tables.onboarding_sessions[0].current_step = "team";
+    Object.assign(db.tables, { onboarding_ai_usage: [] });
+    const callDina = vi.fn(async () => ({ reply: { messages: [{ text: "Who runs the site day to day?", component: null }] }, calls: [], toolCalls: [], attempts: 1 }));
+    vi.doMock("@/lib/onboarding/dina/call", async (orig) => ({ ...(await orig<object>()), callDina, routeStep: async () => ({ step: null, call: null }) }));
+    const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "Bilal in the kitchen", externalId: "t-near" });
+    const content = (callDina.mock.calls[0] as unknown as [{ content: string }])[0].content;
+    expect(content).toMatch(/labour_hint/);
+    expect(content).toMatch(/discount_cap_percent: 20/);
+    expect(content).not.toMatch(/pos_tips|brief_hour/);
+    vi.doUnmock("@/lib/onboarding/dina/call");
+  });
+});
+
 describe("skipping, and the summary", () => {
   test("a skipped team leaves a 30% target; skipped rewards, a free dessert; both are gaps", async () => {
     for (const k of ["team", "rewards"]) expect(await tool("skip_step", { step: k })).toMatchObject({ ok: true });
