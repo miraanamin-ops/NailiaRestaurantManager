@@ -4,7 +4,7 @@ import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { ourWhatsAppNumber } from "../channel";
-import { FLOW_STEPS, gapsFor, progress, stepState, STEP_DEFS, type FlowStepKey } from "../flow";
+import { FLOW_STEPS, gapsFor, gapTitle, progress, stepState, STEP_DEFS, type FlowStepKey } from "../flow";
 import { enterStep, loadFlow, startOnboarding } from "../sessions";
 import { createRestaurantFromSignup, getRestaurant, updateRestaurantFields } from "../store";
 import { markGoogleAccepted } from "./google-step";
@@ -131,7 +131,7 @@ export async function setupsForAdmin() {
       step: s.current_step ? STEP_DEFS[s.current_step].title : s.completed_at ? "Finished" : "All dealt with",
       google: google.status === "done" ? "Accepted" : google.waitingOn === "google" ? "Invited: waiting" : google.waitingOn ? "Waiting on the profile's owner" : google.status.replace("_", " "),
       googleWaiting: google.status === "in_progress" && google.waitingOn === "google",
-      gaps: gapsFor(state).map((g) => STEP_DEFS[g.step_key].title),
+      gaps: gapsFor(state).map((g) => gapTitle(g.step_key)),
       stalled: !s.completed_at && Date.now() - Date.parse(s.updated_at) > 48 * 3_600_000,
     });
   }

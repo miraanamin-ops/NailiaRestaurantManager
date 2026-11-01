@@ -61,7 +61,7 @@ const saveStaff = vi.fn();
 const sendOwnerEmail = vi.fn();
 const sendText = vi.fn();
 
-const imported = (id: string, first: string, last: string) => db.tables.pos_imports.push({ id, restaurant_id: R, status: "imported", first_day: first, last_day: last });
+const imported = (id: string, first: string, last: string, item: string | null = "Item") => db.tables.pos_imports.push({ id, restaurant_id: R, status: "imported", first_day: first, last_day: last, mapping: { item } });
 
 beforeEach(() => {
   vi.resetModules();
@@ -136,6 +136,27 @@ describe("step 7, sales history", () => {
     expect(await tool("confirm_sales_columns", { owner_confirmed: true })).toMatchObject({ ok: true, text: expect.stringMatching(/2 weeks of sales, Oct 2026[\s\S]*at least 8 weeks/) });
     expect(step("sales")?.status).toBe("partial");
     expect(gap("sales")?.unlock_text).toBe("Send me at least 8 weeks of sales and I'll forecast quiet nights and plan offers before they happen.");
+  });
+
+  test("daily takings only: done (forecasts need nothing more), plus a low-priority gap for item sales that never blocks", async () => {
+    receivePosFile.mockImplementation(async () => (imported("imp-3", "2025-11-01", "2026-10-30", null), { status: "imported", importId: "imp-3", message: "ok" }));
+    expect(await filesNote("sales")).toMatch(/Got it: 12 months of sales[\s\S]*daily totals[\s\S]*item sales export[\s\S]*low-priority/);
+    expect(step("sales")).toMatchObject({ status: "done", data: { daily_only: true, extra_gaps: ["sales_items"] } });
+    expect(gap("sales")).toBeUndefined();
+    expect(gap("sales_items")?.unlock_text).toMatch(/item sales export too and I'll unlock dish-level insights/);
+    const { currentStep, pickNudge, gapReply } = await import("@/lib/onboarding/flow");
+    const { loadFlow } = await import("@/lib/onboarding/sessions");
+    expect(currentStep((await loadFlow(R)).state)).toBe("team"); // not a blocker
+    const gaps = [gap("sales_items"), { id: "g-menu", step_key: "menu", unlock_text: "x" }].map((g) => ({ nudge_count: 0, last_nudged_at: null, snoozed_until: null, dismissed: false, dismissed_reason: null, resolved_at: null, ...g })) as never[];
+    expect(pickNudge(gaps, new Date()).pick).toMatchObject({ step_key: "menu" }); // lowest priority
+    expect(gapReply(gaps[0], "now", new Date()).resume).toBe("sales");
+
+    // An item file later closes it.
+    receivePosFile.mockImplementation(async () => (imported("imp-4", "2026-09-01", "2026-10-30"), { status: "imported", importId: "imp-4", message: "ok" }));
+    db.tables.onboarding_sessions[0].current_step = "sales";
+    await filesNote("sales");
+    expect(step("sales")?.data).toMatchObject({ daily_only: false, extra_gaps: [] });
+    expect(gap("sales_items")?.resolved_at).toBeTruthy();
   });
 
   test("a photo isn't a sales export; nothing waiting means nothing to confirm", async () => {

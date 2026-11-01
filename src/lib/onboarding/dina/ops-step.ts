@@ -81,20 +81,37 @@ export async function confirmSalesColumns(restaurantId: string, channel: Channel
   return { ok: true as const, text: await finishSales(restaurantId, channel) };
 }
 
-// Everything imported so far (this file and any earlier), as one span.
+// Everything imported so far (this file and any earlier), as one span. Daily
+// takings alone are enough for forecasts; item sales add dish-level insights, so
+// without any, a low-priority "item sales" gap is kept (never a blocker).
 async function finishSales(restaurantId: string, channel: Channel) {
   const rows =
     check(
-      await getSupabase().from("pos_imports").select("first_day, last_day").eq("restaurant_id", restaurantId).eq("status", "imported").returns<{ first_day: string | null; last_day: string | null }[]>(),
+      await getSupabase()
+        .from("pos_imports")
+        .select("first_day, last_day, mapping")
+        .eq("restaurant_id", restaurantId)
+        .eq("status", "imported")
+        .returns<{ first_day: string | null; last_day: string | null; mapping: { item?: string | null } | null }[]>(),
     ) ?? [];
   const firsts = rows.map((r) => r.first_day).filter((d): d is string => Boolean(d)).sort();
   const lasts = rows.map((r) => r.last_day).filter((d): d is string => Boolean(d)).sort();
-  if (!firsts.length) return "Code found no sales in that file. Ask them to check it's the item sales export.";
+  if (!firsts.length) return "Code found no sales in that file. Ask them to check it's the sales export.";
   const cover = salesCoverage(firsts[0], lasts.at(-1)!);
-  await completeStep(restaurantId, "sales", cover.enough ? "done" : "partial", { pending_import: null, first_day: firsts[0], last_day: lasts.at(-1), weeks: cover.weeks, gap_unlock: cover.enough ? null : SALES_GAP_LINE }, { channel });
+  const itemsToo = rows.some((r) => Boolean(r.mapping?.item));
+  await completeStep(
+    restaurantId,
+    "sales",
+    cover.enough ? "done" : "partial",
+    { pending_import: null, first_day: firsts[0], last_day: lasts.at(-1), weeks: cover.weeks, daily_only: !itemsToo, extra_gaps: itemsToo ? [] : ["sales_items"], gap_unlock: cover.enough ? null : SALES_GAP_LINE },
+    { channel },
+  );
+  const items = itemsToo
+    ? ""
+    : " These are daily totals, which is all forecasts need. In one short line, mention that an item sales export (sales by product) can also unlock dish-level insights later, whenever suits: it's kept as a low-priority reminder, not something to do now.";
   return cover.enough
-    ? `Code saved their sales: "Got it: ${cover.text}." Say that in those words, then move on.`
-    : `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time), then move on.`;
+    ? `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${items} Then move on.`
+    : `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${items} Then move on.`;
 }
 
 // ---------- 8. Team and labour ----------

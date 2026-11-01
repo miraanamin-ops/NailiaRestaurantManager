@@ -128,6 +128,33 @@ minutes; the tests run first).
 6. **Scheduled jobs:** after the next hour (5 past), `/log` > the queue shows a
    `setup_nudges` job, done.
 7. **Clean up:** on `/onboarding/admin`, **Delete** the test restaurant.
+8. **Test tools are yours alone on Production:** from a phone that isn't
+   `BUILDER_WHATSAPP` but owns a demo restaurant (e.g. the Cardamom Corner phone),
+   send `RUN BRIEF`: it must answer that test commands only work for demo
+   restaurants, and do nothing. From your builder phone on a demo restaurant it
+   still works. (Code since 1 Nov: on Production, test tools only act on a demo
+   restaurant whose owner number is `BUILDER_WHATSAPP`, and new sign-ups are never
+   demo restaurants. `/onboarding/admin` was always builder-only.)
+9. **No real restaurant is marked demo:** Supabase > live > **Table Editor** >
+   `restaurants`, filter `is_demo` is true. Only your own demo and test
+   restaurants should be there (on 1 Nov: Ember & Spice, Cardamom Corner,
+   Tayyabs, Dishoom Shoreditch, Mangal 2, Test 1, Test 2, none of them a real
+   customer).
+
+---
+
+## When the first real pilot restaurant goes live
+
+1. **Switch customer email on:** Vercel > **nailiarestaurantmanager** >
+   **Settings** > **Environment Variables** > `EMAIL_REDIRECT` (Production) >
+   **Edit** > `false` > **Save**, then **Deployments** > the newest Production one
+   > **⋯** > **Redeploy**. Until then every customer email goes to you instead
+   (Preview always redirects, whatever this says).
+2. **Check it:** `/log` > Switches shows `EMAIL_REDIRECT: off`. Sign up to the
+   pilot's QR form with your own email: the confirm email arrives from the
+   restaurant, not redirected.
+3. **Check the pilot isn't a demo restaurant:** in `restaurants`, its `is_demo`
+   is false (sign-ups on Production never are; this is the second look).
 
 ---
 

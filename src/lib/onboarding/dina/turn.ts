@@ -16,7 +16,7 @@ import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
 import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
-import { DEFAULT_DISCOUNT_CAP, LABOUR_HINT, POS_TIPS } from "./ops-content";
+import { DAILY_FIGURES_HINT, DEFAULT_DISCOUNT_CAP, LABOUR_HINT, POS_TIPS } from "./ops-content";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
 
 // One turn of the setup conversation, whichever channel it came from (the web
@@ -140,7 +140,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ...Object.fromEntries(near.flatMap((k) => STEP_FIELDS[k] ?? []).map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
     // The cap always has a value (the database default), so she never guesses one.
     ...(near.includes("rewards") ? { discount_cap_percent: restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP } : {}),
-    ...(near.includes("sales") ? { pos_tips: POS_TIPS } : {}),
+    ...(near.includes("sales") ? { pos_tips: POS_TIPS, daily_figures: DAILY_FIGURES_HINT } : {}),
     ...(near.includes("team") ? { labour_hint: LABOUR_HINT } : {}),
   };
   const content = turnText({

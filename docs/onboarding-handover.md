@@ -63,6 +63,17 @@ Milestone A (pilot-usable Dina) is built, and milestone B's phase 9. Before merg
 
 - **Previews**: every Preview deployment uses the dev database, not just this branch's; Preview-only `TEST_MODE`, `TEST_TOOLS`, `GOOGLE_MODE=dummy`, `EMAIL_REDIRECT`; outbound WhatsApp from a preview only to the builder's number.
 - **Brief time**: a job every hour sends the brief to restaurants whose chosen hour it is, and the late-brief alert checks each restaurant's own time. It was a small change (the hourly job already gated on the hour), so it's built for real, not just saved.
+- **Till export steps** (your click paths, in `POS_TIPS` in `src/lib/onboarding/dina/ops-content.ts`; Dina asks for figures by day wherever the till allows it):
+  - Square: Dashboard > Reports > Sales summary. Last 12 months, the export icon, then Start export (CSV).
+  - Lightspeed K-Series: Back Office > Reports > All reports > Monthly Turnover. The period with the calendar icon, then Export CSV.
+  - Epos Now: Back Office > Reporting > Sales Report. Report type "Time Period", the date range, Show by Time Interval: daily, Apply, then CSV or Excel.
+- **Daily takings are imported** (these reports have no items): a file with a date and a takings column but no item column is saved as each day's totals (what the forecasts use), never as dish sales. Item files keep working as before and still feed dish-level data. If only daily figures came, the sales step is done and a low-priority "Item sales" gap is kept (`EXTRA_GAPS.sales_items` in `flow.ts`: the lowest nudge priority, never a blocker); Dina mentions in one line that an item export can unlock dish-level insights later. Tested with a sample in each till's usual layout plus a messy one (`tests/fixtures/sales/`, `tests/daily-sales.test.ts`); the real Claude column reader recognised all four as daily takings (`tests/e2e/daily-sales.e2e.ts`, about $0.02). The samples are hand-made, not real exports: a real file from each till is still worth trying.
+- **Rewards**: once per customer, as built. Fine for the pilot.
+- **Cover rules by day**: kept as notes on the step, as built. Fine for the pilot.
+- **Test tools on Production**: only for a demo restaurant whose owner number is `BUILDER_WHATSAPP`; new sign-ups are never demo restaurants on Production (`testToolsFor`, `signupsAreDemo` in `switches.ts`). `/onboarding/admin` was already builder-only.
+- **clear-dummy-data**: only touches test sites (`is_demo` and `is_test`); any other demo restaurant (Ember & Spice, Cardamom Corner) is listed as skipped and nothing of it is touched.
+- **Live's demo restaurants** (read-only check, 1 Nov): 7 restaurants on live, all demo, none a real customer: Ember & Spice and Cardamom Corner (active, your demo pair), Tayyabs, Dishoom Shoreditch and Mangal 2 (inactive, example.com emails, test sign-ups), Test 1 and Test 2 (inactive, your Gmail).
+- **Merge checklist** additions: switch Production `EMAIL_REDIRECT` off when the first real pilot goes live; check test tools are builder-only on Production; check no real restaurant is marked demo.
 
 ## 3. The test-site wall
 
@@ -119,9 +130,10 @@ Rollback for all of them: `supabase/rollback/onboarding_dina_rollback.sql`.
 
 ## 6. Open items
 
-- **POS export tips** are placeholders (`POS_TIPS` in `src/lib/onboarding/dina/ops-content.ts`): replace with the real click paths for Square, Lightspeed and Epos Now.
-- **"How often a customer can redeem"** (step 9 in the spec) isn't asked: today every reward and offer is once per customer by design, so Dina explains that instead of offering a setting nothing would enforce. Say if you want it as a real setting.
-- **Cover rules by day** ("3 in the kitchen on Friday nights"): the rota stores the least per role on any shift, not per day, so a day-specific rule is kept only in the step's data. Per-day cover would be a rota change.
+- **A real export from each till** (Square, Lightspeed K-Series, Epos Now): the daily-takings import is tested on hand-made samples in their usual layouts. Send a real file from any pilot's till and Claude can check it reads.
+- **Square's takings column**: on the sample the column reader picked "Total Collected" (which can include tips); the owner can switch to "Gross Sales" on the column check page. Say if you'd prefer one as the default.
+- **Rewards once per customer** and **cover rules by day kept as notes**: fine for the pilot (1 Nov); revisit after.
+- **Production EMAIL_REDIRECT** stays on until the first real pilot goes live (merge checklist, "When the first real pilot restaurant goes live").
 - **Customer list import** (the rest of step 10) and **languages and key dates** (step 11) come in milestone C.
 
 - **Google screenshots**: placeholders in `public/onboarding/google/` (phone-1.png to laptop-4.png). Replace with real screenshots, same names. A short video slot is ready (`VIDEO_SLOT` in `src/lib/onboarding/dina/google-content.ts`).

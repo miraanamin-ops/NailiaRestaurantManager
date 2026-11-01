@@ -1,5 +1,5 @@
 import type { ChatComponent, ChatMessage, ConfirmationData, ProgressData, StepStatus, SummaryData } from "@/components/chat/types";
-import { availableSteps, gapsFor, progress, STEP_DEFS, stepState, type FlowState, type FlowStepKey } from "../flow";
+import { availableSteps, gapsFor, gapTitle, progress, STEP_DEFS, stepState, type FlowState, type FlowStepKey } from "../flow";
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
@@ -171,7 +171,7 @@ export function summaryFrom(sources: CardSources): SummaryData {
     done: steps.filter((k) => stepState(sources.state, k).status === "done").length,
     total: steps.length,
     items,
-    locked: gapsFor(sources.state).map((g) => ({ key: g.step_key, title: STEP_DEFS[g.step_key].title, unlock: g.unlock_text })),
+    locked: gapsFor(sources.state).map((g) => ({ key: g.step_key, title: gapTitle(g.step_key), unlock: g.unlock_text })),
     next: [
       `Your first morning brief arrives on WhatsApp at ${hourWords(sources.restaurant.brief_hour ?? 9)}, the morning after you finish.`,
       "Your first Monday report comes on Monday morning.",

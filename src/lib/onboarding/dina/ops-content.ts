@@ -25,13 +25,18 @@ export function salesCoverage(firstDay: string, lastDay: string) {
 
 export const SALES_GAP_LINE = `Send me at least ${MIN_SALES_WEEKS} weeks of sales and I'll forecast quiet nights and plan offers before they happen.`;
 
-// How to export a year of sales from the common UK tills, for Dina to pass on.
-// PLACEHOLDERS: replace each with the real click path (keep them short, one line each).
+// How to export a year of sales from the common UK tills, for Dina to pass on
+// (the owner's click paths, 1 Nov). These give daily takings, which is all the
+// forecasts need; an item sales export also unlocks dish-level insights (a
+// low-priority setup gap when only daily figures came: EXTRA_GAPS.sales_items).
 export const POS_TIPS: Record<string, string> = {
-  Square: "PLACEHOLDER: in Square Dashboard, Reports, Item sales, pick the last 12 months, then Export as CSV.",
-  Lightspeed: "PLACEHOLDER: in Lightspeed Back Office, Reports, Sales, pick the last 12 months, then Export as CSV or Excel.",
-  "Epos Now": "PLACEHOLDER: in Epos Now Back Office, Reporting, Sales by product, pick the last 12 months, then Export.",
+  Square: "Dashboard > Reports > Sales summary. Set the date range to the last 12 months, click the export icon, then Start export (CSV).",
+  "Lightspeed K-Series": "Back Office > Reports > All reports > Monthly Turnover. Set the period with the calendar icon, then Export CSV.",
+  "Epos Now": "Back Office > Reporting > Sales Report. Report type \"Time Period\", set the date range, Show by Time Interval: daily, Apply, then export as CSV or Excel.",
 };
+
+// Daily figures, wherever the till allows it: one total per day, not one for the whole period.
+export const DAILY_FIGURES_HINT = "Ask for figures by day wherever the report offers it (a daily or by-day option): one total for the whole year can't be used.";
 
 // ---------- 8. Team and labour ----------
 

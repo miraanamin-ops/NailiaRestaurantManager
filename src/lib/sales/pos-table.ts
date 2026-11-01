@@ -13,13 +13,18 @@ export type Table = { headers: string[]; rows: Cell[][] };
 export type PosMapping = {
   date: string; // may also hold the time ("09/10/2026 18:42")
   time: string | null;
-  item: string;
+  item: string | null; // none: a daily summary, each row one day's total takings (isDailyTotals)
   quantity: string | null; // none: each line is one item
   price: string;
   price_is: "line_total" | "unit_price";
   receipt: string | null; // order or receipt number, to count sales
   date_order: "dmy" | "mdy" | "ymd";
 };
+
+// A file with no item column is a daily summary (Square's sales summary, Epos Now
+// by day...): its rows are days, kept as day totals only, never as dish sales.
+export const DAILY_ITEM = "Daily total";
+export const isDailyTotals = (m: Pick<PosMapping, "item">) => m.item === null;
 
 export type SaleLine = { day: string; hour: number | null; item: string; quantity: number; amount: number; receipt: string | null };
 
@@ -70,11 +75,15 @@ const filled = (r: Cell[]) => r.filter((c) => c !== null && String(c).trim() !==
 const isNumberish = (c: Cell) => typeof c === "number" || (typeof c === "string" && /^[-£$€(]*[\d,.]+\)?$/.test(c.trim()));
 
 // Many exports start with a title and a date range before the real headings. The
-// heading row is the first with 3+ filled cells, mostly words, followed by data.
+// heading row is the first with 2+ filled cells, mostly words, followed by a row of
+// data (2+ cells, at least one a number or a date). A daily summary can have just
+// two columns (date and takings); a "Period:, 01/11/2025 - 30/10/2026" line isn't
+// followed by data, so it isn't taken for the headings.
 export function toTable(raw: Cell[][]): Table | null {
+  const hasData = (r: Cell[]) => filled(r) >= 2 && r.some((c) => c instanceof Date || (c !== null && String(c).trim() !== "" && isNumberish(c)) || (typeof c === "string" && /^\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4}/.test(c.trim())));
   for (let i = 0; i < Math.min(raw.length - 1, 30); i++) {
     const r = raw[i];
-    if (filled(r) < 3 || filled(raw[i + 1] ?? []) < 2) continue;
+    if (filled(r) < 2 || !hasData(raw[i + 1] ?? [])) continue;
     const words = r.filter((c) => c !== null && String(c).trim() !== "" && !isNumberish(c) && !(c instanceof Date)).length;
     if (words < filled(r) * 0.7) continue;
     const headers = r.map((c, j) => (c === null || String(c).trim() === "" ? `Column ${j + 1}` : String(c).trim()));
@@ -219,7 +228,7 @@ export function applyMapping(table: Table, m: PosMapping) {
   let skipped = 0;
   for (const r of table.rows) {
     const date = parseDate(r[iDate] ?? null, m.date_order);
-    const item = String(r[iItem] ?? "").trim();
+    const item = iItem >= 0 ? String(r[iItem] ?? "").trim() : DAILY_ITEM;
     const price = parseMoney(r[iPrice] ?? null);
     const qty = iQty >= 0 ? parseMoney(r[iQty] ?? null) : 1;
     // Totals rows, blank lines and anything we can't read are skipped (and counted).
@@ -284,9 +293,9 @@ export function describeMapping(m: PosMapping) {
   const lines = [
     `Date → "${m.date}"`,
     m.time && m.time !== m.date ? `Time → "${m.time}"` : m.time === m.date ? `Time → in "${m.date}"` : "Time → (none)",
-    `Item → "${m.item}"`,
-    `Quantity → ${m.quantity ? `"${m.quantity}"` : "(none: 1 each)"}`,
-    `Price → "${m.price}" (${m.price_is === "unit_price" ? "price each" : "line total"})`,
+    ...(m.item === null
+      ? ["Item → (none: a daily total for each day)", `Takings → "${m.price}"`]
+      : [`Item → "${m.item}"`, `Quantity → ${m.quantity ? `"${m.quantity}"` : "(none: 1 each)"}`, `Price → "${m.price}" (${m.price_is === "unit_price" ? "price each" : "line total"})`]),
   ];
   if (m.receipt) lines.push(`Receipt → "${m.receipt}"`);
   return lines;

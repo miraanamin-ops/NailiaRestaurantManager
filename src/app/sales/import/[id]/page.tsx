@@ -25,7 +25,7 @@ export default function ImportPage({ params, searchParams }: PageProps<"/sales/i
 const FIELDS: { key: keyof PosMapping; label: string; required: boolean; hint: string }[] = [
   { key: "date", label: "Date", required: true, hint: "When the sale happened" },
   { key: "time", label: "Time", required: false, hint: "Can be the same column as the date" },
-  { key: "item", label: "Item", required: true, hint: "The dish or drink" },
+  { key: "item", label: "Item", required: false, hint: "The dish or drink. None: the file has one total per day" },
   { key: "quantity", label: "Quantity", required: false, hint: "None: each row is one item" },
   { key: "price", label: "Price", required: true, hint: "The money for the row" },
   { key: "receipt", label: "Receipt or order number", required: false, hint: "Used to count sales" },

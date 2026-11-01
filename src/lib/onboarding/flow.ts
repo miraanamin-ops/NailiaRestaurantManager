@@ -197,16 +197,37 @@ export type Gap = {
 export const MAX_IGNORED_NUDGES = 3;
 export const SNOOZE_DAYS = 7;
 
+// Follow-ups that aren't a step of their own: something a finished step could
+// still add, worth a nudge but never blocking anything. A step lists the ones it
+// wants in its data (extra_gaps, set by code), e.g. a sales step done from daily
+// takings alone still asks for item sales, at the lowest priority.
+export const EXTRA_GAPS: Record<string, { step: FlowStepKey; title: string; unlock: string; gapPriority: number }> = {
+  sales_items: {
+    step: "sales",
+    title: "Item sales",
+    unlock: "Send an item sales export too and I'll unlock dish-level insights: your best sellers, slow dishes and what to put on offer.",
+    gapPriority: 90,
+  },
+};
+
+// A gap's title, whether it's a step or an extra.
+export const gapTitle = (key: string) => (isFlowStep(key) ? STEP_DEFS[key].title : (EXTRA_GAPS[key]?.title ?? key));
+
 // Every skipped or half-done step is a gap, with its unlock line. A half-done
 // step can name what is still missing in its data (gap_unlock, set by code),
-// e.g. the common questions the owner didn't answer.
-export function gapsFor(state: FlowState, defs = STEP_DEFS) {
-  return availableSteps(defs)
+// e.g. the common questions the owner didn't answer. Then the extras finished
+// steps asked for.
+export function gapsFor(state: FlowState, defs = STEP_DEFS): { step_key: string; unlock_text: string }[] {
+  const steps = availableSteps(defs)
     .filter((k) => defs[k].unlock && ["skipped", "partial"].includes(statusOf(state, k)))
     .map((k) => {
       const own = stepState(state, k).data.gap_unlock;
-      return { step_key: k, unlock_text: statusOf(state, k) === "partial" && typeof own === "string" && own.trim() ? own : defs[k].unlock! };
+      return { step_key: k as string, unlock_text: statusOf(state, k) === "partial" && typeof own === "string" && own.trim() ? own : defs[k].unlock! };
     });
+  const extras = Object.entries(EXTRA_GAPS)
+    .filter(([key, e]) => defs[e.step].available && ["done", "partial"].includes(statusOf(state, e.step)) && ((stepState(state, e.step).data.extra_gaps as string[] | undefined) ?? []).includes(key))
+    .map(([key, e]) => ({ step_key: key, unlock_text: e.unlock }));
+  return [...steps, ...extras];
 }
 
 // What to change in the saved gaps after a step changed: new gaps to add, and
@@ -235,11 +256,11 @@ const open = (g: Gap) => !g.dismissed && !g.resolved_at;
 // MAX_IGNORED_NUDGES times without an answer are dismissed instead.
 export function pickNudge(gaps: Gap[], now: Date, defs = STEP_DEFS) {
   const autoDismiss = gaps.filter((g) => open(g) && g.nudge_count >= MAX_IGNORED_NUDGES).map((g) => g.id);
-  const priority = (g: Gap) => (isFlowStep(g.step_key) ? defs[g.step_key].gapPriority : 99);
+  const priority = (g: Gap) => (isFlowStep(g.step_key) ? defs[g.step_key].gapPriority : (EXTRA_GAPS[g.step_key]?.gapPriority ?? 99));
   const pick =
     gaps
       .filter((g) => open(g) && !autoDismiss.includes(g.id) && (!g.snoozed_until || new Date(g.snoozed_until) <= now))
-      .filter((g) => isFlowStep(g.step_key) && defs[g.step_key].available)
+      .filter((g) => (isFlowStep(g.step_key) ? defs[g.step_key].available : Boolean(EXTRA_GAPS[g.step_key]) && defs[EXTRA_GAPS[g.step_key].step].available))
       .sort((a, b) => priority(a) - priority(b))[0] ?? null;
   return { pick, autoDismiss };
 }
@@ -254,5 +275,5 @@ export function gapReply(gap: Gap, reply: GapReply, now: Date): { gap: Gap; resu
   const answered = { ...gap, nudge_count: 0 };
   if (reply === "later") return { gap: { ...answered, snoozed_until: new Date(now.getTime() + SNOOZE_DAYS * 86_400_000).toISOString() }, resume: null };
   if (reply === "not_relevant") return { gap: { ...answered, dismissed: true, dismissed_reason: "not_relevant" }, resume: null };
-  return { gap: answered, resume: isFlowStep(gap.step_key) ? gap.step_key : null };
+  return { gap: answered, resume: isFlowStep(gap.step_key) ? gap.step_key : (EXTRA_GAPS[gap.step_key]?.step ?? null) };
 }
