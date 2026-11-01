@@ -47,6 +47,7 @@ async function Report({ params }: Pick<PageProps<"/report/[token]">, "params">) 
           <p className="text-sm text-stone-300">Weekly report · {data.period.label}</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{data.restaurant.name}</h1>
           <p className="mt-1 text-xs text-stone-400">Compared with the week before ({data.period.prevLabel})</p>
+          {data.simulated && <p className="mt-3 rounded-lg bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-900">{data.simulated}</p>}
           <a
             href={`/report/${token}/pdf`}
             className="mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white active:opacity-80"

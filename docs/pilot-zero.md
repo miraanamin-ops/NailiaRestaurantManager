@@ -28,8 +28,8 @@ Read with `docs/onboarding-handover.md` (section 8: what already existed) and
 |---|---|---|
 | 1 | Identity: live listing, plus-addresses, demo phone and placeholder numbers | **done** |
 | 2 | Google dry run, simulated reviews never replied to (056 on dev after the phone test) | **done** |
-| 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | next |
-| 4 | Test data in `/pilot-zero`, through the real importers | |
+| 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | **done** |
+| 4 | Test data in `/pilot-zero`, through the real importers | next |
 | 5 | Close account (admin console) | |
 | 6 | #note and its CSV export | |
 | 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | |
@@ -165,6 +165,50 @@ Tests: `tests/pilot-zero.test.ts` (rules, switch, never Auto, nothing else write
 them) and `tests/google-live.test.ts` "Google dry run" (against the mocked Google API:
 nothing written while dry run, replies live but hours still dry, simulated reviews,
 the wall, UNDO, other restaurants unchanged).
+
+## Phase 3: the simulation
+
+On the Pilot Zero page (`/onboarding/admin/pilot-zero`), each marked restaurant has a
+**Simulation** box. Code: `src/lib/simulation-rules.ts` (pure) and `src/lib/simulation.ts`.
+It needs 056 (columns `reviews.simulated`, `sales_days.simulated`, `sales_hours.simulated`
+and the `sim_day` job type were added to the same file).
+
+- **Start simulating** on a date. The restaurant's clock (`restaurants.fake_now`, which a
+  Pilot Zero restaurant now honours as well as a demo one) rests at **midday** on that
+  date, inside sending hours. Owner messages on WhatsApp work on the simulated date.
+- While it's on, the **real scheduled jobs skip the restaurant** (the dispatcher, and the
+  late-brief alert). **Stop simulating** goes back to real time and the real jobs.
+- **Add till report**: that weekday's usual takings (the average of the same weekday
+  in its sales history, or a typical day), or an amount you type. **Quiet day**: about
+  45% of usual. Stored as a till report marked dummy and simulated, with sales by hour.
+  It never replaces a day that has real figures.
+- **Add review** (1 to 5 stars): arrives at the simulated time, from "Sim: …", source
+  `simulated`. It's never replied to on Google, whatever the dry run switch says.
+- **Run day**: every scheduled job for the simulated date, in the order they really run,
+  each at its own simulated time:
+  1. 02:05 review check (a new 1 to 3 star review alerts you at once; 4 to 5 are drafted
+     and held for the brief)
+  2. 05:35 nightly forecast (the app's own week forecast, saved as the brief will show it;
+     the Python models on Railway can't run for a simulated date)
+  3. at the brief hour, the morning job's steps: held sends, Monday's birthday email,
+     Monday and Thursday's Google post, Monday's report, Monday planning, the brief
+  4. Thursday 10:00: next week's rota (before an 11am brief, as it really would)
+
+  Each step is its own queued job, like the real morning job, so a slow Claude call
+  can't time the day out. A step that fails is shown and the rest still run. The box
+  shows each step as it goes (refresh). Afterwards the clock rests at midday again.
+- **Next day** moves the date on by one. Then add what happened and Run day again.
+- **Labels**: a brief made during the simulation ends with "🧪 Simulated day: …", and a
+  report made during it says so at the top (web page and PDF). Simulated sales show as
+  dummy figures on the Sales page and in the report. The only export (the customer list)
+  has nothing simulated in it.
+- **Clear simulated data** removes this restaurant's simulated reviews, till reports and
+  hours (drafts about them stay). Stopping also marks any simulated reviews still
+  waiting as handled, so a real review check never drafts replies to them.
+- Only a marked restaurant can be simulated. Every action is in the audit log (action
+  `simulation`, actor builder). Tests: `tests/simulation.test.ts`.
+
+Trying it on the preview needs 056 on dev (after your phone test).
 
 ## Open items (deferred by your call)
 - Close account for the owner on the web and WhatsApp (the admin console version

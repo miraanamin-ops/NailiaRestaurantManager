@@ -195,6 +195,14 @@ const rotaWeekJob: JobHandler = {
   },
 };
 
+// Pilot Zero: Run day for a simulated date, queued from the admin console (lib/simulation.ts).
+const simDay: JobHandler = {
+  run: async (job) => {
+    const { runDayStep } = await import("@/lib/simulation");
+    return runDayStep(job.restaurant_id!, job.payload as import("@/lib/simulation").DayPayload);
+  },
+};
+
 export const HANDLERS: Record<string, JobHandler> = {
   owner_message: ownerMessage,
   rota_week: rotaWeekJob,
@@ -208,6 +216,7 @@ export const HANDLERS: Record<string, JobHandler> = {
   health_check: healthCheck,
   cleanup: cleanupJob,
   setup_nudges: setupNudges,
+  sim_day: simDay,
   ...FEED_JOB_HANDLERS,
   feed_backfill: backfillJob,
 };

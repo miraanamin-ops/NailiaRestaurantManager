@@ -204,13 +204,12 @@ function sourceFiles(dir: string): string[] {
 
 describe("nothing on WhatsApp, Dina or the owner's settings can change them", () => {
   test("only lib/pilot-zero.ts writes the columns (others only read them through the rules)", () => {
-    const allowed = new Set(["src/lib/pilot-zero.ts", "src/lib/gate-rules.ts", "src/lib/supabase.ts", "src/lib/checks/money.ts"]);
-    const offenders = sourceFiles("src")
-      .map((p) => p.replace(/\\/g, "/"))
-      .filter((p) => !allowed.has(p) && /\b(google_dry_run|google_profile_writes|pilot_zero)\b/.test(readFileSync(p, "utf8")));
-    expect(offenders).toEqual([]);
-    // money.ts only reads pilot_zero.
-    expect(readFileSync("src/lib/checks/money.ts", "utf8")).not.toMatch(/(google_dry_run|google_profile_writes)/);
+    const files = sourceFiles("src").map((p) => p.replace(/\\/g, "/"));
+    // The dry run switches: named only by the rules, the type and the switch itself.
+    const switchFiles = new Set(["src/lib/pilot-zero.ts", "src/lib/gate-rules.ts", "src/lib/supabase.ts"]);
+    expect(files.filter((p) => !switchFiles.has(p) && /\b(google_dry_run|google_profile_writes)\b/.test(readFileSync(p, "utf8")))).toEqual([]);
+    // The mark: others may read it (r.pilot_zero, .eq("pilot_zero", true)), only pilot-zero.ts sets it.
+    expect(files.filter((p) => p !== "src/lib/pilot-zero.ts" && /\bpilot_zero\s*:/.test(readFileSync(p, "utf8")))).toEqual([]);
   });
 
   test("they aren't profile fields (so no message, Dina tool or settings form can set them) and UNDO can't restore them", async () => {

@@ -4,6 +4,7 @@ import { check } from "@/lib/drafts";
 import { ownerChannel } from "@/lib/followups";
 import { MAX_FAILURES, type MorningCarry } from "@/lib/morning";
 import { morningGate } from "@/lib/morning-gate";
+import { simulationOn } from "@/lib/simulation-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { analyticsJobsSwitch } from "@/lib/switches";
 import { enqueueBackfill } from "@/lib/feeds/backfill";
@@ -32,7 +33,10 @@ export async function enqueueMorningStep(restaurantId: string, day: string, step
 }
 
 export async function dispatch(job: "hourly" | "daily", now: Date) {
-  const restaurants = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
+  const all = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
+  // A Pilot Zero restaurant with its simulation on is skipped: "Run day" in the
+  // admin console runs its jobs for the simulated date (lib/simulation.ts).
+  const restaurants = all.filter((r) => !simulationOn(r));
   const summary: Record<string, unknown>[] = [];
   // The analytics service's models, only once its worker is deployed (ANALYTICS_JOBS).
   const models = analyticsJobsSwitch(process.env).on ? NIGHTLY_MODELS : [];

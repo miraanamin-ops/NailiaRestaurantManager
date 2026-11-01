@@ -4,6 +4,7 @@ import { londonMinutes, londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { backlogProblem, briefIsLate } from "@/lib/job-health";
 import { briefHourOf } from "@/lib/morning-gate";
+import { simulationOn } from "@/lib/simulation-rules";
 import { getSupabase } from "@/lib/supabase";
 import { deadJobs, queueStats, requeueExpired } from "./store";
 import { handleExpired, jobDied } from "./worker";
@@ -18,9 +19,10 @@ export async function checkLateBriefs(now: Date) {
   const today = londonYmd(now);
   const restaurants =
     check(
-      await getSupabase().from("restaurants").select("id, name, last_brief_on, brief_hour").eq("active", true).returns<{ id: string; name: string; last_brief_on: string | null; brief_hour: number | null }[]>(),
+      await getSupabase().from("restaurants").select("*").eq("active", true).returns<{ id: string; name: string; last_brief_on: string | null; brief_hour: number | null; pilot_zero?: boolean | null; fake_now?: string | null }[]>(),
     ) ?? [];
-  const late = restaurants.filter((r) => briefIsLate({ londonMinutes: londonMinutes(now), today, lastBriefOn: r.last_brief_on, briefHour: briefHourOf(r) }));
+  // A restaurant in a Pilot Zero simulation gets its brief from "Run day", not 9am.
+  const late = restaurants.filter((r) => !simulationOn(r) && briefIsLate({ londonMinutes: londonMinutes(now), today, lastBriefOn: r.last_brief_on, briefHour: briefHourOf(r) }));
   for (const r of late) {
     await alertBuilder(
       `brief-late:${r.id}:${today}`,

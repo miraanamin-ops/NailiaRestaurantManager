@@ -9,7 +9,8 @@ import { check, type Draft } from "@/lib/drafts";
 import { dryRunState, pilotZeroOverview } from "@/lib/pilot-zero";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { Card, Frame } from "@/app/onboarding/ui";
-import { markRestaurant, switchGoogle } from "./actions";
+import { simulationView, type DayResult, type SimulationView } from "@/lib/simulation";
+import { markRestaurant, simClear, simNextDay, simReview, simRunDay, simSetDay, simStop, simTillReport, switchGoogle } from "./actions";
 
 export const metadata: Metadata = { title: "Pilot Zero · DinerAI", robots: { index: false, follow: false } };
 
@@ -77,6 +78,98 @@ function GoogleSwitch({ r, kind, dry }: { r: Restaurant; kind: "replies" | "prof
   );
 }
 
+function Hidden({ r }: { r: Restaurant }) {
+  return <input type="hidden" name="r" value={r.id} />;
+}
+
+// The simulation (lib/simulation.ts): a simulated date, things to inject, and Run day.
+function Simulation({ r, view }: { r: Restaurant; view: SimulationView }) {
+  const results = (view.lastRun?.result?.results as DayResult[] | undefined) ?? [];
+  const finished = view.lastRun?.result?.finished === true;
+  return (
+    <div className="space-y-3 rounded-xl bg-amber-50 p-3">
+      <h3 className="text-sm font-semibold">Simulation</h3>
+      {!view.day ? (
+        <>
+          <p className="text-sm text-stone-600">Off: the real scheduled jobs run as normal.</p>
+          <form action={simSetDay} className="flex flex-wrap gap-2">
+            <Hidden r={r} />
+            <input type="date" name="day" required aria-label="Simulated date" className={input} />
+            <button className={small}>Start simulating</button>
+          </form>
+        </>
+      ) : (
+        <>
+          <p className="text-sm">
+            Simulated clock: <b>{view.label}</b>. Real scheduled jobs skip this restaurant; Run day runs them for this date. Owner messages use this date too.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={simRunDay}>
+              <Hidden r={r} />
+              <button className={`${small} bg-[#c8f03c]`}>Run day</button>
+            </form>
+            <form action={simNextDay}>
+              <Hidden r={r} />
+              <button className={small}>Next day</button>
+            </form>
+            <form action={simStop}>
+              <Hidden r={r} />
+              <button className={small}>Stop simulating</button>
+            </form>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <form action={simTillReport} className="flex gap-1">
+              <Hidden r={r} />
+              <input name="net" inputMode="decimal" placeholder="£ net (optional)" aria-label="Net takings, optional" className={`${input} w-36`} />
+              <button className={small}>Add till report</button>
+            </form>
+            <form action={simTillReport}>
+              <Hidden r={r} />
+              <input type="hidden" name="quiet" value="1" />
+              <button className={small}>Quiet day</button>
+            </form>
+            <form action={simReview} className="flex gap-1">
+              <Hidden r={r} />
+              <select name="rating" aria-label="Stars" defaultValue="1" className={input}>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>
+                    {n} star{n === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+              <button className={small}>Add review</button>
+            </form>
+          </div>
+        </>
+      )}
+      <p className="text-sm text-stone-600">
+        Simulated so far: {view.reviews} review{view.reviews === 1 ? "" : "s"}, {view.tillReports} till report{view.tillReports === 1 ? "" : "s"}.
+      </p>
+      {(view.reviews > 0 || view.tillReports > 0) && (
+        <form action={simClear}>
+          <Hidden r={r} />
+          <button className={`${small} text-red-700`}>Clear simulated data</button>
+        </form>
+      )}
+      {view.lastRun && (
+        <div className="text-sm">
+          <p className="font-semibold">
+            Last Run day{typeof view.lastRun.result?.day === "string" ? ` (${view.lastRun.result.day})` : ""}: {finished ? "finished" : view.lastRun.status === "dead" ? "stopped with an error" : "in progress (refresh)"}
+          </p>
+          <ul className="mt-1 space-y-1 text-stone-700">
+            {results.map((x, i) => (
+              <li key={i}>
+                {x.error ? "❌" : "✓"} {x.at} {x.label}: {x.error ?? x.done}
+              </li>
+            ))}
+          </ul>
+          {view.lastRun.last_error && <p className="text-red-700">{view.lastRun.last_error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pilot-zero">, "searchParams">) {
   await connection();
   const owner = await requireOwner("/onboarding/admin/pilot-zero");
@@ -84,6 +177,7 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
   const q = await searchParams;
   const overview = await pilotZeroOverview();
   const posted = overview ? await Promise.all(overview.marked.map((r) => wouldHavePosted(r.id))) : [];
+  const sims = overview ? await Promise.all(overview.marked.map((r) => simulationView(r))) : [];
 
   return (
     <Frame>
@@ -111,6 +205,7 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
                 <p className="text-sm text-stone-600">Google: {r.google_location_id ? `connected to ${r.google_location_title ?? r.google_location_id}` : "not connected"}</p>
                 <GoogleSwitch r={r} kind="replies" dry={state.replies} />
                 <GoogleSwitch r={r} kind="profile" dry={state.profile} />
+                <Simulation r={r} view={sims[i]} />
                 <h3 className="text-sm font-semibold">Would have posted (latest {posted[i].length})</h3>
                 {posted[i].length ? (
                   <ul className="space-y-1 text-sm text-stone-700">

@@ -33,3 +33,50 @@ export async function switchGoogle(form: FormData) {
     setGoogleDryRun({ restaurantId: r, kind, dryRun, confirm: String(form.get("confirm") ?? ""), builderEmail: by }),
   );
 }
+
+// ---------- The simulation (lib/simulation.ts) ----------
+
+async function sim(form: FormData, done: string, act: (r: string, builderEmail: string) => Promise<unknown>) {
+  const { SimulationError } = await import("@/lib/simulation");
+  return run(form, done, async (r, by) => {
+    try {
+      return await act(r, by);
+    } catch (err) {
+      if (err instanceof SimulationError) throw new PilotZeroError(err.message);
+      throw err;
+    }
+  });
+}
+
+export async function simSetDay(form: FormData) {
+  const { setSimulatedDay } = await import("@/lib/simulation");
+  const day = String(form.get("day") ?? "");
+  return sim(form, `Simulating ${day}: real scheduled jobs skip this restaurant until you stop`, (r, by) => setSimulatedDay(r, day, by));
+}
+export async function simNextDay(form: FormData) {
+  const { nextSimulatedDay } = await import("@/lib/simulation");
+  return sim(form, "Moved to the next simulated day", (r, by) => nextSimulatedDay(r, by));
+}
+export async function simStop(form: FormData) {
+  const { stopSimulation } = await import("@/lib/simulation");
+  return sim(form, "Simulation stopped: back to real time", (r, by) => stopSimulation(r, by));
+}
+export async function simTillReport(form: FormData) {
+  const { injectZReport } = await import("@/lib/simulation");
+  const quiet = form.get("quiet") === "1";
+  const net = Number(String(form.get("net") ?? "").replace(/[£,\s]/g, "")) || null;
+  return sim(form, quiet ? "Quiet day added" : "Till report added", (r, by) => injectZReport(r, { quiet, net }, by));
+}
+export async function simReview(form: FormData) {
+  const { injectReview } = await import("@/lib/simulation");
+  const rating = Number(form.get("rating") ?? 5);
+  return sim(form, `${rating}-star review added`, (r, by) => injectReview(r, rating, by));
+}
+export async function simRunDay(form: FormData) {
+  const { queueRunDay } = await import("@/lib/simulation");
+  return sim(form, "Run day started: refresh in a minute to see each step", (r, by) => queueRunDay(r, by));
+}
+export async function simClear(form: FormData) {
+  const { clearSimulatedData } = await import("@/lib/simulation");
+  return sim(form, "Simulated data cleared", (r, by) => clearSimulatedData(r, by));
+}

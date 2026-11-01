@@ -29,7 +29,7 @@ site as it is now keeps working with them.
 | 6 | `supabase/053_restaurant_faqs.sql` | the answers to common questions |
 | 7 | `supabase/054_brief_hour.sql` | the hour each owner's morning brief arrives (9am unless they pick another) |
 | 8 | `supabase/055_forecast_snapshots.sql` | the week forecast saved once a day, so the brief, the Monday report and the rota always show the same numbers |
-| 9 | `supabase/056_pilot_zero.sql` | Pilot Zero: the mark for your own pilot restaurant and its Google dry run switches (off for everyone else) |
+| 9 | `supabase/056_pilot_zero.sql` | Pilot Zero: the mark for your own pilot restaurant, its Google dry run switches, and the simulation (labels for simulated reviews and sales, the Run day job) |
 
 **Check:** in the SQL Editor, run:
 
