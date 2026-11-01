@@ -29,8 +29,8 @@ Read with `docs/onboarding-handover.md` (section 8: what already existed) and
 | 1 | Identity: live listing, plus-addresses, demo phone and placeholder numbers | **done** |
 | 2 | Google dry run, simulated reviews never replied to (056 on dev after the phone test) | **done** |
 | 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | **done** |
-| 4 | Test data in `/pilot-zero`, through the real importers | next |
-| 5 | Close account (admin console) | |
+| 4 | Test data in `/pilot-zero`, through the real importers | **done** |
+| 5 | Close account (admin console) | next |
 | 6 | #note and its CSV export | |
 | 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | |
 
@@ -224,8 +224,28 @@ and the `sim_day` job type were added to the same file).
 
 Trying it on the preview needs 056 on dev (after your phone test).
 
+## Phase 4: test data
+
+`pilot-zero/` (see its README): a 12-month Square Sales summary (361 days, Nov 2025 to
+Oct 2026, with the week, Ramadan, both Eids, school holidays, two closures and a big
+event), a 6-week Square Transactions file (5,463 payments, 1.8 MB, matching the
+summary), a staff sheet (10 people, all at £12.71 an hour or more) and ten WhatsApp
+lines that set each person's availability. Made by `pilot-zero/make-files.mjs` (always
+the same output). `tests/pilot-zero-files.test.ts` runs them through the real
+importers: none was rejected, so nothing needed fixing.
+
+**A gap with what's built:** Dina's team step saves name, role, pay, contracted hours
+and cover rules, but not availability (days, times, max hours). For now availability
+goes in afterwards by WhatsApp (the ten lines, read by the rota's staff parser). Open
+question for you: extend her team step to save availability too?
+
+## Notes for the run sheet (phase 7)
+- Each simulated day starts with: send any WhatsApp message to the restaurant, so the
+  brief isn't held by WhatsApp's 24-hour window (your call, 1 Nov).
+
 ## Open items (deferred by your call)
 - Close account for the owner on the web and WhatsApp (the admin console version
   comes in phase 5).
 - Injected customer sign-ups in the simulation (you'll sign up a couple yourself
   with plus-addresses).
+- Availability in Dina's team step (phase 4: for now by WhatsApp after setup).
