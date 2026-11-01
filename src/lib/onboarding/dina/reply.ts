@@ -38,6 +38,8 @@ export const Component = z.discriminatedUnion("type", [
   // Step 5: the next dish's suggested allergens to check (code picks the dish).
   // (dish: set by code when the card is saved, whatever she sends.)
   z.object({ type: z.literal("allergen_check"), dish: z.string().optional() }),
+  // Step 10: the link to their printable QR codes (code fills it).
+  z.object({ type: z.literal("qr_kit") }),
 ]);
 export type Component = z.infer<typeof Component>;
 

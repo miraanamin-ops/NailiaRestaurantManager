@@ -43,8 +43,8 @@ const step = (key: FlowStepKey, title: string, unlock: string | null, opts: { ga
   available: opts.available ?? true,
 });
 
-// Steps 7 to 12 come in milestone B and C (docs/onboarding-audit.md): until then
-// their safe defaults apply and they aren't asked.
+// Step 11 comes in milestone C (docs/onboarding-audit.md): until then it isn't
+// asked. Step 10 is the QR codes for now (customer list import comes with 11).
 export const STEP_DEFS: Record<FlowStepKey, StepDef> = {
   hello: step("hello", "Hello", null),
   google: step("google", "Google profile", "Connect Google and I'll reply to your reviews, post updates and track calls and directions for you.", { gapPriority: 1 }),
@@ -52,12 +52,12 @@ export const STEP_DEFS: Record<FlowStepKey, StepDef> = {
   make_it_right: step("make_it_right", "Making it right", "Tell me how you like to fix complaints and I'll offer it in replies to unhappy customers."),
   menu: step("menu", "Your menu", "Share your menu and I'll write captions, suggest offers and answer allergen questions using your real dishes.", { gapPriority: 3 }),
   hours_faqs: step("hours_faqs", "Hours and FAQs", "Confirm your hours and FAQs and I'll keep Google accurate and answer common questions."),
-  sales: step("sales", "Sales history", "Send your sales history and I'll forecast quiet nights and plan offers before they happen.", { gapPriority: 2, available: false }),
-  team: step("team", "Team and labour", "Share your team and labour target and I'll track labour % daily and suggest rotas.", { available: false }),
-  rewards: step("rewards", "Rewards and limits", "Set your rewards and limits and I'll run offers without ever going over budget.", { available: false }),
-  customers_qr: step("customers_qr", "Customers and QR codes", "Import your customers and print your QR codes and I'll start growing your list.", { available: false }),
+  sales: step("sales", "Sales history", "Send your sales history and I'll forecast quiet nights and plan offers before they happen.", { gapPriority: 2 }),
+  team: step("team", "Team and labour", "Share your team and labour target and I'll track labour % daily and suggest rotas."),
+  rewards: step("rewards", "Rewards and limits", "Set your rewards and limits and I'll run offers without ever going over budget."),
+  customers_qr: step("customers_qr", "Customers and QR codes", "Import your customers and print your QR codes and I'll start growing your list."),
   languages_dates: step("languages_dates", "Languages and key dates", "Tell me your languages and key dates and I'll plan campaigns around them.", { available: false }),
-  approvals_timing: step("approvals_timing", "Approvals and timing", "Tell me who approves and when to message you, and I’ll fit around your day.", { available: false }),
+  approvals_timing: step("approvals_timing", "Approvals and timing", "Tell me who approves and when to message you, and I’ll fit around your day."),
 };
 
 export const isFlowStep = (key: string): key is FlowStepKey => (FLOW_STEPS as readonly string[]).includes(key);

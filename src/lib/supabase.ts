@@ -92,6 +92,7 @@ export type Restaurant = {
   forecast_unvalidated?: boolean;
   // The owner's labour target, % of sales; the builder's forecast error limit, % (046).
   labour_target_pct?: number | string | null;
+  brief_hour?: number | null; // 7 to 11, the morning brief's hour (054); 9 if unset
   forecast_error_limit_pct?: number | string | null;
   // Found or chosen during onboarding (step 12).
   owner_name: string | null;

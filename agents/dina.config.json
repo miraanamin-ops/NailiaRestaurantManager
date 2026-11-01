@@ -13,6 +13,11 @@
     "tone": 8000,
     "make_it_right": 6000,
     "menu": 12000,
-    "hours_faqs": 8000
+    "hours_faqs": 8000,
+    "sales": 6000,
+    "team": 8000,
+    "rewards": 6000,
+    "customers_qr": 6000,
+    "approvals_timing": 6000
   }
 }

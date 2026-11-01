@@ -138,14 +138,15 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
     case "files": {
       const { checkUploadedFiles } = await import("@/lib/onboarding/dina/uploads-store");
       const { describeFiles, refusedText } = await import("@/lib/onboarding/dina/uploads");
-      const { noteForFiles } = await import("@/lib/onboarding/dina/whatsapp-turn");
+      const { dataForFiles, noteForFiles } = await import("@/lib/onboarding/dina/whatsapp-turn");
       const { saved, refused } = await checkUploadedFiles(r, action.paths);
       const step = (await chatSources(r)).focus?.current_step ?? null;
       const refusal = refusedText(refused);
       const note = [saved.length ? await noteForFiles(r, step, saved, "in the chat") : null, refusal ? `Some files couldn't be used; tell them in a line: "${refusal}"` : null]
         .filter(Boolean)
         .join(" ");
-      return { event: "message", text: saved.length ? `📎 ${describeFiles(saved)}` : "📎 a file I couldn't use", externalId: action.clientId, ownerParts: saved, note };
+      const data = saved.length ? await dataForFiles(r, step, saved) : [];
+      return { event: "message", text: saved.length ? `📎 ${describeFiles(saved)}` : "📎 a file I couldn't use", externalId: action.clientId, ownerParts: saved, note, data };
     }
     case "jump": {
       if (!isFlowStep(action.step)) throw new FlowError("That step doesn't exist", "unavailable");

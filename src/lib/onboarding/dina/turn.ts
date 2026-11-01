@@ -16,6 +16,7 @@ import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
 import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
+import { LABOUR_HINT, POS_TIPS } from "./ops-content";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
 
 // One turn of the setup conversation, whichever channel it came from (the web
@@ -52,11 +53,17 @@ export type TurnResult =
 // What Dina may be told about the restaurant: its own details only. Never the
 // customer list, and (from the menu step on) only allergens the owner confirmed.
 // (opening_hours too: the full run of 31 Oct showed an empty hours card because she couldn't tell there were none.)
+// Steps 7 to 12 add the settings they change (what is set now, so she proposes it rather than asks).
 const KNOWN_FIELDS = ["owner_name", "name", "address", "cuisine", "phone", "website", "google_rating", "google_rating_count", "opening_hours"] as const;
+const STEP_FIELDS: Partial<Record<FlowStepKey, readonly string[]>> = {
+  team: ["labour_target_pct"],
+  rewards: ["signup_reward", "discount_cap_percent", "recovery_offers"],
+  approvals_timing: ["brief_hour", "send_window_start", "send_window_end"],
+};
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 // Code's note says it saved something this turn (so "that's saved" can be true without her tool).
-const CODE_SAVED = /Code (saved|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
+const CODE_SAVED = /Code (saved|sent|made|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
 
 export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const supabase = getSupabase();
@@ -126,6 +133,9 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ),
     // Path A: the owner can connect Google directly (google_connect) instead of the manager steps.
     ...(googleConnectOn() ? { google_connect: "available: offer google_connect in the Google step" } : {}),
+    ...Object.fromEntries((step ? (STEP_FIELDS[step] ?? []) : []).map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
+    ...(step === "sales" ? { pos_tips: POS_TIPS } : {}),
+    ...(step === "team" ? { labour_hint: LABOUR_HINT } : {}),
   };
   const content = turnText({
     restaurant: known,

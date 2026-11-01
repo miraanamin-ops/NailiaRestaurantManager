@@ -26,8 +26,10 @@ export function hourlyIsLate(lastHourlyStart: string | null, now: Date, tracking
 // From 9:30 UK the brief is late unless it has been sent today, or deliberately
 // held for WhatsApp's 24-hour rule (the brief step marks that day done too: it
 // goes with the owner's next message). A brief whose step failed or died is late.
-export function briefIsLate(input: { londonMinutes: number; today: string; lastBriefOn: string | null }) {
-  if (input.londonMinutes < BRIEF_DUE_MINUTES) return false;
+// A restaurant with a later brief hour (briefHour, 7 to 11) is due half an hour after it.
+export function briefIsLate(input: { londonMinutes: number; today: string; lastBriefOn: string | null; briefHour?: number }) {
+  const due = input.briefHour === undefined ? BRIEF_DUE_MINUTES : input.briefHour * 60 + BRIEF_DUE.minute;
+  if (input.londonMinutes < due) return false;
   return input.lastBriefOn !== input.today;
 }
 

@@ -5,6 +5,7 @@ import { FlowError, FLOW_STEPS, isFlowStep, STEP_DEFS, type FlowStepKey } from "
 import { completeStep, enterStep, loadFlow, noteStep, skipStep, type Channel } from "../sessions";
 import { UK_ALLERGENS } from "../profile-data";
 import { getRestaurant } from "../store";
+import { BRIEF_HOURS, MAX_CAP, MIN_CAP, STAFF_ROLES } from "./ops-content";
 
 // Dina's tools: the only way anything she hears is saved. Each checks its input in
 // code (a zod schema, then its own rules) and either saves and says what it saved,
@@ -127,6 +128,73 @@ export const TOOLS: DinaTool[] = [
     async run(ctx, input) {
       const { setAllergens } = await import("./menu-step");
       return setAllergens(ctx.restaurantId, input.dish, input.allergens, ctx.channel);
+    },
+  }),
+  tool({
+    name: "confirm_sales_columns",
+    status: "Importing your sales…",
+    description:
+      "Step 7: import the sales file once the owner has said the columns code read look right (or that they fixed them on the import page). Code imports it and says how much history arrived.",
+    schema: z.object({ owner_confirmed: z.literal(true).describe("true only if the owner said the columns are right, or that they fixed them") }),
+    async run(ctx) {
+      const { confirmSalesColumns } = await import("./ops-step");
+      return confirmSalesColumns(ctx.restaurantId, ctx.channel);
+    },
+  }),
+  tool({
+    name: "save_team",
+    status: "Saving your team…",
+    description:
+      "Step 8: save the team once the owner has told you who works there (from chat or the staff list they sent) and their labour target. staff: each person with a role (kitchen, front, delivery or manager), hourly rate in pounds and contracted hours a week if given (null if not). manager: who runs the site day to day (a name on the list, or 'me' for the owner), or null. cover_rules: the least of each role on any shift, if they said. labour_target_pct: their target as a % of sales, or null if they didn't pick one (code uses 30%, flagged). Only what they said: never guess a rate.",
+    schema: z.object({
+      staff: z
+        .array(
+          z.object({
+            name: words(60),
+            role: z.enum(STAFF_ROLES),
+            hourly_rate: z.number().nullable(),
+            contracted_hours: z.number().nullable(),
+          }),
+        )
+        .max(40),
+      manager: words(60).nullable(),
+      cover_rules: z.array(z.object({ role: z.enum(STAFF_ROLES), min_on_shift: z.number().int() })).max(4),
+      labour_target_pct: z.number().nullable(),
+    }),
+    async run(ctx, input) {
+      const { saveTeam } = await import("./ops-step");
+      return saveTeam(ctx.restaurantId, input, ctx.channel);
+    },
+  }),
+  tool({
+    name: "save_rewards",
+    status: "Saving your rewards…",
+    description:
+      `Step 9: save the sign-up reward (in their words, e.g. "a free dessert", "10% off your first visit") and the discount cap: the most off any offer can ever be, a whole number from ${MIN_CAP} to ${MAX_CAP}. Code checks the reward fits the cap.`,
+    schema: z.object({ signup_reward: words(80), discount_cap_percent: z.number().int() }),
+    async run(ctx, input) {
+      const { saveRewards } = await import("./ops-step");
+      return saveRewards(ctx.restaurantId, input, ctx.channel);
+    },
+  }),
+  tool({
+    name: "send_qr_kit",
+    status: "Sending your QR codes…",
+    description: "Step 10: email (and WhatsApp, if linked) the owner their printable QR codes, once they say yes to having them. No input.",
+    schema: z.object({}),
+    async run(ctx) {
+      const { sendQrKit } = await import("./ops-step");
+      return sendQrKit(ctx.restaurantId, ctx.channel);
+    },
+  }),
+  tool({
+    name: "save_timing",
+    status: "Saving your timings…",
+    description: `Step 12: save when the morning brief comes (brief_hour: one of ${BRIEF_HOURS.join(", ")}, meaning am) and the hours customer messages may go out (quiet_start and quiet_end as HH:MM, e.g. 09:00 and 21:00). Use the defaults (9, 09:00, 21:00) for anything they were happy to leave.`,
+    schema: z.object({ brief_hour: z.number().int(), quiet_start: z.string().max(5), quiet_end: z.string().max(5) }),
+    async run(ctx, input) {
+      const { saveTiming } = await import("./ops-step");
+      return saveTiming(ctx.restaurantId, input, ctx.channel);
     },
   }),
   tool({

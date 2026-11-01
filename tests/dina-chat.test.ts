@@ -64,8 +64,8 @@ describe("what the chat draws", () => {
     state = wait(state, "google", "google_acceptance", {}, T);
     state = skip(state, "tone", T);
     const p = progressFrom(state, "make_it_right");
-    expect(p).toMatchObject({ position: 4, total: 6 });
-    expect(p.steps.map((s) => s.status)).toEqual(["done", "waiting", "skipped", "in_progress", "not_started", "not_started"]);
+    expect(p).toMatchObject({ position: 4, total: 11 });
+    expect(p.steps.map((s) => s.status)).toEqual(["done", "waiting", "skipped", "in_progress", ...Array(7).fill("not_started")]);
     // Editing a finished step: it stays done in the list.
     expect(progressFrom(state, "hello").steps[0].status).toBe("done");
   });
@@ -73,7 +73,7 @@ describe("what the chat draws", () => {
   test("'Skip for now' only on a skippable step that's part of setup", () => {
     expect(skippableNow("hello")).toBe(false);
     expect(skippableNow("tone")).toBe(true);
-    expect(skippableNow("sales")).toBe(false); // not built yet
+    expect(skippableNow("languages_dates")).toBe(false); // not built yet
     expect(skippableNow(null)).toBe(false);
   });
 
@@ -82,7 +82,7 @@ describe("what the chat draws", () => {
     state = skip(state, "google", T);
     state = complete(state, "tone", "partial", {}, T);
     const s = summaryFrom({ restaurant: { ...restaurant, cuisine: "Halal grill" }, state });
-    expect(s).toMatchObject({ done: 1, total: 6 });
+    expect(s).toMatchObject({ done: 1, total: 11 });
     expect(s.items.map((i) => [i.title, i.status, i.detail])).toEqual([
       ["Hello", "done", "Ember & Spice Grill, Halal grill, 12 High Street, London E1 6AN"],
       ["Your tone", "partial", "Half done"],
@@ -179,7 +179,7 @@ describe("the chat endpoint", () => {
     expect(status).toBe(200);
     expect(events.map((e) => e.type)).toEqual(["typing", "status", "message", "message", "state", "done"]);
     expect(events.filter((e) => e.type === "message").map((e) => (e as { message: { text: string } }).message.text)).toEqual(["Lovely, saved.", "Next, your tone."]);
-    expect(events.find((e) => e.type === "state")).toMatchObject({ skippable: true, progress: { position: 3, total: 6 } });
+    expect(events.find((e) => e.type === "state")).toMatchObject({ skippable: true, progress: { position: 3, total: 11 } });
     expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ restaurantId: R, channel: "web", event: "message", text: "We're a halal grill", externalId: clientId }));
   });
 
@@ -204,7 +204,7 @@ describe("the chat endpoint", () => {
     expect(db.tables.onboarding_sessions[0].current_step).toBe("menu");
     expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ event: "action", note: expect.stringMatching(/Your menu/) }));
     dinaTurn.mockClear();
-    const { events } = await call({ r: R, action: { kind: "jump", step: "sales", clientId: uuid() } });
+    const { events } = await call({ r: R, action: { kind: "jump", step: "languages_dates", clientId: uuid() } });
     expect(events.at(-1)).toEqual({ type: "error", text: expect.stringMatching(/isn't part of setup yet/) });
     expect(dinaTurn).not.toHaveBeenCalled();
   });

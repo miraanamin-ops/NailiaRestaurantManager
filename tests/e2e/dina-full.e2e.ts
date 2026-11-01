@@ -1,11 +1,12 @@
 // One whole onboarding with the REAL Claude, on the in-memory database: the real
 // sign-up (invite code, no paywall), then the real web chat endpoint, turn by turn,
 // with a scripted owner answering whatever Dina asks (basics, Google, tone, making
-// it right, a menu photo, allergens, hours and FAQs), then WhatsApp linked by the
+// it right, a menu photo, allergens, hours and FAQs, a year of sales as CSV, the
+// team, rewards, the QR codes, timing), then WhatsApp linked by the
 // sign-up number, until setup finishes and the summary shows. Nothing is sent
 // (WhatsApp and email are stand-ins). Prints the conversation, every stumble
 // (the fallback line, a refused tool, a reply sent back, a step that took many
-// turns) and the total cost. About $0.25 to $0.40. Run on its own:
+// turns) and the total cost. About $0.30 to $0.50. Run on its own:
 //   node --env-file=.env.local node_modules/vitest/vitest.mjs run --config vitest.e2e.config.mts tests/e2e/dina-full.e2e.ts
 import sharp from "sharp";
 import { beforeAll, describe, expect, test, vi } from "vitest";
@@ -46,6 +47,15 @@ beforeAll(() => {
       google_connections: [],
       rate_limits: [],
       staff: [],
+      staff_pay_rates: [],
+      staff_availability: [],
+      rota_rules: [],
+      pos_imports: [],
+      pos_layouts: [],
+      sales_items: [],
+      sales_hours: [],
+      sales_days: [],
+      cached_data: [],
       jobs: [],
       pilot_invites: [{ code: "FULL-RUN", max_uses: 1, used_count: 0, active: true, expires_at: null, type: "pilot" }],
     },
@@ -117,11 +127,23 @@ async function chat(action: Record<string, unknown>, label: string) {
 const step = () => db.tables.onboarding_sessions[0]?.current_step as string | null;
 const lastDina = () => [...shown].reverse().find((m) => m.role === "dina")!;
 const tapped = new Set<string>();
+const TEAM = "Bilal in the kitchen, £12.50 an hour, 30 hours a week. Sara front of house, £11.44, 25 hours. Jamal on delivery, £11.44, no fixed hours.";
 
 async function menuPhoto() {
   const lines = ["EMBER & SPICE GRILL", "", "GRILLS", "Lamb Chops ........ £14.00", "Chicken Tikka ..... £11.50", "Mixed Grill ....... £18.00", "", "SIDES", "Garlic Naan ....... £3.00", "Chips ............. £3.50"];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1000"><rect width="100%" height="100%" fill="#fffaf0"/>${lines.map((l, i) => `<text x="80" y="${110 + i * 70}" font-family="Georgia, serif" font-size="${i === 0 ? 48 : 40}" fill="#222">${l.replace(/&/g, "&amp;")}</text>`).join("")}</svg>`;
   return sharp(Buffer.from(svg)).jpeg({ quality: 85 }).toBuffer();
+}
+
+// A year of item sales as a till would export it (Nov 2025 to Oct 2026).
+function salesCsv() {
+  const lines = ["Date,Time,Item,Qty,Net Sales"];
+  for (let t = Date.UTC(2025, 10, 1); t <= Date.UTC(2026, 9, 30); t += 86_400_000) {
+    const d = new Date(t).toISOString().slice(0, 10).split("-").reverse().join("/");
+    lines.push(`${d},18:30,Mixed Grill,${2 + (t / 86_400_000) % 5},${(18 * (2 + (t / 86_400_000) % 5)).toFixed(2)}`, `${d},19:15,Chips,4,14.00`);
+  }
+  return Buffer.from(lines.join("
+"));
 }
 
 // What the owner does next, from the step and Dina's last message.
@@ -142,6 +164,11 @@ async function ownerMove() {
     const n = shown.filter((x) => x.component?.type === "dish_check").length;
     return n <= 2 ? answerTap("allergen_ok", "That's right") : answerTap("allergen_later", "Do the rest later");
   }
+  if (c?.type === "upload" && step() === "sales") {
+    await db.client.storage.from("onboarding-uploads").upload(`${restaurantId}/incoming/sales.csv`, salesCsv(), { contentType: "text/csv" });
+    return chat({ kind: "files", paths: [`${restaurantId}/incoming/sales.csv`] }, "uploads a year of sales as CSV");
+  }
+  if (c?.type === "upload" && step() === "team") return chat({ kind: "message", text: TEAM }, "types the team");
   if (c?.type === "upload") {
     await db.client.storage.from("onboarding-uploads").upload(`${restaurantId}/incoming/menu.jpg`, await menuPhoto(), { contentType: "image/jpeg" });
     return chat({ kind: "files", paths: [`${restaurantId}/incoming/menu.jpg`] }, "uploads a menu photo");
@@ -149,7 +176,9 @@ async function ownerMove() {
   if (c?.type === "quick_replies") {
     const opts = (c.options as { id: string; label: string }[]) ?? [];
     const pick = (re: RegExp) => opts.find((o) => re.test(`${o.id} ${o.label}`.toLowerCase()));
+    const byStep: Record<string, RegExp> = { sales: /yes|import/, team: /30/, rewards: /sounds good|good|keep|yes/, customers_qr: /send|yes/, approvals_timing: /8am|8 am|yes|fine|keep/ };
     const choice =
+      (byStep[step() ?? ""] && pick(byStep[step()!])) ||
       (/phone or a laptop/.test(t) && pick(/laptop/)) ||
       (/owner or (the |a )?manager/.test(t) && pick(/owner/)) ||
       (/queue/.test(t) && pick(/no/)) ||
@@ -184,6 +213,19 @@ async function ownerMove() {
     if (hit) return chat({ kind: "message", text: hit[1] }, `"${hit[1]}"`);
     if (/hour|open/.test(asked)) return chat({ kind: "message", text: "Monday to Saturday 12 till 10pm, closed on Sundays" }, "the hours");
   }
+  if (step() === "sales") return chat({ kind: "message", text: "Yes, that's right, import it" }, '"Yes, import it"');
+  if (step() === "team") {
+    if (/manager|day to day|runs/.test(asked)) return chat({ kind: "message", text: "Sara runs the floor day to day" }, "the site manager");
+    if (/cover|on shift|minimum|at least/.test(asked)) return chat({ kind: "message", text: "Always at least 2 in the kitchen" }, "the cover rule");
+    if (/target|labour|%/.test(asked)) return chat({ kind: "message", text: "30% is fine" }, '"30% is fine"');
+    return chat({ kind: "message", text: TEAM }, "the team");
+  }
+  if (step() === "rewards") return chat({ kind: "message", text: "Sounds good, keep those" }, '"Sounds good"');
+  if (step() === "customers_qr") return chat({ kind: "message", text: "Yes, send them to me" }, '"Yes, send them"');
+  if (step() === "approvals_timing") {
+    if (/sending|customer messages|9am to 9pm|hours/.test(asked)) return chat({ kind: "message", text: "9am to 9pm is fine" }, '"9am to 9pm is fine"');
+    return chat({ kind: "message", text: "8am please" }, '"8am please"');
+  }
   return chat({ kind: "message", text: "Yes please, carry on" }, '"Yes please, carry on"');
 }
 
@@ -206,7 +248,7 @@ describe("a whole onboarding, for real", () => {
 
     await chat({ kind: "start" }, "opens the chat");
     const turnsAt: Record<string, number> = {};
-    while (turns < 60 && step()) {
+    while (turns < 100 && step()) {
       const s = step()!;
       turnsAt[s] = (turnsAt[s] ?? 0) + 1;
       await ownerMove();
@@ -221,7 +263,10 @@ describe("a whole onboarding, for real", () => {
 
     const r = db.tables.restaurants[0];
     const session = db.tables.onboarding_sessions[0];
-    console.log("\n[Saved]", JSON.stringify({ name: r.name, address: r.address, cuisine: r.cuisine, brand_voice: r.brand_voice, recovery_offers: r.recovery_offers, complaint_contact: r.complaint_contact, opening_hours: r.opening_hours, faqs: r.faqs, halal: r.halal_statement, dishes: (r.menu as { items: unknown[] }[] | undefined)?.reduce((n, c) => n + c.items.length, 0), active: r.active }));
+    console.log("\n[Saved]", JSON.stringify({ name: r.name, address: r.address, cuisine: r.cuisine, brand_voice: r.brand_voice, recovery_offers: r.recovery_offers, complaint_contact: r.complaint_contact, opening_hours: r.opening_hours, faqs: r.faqs, halal: r.halal_statement, dishes: (r.menu as { items: unknown[] }[] | undefined)?.reduce((n, c) => n + c.items.length, 0), active: r.active, signup_reward: r.signup_reward, cap: r.discount_cap_percent, labour: r.labour_target_pct, brief_hour: r.brief_hour, window: [r.send_window_start, r.send_window_end] }));
+    console.log("[Team]", db.tables.staff.map((x) => `${x.display_name} (${(x.roles as string[]).join("/")})`).join(", "), "| cover:", JSON.stringify(db.tables.rota_rules.map((x) => [x.role, x.min_on_shift])));
+    console.log("[Sales]", db.tables.pos_imports.map((x) => `${x.status} ${x.first_day} to ${x.last_day}, ${x.rows_imported} lines`).join("; "));
+    console.log("[Gaps]", db.tables.setup_gaps.map((g) => `${g.step_key}: ${g.unlock_text}`).join(" / ") || "none");
     console.log("[Steps]", db.tables.onboarding_steps.map((s) => `${s.step_key}: ${s.status}${s.waiting_on ? ` (waiting on ${s.waiting_on})` : ""}`).join(", "));
     const byStep = new Map<string, number>();
     for (const u of db.tables.onboarding_ai_usage) byStep.set(`${u.step_key}/${u.purpose}`, (byStep.get(`${u.step_key}/${u.purpose}`) ?? 0) + Number(u.cost_usd));

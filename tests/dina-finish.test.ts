@@ -14,6 +14,7 @@ const callDina = vi.fn();
 const usage = { purpose: "turn", model: "claude-sonnet-5-5", tokens: { input: 1000, output: 100, cacheRead: 0, cacheWrite: 0, cost: 0.003 } };
 const answer = (text: string, component: unknown = null) => ({ reply: { messages: [{ text, component }] }, calls: [usage], toolCalls: [], attempts: 1 });
 const ALL = ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs"];
+const LATER_STEPS = ["sales", "team", "rewards", "customers_qr", "approvals_timing"];
 
 beforeEach(() => {
   vi.resetModules();
@@ -35,6 +36,8 @@ beforeEach(() => {
       ],
       onboarding_steps: [
         ...ALL.slice(0, 5).map((k) => ({ restaurant_id: R, step_key: k, status: k === "menu" ? "partial" : "done", data: {}, completed_at: "2026-10-31T10:05:00Z" })),
+        // Steps 7 to 12 skipped already, so hours and FAQs is the last one left.
+        ...LATER_STEPS.map((k) => ({ restaurant_id: R, step_key: k, status: "skipped", data: {}, skipped_at: "2026-10-31T10:06:00Z" })),
         { restaurant_id: REAL, step_key: "hello", status: "done", data: {} },
         { restaurant_id: REAL, step_key: "google", status: "in_progress", waiting_on: "google", data: { invited_at: "2026-10-31T09:10:00Z" } },
       ],
@@ -158,7 +161,7 @@ describe("the builder's test controls", () => {
     const { jumpTestSite } = await import("@/lib/onboarding/dina/test-sites");
     await jumpTestSite(R, "tone");
     expect(session().current_step).toBe("tone");
-    await expect(jumpTestSite(R, "sales")).rejects.toThrow(/isn't a step in setup/);
+    await expect(jumpTestSite(R, "languages_dates")).rejects.toThrow(/isn't a step in setup/);
   });
 
   test("reset, delete and link never touch a real restaurant", async () => {

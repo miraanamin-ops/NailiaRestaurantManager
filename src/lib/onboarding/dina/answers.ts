@@ -70,7 +70,12 @@ export async function handleAnswer(input: { restaurantId: string; messageId: str
 }
 
 // After a step is skipped (the button, "skip" on WhatsApp, or Dina's skip_step):
-// a skipped tone means Warm and personal for now.
+// a skipped tone means Warm and personal for now; a skipped team, a 30% labour
+// target; skipped rewards, a free dessert for new sign-ups.
 export async function afterSkip(restaurantId: string, step: FlowStepKey) {
   if (step === "tone") await applyToneDefaults(restaurantId);
+  if (step === "team" || step === "rewards") {
+    const { applyOpsDefaults } = await import("./ops-step");
+    await applyOpsDefaults(restaurantId, step);
+  }
 }

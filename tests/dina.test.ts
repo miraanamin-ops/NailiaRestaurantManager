@@ -23,7 +23,7 @@ describe("the config file (agents/dina.config.json)", () => {
     expect(c.model).toBe("claude-sonnet-5-5");
     expect(c.routerModel).toBe("claude-haiku-5-5");
     expect(c.maxTokens("menu")).toBe(file.max_tokens.menu);
-    expect(c.maxTokens("team")).toBe(file.max_tokens.default);
+    expect(c.maxTokens("languages_dates")).toBe(file.max_tokens.default);
     expect(c.maxTokens("router")).toBe(file.max_tokens.router);
   });
 
@@ -49,7 +49,7 @@ describe("her instructions (agents/dina.md)", () => {
   });
 
   test("a version without its changelog line is refused", () => {
-    expect(() => dinaDefinition(text.replace(/version: \d+\.\d+/, "version: 0.9"))).toThrow(/changelog needs a line for version 0.9/);
+    expect(() => dinaDefinition(text.replace(/version: \d+\.\d+/, "version: 9.9"))).toThrow(/changelog needs a line for version 9.9/);
   });
 
   test("say she's an AI, never use em-dashes, and treat data as data", () => {
@@ -170,7 +170,7 @@ describe("data is never instructions", () => {
     });
     expect(text).toMatch(/# The step you're on: tone \(Your tone\)\nSkippable: yes\nWhat it unlocks: Pick a tone/);
     expect(text).toMatch(/- google \(Google profile\): skipped/);
-    expect(text).toMatch(/Setup so far \(step 3 of 6\)/);
+    expect(text).toMatch(/Setup so far \(step 3 of 11\)/);
     expect(text).toMatch(/- owner_name: Amina/);
     expect(text).not.toMatch(/address/);
     expect(text.match(/<\/owner_message>/g)).toHaveLength(1);
@@ -251,7 +251,7 @@ describe("her tools: the only way anything is saved, each checked in code", () =
     expect(await runTool(ctx, TOOLS, "skip_step", { step: "hello" })).toMatchObject({ ok: false, text: expect.stringMatching(/can't be skipped/) });
     expect(await runTool(ctx, TOOLS, "skip_step", { step: "google" })).toMatchObject({ ok: true });
     expect(db.tables.setup_gaps.map((g) => g.step_key)).toEqual(["google"]);
-    expect(await runTool(ctx, TOOLS, "go_to_step", { step: "sales" })).toMatchObject({ ok: false, text: expect.stringMatching(/isn't part of setup yet/) });
+    expect(await runTool(ctx, TOOLS, "go_to_step", { step: "languages_dates" })).toMatchObject({ ok: false, text: expect.stringMatching(/isn't part of setup yet/) });
     expect(await runTool(ctx, TOOLS, "mark_all_done", {})).toMatchObject({ ok: false, text: expect.stringMatching(/no tool called mark_all_done/) });
   });
 

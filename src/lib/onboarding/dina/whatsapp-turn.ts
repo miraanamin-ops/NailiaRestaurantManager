@@ -8,6 +8,7 @@ import { STEP_DEFS, type FlowStepKey } from "../flow";
 import { getSession, skipStep } from "../sessions";
 import { afterSkip, answeredPart, handleAnswer } from "./answers";
 import { chatSources } from "./chat";
+import type { DataBlock } from "./prompt";
 import { codeTurn, dinaTurn, type SavedMessage, type TurnInput } from "./turn";
 import { describeFiles, refusedText } from "./uploads";
 import { isFilePart, saveWhatsAppFiles, type FilePart } from "./uploads-store";
@@ -144,21 +145,41 @@ async function files(channel: OwnerChannel, input: DinaWhatsAppInput, step: Flow
   ]
     .filter(Boolean)
     .join(" ");
-  const result = await dinaTurn({ restaurantId: input.restaurantId, channel: "whatsapp", event: "message", text, externalId: input.messageSid ?? null, ownerParts: parts, note });
+  const data = await dataForFiles(input.restaurantId, step, all);
+  const result = await dinaTurn({ restaurantId: input.restaurantId, channel: "whatsapp", event: "message", text, externalId: input.messageSid ?? null, ownerParts: parts, note, data });
   if (!result.duplicate) await sendTurn(channel, result.messages);
 }
 
 // What Dina is told about files that arrived (either channel). On the menu step
-// they're read into a menu draft first; on other steps they're kept for later.
-export async function noteForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[], via: string) {
+// they're read into a menu draft first; on the sales step, imported as sales; on
+// the team step, a staff spreadsheet is given to her as data (dataForFiles); on
+// other steps they're kept for later.
+export async function noteForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[], via: string, channel: "web" | "whatsapp" = via === "on WhatsApp" ? "whatsapp" : "web") {
   const sent = `The owner has just sent ${describeFiles(files)} ${via}.`;
   if (step === "menu") {
     const { readMenuFiles } = await import("./menu-step");
     const read = await readMenuFiles(restaurantId, files).catch((err) => (console.error("Reading the menu failed", err), "The menu couldn't be read this time. Ask them to send it again, flat and in good light, or as a PDF."));
     return `${sent} ${read}`;
   }
+  if (step === "sales") {
+    const { readSalesFiles } = await import("./ops-step");
+    const read = await readSalesFiles(restaurantId, files, channel).catch((err) => (console.error("Importing the sales file failed", err), "The sales file couldn't be imported this time. Ask them to send it again, as CSV or Excel."));
+    return `${sent} ${read}`;
+  }
+  if (step === "team") {
+    const sheet = files.some((f) => f.kind === "csv" || f.kind === "excel");
+    return `${sent} ${sheet ? "Their staff list is in the data below: read the names, roles, rates and hours from it, check anything unclear with them, then call save_team." : "Ask for the staff list as a CSV or Excel file, or to type it (name, role, hourly rate, contracted hours)."}`;
+  }
   const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
   return `${sent} They're saved safely for ${stepName}. Reading files for this step comes in a later version: say in a few words that you've got them, then carry on with the step you're on.`;
+}
+
+// Files given to Dina as data for this turn: a staff spreadsheet on the team step.
+export async function dataForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[]) {
+  if (step !== "team") return [];
+  const { staffFileAsData } = await import("./ops-step");
+  const block = await staffFileAsData(restaurantId, files).catch((err) => (console.error("Reading the staff list failed", err), null));
+  return block ? [block as DataBlock] : [];
 }
 
 // The owner's message, kept without a turn (part of a burst, or nothing usable).

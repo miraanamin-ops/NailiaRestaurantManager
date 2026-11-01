@@ -29,7 +29,8 @@ import {
 
 const T = "2026-10-28T10:00:00.000Z";
 const LATER = "2026-10-28T11:00:00.000Z";
-const MILESTONE_A: FlowStepKey[] = ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs"];
+// Steps 1 to 10 and 12 (phase 9); languages and key dates (11) comes later.
+const ASKED: FlowStepKey[] = ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "approvals_timing"];
 
 const hello = (s: FlowState = {}) => complete(s, "hello", "done", { owner_name: "Amina", restaurant_name: "Ember & Spice Grill" }, T);
 const all = (fn: (s: FlowState, k: FlowStepKey) => FlowState, start: FlowState = hello()) => availableSteps().filter((k) => k !== "hello").reduce(fn, start);
@@ -44,10 +45,10 @@ describe("the steps", () => {
     expect(STEP_DEFS.google.unlock).toBe("Connect Google and I'll reply to your reviews, post updates and track calls and directions for you.");
   });
 
-  test("milestone A asks steps 1 to 6; the rest aren't part of setup yet and can't be entered", () => {
-    expect(availableSteps()).toEqual(MILESTONE_A);
-    expect(() => enter({}, "sales", T)).toThrow(FlowError);
-    expect(() => skip({}, "team", T)).toThrow(/isn't part of setup yet/);
+  test("every step but languages and key dates is asked; that one isn't part of setup yet and can't be entered", () => {
+    expect(availableSteps()).toEqual(ASKED);
+    expect(() => enter({}, "languages_dates", T)).toThrow(FlowError);
+    expect(() => skip({}, "languages_dates", T)).toThrow(/isn't part of setup yet/);
   });
 
   test("no unlock line or step title has an em-dash", () => {
@@ -58,7 +59,7 @@ describe("the steps", () => {
 describe("where the owner is", () => {
   test("starts at Hello and goes in order", () => {
     expect(currentStep({})).toBe("hello");
-    expect(progress({})).toEqual({ total: 6, position: 1, done: 0, resolved: 0 });
+    expect(progress({})).toEqual({ total: 11, position: 1, done: 0, resolved: 0 });
     const s = hello();
     expect(currentStep(s)).toBe("google");
     expect(progress(s)).toMatchObject({ position: 2, done: 1 });
@@ -150,7 +151,7 @@ describe("activating and finishing", () => {
     expect(currentStep(s)).toBeNull();
     expect(canFinish(s, false)).toBe(false);
     expect(canFinish(s, true)).toBe(true);
-    expect(progress(s)).toEqual({ total: 6, position: 6, done: 1, resolved: 6 });
+    expect(progress(s)).toEqual({ total: 11, position: 11, done: 1, resolved: 11 });
   });
 
   test("a step still being worked on stops finishing", () => {
@@ -186,7 +187,7 @@ describe("setup gaps", () => {
   });
 
   test("all steps skipped: one gap per skippable step", () => {
-    expect(gapsFor(all((st, k) => skip(st, k, T))).map((g) => g.step_key)).toEqual(MILESTONE_A.slice(1));
+    expect(gapsFor(all((st, k) => skip(st, k, T))).map((g) => g.step_key)).toEqual(ASKED.slice(1));
   });
 
   test("syncing: new gaps are added once, finished ones close, and skipping again re-opens a closed one", () => {

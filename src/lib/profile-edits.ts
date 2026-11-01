@@ -47,6 +47,11 @@ export type EditableFields = ProfileFields &
     // Offers (settings page)
     | "approved_offer_types"
     | "birthday_offer"
+    // Dina's steps 8 and 12 (labour target; sending hours and brief hour, 054)
+    | "labour_target_pct"
+    | "send_window_start"
+    | "send_window_end"
+    | "brief_hour"
   >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
@@ -81,6 +86,10 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   quiet_hours_end: "quiet hours end",
   approved_offer_types: "kinds of offer",
   birthday_offer: "birthday offer",
+  labour_target_pct: "labour target",
+  send_window_start: "sending hours start",
+  send_window_end: "sending hours end",
+  brief_hour: "morning brief time",
 };
 
 // The menu goes through saveMenu (src/lib/ops/menu.ts): sent with the settings

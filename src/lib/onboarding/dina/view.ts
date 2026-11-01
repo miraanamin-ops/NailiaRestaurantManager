@@ -3,6 +3,7 @@ import { availableSteps, gapsFor, progress, STEP_DEFS, stepState, type FlowState
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
+import { hourWords, ROLE_WORDS, type CoverRule } from "./ops-content";
 import type { Hours, MenuCategory } from "../profile-data";
 
 // What the web chat draws, made from what's saved: the conversation (with which
@@ -18,7 +19,7 @@ export type AnswerPart = { type: "answer"; to: string; choice: string };
 const isAnswer = (p: unknown): p is AnswerPart => typeof p === "object" && p !== null && (p as AnswerPart).type === "answer" && typeof (p as AnswerPart).to === "string";
 
 export type CardSources = {
-  restaurant: { id?: string; slug?: string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null };
+  restaurant: { id?: string; slug?: string | null; brief_hour?: number | null; signup_reward?: string | null; discount_cap_percent?: number | null; labour_target_pct?: number | string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null };
   state: FlowState;
   // For the Google and tone cards (chat.ts fills these in): our manager email,
   // where "Connect Google" goes (null while Path A is off), the tone config.
@@ -126,6 +127,24 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
     const answers = Object.values((data(s, "hours_faqs").answers ?? {}) as Record<string, string>).filter((v) => v && v !== "(not answered)").length;
     return `Opening hours set; ${answers} common question${answers === 1 ? "" : "s"} answered`;
   },
+  sales: (s) => {
+    const d = data(s, "sales") as { weeks?: number; first_day?: string; last_day?: string };
+    return d.weeks !== undefined ? `${d.weeks} weeks of sales, ${d.first_day} to ${d.last_day}` : "Saved";
+  },
+  team: (s) => {
+    const d = data(s, "team") as { staff?: number; manager?: string | null; cover_rules?: CoverRule[]; labour_target_pct?: number; labour_defaulted?: boolean };
+    const cover = (d.cover_rules ?? []).map((c) => `at least ${c.min_on_shift} ${ROLE_WORDS[c.role]}`).join(", ");
+    return [`${d.staff ?? 0} on the team`, d.manager ? `${d.manager} runs the site` : null, cover || null, `labour target ${d.labour_target_pct ?? 30}%${d.labour_defaulted ? " (the default)" : ""}`].filter(Boolean).join("; ");
+  },
+  rewards: ({ restaurant }) => `Sign-up reward: ${restaurant.signup_reward ?? "not set"}; offers never over ${restaurant.discount_cap_percent ?? 20}% off`,
+  customers_qr: (s) => {
+    const via = (data(s, "customers_qr").qr_via as string[] | undefined) ?? [];
+    return via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready";
+  },
+  approvals_timing: (s) => {
+    const d = data(s, "approvals_timing") as { brief_hour?: number; quiet_start?: string; quiet_end?: string };
+    return `Brief at ${hourWords(d.brief_hour ?? 9)}; customer messages ${d.quiet_start ?? "09:00"} to ${d.quiet_end ?? "21:00"}; you approve everything`;
+  },
 };
 
 // Where "Change" goes: the step in the chat, so Dina picks it up there.
@@ -154,7 +173,7 @@ export function summaryFrom(sources: CardSources): SummaryData {
     items,
     locked: gapsFor(sources.state).map((g) => ({ key: g.step_key, title: STEP_DEFS[g.step_key].title, unlock: g.unlock_text })),
     next: [
-      "Your first morning brief arrives on WhatsApp at 9am, the morning after you finish.",
+      `Your first morning brief arrives on WhatsApp at ${hourWords(sources.restaurant.brief_hour ?? 9)}, the morning after you finish.`,
       "Your first Monday report comes on Monday morning.",
       ...(queued ? [`${queued} review repl${queued === 1 ? "y is" : "ies are"} waiting for your approval in that first brief.`] : []),
       qr ? `Your QR codes are ready to print: ${qr}` : "Your QR codes will be ready to print.",
@@ -195,6 +214,7 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     return { type: "choice_cards", quote: { ...options.review, real: options.real }, cards: toneCards(setup.tones, options) };
   }
   if (p.type === "allergen_check") return dishCheck((part as { dish?: string }).dish, sources);
+  if (p.type === "qr_kit") return sources.restaurant.slug ? { type: "link", label: "Open your QR codes", href: `/r/${sources.restaurant.slug}/qr-pack`, hint: "Four table cards and a counter sign, ready to print." } : null;
   if (p.type === "whatsapp_link") return { type: "link", label: "Link my WhatsApp", href: `/onboarding/in?r=${sources.restaurant.id ?? ""}`, hint: null };
   if (p.type === "queue_replies")
     return {
