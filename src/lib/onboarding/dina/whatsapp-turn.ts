@@ -168,7 +168,13 @@ export async function noteForFiles(restaurantId: string, step: FlowStepKey | nul
   }
   if (step === "team") {
     const sheet = files.some((f) => f.kind === "csv" || f.kind === "excel");
-    return `${sent} ${sheet ? "Their staff list is in the data below: read the names, roles, rates and hours from it, check anything unclear with them, then call save_team." : "Ask for the staff list as a CSV or Excel file, or to type it (name, role, hourly rate, contracted hours)."}`;
+    // Kept on the step, so the sheet stays in front of her on the next turns too
+    // (she asks one question at a time before save_team; the first real run lost it).
+    if (sheet) {
+      const { noteStep } = await import("../sessions");
+      await noteStep(restaurantId, "team", { staff_files: files.filter((f) => f.kind === "csv" || f.kind === "excel") }, { channel });
+    }
+    return `${sent} ${sheet ? "Their staff list is in the data below: read the names, roles, rates, contracted hours and, where it has them, each person's days, times and max hours a week; check anything unclear with them, then call save_team and show editable_card team." : "Ask for the staff list as a CSV or Excel file, or to type it (name, role, hourly rate, contracted hours, and when each person can work)."}`;
   }
   const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
   return `${sent} They're saved safely for ${stepName}. Reading files for this step comes in a later version: say in a few words that you've got them, then carry on with the step you're on.`;

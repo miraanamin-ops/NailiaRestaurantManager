@@ -32,7 +32,7 @@ Read with `docs/onboarding-handover.md` (section 8: what already existed) and
 | 4 | Test data in `/pilot-zero`, through the real importers | **done** |
 | 5 | Close account (admin console) | **done** |
 | 6 | #note and its CSV export | **done** |
-| 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | next |
+| 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | **done** |
 
 ## Phase 1: identity
 
@@ -298,6 +298,34 @@ message. The Pilot Zero page lists the latest 20 and **Download all as CSV**
 (`/onboarding/admin/pilot-zero/notes`: date, simulated, restaurant, note, time written;
 formula-safe). Notes stay if the restaurant is closed. Tests: `tests/pilot-notes.test.ts`
 and the #note cases in `tests/webhook.test.ts`.
+
+## Phase 7: two simulated days, the real team step, the run sheet
+
+**Two simulated days** (`tests/pilot-zero-two-days.test.ts`, in memory: 056 isn't on dev
+yet). A restaurant on your number, set up as on live (Production, Google through our
+manager account, dry run by default), with the pilot-zero year and team, runs a simulated
+Thursday and Friday through the real simulation, morning job, review check, rota, send
+gate and Google wall (only Claude, WhatsApp and Google's servers are stand-ins). The
+overnight 1-star alerts at once; the briefs carry the 🧪 footnote; approving replies says
+"would have posted" (and "simulated review" for the 1-star); **nothing is written to
+Google**; Stop puts everything back. Found and fixed: with a year of daily totals but no
+sales by the hour, the rota said "less than 8 weeks of sales history"; it now says it needs
+sales by the hour (and the run sheet imports the transactions file too).
+
+**The team step with the real Claude** (`tests/e2e/dina-team.e2e.ts`, in memory, two runs,
+$0.06 and $0.05):
+- Run 1 stumbled: she read the sheet, asked the labour target first (one question at a
+  time, right), then "couldn't see the rows" any more and kept asking for the sheet. The
+  sheet was only in front of her on the turn it arrived. **Fixed**: it's kept on the step
+  and given to her every turn until the team is saved (`staffSheetData` in `turn.ts`;
+  test in `tests/dina-ops.test.ts`). An owner would have hit this too.
+- Run 2: sheet, one question (target), `save_team`, the team card, Looks right: all 10
+  saved with days, times, max hours, contracted hours and pay exactly as in the sheet.
+- Still to watch: she didn't ask about cover rules (the sheet has none), so none were
+  saved. The run sheet tells you to say them. Making her always ask is a small prompt
+  change if you want it.
+
+**The run sheet**: `docs/pilot-zero-run-sheet.md`.
 
 ## Notes for the run sheet (phase 7)
 - Each simulated day starts with: send any WhatsApp message to the restaurant, so the

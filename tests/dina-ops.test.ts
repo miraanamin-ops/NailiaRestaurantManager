@@ -335,6 +335,23 @@ describe("what Dina is told", () => {
     expect(content).not.toMatch(/pos_tips|brief_hour/);
     vi.doUnmock("@/lib/onboarding/dina/call");
   });
+
+  test("the staff sheet stays in front of her on the next turns of the team step, until the team is saved", async () => {
+    // The first real run (Pilot Zero, 1 Nov): she asked the labour target first, then
+    // "couldn't see the rows" any more and kept asking for the sheet again.
+    db.tables.onboarding_sessions[0].current_step = "team";
+    Object.assign(db.tables, { onboarding_ai_usage: [] });
+    vi.doMock("@/lib/sales/pos-file", async (orig) => ({ ...(await orig<object>()), readTable: async () => ({ headers: ["Name", "Role", "Days available"], rows: [["Bilal", "Kitchen", "Wed-Sun"]] }) }));
+    const callDina = vi.fn(async () => ({ reply: { messages: [{ text: "Who runs the site day to day?", component: null }] }, calls: [], toolCalls: [], attempts: 1 }));
+    vi.doMock("@/lib/onboarding/dina/call", async (orig) => ({ ...(await orig<object>()), callDina, routeStep: async () => ({ step: null, call: null }) }));
+    await filesNote("team");
+    expect(step("team")?.data?.staff_files).toEqual([sheet]);
+    const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "28%", externalId: "t-sheet" });
+    expect((callDina.mock.calls[0] as unknown as [{ content: string }])[0].content).toContain("Name: Bilal | Role: Kitchen | Days available: Wed-Sun");
+    vi.doUnmock("@/lib/onboarding/dina/call");
+    vi.doUnmock("@/lib/sales/pos-file");
+  });
 });
 
 describe("skipping, and the summary", () => {

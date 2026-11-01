@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
-import { availableSteps, currentStep, STEP_DEFS, statusOf, type FlowStepKey } from "../flow";
+import { availableSteps, currentStep, STEP_DEFS, statusOf, stepState, type FlowStepKey } from "../flow";
 import { enterStep, getSession, loadFlow, startOnboarding, type Channel } from "../sessions";
 import { getRestaurant } from "../store";
 import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from "./call";
@@ -18,6 +18,7 @@ import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
 import { DAILY_FIGURES_HINT, DEFAULT_DISCOUNT_CAP, LABOUR_HINT, POS_TIPS } from "./ops-content";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
+import type { FilePart } from "./uploads-store";
 
 // One turn of the setup conversation, whichever channel it came from (the web
 // chat and WhatsApp call this, and only draw the result differently):
@@ -62,6 +63,18 @@ const STEP_FIELDS: Partial<Record<FlowStepKey, readonly string[]>> = {
 };
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
+
+// Team: the staff sheet the owner sent earlier in this step (whatsapp-turn.ts
+// noteForFiles keeps it on the step), in front of her every turn until the team is
+// saved. She asks one question at a time before save_team; the first real run lost
+// the sheet after the upload turn and asked for it again and again.
+async function staffSheetData(restaurantId: string, state: Awaited<ReturnType<typeof loadFlow>>["state"]) {
+  const team = stepState(state, "team");
+  const files = team.data.staff_files as FilePart[] | undefined;
+  if (!files?.length || team.status === "done") return null;
+  const { staffFileAsData } = await import("./ops-step");
+  return (await staffFileAsData(restaurantId, files).catch(() => null)) as DataBlock | null;
+}
 // Code's note says it saved something this turn (so "that's saved" can be true without her tool).
 const CODE_SAVED = /Code (saved|sent|made|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
 
@@ -123,6 +136,8 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   state = stateNow;
   // Hello: Google Maps matches for the name, so she can ask "Is this you?" (when we can search).
   const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
+  // (On the turn it arrives the sheet is already in input.data.)
+  const sheet = step === "team" && !input.data?.length ? await staffSheetData(id, state) : null;
   const asked = availableSteps();
   const near: FlowStepKey[] = step ? [step, ...(asked.includes(step) ? asked.slice(asked.indexOf(step) + 1, asked.indexOf(step) + 2) : [])] : [];
   const known = {
@@ -151,7 +166,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     event: input.event,
     history,
     ownerText: input.text ?? null,
-    data: [...(input.data ?? []), ...(places ? [places] : [])],
+    data: [...(input.data ?? []), ...(places ? [places] : []), ...(sheet ? [sheet] : [])],
     note: input.note,
   });
 
