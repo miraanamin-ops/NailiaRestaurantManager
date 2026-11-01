@@ -15,7 +15,7 @@ Read with:
 - **Built**: milestone A (sign-up with no paywall, Dina on the web and WhatsApp, steps 1 to 6, the summary, the builder's test controls) and milestone B's phase 9 (steps 7 to 10 and 12), plus the work listed in section 3. All tests pass (1,598); the latest preview build is Ready.
 - **Blocking the merge**: your phone test (you're running it separately, against the `onboarding-dina` preview and the dev database).
 - **While the phone test runs**: don't change Vercel settings, Twilio settings or the dev database layout without asking you first. Push when something's done and tell you, so you can re-test on the new preview.
-- **Next by plan**: phase 10 (gap nudges in the brief, a gaps page), then milestone C (customer list import, languages and key dates, resume reminders, the admin onboarding view, retiring the old onboarding). A "Pilot Zero" harness is being considered: section 8 lists what it can reuse.
+- **Next by plan**: phase 10 (gap nudges in the brief, a gaps page), then milestone C (customer list import, languages and key dates, resume reminders, the admin onboarding view, retiring the old onboarding). Pilot Zero (you as the first real customer, after the merge) is being built on this branch: `docs/pilot-zero.md` (decisions, phases, status). Section 8 lists what it reuses.
 
 ## 1. Phases done
 

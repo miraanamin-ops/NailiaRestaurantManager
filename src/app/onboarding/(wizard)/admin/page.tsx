@@ -99,6 +99,12 @@ async function Admin({ searchParams }: Pick<PageProps<"/onboarding/admin">, "sea
         <button className="block w-full rounded-full bg-[#c8f03c] px-4 py-4 text-center text-base font-semibold text-[#0b0c0a]">Start a test onboarding</button>
       </form>
       <p className="mt-2 text-sm text-stone-500">A test restaurant never reaches anyone real on any channel. It opens straight into the chat with Dina.</p>
+      <p className="mt-2 text-sm">
+        <Link href="/onboarding/admin/phone" className="underline">
+          Demo phone
+        </Link>
+        <span className="text-stone-500">: talk to the demo restaurants as their owner, test commands included.</span>
+      </p>
 
       <h2 className="mt-8 text-xl font-semibold">Test restaurants ({tests.length})</h2>
       <div className="mt-3 space-y-3">{tests.length ? tests.map(row) : <p className="text-sm text-stone-500">None yet.</p>}</div>

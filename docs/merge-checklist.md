@@ -129,18 +129,22 @@ minutes; the tests run first).
 6. **Scheduled jobs:** after the next hour (5 past), `/log` > the queue shows a
    `setup_nudges` job, done.
 7. **Clean up:** on `/onboarding/admin`, **Delete** the test restaurant.
-8. **Test tools are yours alone on Production:** from a phone that isn't
-   `BUILDER_WHATSAPP` but owns a demo restaurant (e.g. the Cardamom Corner phone),
-   send `RUN BRIEF`: it must answer that test commands only work for demo
-   restaurants, and do nothing. From your builder phone on a demo restaurant it
-   still works. (Code since 1 Nov: on Production, test tools only act on a demo
-   restaurant whose owner number is `BUILDER_WHATSAPP`, and new sign-ups are never
-   demo restaurants. `/onboarding/admin` was always builder-only.)
-9. **No real restaurant is marked demo:** Supabase > live > **Table Editor** >
-   `restaurants`, filter `is_demo` is true. Only your own demo and test
-   restaurants should be there (on 1 Nov: Ember & Spice, Cardamom Corner,
-   Tayyabs, Dishoom Shoreditch, Mangal 2, Test 1, Test 2, none of them a real
-   customer).
+8. **Move the demo pair to placeholder numbers** (for Pilot Zero, `docs/pilot-zero.md`;
+   ask Claude, or run it yourself from the worktree):
+   `node --env-file=.env.live.local scripts/demo-numbers.mjs --live` shows the
+   change (Ember & Spice from your number to +44 7700 900401, Cardamom Corner from
+   none to +44 7700 900402); add `--yes` to make it. Only after the deploy is
+   Ready: the older code has no demo phone. Your number is then free for your
+   Pilot Zero sign-up.
+9. **The demo phone and test tools:** https://app.dinerai.co.uk/onboarding/admin/phone
+   (builder login) > **Ember & Spice Grill** > tap **HELP**: the assistant's help
+   text appears within a few seconds. Tap **RUN BRIEF**: the brief appears there
+   (nothing is sent to any phone). On Production, test tools only act on a demo
+   restaurant whose owner number is `BUILDER_WHATSAPP` or a placeholder, and new
+   sign-ups are never demo restaurants.
+10. **No real restaurant is marked demo:** Supabase > live > **Table Editor** >
+   `restaurants`, filter `is_demo` is true. Only Ember & Spice and Cardamom Corner
+   (and any test restaurant you've just made) should be there.
 
 ---
 

@@ -12,6 +12,7 @@ import {
   emailRedirectSwitch,
   environmentOf,
   googleSwitch,
+  isPlaceholderNumber,
   readFlag,
   switchChanges,
   switchesRecord,
@@ -317,6 +318,19 @@ describe("test tools on production are the builder's alone", () => {
     expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: null })).toBe(false);
     expect(testToolsFor(prod, { is_demo: false, owner_whatsapp: BUILDER })).toBe(false);
     expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "" }, { is_demo: true, owner_whatsapp: "" })).toBe(false);
+  });
+  test("the number is compared as digits, whatever the format", () => {
+    expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "+44 7700 900123" }, { is_demo: true, owner_whatsapp: BUILDER })).toBe(true);
+    expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "+447700900123" }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900124" })).toBe(false);
+  });
+  test("a demo restaurant on a placeholder number (only the builder's demo phone can use it)", () => {
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: "whatsapp:+447700900401" })).toBe(true);
+    expect(testToolsFor(prod, { is_demo: false, owner_whatsapp: "whatsapp:+447700900401" })).toBe(false);
+    expect(testToolsFor({ ...PROD, BUILDER_WHATSAPP: BUILDER }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900401" })).toBe(false);
+  });
+  test("placeholder numbers are one small block of the drama range", () => {
+    for (const n of ["whatsapp:+447700900401", "+44 7700 900402", "447700900499"]) expect(isPlaceholderNumber(n)).toBe(true);
+    for (const n of ["whatsapp:+447700900123", "+447700900399", "+447700900500", "+4477009004011", "", null, undefined]) expect(isPlaceholderNumber(n)).toBe(false);
   });
   test("previews and local copies keep the demo-only rule", () => {
     expect(testToolsFor({ ...PREVIEW, TEST_TOOLS: "true" }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900999" })).toBe(true);

@@ -3,7 +3,7 @@
 import { describe, expect, test } from "vitest";
 import { brandFor, contrast, textOn, toneFor, validHex } from "@/lib/email/brand";
 import { campaignContent, confirmContent, feedbackContent, googleReviewUrl, plainText, welcomeContent, type EmailContent } from "@/lib/email/content";
-import { fromHeader, isDummyAddress, routeEmail, senderAddress } from "@/lib/email/route";
+import { fromHeader, isDummyAddress, mailbox, routeEmail, senderAddress } from "@/lib/email/route";
 import { renderEmail } from "@/lib/email/templates";
 
 const restaurant = {
@@ -37,6 +37,20 @@ describe("where an email goes", () => {
     expect(routeEmail("owner@grill.co.uk", t)).toEqual({ kind: "send", to: "owner@grill.co.uk", redirectedFrom: null });
     expect(routeEmail("stranger@gmail.com", t)).toEqual({ kind: "send", to: "me@gmail.com", redirectedFrom: "stranger@gmail.com" });
     expect(routeEmail("stranger@gmail.com", { ...t, builder: null }).kind).toBe("simulate");
+  });
+  test("plus-addresses: the builder's own variants go as themselves; anyone else's are redirected", () => {
+    const t = { ...opts, redirect: true, allowed: ["me@gmail.com"], builder: "Me@gmail.com" };
+    expect(routeEmail("me+pilot1@gmail.com", t)).toEqual({ kind: "send", to: "me+pilot1@gmail.com", redirectedFrom: null });
+    expect(routeEmail("M.e+cust@googlemail.com", t)).toEqual({ kind: "send", to: "m.e+cust@googlemail.com", redirectedFrom: null });
+    expect(routeEmail("mee+x@gmail.com", t)).toEqual({ kind: "send", to: "me@gmail.com", redirectedFrom: "mee+x@gmail.com" });
+    expect(routeEmail("me+x@outlook.com", t)).toEqual({ kind: "send", to: "me@gmail.com", redirectedFrom: "me+x@outlook.com" });
+    // A plus-address is a real address: never treated as dummy, emailed as typed when live.
+    expect(isDummyAddress("me+pilot1@gmail.com")).toBe(false);
+    expect(routeEmail("Me+Pilot1@gmail.com", opts)).toEqual({ kind: "send", to: "me+pilot1@gmail.com", redirectedFrom: null });
+  });
+  test("an inbox: +tag dropped, Gmail's dots ignored, other domains keep theirs", () => {
+    expect(mailbox("Mi.Raan+trial2@gmail.com")).toBe("miraan@gmail.com");
+    expect(mailbox("a.b+c@example.co.uk")).toBe("a.b@example.co.uk");
   });
   test("from our domain, with the restaurant's name", () => {
     expect(senderAddress({ EMAIL_FROM_DOMAIN: "mail.dinerai.co.uk" })).toBe("hello@mail.dinerai.co.uk");

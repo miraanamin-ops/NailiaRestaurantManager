@@ -28,8 +28,21 @@ export function routeEmail(
   if (opts.seed || isDummyAddress(address)) return { kind: "simulate", reason: "dummy customer" };
   if (!opts.redirect) return { kind: "send", to: address, redirectedFrom: null };
   if (opts.allowed.map((a) => a.trim().toLowerCase()).includes(address)) return { kind: "send", to: address, redirectedFrom: null };
+  // The builder's own inbox under another name (name+tag@, or Gmail's dots)
+  // lands with the builder anyway, so it goes as itself.
+  if (opts.builder && mailbox(address) === mailbox(opts.builder)) return { kind: "send", to: address, redirectedFrom: null };
   if (opts.builder) return { kind: "send", to: opts.builder.trim().toLowerCase(), redirectedFrom: address };
   return { kind: "simulate", reason: "emails are redirected, and there's no BUILDER_EMAIL to redirect to" };
+}
+
+// The inbox an address lands in: a +tag goes to the same inbox, and Gmail
+// ignores dots. Only used to recognise the builder's own variants; customers and
+// owners are always matched on the exact address.
+export function mailbox(email: string) {
+  const [local = "", domain = ""] = email.trim().toLowerCase().split("@");
+  const base = local.split("+")[0];
+  const gmail = domain === "gmail.com" || domain === "googlemail.com";
+  return gmail ? `${base.replace(/\./g, "")}@gmail.com` : `${base}@${domain}`;
 }
 
 // "Ember & Spice Grill <hello@mail.dinerai.co.uk>". The name is quoted, without

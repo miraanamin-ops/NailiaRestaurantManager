@@ -2,7 +2,7 @@ import "server-only";
 import twilio from "twilio";
 import { BUTTON_IDS, HOURS_IDS, QUESTION_IDS } from "@/lib/bot/parse";
 import { clip } from "@/lib/text";
-import { whatsAppSendAllowed } from "@/lib/switches";
+import { isPlaceholderNumber, whatsAppSendAllowed } from "@/lib/switches";
 
 // Quick-reply template with Approve / Edit / Skip buttons. Created in the
 // Twilio account automatically the first time it's needed.
@@ -43,8 +43,13 @@ export function getTwilio() {
 
 // Every outbound WhatsApp goes through here. On a preview deployment only the
 // builder's number gets real messages; the rest are skipped with a made-up id.
+// A placeholder owner number (a demo restaurant run from the builder's demo
+// phone, lib/switches.ts) never gets anything, anywhere: the message is only
+// logged, and the demo phone page shows it.
+export const PLACEHOLDER_SID = "placeholder-";
 type MessageParams = Parameters<ReturnType<typeof getTwilio>["messages"]["create"]>[0];
 async function createMessage(params: MessageParams) {
+  if (isPlaceholderNumber(params.to)) return { sid: `${PLACEHOLDER_SID}${Date.now()}` };
   if (!whatsAppSendAllowed(process.env, params.to)) {
     console.warn(`Preview: WhatsApp to ${params.to} not sent (only BUILDER_WHATSAPP gets messages on previews)`);
     return { sid: `preview-skipped-${Date.now()}` };

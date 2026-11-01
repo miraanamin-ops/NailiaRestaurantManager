@@ -115,6 +115,14 @@ describe("pilot invite codes", () => {
     expect(db.tables.restaurants).toHaveLength(1);
   });
 
+  test("a plus-address signs up as its own owner, kept exactly as typed, with the login link to it", async () => {
+    process.env.VERCEL_ENV = "production";
+    expect(await submit({ invite: "pilot-one", email: "Aisha+Pilot0@Grill.test" })).toBe("/start?sent=1");
+    const r = db.tables.restaurants[0];
+    expect(r.owner_email).toBe("aisha+pilot0@grill.test");
+    expect(emailLoginLink).toHaveBeenCalledWith("aisha+pilot0@grill.test", `/onboarding?r=${r.id}`, expect.any(String));
+  });
+
   test("works on the live site while sign-up is invite-only", async () => {
     process.env.VERCEL_ENV = "production";
     expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
