@@ -5,6 +5,7 @@
 -- The closure records (and their export files: empty the account-exports bucket in
 -- Supabase > Storage first) go too.
 drop table if exists account_closures;
+drop table if exists pilot_notes;
 delete from storage.buckets where id = 'account-exports';
 delete from jobs where type in ('sim_day', 'account_close');
 delete from job_types where type in ('sim_day', 'account_close');

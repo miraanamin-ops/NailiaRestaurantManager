@@ -113,3 +113,14 @@ export const BUILDER_HELP = [
   "EID CONFIRMED FOR TUESDAY: confirm the next Eid's date (also EID AL-ADHA, RAMADAN STARTS, DIWALI; add UK for UK moon sighting)",
   "GOOGLE ACCEPTED ember-spice: Google accepted our manager invite for a restaurant setting up (its link name or its name)",
 ].join("\n");
+
+// #note (Pilot Zero, docs/pilot-zero.md): an observation for the Pilot Zero log,
+// from BUILDER_WHATSAPP only, e.g. "#note the brief said Friday was quiet but it wasn't".
+// The text after "#note" (null: it isn't a note, or there's nothing to note).
+export const NOTE_PREFIX = /^\s*#note\b[:\s-]*/i;
+export const isNoteCommand = (body: string) => NOTE_PREFIX.test(body);
+export function noteText(body: string) {
+  if (!isNoteCommand(body)) return null;
+  const text = body.replace(NOTE_PREFIX, "").trim();
+  return text ? text.slice(0, 2000) : null;
+}

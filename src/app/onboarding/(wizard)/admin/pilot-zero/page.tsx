@@ -11,6 +11,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { Card, Frame } from "@/app/onboarding/ui";
 import { simulationView, type DayResult, type SimulationView } from "@/lib/simulation";
 import { importsFor, type ImportRow } from "@/lib/pilot-zero-sales";
+import { recentNotes } from "@/lib/pilot-notes";
 import { markRestaurant, removeSales, simClear, simNextDay, simReview, simRunDay, simSetDay, simStop, simTillReport, switchGoogle } from "./actions";
 
 export const metadata: Metadata = { title: "Pilot Zero · DinerAI", robots: { index: false, follow: false } };
@@ -217,6 +218,7 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
   const posted = overview ? await Promise.all(overview.marked.map((r) => wouldHavePosted(r.id))) : [];
   const sims = overview ? await Promise.all(overview.marked.map((r) => simulationView(r))) : [];
   const uploads = overview ? await Promise.all(overview.marked.map((r) => importsFor(r.id))) : [];
+  const notes = overview ? await recentNotes(20) : null;
 
   return (
     <Frame>
@@ -259,6 +261,26 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
               </Card>
             );
           })}
+
+          <h2 className="mt-8 text-xl font-semibold">Your notes</h2>
+          <p className="text-sm text-stone-500">
+            Send <b>#note</b> and what you noticed from your own WhatsApp (e.g. <i>#note the brief came at 9:02</i>). It&apos;s saved with the simulated date when a simulation is on, never sent to Dina or the assistant.{" "}
+            <a href="/onboarding/admin/pilot-zero/notes" className="underline">
+              Download all as CSV
+            </a>
+          </p>
+          {notes?.length ? (
+            <ul className="mt-2 space-y-1 text-sm text-stone-700">
+              {notes.map((n) => (
+                <li key={n.id}>
+                  <b>{n.day}</b>
+                  {n.simulated ? " (simulated)" : ""}: {n.note}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-stone-500">No notes yet.</p>
+          )}
 
           <h2 className="mt-8 text-xl font-semibold">Mark a restaurant for Pilot Zero</h2>
           <p className="text-sm text-stone-500">Only test restaurants and restaurants on your own number can be marked. Its Google writes are dry run from then on.</p>

@@ -236,3 +236,38 @@ describe("builder commands only from the builder's own number", () => {
     expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", BUILDER, "✅ done");
   });
 });
+
+describe("#note: the Pilot Zero log, from the builder's own number only", () => {
+  const sendText = vi.fn(async () => ({ sid: "SMn", body: "" }));
+  const saveNote = vi.fn(async () => "📝 Noted for 2026-11-12 (simulated day).");
+  beforeEach(() => {
+    sendText.mockClear();
+    saveNote.mockClear();
+    vi.doMock("@/lib/whatsapp", async (orig) => ({ ...(await orig<object>()), sendText }));
+    vi.doMock("@/lib/pilot-notes", () => ({ saveNote }));
+  });
+  afterEach(() => {
+    vi.doUnmock("@/lib/whatsapp");
+    vi.doUnmock("@/lib/pilot-notes");
+    delete process.env.BUILDER_WHATSAPP;
+  });
+  const note = (from: string) => ({ ...message(from, `SMn${Math.random()}`), Body: "#note the brief came at 9:02" });
+
+  test("the builder's number (also their restaurant's owner number): saved and answered, never sent to the assistant", async () => {
+    process.env.BUILDER_WHATSAPP = OWNER; // the builder owns the Pilot Zero restaurant
+    const m = note(OWNER);
+    await post(m, sign(m));
+    expect(saveNote).toHaveBeenCalledWith({ body: "#note the brief came at 9:02", restaurantId: "r1", messageSid: m.MessageSid });
+    expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", OWNER, "📝 Noted for 2026-11-12 (simulated day).");
+    expect(handleMessage).not.toHaveBeenCalled();
+    expect(queued).toEqual([]);
+  });
+
+  test("any other number: an ordinary message to its own restaurant, nothing noted", async () => {
+    process.env.BUILDER_WHATSAPP = "whatsapp:+447700900999";
+    const m = note(OWNER);
+    await post(m, sign(m));
+    expect(saveNote).not.toHaveBeenCalled();
+    expect(handleMessage).toHaveBeenCalledWith(expect.objectContaining({ body: "#note the brief came at 9:02" }));
+  });
+});

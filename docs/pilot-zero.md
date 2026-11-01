@@ -31,8 +31,8 @@ Read with `docs/onboarding-handover.md` (section 8: what already existed) and
 | 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | **done** |
 | 4 | Test data in `/pilot-zero`, through the real importers | **done** |
 | 5 | Close account (admin console) | **done** |
-| 6 | #note and its CSV export | next |
-| 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | |
+| 6 | #note and its CSV export | **done** |
+| 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | next |
 
 ## Phase 1: identity
 
@@ -285,6 +285,20 @@ Tests: `tests/closure.test.ts` (asking twice, the cooling-off, cancelling, the e
 Google both ways, Stripe, a retry, the login, the export deleted after 7 days, and the
 other restaurant's rows, files and login untouched every time).
 
+## Phase 6: #note
+
+From your own WhatsApp (`BUILDER_WHATSAPP` only), send **#note** and what you noticed, e.g.
+`#note the brief said Friday was quiet but it wasn't`. The webhook catches it before
+anything else (`isNoteCommand` in `src/lib/feeds/builder-parse.ts`), so it never reaches
+Dina or the assistant, even though your number is your Pilot Zero restaurant's owner
+number. It's saved in `pilot_notes` (056) with the simulated date if your restaurant is
+simulating, else today's, and you get "📝 Noted for 2026-11-12 (simulated day)." back. A
+repeat delivery from Twilio is noted once. From any other number "#note" is an ordinary
+message. The Pilot Zero page lists the latest 20 and **Download all as CSV**
+(`/onboarding/admin/pilot-zero/notes`: date, simulated, restaurant, note, time written;
+formula-safe). Notes stay if the restaurant is closed. Tests: `tests/pilot-notes.test.ts`
+and the #note cases in `tests/webhook.test.ts`.
+
 ## Notes for the run sheet (phase 7)
 - Each simulated day starts with: send any WhatsApp message to the restaurant, so the
   brief isn't held by WhatsApp's 24-hour window (your call, 1 Nov).
@@ -293,6 +307,9 @@ other restaurant's rows, files and login untouched every time).
 
 ## Open items (deferred by your call)
 - Close account for the owner on the web and WhatsApp (the admin console version
-  comes in phase 5).
+  is phase 5).
+- The privacy notice and the data processing agreement must say that Twilio, Resend
+  and Supabase keep their own logs and backups for their own retention periods after
+  an account is closed (your call, 1 Nov).
 - Injected customer sign-ups in the simulation (you'll sign up a couple yourself
   with plus-addresses).

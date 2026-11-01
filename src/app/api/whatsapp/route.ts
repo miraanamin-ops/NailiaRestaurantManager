@@ -10,7 +10,7 @@ import { linkSignupNumber, pendingSignupsFor } from "@/lib/onboarding/entry";
 import { getSupabase } from "@/lib/supabase";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { handleBuilderCommand } from "@/lib/feeds/builder";
-import { isBuilderCommand, isBuilderNumber } from "@/lib/feeds/builder-parse";
+import { isBuilderCommand, isBuilderNumber, isNoteCommand } from "@/lib/feeds/builder-parse";
 import { sendText } from "@/lib/whatsapp";
 import { messageOwner } from "@/lib/notify";
 import { kickWorkers } from "@/lib/queue/kick";
@@ -85,6 +85,10 @@ export async function POST(req: NextRequest) {
   // "BUILDER ..." from any other number (an owner's included) does nothing and gets
   // no reply at all: it never reaches the assistant or Dina as a chat message.
   const builderAttempt = !media && !builderCommand && isBuilderCommand(body);
+  // "#note ..." from the builder's number: an observation for the Pilot Zero log
+  // (lib/pilot-notes.ts), never a message to the assistant or Dina. From any other
+  // number it's an ordinary message.
+  const noteCommand = !media && isBuilderNumber(owner, process.env.BUILDER_WHATSAPP) && isNoteCommand(body);
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? staff?.restaurant_id ?? null,
     direction: "inbound",
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
     status: "received",
     error: builderAttempt
       ? "Ignored: a builder command from a number that isn't the builder's"
-      : restaurant || linkCode || staff || signups.length || builderCommand
+      : restaurant || linkCode || staff || signups.length || builderCommand || noteCommand
         ? null
         : "Ignored: not a registered owner number",
   });
@@ -123,6 +127,18 @@ export async function POST(req: NextRequest) {
         reply = "⚠️ That builder command failed: " + (err instanceof Error ? err.message : String(err));
       }
       await sendText(sandbox, owner, reply).catch((err) => console.error("Couldn't answer the builder", err));
+    });
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
+
+  if (noteCommand) {
+    after(async () => {
+      const { saveNote } = await import("@/lib/pilot-notes");
+      const reply = await saveNote({ body, restaurantId: restaurant?.id ?? null, messageSid: params.MessageSid ?? null }).catch((err) => {
+        console.error("A #note failed", err);
+        return `⚠️ That note wasn't saved: ${err instanceof Error ? err.message : String(err)}`;
+      });
+      if (reply) await sendText(sandbox, owner, reply).catch((err) => console.error("Couldn't answer the builder", err));
     });
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }

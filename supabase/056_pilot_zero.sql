@@ -31,6 +31,10 @@
 --                          after 7 days by the daily clean-up
 --   job type account_close the closing itself (export, email, Google, Stripe, delete)
 --
+-- The Pilot Zero log (phase 6, src/lib/pilot-notes.ts):
+--   pilot_notes            "#note ..." from the builder's WhatsApp, with the
+--                          simulated date (or the real one); CSV from the admin console
+--
 -- Only adds things, so the code before it keeps working. Safe to re-run.
 
 alter table restaurants add column if not exists pilot_zero boolean not null default false;
@@ -75,5 +79,16 @@ alter table account_closures enable row level security;
 insert into storage.buckets (id, name, public)
 values ('account-exports', 'account-exports', false)
 on conflict (id) do nothing;
+
+create table if not exists pilot_notes (
+  id             uuid primary key default gen_random_uuid(),
+  restaurant_id  uuid references restaurants(id) on delete set null, -- the builder's restaurant then, if any
+  day            date not null,                                      -- the simulated date, or the real one
+  simulated      boolean not null default false,
+  note           text not null,
+  message_sid    text unique,                                        -- Twilio's id: a repeat delivery is noted once
+  created_at     timestamptz not null default now()
+);
+alter table pilot_notes enable row level security;
 
 insert into schema_migrations (name) values ('056_pilot_zero.sql') on conflict (name) do nothing;
