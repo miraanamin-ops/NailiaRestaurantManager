@@ -24,6 +24,8 @@ export function salesCoverage(firstDay: string, lastDay: string) {
 }
 
 export const SALES_GAP_LINE = `Send me at least ${MIN_SALES_WEEKS} weeks of sales and I'll forecast quiet nights and plan offers before they happen.`;
+// Takings without the number of orders each day: forecasts work from orders x average spend, so they need it.
+export const ORDERS_GAP_LINE = "Send your sales with the number of orders each day (transactions or receipts) and I'll forecast quiet nights and plan offers before they happen.";
 
 // How to export a year of sales from the common UK tills, for Dina to pass on
 // (the owner's click paths, 1 Nov). These give daily takings, which is all the

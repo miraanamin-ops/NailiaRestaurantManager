@@ -14,17 +14,24 @@ export type PosMapping = {
   date: string; // may also hold the time ("09/10/2026 18:42")
   time: string | null;
   item: string | null; // none: a daily summary, each row one day's total takings (isDailyTotals)
-  quantity: string | null; // none: each line is one item
+  quantity: string | null; // none: each line is one item. Daily summaries: the number of orders (transactions) that day, which forecasts need
   price: string;
   price_is: "line_total" | "unit_price";
   receipt: string | null; // order or receipt number, to count sales
   date_order: "dmy" | "mdy" | "ymd";
+  // What the amounts are: "net" (net sales: excluding VAT, tips and service charge,
+  // after refunds and discounts) or "gross" (including VAT). Not set = gross, as
+  // item lines usually are. Daily summaries use the net sales column where there is one.
+  amount_basis?: "gross" | "net";
 };
 
 // A file with no item column is a daily summary (Square's sales summary, Epos Now
 // by day...): its rows are days, kept as day totals only, never as dish sales.
 export const DAILY_ITEM = "Daily total";
 export const isDailyTotals = (m: Pick<PosMapping, "item">) => m.item === null;
+export const amountBasis = (m: Pick<PosMapping, "amount_basis">): "gross" | "net" => (m.amount_basis === "net" ? "net" : "gross");
+// "net sales, excluding VAT" / "including VAT", for the owner and for Dina.
+export const basisWords = (m: Pick<PosMapping, "amount_basis">) => (amountBasis(m) === "net" ? "net sales: excluding VAT, tips and service charge" : "including VAT");
 
 export type SaleLine = { day: string; hour: number | null; item: string; quantity: number; amount: number; receipt: string | null };
 
@@ -294,7 +301,11 @@ export function describeMapping(m: PosMapping) {
     `Date → "${m.date}"`,
     m.time && m.time !== m.date ? `Time → "${m.time}"` : m.time === m.date ? `Time → in "${m.date}"` : "Time → (none)",
     ...(m.item === null
-      ? ["Item → (none: a daily total for each day)", `Takings → "${m.price}"`]
+      ? [
+          "Item → (none: a daily total for each day)",
+          `Takings → "${m.price}" (${basisWords(m)})`,
+          `Orders → ${m.quantity ? `"${m.quantity}"` : "(none: forecasts need the number of orders each day)"}`,
+        ]
       : [`Item → "${m.item}"`, `Quantity → ${m.quantity ? `"${m.quantity}"` : "(none: 1 each)"}`, `Price → "${m.price}" (${m.price_is === "unit_price" ? "price each" : "line total"})`]),
   ];
   if (m.receipt) lines.push(`Receipt → "${m.receipt}"`);

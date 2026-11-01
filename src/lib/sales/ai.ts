@@ -68,11 +68,19 @@ const MappingSchema = z.object({
   date: z.string().nullable().describe("Exact heading of the column with the date of the sale"),
   time: z.string().nullable().describe("Exact heading of the column with the time (can be the same as the date column if it holds both), or null"),
   item: z.string().nullable().describe("Exact heading of the column with the item / product name"),
-  quantity: z.string().nullable().describe("Exact heading of the quantity column, or null if each row is one item"),
+  quantity: z
+    .string()
+    .nullable()
+    .describe("Item sales: exact heading of the quantity column, or null if each row is one item. Daily totals: the heading of the number of orders that day (transactions, receipts, orders, bills, sales count; not covers or items), or null if there isn't one."),
   price: z
     .string()
     .nullable()
-    .describe("Exact heading of the column with the amount of money for the row. Prefer the total for the line including VAT (gross sales / total / amount) over a unit price; avoid net, tax, cost or discount columns. For daily totals: the day's takings including VAT (gross sales, total collected, turnover)."),
+    .describe(
+      "Exact heading of the column with the amount of money for the row. Item sales: prefer the total for the line including VAT (gross sales / total / amount) over a unit price; avoid tax, cost or discount columns. Daily totals: the day's NET SALES (excluding VAT, tips and service charge, after refunds and discounts), e.g. Square's \"Net Sales\", \"Turnover excl. VAT\", Epos Now's \"Net Sales\"; only if there's no such column, the takings including VAT. Never tips, tax, service charge, discounts or \"total collected\" when a net sales column exists.",
+    ),
+  amount_basis: z
+    .enum(["net", "gross"])
+    .describe("What the chosen price column is: net (excluding VAT, tips and service charge) or gross (including VAT)."),
   price_is: z.enum(["line_total", "unit_price"]).describe("line_total if the price column is the total for the row's quantity, unit_price if it's the price of one item"),
   receipt: z.string().nullable().describe("Exact heading of the receipt / order / transaction / ticket number column, or null"),
   date_order: z.enum(["dmy", "mdy", "ymd"]).describe("How dates are written, e.g. 09/10/2026 in the UK is dmy"),
@@ -92,7 +100,7 @@ export async function suggestMapping(sample: { headers: string[]; rows: string[]
   // A daily summary (no items, one row per day): kept as day totals, never as dish sales.
   if (!out.is_item_sales && out.is_daily_totals && out.date && out.price) {
     return {
-      mapping: { date: out.date, time: null, item: null, quantity: null, price: out.price, price_is: "line_total", receipt: null, date_order: out.date_order },
+      mapping: { date: out.date, time: null, item: null, quantity: out.quantity, price: out.price, price_is: "line_total", receipt: null, date_order: out.date_order, amount_basis: out.amount_basis },
       posName: out.pos_name,
       problem: null,
     };

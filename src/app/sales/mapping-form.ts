@@ -24,5 +24,6 @@ export function mappingFromForm(get: (key: string) => string): PosMapping | null
     price_is: get("price_is") === "unit_price" ? "unit_price" : "line_total",
     receipt: opt("receipt"),
     date_order: get("date_order") === "mdy" ? "mdy" : get("date_order") === "ymd" ? "ymd" : "dmy",
+    amount_basis: get("amount_basis") === "net" ? "net" : "gross",
   };
 }

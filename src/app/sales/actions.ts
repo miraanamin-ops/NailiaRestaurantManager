@@ -22,7 +22,7 @@ export async function importWithMapping(form: FormData) {
   const back = form.get("back") === "onboarding" ? "&back=onboarding" : "";
   await own(rid);
   const mapping = mappingFromForm((k) => String(form.get(k) ?? ""));
-  if (!mapping) redirect(`/sales/import/${id}?r=${rid}${back}&error=${encodeURIComponent("Choose the date, item and price columns.")}`);
+  if (!mapping) redirect(`/sales/import/${id}?r=${rid}${back}&error=${encodeURIComponent("Choose the date and price columns (and the item column, if the file has one).")}`);
   const outcome = await confirmImport(rid, id, mapping, "owner");
   const text = outcome.message.replace(/^📊 /, "");
   if (outcome.status === "failed" && outcome.importId) redirect(`/sales/import/${id}?r=${rid}${back}&error=${encodeURIComponent(text)}`);

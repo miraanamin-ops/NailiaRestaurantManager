@@ -12,16 +12,30 @@ import { applyMapping, describeMapping, mappingWorks, parseCsv, toTable, type Po
 import { memoryDb } from "./support/memory-db";
 
 const file = (name: string) => readFileSync(`tests/fixtures/sales/${name}`);
-const daily = (date: string, price: string, date_order: PosMapping["date_order"] = "dmy"): PosMapping => ({ date, time: null, item: null, quantity: null, price, price_is: "line_total", receipt: null, date_order });
+const daily = (date: string, price: string, date_order: PosMapping["date_order"], amount_basis: "net" | "gross", orders: string | null = null): PosMapping => ({
+  date,
+  time: null,
+  item: null,
+  quantity: orders,
+  price,
+  price_is: "line_total",
+  receipt: null,
+  date_order,
+  amount_basis,
+});
 
+// Net sales wherever the till has a net column (Square's "Net Sales", Lightspeed's
+// "Turnover excl. VAT", Epos Now's "Net Sales"); the messy file only has takings
+// including VAT. Orders each day where there's a count (Lightspeed's "Receipts",
+// Epos Now's "Transactions"; forecasts need them). 70 days, 1 Aug to 9 Oct 2026;
+// the first day £1,550.50 with VAT, 40 orders.
 const SAMPLES = [
-  { name: "square-sales-summary.csv", headers: 8, mapping: daily("Date", "Gross Sales", "mdy"), skipped: 0 },
-  { name: "lightspeed-monthly-turnover.csv", headers: 5, mapping: daily("Date", "Turnover incl. VAT", "ymd"), skipped: 0 },
-  { name: "epos-now-sales-report.csv", headers: 7, mapping: daily("Time Interval", "Total"), skipped: 1 },
-  { name: "messy-daily-takings.csv", headers: 3, mapping: daily("Date", "Takings"), skipped: 1 },
+  { name: "square-sales-summary.csv", headers: 8, mapping: daily("Date", "Net Sales", "mdy", "net"), skipped: 0, first: 1283.75, net: 1283.75, orders: null },
+  { name: "lightspeed-monthly-turnover.csv", headers: 5, mapping: daily("Date", "Turnover excl. VAT", "ymd", "net", "Receipts"), skipped: 0, first: 1292.08, net: 1292.08, orders: 40 },
+  { name: "epos-now-sales-report.csv", headers: 7, mapping: daily("Time Interval", "Net Sales", "dmy", "net", "Transactions"), skipped: 1, first: 1292.08, net: 1292.08, orders: 40 },
+  { name: "messy-daily-takings.csv", headers: 3, mapping: daily("Date", "Takings", "dmy", "gross"), skipped: 1, first: 1550.5, net: 1292.08, orders: null },
 ] as const;
-// 70 days, 1 Aug to 9 Oct 2026; £100,290 in all; the first day £1,550.50.
-const TOTAL = 100290;
+const TOTAL_WITH_VAT = 100290;
 
 describe("reading each till's daily file", () => {
   for (const s of SAMPLES) {
@@ -33,9 +47,9 @@ describe("reading each till's daily file", () => {
       const { lines, skipped } = applyMapping(table, s.mapping);
       expect(lines).toHaveLength(70);
       expect(skipped).toBe(s.skipped);
-      expect(lines[0]).toMatchObject({ day: "2026-08-01", item: "Daily total", amount: 1550.5 });
+      expect(lines[0]).toMatchObject({ day: "2026-08-01", item: "Daily total", amount: s.first });
       expect(lines.at(-1)?.day).toBe("2026-10-09");
-      expect(Math.round(lines.reduce((sum, l) => sum + l.amount, 0))).toBe(TOTAL);
+      if (s.mapping.amount_basis === "gross") expect(Math.round(lines.reduce((sum, l) => sum + l.amount, 0))).toBe(TOTAL_WITH_VAT);
     });
   }
 
@@ -46,7 +60,14 @@ describe("reading each till's daily file", () => {
   });
 
   test("how the columns are described to the owner", () => {
-    expect(describeMapping(daily("Date", "Takings"))).toEqual(['Date → "Date"', "Time → (none)", "Item → (none: a daily total for each day)", 'Takings → "Takings"']);
+    expect(describeMapping(daily("Date", "Net Sales", "dmy", "net"))).toEqual([
+      'Date → "Date"',
+      "Time → (none)",
+      "Item → (none: a daily total for each day)",
+      'Takings → "Net Sales" (net sales: excluding VAT, tips and service charge)',
+      "Orders → (none: forecasts need the number of orders each day)",
+    ]);
+    expect(describeMapping(daily("Date", "Takings", "dmy", "gross", "Transactions")).slice(-2)).toEqual(['Takings → "Takings" (including VAT)', 'Orders → "Transactions"']);
   });
 });
 
@@ -78,13 +99,19 @@ describe("importing daily takings", () => {
     test(`${s.name}: asked once, then 70 days of totals saved and no dish sales`, async () => {
       suggestMapping.mockResolvedValue({ mapping: s.mapping, posName: null, problem: null });
       const first = await upload(s.name);
-      expect(first).toMatchObject({ status: "needs_mapping", message: expect.stringMatching(/Item → \(none: a daily total for each day\)[\s\S]*First day: Sat 1 Aug, £1,550\.50[\s\S]*Reply \*YES\* to import 70 days of daily takings/) });
+      expect(first).toMatchObject({ status: "needs_mapping", message: expect.stringMatching(/Item → \(none: a daily total for each day\)[\s\S]*First day: Sat 1 Aug, £[\d,.]+[\s\S]*Reply \*YES\* to import 70 days of daily takings/) });
 
       const { confirmImport } = await import("@/lib/sales/pos-import");
       const done = await confirmImport(R, first.importId!, s.mapping);
-      expect(done).toMatchObject({ status: "imported", message: expect.stringMatching(/^📊 Imported daily takings for 70 days, Sat 1 Aug to Fri 9 Oct \(£100,290 including VAT\)/) });
+      expect(done).toMatchObject({ status: "imported", message: expect.stringContaining("📊 Imported daily takings for 70 days, Sat 1 Aug to Fri 9 Oct (") });
+      expect(done.message).toContain(`from "${s.mapping.price}": ${s.mapping.amount_basis === "net" ? "net sales: excluding VAT, tips and service charge" : "including VAT"}`);
       expect(db.tables.sales_days).toHaveLength(70);
-      expect(db.tables.sales_days.find((d) => d.day === "2026-08-01")).toMatchObject({ gross_sales: 1550.5 });
+      // Net sales as the till gives them (not an estimate); takings with VAT have the VAT taken off (an estimate).
+      expect(db.tables.sales_days.find((d) => d.day === "2026-08-01")).toMatchObject(
+        s.mapping.amount_basis === "net" ? { net_sales: s.net, gross_sales: null, net_estimated: false } : { net_sales: s.net, gross_sales: 1550.5, net_estimated: true },
+      );
+      // The number of orders each day, where the file has it (forecasts work from it).
+      expect(db.tables.sales_days.find((d) => d.day === "2026-08-01")?.transactions).toBe(s.orders);
       expect(db.tables.sales_items).toEqual([]);
       expect(db.tables.pos_imports[0]).toMatchObject({ status: "imported", first_day: "2026-08-01", last_day: "2026-10-09", rows_imported: 70 });
 

@@ -13,6 +13,8 @@ import {
   applyMapping,
   dayTotals,
   describeMapping,
+  amountBasis,
+  basisWords,
   isDailyTotals,
   layoutSignature,
   mappingProblems,
@@ -196,6 +198,7 @@ export async function confirmImport(restaurantId: string, importId: string, mapp
     price_is: mapping.price_is,
     receipt: mapping.receipt,
     date_order: mapping.date_order,
+    ...(mapping.amount_basis ? { amount_basis: mapping.amount_basis } : {}),
   };
   const layout = checkRow(
     await supabase
@@ -331,12 +334,15 @@ async function runDailyImport(row: PosImport, table: Table, mapping: PosMapping,
     await setImport(row, { status: "failed", error: "No readable days", rows_skipped: skipped });
     return { status: "failed", importId: row.id, message: "I couldn't find any days with takings in that file with those columns." };
   }
-  const totals = dayTotals(lines.map((l) => ({ day: l.day, hour: null, receipt: null, amount: l.amount })));
+  // The orders that day (the quantity column, for a daily summary): forecasts need them.
+  const orders = new Map<string, number>();
+  if (mapping.quantity) for (const l of lines) orders.set(l.day, (orders.get(l.day) ?? 0) + l.quantity);
+  const totals = dayTotals(lines.map((l) => ({ day: l.day, hour: null, receipt: null, amount: l.amount }))).map((d) => ({ ...d, transactions: orders.has(d.day) ? Math.round(orders.get(d.day)!) : null }));
   const days = totals.map((d) => d.day).sort();
   const [first, last] = [days[0], days.at(-1)!];
   // Real takings replace seeded hours for the same days (as an item import does).
   check(await supabase.from("sales_hours").delete().eq("restaurant_id", rid).eq("source", "seed").gte("day", first).lte("day", last));
-  await saveDaysFromPos(rid, totals);
+  await saveDaysFromPos(rid, totals, amountBasis(mapping));
   if (historicImport(first, londonYmd(new Date()))) {
     try {
       await enqueueBackfill(rid, "pos_import");
@@ -349,7 +355,7 @@ async function runDailyImport(row: PosImport, table: Table, mapping: PosMapping,
   const period = first === last ? dayLabel(first) : `${dayLabel(first)} to ${dayLabel(last)}`;
   await logAction({ restaurantId: rid, actor, action: "sales_imported", detail: `Daily takings imported: ${plural(totals.length, "day")}, ${period}`, data: { import_id: row.id, daily: true } });
   const extra = skipped ? `\n${plural(skipped, "row")} ${skipped === 1 ? "wasn't a day" : "weren't days"} (totals or blanks).` : "";
-  return { status: "imported", importId: row.id, message: `📊 Imported daily takings for ${plural(totals.length, "day")}, ${period} (${gbp(amount)} including VAT).${extra}` };
+  return { status: "imported", importId: row.id, message: `📊 Imported daily takings for ${plural(totals.length, "day")}, ${period} (${gbp(amount)}, from "${mapping.price}": ${basisWords(mapping)}).${extra}` };
 }
 
 // The newest file waiting for its columns to be confirmed on WhatsApp (from the last day).

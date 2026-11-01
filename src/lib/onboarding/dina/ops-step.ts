@@ -8,7 +8,7 @@ import { londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { sendOwnerEmail } from "@/lib/email";
 import { confirmImport, getImport, receivePosFile } from "@/lib/sales/pos-import";
-import { describeMapping } from "@/lib/sales/pos-table";
+import { amountBasis, basisWords, describeMapping, isDailyTotals, type PosMapping } from "@/lib/sales/pos-table";
 import { readTable } from "@/lib/sales/pos-file";
 import { appUrl, getSupabase } from "@/lib/supabase";
 import { sendText } from "@/lib/whatsapp";
@@ -25,6 +25,8 @@ import {
   hourWords,
   rewardsProblems,
   ROLE_WORDS,
+  MIN_SALES_WEEKS,
+  ORDERS_GAP_LINE,
   SALES_GAP_LINE,
   salesCoverage,
   teamProblems,
@@ -89,29 +91,59 @@ async function finishSales(restaurantId: string, channel: Channel) {
     check(
       await getSupabase()
         .from("pos_imports")
-        .select("first_day, last_day, mapping")
+        .select("first_day, last_day, mapping, imported_at")
         .eq("restaurant_id", restaurantId)
         .eq("status", "imported")
-        .returns<{ first_day: string | null; last_day: string | null; mapping: { item?: string | null } | null }[]>(),
+        .returns<{ first_day: string | null; last_day: string | null; mapping: PosMapping | null; imported_at: string | null }[]>(),
     ) ?? [];
   const firsts = rows.map((r) => r.first_day).filter((d): d is string => Boolean(d)).sort();
   const lasts = rows.map((r) => r.last_day).filter((d): d is string => Boolean(d)).sort();
   if (!firsts.length) return "Code found no sales in that file. Ask them to check it's the sales export.";
   const cover = salesCoverage(firsts[0], lasts.at(-1)!);
   const itemsToo = rows.some((r) => Boolean(r.mapping?.item));
+  // Forecasts work from the number of orders each day (then the average spend), so days need it.
+  const { count: withOrders } = await getSupabase()
+    .from("sales_days")
+    .select("day", { count: "exact", head: true })
+    .eq("restaurant_id", restaurantId)
+    .gte("day", firsts[0])
+    .lte("day", lasts.at(-1)!)
+    .gt("transactions", 0);
+  const ordersOk = (withOrders ?? 0) >= MIN_SALES_WEEKS * 7;
+  const forecastable = cover.enough && ordersOk;
   await completeStep(
     restaurantId,
     "sales",
-    cover.enough ? "done" : "partial",
-    { pending_import: null, first_day: firsts[0], last_day: lasts.at(-1), weeks: cover.weeks, daily_only: !itemsToo, extra_gaps: itemsToo ? [] : ["sales_items"], gap_unlock: cover.enough ? null : SALES_GAP_LINE },
+    forecastable ? "done" : "partial",
+    {
+      pending_import: null,
+      first_day: firsts[0],
+      last_day: lasts.at(-1),
+      weeks: cover.weeks,
+      days_with_orders: withOrders ?? 0,
+      daily_only: !itemsToo,
+      extra_gaps: itemsToo ? [] : ["sales_items"],
+      gap_unlock: forecastable ? null : cover.enough ? ORDERS_GAP_LINE : SALES_GAP_LINE,
+    },
     { channel },
   );
   const items = itemsToo
     ? ""
-    : " These are daily totals, which is all forecasts need. In one short line, mention that an item sales export (sales by product) can also unlock dish-level insights later, whenever suits: it's kept as a low-priority reminder, not something to do now.";
-  return cover.enough
-    ? `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${items} Then move on.`
-    : `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${items} Then move on.`;
+    : " These are daily totals. In one short line, mention that an item sales export (sales by product) can also unlock dish-level insights later, whenever suits: it's kept as a low-priority reminder, not something to do now.";
+  const column = ` Then say in one line which column the takings came from: ${columnUsed(rows)}.`;
+  if (forecastable) return `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${column}${items} Then move on.`;
+  if (cover.enough)
+    return `Code saved their sales (${cover.text}), but the file has no number of orders for most days, and forecasts need it, so the step is half done and a setup gap for later. Say so kindly in a line: a report from their till that also shows the number of orders (transactions or receipts) each day will do it.${column}${items} Then move on.`;
+  return `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${column}${items} Then move on.`;
+}
+
+// The column the newest file's takings came from, in words for Dina: the net sales
+// column as it is, or amounts including VAT with the VAT taken off.
+function columnUsed(rows: { mapping: PosMapping | null; imported_at: string | null }[]) {
+  const m = [...rows].sort((a, b) => String(b.imported_at).localeCompare(String(a.imported_at)))[0]?.mapping;
+  if (!m) return "their sales file";
+  if (amountBasis(m) === "net") return `"${m.price}" (${basisWords(m)}), used as it is`;
+  return isDailyTotals(m) ? `"${m.price}" (including VAT), with the VAT taken off to get net sales` : `the item totals in "${m.price}" (including VAT), with the VAT taken off to get net sales`;
 }
 
 // ---------- 8. Team and labour ----------

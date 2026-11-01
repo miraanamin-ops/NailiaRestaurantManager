@@ -26,7 +26,7 @@ const FIELDS: { key: keyof PosMapping; label: string; required: boolean; hint: s
   { key: "date", label: "Date", required: true, hint: "When the sale happened" },
   { key: "time", label: "Time", required: false, hint: "Can be the same column as the date" },
   { key: "item", label: "Item", required: false, hint: "The dish or drink. None: the file has one total per day" },
-  { key: "quantity", label: "Quantity", required: false, hint: "None: each row is one item" },
+  { key: "quantity", label: "Quantity (or orders that day)", required: false, hint: "None: each row is one item. For one total a day: the number of orders (transactions), which forecasts need" },
   { key: "price", label: "Price", required: true, hint: "The money for the row" },
   { key: "receipt", label: "Receipt or order number", required: false, hint: "Used to count sales" },
 ];
@@ -104,6 +104,14 @@ async function CheckColumns({ params, searchParams }: Pick<PageProps<"/sales/imp
                 <option value="line_total">the total for the row</option>
                 <option value="unit_price">the price of one item</option>
               </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium">The amounts are…</span>
+              <select name="amount_basis" defaultValue={mapping?.amount_basis ?? "gross"} className={select}>
+                <option value="net">net sales: excluding VAT, tips and service charge</option>
+                <option value="gross">including VAT</option>
+              </select>
+              <span className="text-xs text-stone-500">For one total a day, pick the net sales column if there is one</span>
             </label>
             <label className="block">
               <span className="text-sm font-medium">Dates are written</span>

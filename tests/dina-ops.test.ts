@@ -61,7 +61,16 @@ const saveStaff = vi.fn();
 const sendOwnerEmail = vi.fn();
 const sendText = vi.fn();
 
-const imported = (id: string, first: string, last: string, item: string | null = "Item") => db.tables.pos_imports.push({ id, restaurant_id: R, status: "imported", first_day: first, last_day: last, mapping: { item } });
+// An import the importer "made", and its days (with the number of orders each day, unless orders is false).
+const imported = (id: string, first: string, last: string, item: string | null = "Item", orders = true) => {
+  const mapping = item ? { item, price: "Line Total" } : { item: null, price: "Net Sales", amount_basis: "net", quantity: orders ? "Transactions" : null };
+  db.tables.pos_imports.push({ id, restaurant_id: R, status: "imported", first_day: first, last_day: last, mapping, imported_at: new Date(Date.now() + db.tables.pos_imports.length).toISOString() });
+  for (let t = Date.parse(`${first}T00:00:00Z`); t <= Date.parse(`${last}T00:00:00Z`); t += 86_400_000) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    db.tables.sales_days = (db.tables.sales_days ?? []).filter((d) => d.day !== day);
+    db.tables.sales_days.push({ restaurant_id: R, day, net_sales: 1000, transactions: orders ? 50 : null });
+  }
+};
 
 beforeEach(() => {
   vi.resetModules();
@@ -80,6 +89,7 @@ beforeEach(() => {
     staff: [],
     rota_rules: [],
     messages: [],
+    sales_days: [],
   });
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client, appUrl: () => "https://app.test" }));
   vi.doMock("@/lib/ops/menu", async (orig) => ({
@@ -125,6 +135,21 @@ describe("step 7, sales history", () => {
     expect(gap("sales")).toBeUndefined();
   });
 
+  test("Dina says in one line which column the takings came from", async () => {
+    receivePosFile.mockImplementation(async () => (imported("imp-n", "2025-11-01", "2026-10-30", null), { status: "imported", importId: "imp-n", message: "ok" }));
+    expect(await filesNote("sales")).toMatch(/which column the takings came from: "Net Sales" \(net sales: excluding VAT, tips and service charge\), used as it is/);
+    receivePosFile.mockImplementation(async () => (imported("imp-i", "2026-09-01", "2026-10-30"), { status: "imported", importId: "imp-i", message: "ok" }));
+    db.tables.onboarding_sessions[0].current_step = "sales";
+    expect(await filesNote("sales")).toMatch(/the item totals in "Line Total" \(including VAT\), with the VAT taken off to get net sales/);
+  });
+
+  test("daily takings with no number of orders: half done, with a gap asking for them (forecasts need orders)", async () => {
+    receivePosFile.mockImplementation(async () => (imported("imp-o", "2025-11-01", "2026-10-30", null, false), { status: "imported", importId: "imp-o", message: "ok" }));
+    expect(await filesNote("sales")).toMatch(/no number of orders for most days, and forecasts need it/);
+    expect(step("sales")).toMatchObject({ status: "partial", data: { days_with_orders: 0 } });
+    expect(gap("sales")?.unlock_text).toBe("Send your sales with the number of orders each day (transactions or receipts) and I'll forecast quiet nights and plan offers before they happen.");
+  });
+
   test("a new layout asks once; 'Yes, import it' imports; under 8 weeks is half done, with its own gap line", async () => {
     receivePosFile.mockResolvedValue({ status: "needs_mapping", importId: "imp-2", message: "?" });
     getImport.mockResolvedValue({ id: "imp-2", status: "needs_mapping", mapping: { date: "Date", time: null, item: "Item", quantity: null, price: "Price", price_is: "line_total", receipt: null, date_order: "dmy", pos_name: "Square" } });
@@ -138,7 +163,7 @@ describe("step 7, sales history", () => {
     expect(gap("sales")?.unlock_text).toBe("Send me at least 8 weeks of sales and I'll forecast quiet nights and plan offers before they happen.");
   });
 
-  test("daily takings only: done (forecasts need nothing more), plus a low-priority gap for item sales that never blocks", async () => {
+  test("daily takings with orders: done (forecasts need nothing more), plus a low-priority gap for item sales that never blocks", async () => {
     receivePosFile.mockImplementation(async () => (imported("imp-3", "2025-11-01", "2026-10-30", null), { status: "imported", importId: "imp-3", message: "ok" }));
     expect(await filesNote("sales")).toMatch(/Got it: 12 months of sales[\s\S]*daily totals[\s\S]*item sales export[\s\S]*low-priority/);
     expect(step("sales")).toMatchObject({ status: "done", data: { daily_only: true, extra_gaps: ["sales_items"] } });

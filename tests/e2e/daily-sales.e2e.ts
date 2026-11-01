@@ -10,11 +10,12 @@ beforeAll(() => {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error("Needs ANTHROPIC_API_KEY (run with --env-file=.env.local)");
 });
 
+// Net sales wherever there's a net column, and the orders count where there is one.
 const SAMPLES = [
-  { name: "square-sales-summary.csv", takings: ["Gross Sales", "Total Collected", "Net Sales"] },
-  { name: "lightspeed-monthly-turnover.csv", takings: ["Turnover incl. VAT"] },
-  { name: "epos-now-sales-report.csv", takings: ["Total", "Gross Sales"] },
-  { name: "messy-daily-takings.csv", takings: ["Takings"] },
+  { name: "square-sales-summary.csv", takings: "Net Sales", basis: "net", orders: null },
+  { name: "lightspeed-monthly-turnover.csv", takings: "Turnover excl. VAT", basis: "net", orders: "Receipts" },
+  { name: "epos-now-sales-report.csv", takings: "Net Sales", basis: "net", orders: "Transactions" },
+  { name: "messy-daily-takings.csv", takings: "Takings", basis: "gross", orders: null },
 ];
 
 describe("the real column reader on daily takings", () => {
@@ -24,8 +25,7 @@ describe("the real column reader on daily takings", () => {
       const { suggestMapping } = await import("@/lib/sales/ai");
       const out = await suggestMapping(sampleForAi(table));
       console.log(`${s.name}: ${JSON.stringify(out)}`);
-      expect(out.mapping).toMatchObject({ item: null });
-      expect(s.takings).toContain(out.mapping!.price);
+      expect(out.mapping).toMatchObject({ item: null, price: s.takings, amount_basis: s.basis, quantity: s.orders });
       expect(mappingWorks(table, out.mapping!)).toBe(true);
       expect(applyMapping(table, out.mapping!).lines).toHaveLength(70);
     });
