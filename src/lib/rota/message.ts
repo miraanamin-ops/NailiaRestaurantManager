@@ -25,6 +25,9 @@ export { span12, time12 };
 
 export const MINIMUM_NOTE =
   "Built from your opening hours and minimum staffing only: there's less than 8 weeks of sales history, so I can't staff to a forecast yet.";
+// Enough history, but only daily totals: the forecast can't say which hours are busy.
+export const MINIMUM_HOURLY_NOTE =
+  "Built from your opening hours and minimum staffing only: your sales so far are daily totals, and I need sales by the hour to staff to a forecast. A till export with times (e.g. Square's Transactions export) fixes that.";
 
 export type Previous = { weekStart: string; costPence: number; hours: number } | null;
 
@@ -62,7 +65,7 @@ export function rotaDraftText(weekStart: string, plan: RotaPlan, opts: { previou
   if (opts.understood?.length) lines.push(`✏️ Changed: ${opts.understood.join("; ")}`, "");
   lines.push(`💷 *${money(t.costPence)} labour${t.labourPct !== null ? ` · ${wholePct(t.labourPct)} of forecast sales` : ""}* for ${weekLabel(weekStart)}`);
   const orders = plan.days.reduce((n, d) => n + (d.orders ?? 0), 0);
-  if (plan.basis === "minimum") lines.push(`ℹ️ ${MINIMUM_NOTE}`);
+  if (plan.basis === "minimum") lines.push(`ℹ️ ${(plan as { minimumReason?: string }).minimumReason === "hourly" ? MINIMUM_HOURLY_NOTE : MINIMUM_NOTE}`);
   else lines.push(`📈 Staffed to your forecast: about ${orders.toLocaleString("en-GB")} orders${t.salesPence ? `, ${money(t.salesPence)} sales` : ""}`);
   lines.push(`👥 ${t.hours} hours · ${plural(plan.byStaff.length, "person", "people")}`);
   if (t.openShiftHours) lines.push(`_Includes ${t.openShiftHours} hours of open shifts nobody could take, costed at the average rate._`);
