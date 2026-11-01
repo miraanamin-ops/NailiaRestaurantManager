@@ -82,6 +82,11 @@ export async function dispatch(job: "hourly" | "daily", now: Date) {
     if (await enqueue({ type: "cleanup", restaurantId: null, key: keys.cleanup(day) })) system.push("cleanup");
     // Restaurants still setting up aren't active, so they get one hourly job between them.
     if (job === "hourly" && (await enqueue({ type: "setup_nudges", restaurantId: null, key: keys.setupNudges(now) }))) system.push("setup_nudges");
+    // Accounts whose 24-hour cooling-off is over: closed now (lib/closure.ts).
+    const { dueClosures } = await import("@/lib/closure");
+    for (const c of await dueClosures(now)) {
+      if (await enqueue({ type: "account_close", restaurantId: null, key: `account_close:${c.id}:due`, payload: { closure: c.id }, priority: 20 })) system.push("account_close");
+    }
   } catch (err) {
     console.error("Couldn't queue the system jobs", err);
     summary.push({ restaurant: null, dispatch: { error: err instanceof Error ? err.message : String(err) } });

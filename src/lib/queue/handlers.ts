@@ -179,8 +179,25 @@ const setupNudges: JobHandler = {
 };
 
 // Daily: old finished and dead jobs (lib/queue/config.ts RETENTION).
+// Also: closed accounts' exports past their 7 days (lib/closure.ts).
 const cleanupJob: JobHandler = {
-  run: async () => ({ removed: await cleanup(), feedCache: await clearFeedCache() }),
+  run: async () => {
+    const { deleteExpiredExports } = await import("@/lib/closure");
+    return { removed: await cleanup(), feedCache: await clearFeedCache(), exportsDeleted: await deleteExpiredExports(new Date()) };
+  },
+};
+
+// Closing an account once it's confirmed and its cooling-off is over (lib/closure.ts).
+// Each step is recorded as it's done, so a retry carries on where it stopped.
+const accountClose: JobHandler = {
+  run: async (job) => {
+    const { runClosing } = await import("@/lib/closure");
+    return runClosing(String(job.payload.closure ?? ""));
+  },
+  onDead: async (job, err) => {
+    const { closingFailed } = await import("@/lib/closure");
+    await closingFailed(String(job.payload.closure ?? ""), err);
+  },
 };
 
 // Thursday 10am: next week's rota, sent to the owner as a draft (lib/rota/build.ts).
@@ -217,6 +234,7 @@ export const HANDLERS: Record<string, JobHandler> = {
   cleanup: cleanupJob,
   setup_nudges: setupNudges,
   sim_day: simDay,
+  account_close: accountClose,
   ...FEED_JOB_HANDLERS,
   feed_backfill: backfillJob,
 };

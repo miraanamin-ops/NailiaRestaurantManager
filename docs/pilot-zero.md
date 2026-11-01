@@ -30,8 +30,8 @@ Read with `docs/onboarding-handover.md` (section 8: what already existed) and
 | 2 | Google dry run, simulated reviews never replied to (056 on dev after the phone test) | **done** |
 | 3 | Simulation in `/onboarding/admin`: date, Z-report, simulated reviews, quiet day, Run day | **done** |
 | 4 | Test data in `/pilot-zero`, through the real importers | **done** |
-| 5 | Close account (admin console) | next |
-| 6 | #note and its CSV export | |
+| 5 | Close account (admin console) | **done** |
+| 6 | #note and its CSV export | next |
 | 7 | Two simulated days with dry-run Google; tests; preview Ready; the run sheet | |
 
 ## Phase 1: identity
@@ -246,6 +246,44 @@ to Dina to ask about. A change on the card means a corrected `save_team`. Dina's
 sales): one upload, or a date range, for a restaurant marked for Pilot Zero, after typing
 its name. Imported days, hours and items go; uploads wholly covered are marked removed and
 their files deleted; till reports the owner sent stay. Audit action `sales_removed`.
+
+## Phase 5: closing an account (admin console)
+
+`/onboarding/admin` > **Close an account** (`src/lib/closure-rules.ts` pure, `src/lib/closure.ts`).
+Needs 056 (`account_closures`, the private `account-exports` bucket, the `account_close` job).
+
+1. **Request** (ask 1): pick the restaurant and type its name. Nothing changes yet.
+   Ember & Spice and Cardamom Corner can't be closed.
+2. **Confirm** (ask 2): type the name again and tick "I understand everything will be
+   deleted". Sending is paused at once and the owner is emailed when it closes and how
+   to cancel (reply to the email). It closes after a **24-hour cooling-off**, picked up
+   by the hourly job. **Cancel closing** works until then and puts sending back on. A
+   demo or Pilot Zero restaurant can tick "skip the cooling-off" and close straight away.
+3. **Closing** (a queued system job; each step is recorded, so a retry carries on where it
+   stopped; if it dies, the page shows the error with **Try again**):
+   1. the export: `account.json` (everything that's theirs: profile, customers and
+      consents, reviews, drafts, campaigns, sales, team and rotas, reports, the chats,
+      the log; no logins or tokens), `customers.csv` and `sales.csv`, under the
+      anonymous reference in `account-exports`;
+   2. Google: their own login is revoked (`disconnect`); if we're on their profile as a
+      manager (dina@dinerai.co.uk), our link is removed, you get an alert to remove the
+      manager account from that profile, and the owner's email tells them how too;
+   3. Stripe: the subscription is cancelled when Stripe is on (else "off");
+   4. the owner's email with the download links, valid 7 days (sent before anything is
+      deleted, so a failed email stops the closing);
+   5. deleting: the restaurant's files in post-photos, sales-files and onboarding-uploads,
+      its login (unless another restaurant or your own builder login uses that email),
+      then the restaurant row, which takes every table with it;
+   6. **one anonymous line kept**: the reference (CL-…), the kind (demo, Pilot Zero, real),
+      the dates, what each step did and the counts. No name, email or number.
+4. The daily clean-up deletes the export files once their 7 days are up.
+
+Everything is in the audit log while the restaurant exists (action `closure`), and you
+get an alert when it's closed. Not covered by us: Twilio's own message logs, Resend's email
+logs and Supabase's backups keep copies for their own retention periods.
+Tests: `tests/closure.test.ts` (asking twice, the cooling-off, cancelling, the export,
+Google both ways, Stripe, a retry, the login, the export deleted after 7 days, and the
+other restaurant's rows, files and login untouched every time).
 
 ## Notes for the run sheet (phase 7)
 - Each simulated day starts with: send any WhatsApp message to the restaurant, so the

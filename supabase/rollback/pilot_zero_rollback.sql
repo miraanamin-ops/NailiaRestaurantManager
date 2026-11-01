@@ -2,8 +2,12 @@
 -- before 056 doesn't). Without them nothing is dry run: check first that no
 -- restaurant has a real Google profile linked that should stay dry run.
 
-delete from jobs where type = 'sim_day';
-delete from job_types where type = 'sim_day';
+-- The closure records (and their export files: empty the account-exports bucket in
+-- Supabase > Storage first) go too.
+drop table if exists account_closures;
+delete from storage.buckets where id = 'account-exports';
+delete from jobs where type in ('sim_day', 'account_close');
+delete from job_types where type in ('sim_day', 'account_close');
 -- Simulated rows go too (they were only ever test data).
 delete from reviews where simulated;
 delete from sales_hours where simulated;
