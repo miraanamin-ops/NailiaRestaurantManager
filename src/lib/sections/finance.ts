@@ -4,7 +4,8 @@ import { coverageNote } from "@/lib/calendar-lines/rules";
 import { londonYmd } from "@/lib/clock";
 import { labourForWeek, labourTarget } from "@/lib/finance/labour";
 import { financeBlock, forecastLine, labourLine, labourPctOf, lastWeekLines, lastWeekSummary, longDay, type LabourWeek } from "@/lib/finance/rules";
-import { getWeekAhead, weekForecastAsOf } from "@/lib/forecast/week-ahead";
+import { savedWeekAhead, toldForWeek } from "@/lib/forecast/snapshot";
+import { weekForecastAsOf } from "@/lib/forecast/week-ahead";
 import { addDaysYmd, mondayOf, weekDays, weekTotals, type WeekAhead } from "@/lib/forecast/week-ahead-rules";
 import type { Period } from "@/lib/report/build";
 import { appUrl } from "@/lib/supabase";
@@ -15,13 +16,15 @@ import type { BriefSectionDef, ReportSectionDef } from "./types";
 // (Mondays) and the calendar lines (every day); in the Monday report, Last week
 // and Next week.
 
-// The brief's blocks and the report's sections ask for the same weeks: worked out once a minute.
+// The brief's blocks and the report's sections ask for the same weeks: the copy saved
+// today (lib/forecast/snapshot.ts), so they always show the same numbers; kept in
+// memory for a minute too, to save reading it again within one brief.
 const memo = new Map<string, { at: number; value: Promise<WeekAhead> }>();
 export function weekAheadFor(restaurantId: string, weekStart: string, now: Date) {
   const key = `${restaurantId}|${weekStart}|${londonYmd(now)}`;
   const hit = memo.get(key);
   if (hit && Date.now() - hit.at < 60_000) return hit.value;
-  const value = getWeekAhead(restaurantId, weekStart, now);
+  const value = savedWeekAhead(restaurantId, weekStart, now);
   value.catch(() => memo.delete(key));
   memo.set(key, { at: Date.now(), value });
   return value;
@@ -67,6 +70,16 @@ export const calendarBriefSection: BriefSectionDef = {
 
 // ---------- The report ----------
 
+// Last week's days with the forecast the owner was told (the copy saved that Monday)
+// and what happened. A forecast that was held back (not shown) counts as none.
+export function toldDays(actual: Awaited<ReturnType<typeof weekForecastAsOf>>["days"], told: WeekAhead) {
+  const byDay = new Map(told.days.map((d) => [d.date, d]));
+  return actual.map((a) => {
+    const t = told.show_ranges ? byDay.get(a.date) : undefined;
+    return { ...a, sales_low: t?.sales_low ?? null, sales_mid: t?.sales_mid ?? null, sales_high: t?.sales_high ?? null };
+  });
+}
+
 const periodDates = (p: Period) => weekDays(londonYmd(p.start));
 const pounds = (pence: number) => Math.round(pence) / 100;
 
@@ -77,14 +90,18 @@ export const lastWeekReportSection: ReportSectionDef = {
   async build({ restaurant, period: p }) {
     const dates = periodDates(p);
     const before = weekDays(londonYmd(p.prevStart));
-    const [asOf, prev, labour, labourBefore, target] = await Promise.all([
+    const [asOf, told, prev, labour, labourBefore, target] = await Promise.all([
       weekForecastAsOf(restaurant.id, dates[0]),
+      toldForWeek(restaurant.id, dates[0]),
       weekForecastAsOf(restaurant.id, before[0]),
       labourForDays(restaurant.id, dates),
       labourForDays(restaurant.id, before),
       labourTarget(restaurant.id),
     ]);
-    const s = lastWeekSummary(asOf.days, labour, target);
+    // The forecast the owner was told that Monday (the saved copy); only weeks from
+    // before saved copies fall back to working it out again.
+    const days = told ? toldDays(asOf.days, told) : asOf.days;
+    const s = lastWeekSummary(days, labour, target);
     if (s.actual === null) return null; // no sales figures: the section stays out
     const prevActual = prev.days.reduce((n, d) => n + (d.actual_pence ?? 0), 0);
     const prevLabour = labourBefore.status !== "none" ? labourPctOf(labourBefore.costPence, prevActual) : null;
@@ -95,8 +112,7 @@ export const lastWeekReportSection: ReportSectionDef = {
         ...(s.labourPct !== null ? [{ label: "Labour % of sales", value: { now: s.labourPct, before: prevLabour ?? s.labourPct }, format: "count" as const }] : []),
       ],
       lines: lastWeekLines(s, labour),
-      footnote:
-        "Forecast: what our method said that Monday, from the sales before it. Labour: the rota's planned hours x pay, not timesheets. Information about your business, not financial advice.",
+      footnote: `Forecast: ${told ? "what your brief said that Monday" : "what our method says it would have forecast that Monday, from the sales before it"}. Labour: the rota's planned hours x pay, not timesheets. Information about your business, not financial advice.`,
     };
   },
   facts: (s) => `Last week: ${s.lines.join(" ")}`,

@@ -11,6 +11,11 @@
 
 begin;
 
+-- 0f. 055 (the saved daily forecast) is built on the forecast: it goes first
+--     (its policy uses ops_owns_restaurant). See also forecast_snapshots_rollback.sql.
+drop table if exists forecast_snapshots cascade;
+delete from schema_migrations where name = '055_forecast_snapshots.sql';
+
 -- 0e. 048 (onboarding with Dina): its owner read policies use ops_owns_restaurant.
 --     Only the policies go: the setup data stays, readable by the app's server
 --     only. See onboarding_dina_rollback.sql to undo 048 itself.

@@ -12,7 +12,7 @@ through the older setup carry on with it.
 
 ## Before merging
 
-### 1. Database: migrations 048 to 054, in this order
+### 1. Database: migrations 048 to 055, in this order
 
 Supabase > the **live** project (gfrkcvcqmdhdhpcytlkc) > **SQL Editor** > **New
 query**. Paste each file, click **Run**, and wait for "Success" before the next.
@@ -28,16 +28,17 @@ site as it is now keeps working with them.
 | 5 | `supabase/052_setup_nudges.sql` | the hourly setup nudges job |
 | 6 | `supabase/053_restaurant_faqs.sql` | the answers to common questions |
 | 7 | `supabase/054_brief_hour.sql` | the hour each owner's morning brief arrives (9am unless they pick another) |
+| 8 | `supabase/055_forecast_snapshots.sql` | the week forecast saved once a day, so the brief, the Monday report and the rota always show the same numbers |
 
 **Check:** in the SQL Editor, run:
 
 ```sql
 select name from schema_migrations
-where name between '048' and '055'
+where name between '048' and '056'
 order by name;
 ```
 
-Seven rows, 048 to 054. Or ask Claude to run
+Eight rows, 048 to 055. Or ask Claude to run
 `node --env-file=.env.live.local scripts/check-schema.mjs --live` (read only).
 
 ### 2. Vercel: production settings
@@ -166,7 +167,7 @@ If something is wrong on live after the merge:
    from **before** the merge > **⋯** > **Instant Rollback** (or **Promote to
    Production**). The site is back on the older code straight away, including
    the older sign-up and setup.
-   - The database stays as it is. Migrations 048 to 054 only added things, and
+   - The database stays as it is. Migrations 048 to 055 only added things, and
      the older code ignores them (it ran with them before the merge).
    - Restaurants that signed up with Dina meanwhile keep their details. Their
      sign-up also made the older setup record, so with the older code they carry

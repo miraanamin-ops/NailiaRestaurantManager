@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { logAction, type Actor } from "@/lib/audit";
 import { londonTime, londonYmd } from "@/lib/clock";
 import { createDraft, focusDraft, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { getWeekAhead } from "@/lib/forecast/week-ahead";
+import { savedWeekAhead } from "@/lib/forecast/snapshot";
 import { addDaysYmd, weekDays, weekdayOf } from "@/lib/forecast/week-ahead-rules";
 import type { Send } from "@/lib/google-jobs";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
@@ -120,7 +120,7 @@ export async function planWeek(r: Restaurant, weekStart: string, now: Date, adju
     return { error: `There's nobody on your team yet. Add people like this: *add Ali, kitchen, £13, weekdays*, or on the staff page: ${appUrl()}/staff?r=${r.id}` };
   }
   const [ahead, weeks, timeOff, past] = await Promise.all([
-    getWeekAhead(r.id, weekStart, now),
+    savedWeekAhead(r.id, weekStart, now), // the saved copy: the same numbers as the brief and the report
     salesHistoryWeeks(r.id, londonYmd(now)),
     timeOffIn(r.id, weekStart),
     history(r.id, weekStart, inputs.staff),

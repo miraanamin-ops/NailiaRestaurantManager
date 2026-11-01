@@ -114,10 +114,11 @@ const pounds = (pence: number | null) => (pence === null ? null : Math.round(pen
 async function weekAheadData(restaurantId: string, today: string): Promise<Pick<MetricsData, "forecast_weeks" | "labour_weeks" | "labour_target_pct">> {
   const thisMonday = addDays(today, -((new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7));
   const now = new Date(`${today}T12:00:00Z`);
-  const [{ getWeekAhead }, { labourForWeek, labourTarget }] = await Promise.all([import("@/lib/forecast/week-ahead"), import("@/lib/finance/labour")]);
+  // The saved copy (lib/forecast/snapshot.ts): the same numbers as the brief and the report.
+  const [{ savedWeekAhead }, { labourForWeek, labourTarget }] = await Promise.all([import("@/lib/forecast/snapshot"), import("@/lib/finance/labour")]);
   const forecast = await Promise.all(
     [thisMonday, addDays(thisMonday, 7)].map((w) =>
-      getWeekAhead(restaurantId, w, now)
+      savedWeekAhead(restaurantId, w, now)
         .then((a) => ({
           week_start: w,
           status: a.status === "ok" && !a.show_ranges ? ("held_back" as const) : a.status,
