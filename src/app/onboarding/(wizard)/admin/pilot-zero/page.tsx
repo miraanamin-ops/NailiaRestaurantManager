@@ -10,7 +10,8 @@ import { dryRunState, pilotZeroOverview } from "@/lib/pilot-zero";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { Card, Frame } from "@/app/onboarding/ui";
 import { simulationView, type DayResult, type SimulationView } from "@/lib/simulation";
-import { markRestaurant, simClear, simNextDay, simReview, simRunDay, simSetDay, simStop, simTillReport, switchGoogle } from "./actions";
+import { importsFor, type ImportRow } from "@/lib/pilot-zero-sales";
+import { markRestaurant, removeSales, simClear, simNextDay, simReview, simRunDay, simSetDay, simStop, simTillReport, switchGoogle } from "./actions";
 
 export const metadata: Metadata = { title: "Pilot Zero · DinerAI", robots: { index: false, follow: false } };
 
@@ -170,6 +171,43 @@ function Simulation({ r, view }: { r: Restaurant; view: SimulationView }) {
   );
 }
 
+// Imported sales: remove one upload, or everything imported in a date range (till reports stay).
+function ImportedSales({ r, uploads }: { r: Restaurant; uploads: ImportRow[] }) {
+  const confirm = <input name="confirm" required autoComplete="off" placeholder={`Type "${r.name}" to confirm`} aria-label={`Type the restaurant name, ${r.name}, to confirm`} className={`${input} min-w-0 flex-1`} />;
+  return (
+    <div className="space-y-2 rounded-xl bg-stone-50 p-3">
+      <h3 className="text-sm font-semibold">Imported sales</h3>
+      <p className="text-sm text-stone-600">Removes sales uploaded from a till export (e.g. the made-up year in pilot-zero/). The owner&apos;s till report photos are kept. Can&apos;t be undone.</p>
+      {uploads.length ? (
+        <ul className="space-y-2 text-sm">
+          {uploads.map((u) => (
+            <li key={u.id}>
+              <form action={removeSales} className="flex flex-wrap items-center gap-2">
+                <Hidden r={r} />
+                <input type="hidden" name="import" value={u.id} />
+                <span>
+                  {u.file_name ?? "A file"}: {u.first_day} to {u.last_day}, {u.rows_imported ?? 0} rows
+                </span>
+                {confirm}
+                <button className={`${small} text-red-700`}>Remove</button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-stone-500">No uploads.</p>
+      )}
+      <form action={removeSales} className="flex flex-wrap items-center gap-2">
+        <Hidden r={r} />
+        <input type="date" name="from" required aria-label="From" className={input} />
+        <input type="date" name="to" required aria-label="To" className={input} />
+        {confirm}
+        <button className={`${small} text-red-700`}>Remove that range</button>
+      </form>
+    </div>
+  );
+}
+
 async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pilot-zero">, "searchParams">) {
   await connection();
   const owner = await requireOwner("/onboarding/admin/pilot-zero");
@@ -178,6 +216,7 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
   const overview = await pilotZeroOverview();
   const posted = overview ? await Promise.all(overview.marked.map((r) => wouldHavePosted(r.id))) : [];
   const sims = overview ? await Promise.all(overview.marked.map((r) => simulationView(r))) : [];
+  const uploads = overview ? await Promise.all(overview.marked.map((r) => importsFor(r.id))) : [];
 
   return (
     <Frame>
@@ -206,6 +245,7 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
                 <GoogleSwitch r={r} kind="replies" dry={state.replies} />
                 <GoogleSwitch r={r} kind="profile" dry={state.profile} />
                 <Simulation r={r} view={sims[i]} />
+                <ImportedSales r={r} uploads={uploads[i]} />
                 <h3 className="text-sm font-semibold">Would have posted (latest {posted[i].length})</h3>
                 {posted[i].length ? (
                   <ul className="space-y-1 text-sm text-stone-700">

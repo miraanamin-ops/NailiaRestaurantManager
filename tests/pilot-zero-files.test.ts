@@ -5,7 +5,7 @@
 // message parser. If a file is rejected, the file is fixed, not the importer.
 import { readFileSync, statSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { salesCoverage, teamProblems, type StaffInputRow } from "@/lib/onboarding/dina/ops-content";
+import { availabilityOf, salesCoverage, teamCard, teamProblems, type StaffInputRow } from "@/lib/onboarding/dina/ops-content";
 import { MAX_FILE_BYTES } from "@/lib/sales/pos-file";
 import { parseCsv, toTable, type PosMapping } from "@/lib/sales/pos-table";
 import { parseStaffCommand } from "@/lib/rota/staff-input";
@@ -134,15 +134,45 @@ describe("the staff sheet", () => {
     expect(new Set(rows.map((r) => r.Role))).toEqual(new Set(["Manager", "Kitchen", "Front of house", "Delivery"]));
   });
 
-  test("what Dina would save from it passes her team checks (with the staffing rules)", () => {
+  // What Dina's save_team gets from the sheet: every column as written.
+  const sheetTeam = () => {
     const roleOf = (r: string) => ({ Manager: "manager", Kitchen: "kitchen", "Front of house": "front", Delivery: "delivery" })[r] as StaffInputRow["role"];
-    const staff: StaffInputRow[] = STAFF_ROWS().map((r) => ({ name: r.Name, role: roleOf(r.Role), hourly_rate: Number(r["Hourly rate"].replace("£", "")), contracted_hours: Number(r["Contracted hours"]) }));
+    const staff: StaffInputRow[] = STAFF_ROWS().map((r) => ({
+      name: r.Name,
+      role: roleOf(r.Role),
+      hourly_rate: Number(r["Hourly rate"].replace("£", "")),
+      contracted_hours: Number(r["Contracted hours"]),
+      days: r["Days available"],
+      times: r["Times available"],
+      max_hours: Number(r["Max hours a week"]),
+    }));
     const rules = [
       { role: "manager" as const, min_on_shift: 1 },
       { role: "kitchen" as const, min_on_shift: 2 },
       { role: "front" as const, min_on_shift: 2 },
     ];
-    expect(teamProblems({ staff, manager: "Yusuf Rahman", cover_rules: rules, labour_target_pct: 28 })).toEqual([]);
+    return { staff, manager: "Yusuf Rahman", cover_rules: rules, labour_target_pct: 28 };
+  };
+
+  test("the sheet as written passes Dina's team checks (availability included), with the staffing rules", () => {
+    expect(teamProblems(sheetTeam())).toEqual([]);
+  });
+
+  test("the team card shows everyone's availability for the owner to check", () => {
+    const card = teamCard(sheetTeam());
+    expect(card.fields).toHaveLength(13); // 10 people, the manager, cover, the target
+    expect(card.fields.find((f) => f.label === "Aisha Patel")?.value).toBe("Front of house · £12.71 an hour · 20h contracted · Fri to Sun · 17:00 to 23:00 · max 20h a week");
+    expect(card.fields.find((f) => f.label === "Farah Begum")?.value).toBe("Kitchen · £12.71 an hour · 16h contracted · Sat, Sun · max 20h a week"); // "Any time": no limit
+    expect(card.fields.find((f) => f.label === "On every shift")?.value).toBe("at least 1 manager, at least 2 kitchen, at least 2 front of house");
+  });
+
+  test("the sheet and the WhatsApp lines give each person the same availability (the lines stay a fallback)", () => {
+    const lines = readFileSync(path("staff-availability-messages.txt"), "utf8").trim().split("\n").map((l) => parseStaffCommand(l) as { input: { name: string; days: number[] | null; starts: string | null; ends: string | null; maxHours: number | null } });
+    for (const s of sheetTeam().staff) {
+      const fromLine = lines.find((l) => l.input.name === s.name)!.input;
+      const a = availabilityOf(s);
+      expect([a.days ?? [1, 2, 3, 4, 5, 6, 7], a.starts, a.ends, a.maxHours]).toEqual([fromLine.days ?? [1, 2, 3, 4, 5, 6, 7], fromLine.starts, fromLine.ends, fromLine.maxHours]);
+    }
   });
 
   test("every availability line is read in full by the staff parser (days, times, pay, max hours)", () => {
@@ -159,5 +189,46 @@ describe("the staff sheet", () => {
     expect(by["Daniel Mensah"]).toMatchObject({ days: [1, 2, 3, 4, 5, 6, 7], starts: "11:00", ends: "17:00" });
     expect(by["Hamza Siddiqui"]).toMatchObject({ roles: ["delivery"], ratePence: 1275, days: [4, 5, 6, 7] });
     expect(Object.values(by).every((s) => Number(s.ratePence) >= 1271)).toBe(true);
+  });
+});
+
+// ---------- Removing the made-up sales (lib/pilot-zero-sales.ts) ----------
+
+describe("removing imported sales from the Pilot Zero restaurant", () => {
+  const mark = (on: boolean) => Object.assign(db.tables.restaurants[0], { pilot_zero: on });
+  const remove = async (target: { importId: string } | { from: string; to: string }, confirm = "pilot zero food hall") => {
+    const { removeImportedSales } = await import("@/lib/pilot-zero-sales");
+    return removeImportedSales({ restaurantId: R, target, confirm, builderEmail: "me@b.dev" });
+  };
+
+  test("by upload: that upload's days go, its file is deleted, till reports stay; then a date range wipes the rest", async () => {
+    mark(true);
+    await importFile(SUMMARY, daily("mdy"));
+    await importFile(TRANSACTIONS, daily("dmy", "Transaction ID"));
+    db.tables.sales_days.push({ id: "z1", restaurant_id: R, day: "2026-10-31", net_sales: 999, source: "z_report" });
+    db.tables.sales_days = db.tables.sales_days.filter((d) => !(d.day === "2026-10-31" && d.source === "pos"));
+    const { importsFor } = await import("@/lib/pilot-zero-sales");
+    const uploads = await importsFor(R);
+    expect(uploads.map((u) => u.file_name)).toEqual([TRANSACTIONS, SUMMARY]);
+
+    expect(await remove({ importId: uploads[0].id })).toEqual({ from: "2026-09-20", to: "2026-10-31", days: 41, items: 0, uploads: 1 });
+    expect(db.tables.sales_days.filter((d) => d.day >= "2026-09-20")).toEqual([expect.objectContaining({ id: "z1", source: "z_report" })]);
+    expect(db.tables.pos_imports.find((i) => i.id === uploads[0].id)).toMatchObject({ status: "cancelled", error: expect.stringMatching(/Removed by the builder/) });
+    expect([...db.files.keys()].some((k) => k.endsWith(String(uploads[0].file_path)))).toBe(false);
+    expect([...db.files.keys()].some((k) => k.endsWith(String(uploads[1].file_path)))).toBe(true);
+
+    expect(await remove({ from: "2025-11-01", to: "2026-10-31" })).toMatchObject({ days: 319, uploads: 1 });
+    expect(db.tables.sales_days).toEqual([expect.objectContaining({ id: "z1" })]); // only the till report is left
+    expect(db.tables.audit_log.filter((a) => a.action === "sales_removed").map((a) => a.actor)).toEqual(["builder", "builder"]);
+  });
+
+  test("refused, changing nothing: the wrong name typed, a restaurant not marked for Pilot Zero, a backwards range", async () => {
+    mark(true);
+    await importFile(SUMMARY, daily("mdy"));
+    await expect(remove({ from: "2025-11-01", to: "2026-10-31" }, "Pilot Zero")).rejects.toThrow(/type the restaurant's name exactly \(Pilot Zero Food Hall\)/);
+    await expect(remove({ from: "2026-10-31", to: "2025-11-01" })).rejects.toThrow(/start first/);
+    mark(false);
+    await expect(remove({ from: "2025-11-01", to: "2026-10-31" })).rejects.toThrow(/isn't marked for Pilot Zero/);
+    expect(db.tables.sales_days).toHaveLength(361);
   });
 });

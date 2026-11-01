@@ -15,7 +15,7 @@ Square export ever looks different, trust the real one.
 | `square-sales-summary-12-months.csv` | Square **Sales summary**, one row per day, 1 Nov 2025 to 31 Oct 2026 (361 days: 4 closed days left out, as Square does). Net sales about £653,000 for the year. | Dina's **sales** step (or Sales page > Upload). The columns to confirm: Date, takings = "Net Sales". |
 | `square-transactions-6-weeks.csv` | Square **Transactions** export, one row per payment, 20 Sep to 31 Oct 2026: 5,463 rows, 3 refunds, 1.8 MB (small enough for WhatsApp). Each day's net sales match the summary. | After the summary, if you want each day's **number of orders** too (forecasts are better with it). Columns: Date, takings = "Net Sales", orders = one per "Transaction ID". |
 | `staff-sheet.csv` | The team: 10 people, all at £12.71 an hour or more (the National Living Wage from April 2026), with role, pay, contracted hours, days, times and max hours. | Dina's **team** step. |
-| `staff-availability-messages.txt` | One WhatsApp line per person that sets their availability, e.g. `add Aisha Patel, front of house, £12.71, fri-sun, 5pm-11pm, max 20 hours`. | Send each line as its own WhatsApp message after setup (see "Availability" below). |
+| `staff-availability-messages.txt` | One WhatsApp line per person, e.g. `add Aisha Patel, front of house, £12.71, fri-sun, 5pm-11pm, max 20 hours`. | The fallback (see "Availability" below). |
 
 ## What's in the sales
 
@@ -57,12 +57,14 @@ least 1 manager, 2 kitchen and 2 front of house on every shift; labour target 28
 
 ## Availability
 
-Dina's team step saves each person's name, role, pay and contracted hours, and the
-cover rules. It doesn't save **availability** (days, times, max hours): that isn't in
-what she can save today. So after setup, send the ten lines in
-`staff-availability-messages.txt` to the restaurant on WhatsApp, one message each. The
-same staff parser the rota uses reads each one in full (the test checks every line).
-Then text `TEAM` to see the team with their days and times.
+Dina's team step reads everyone's days, times and max hours from the sheet and shows
+them on the **Your team** card. Check it and tap **Looks right**: code saves the team
+then, availability included ("Any time" means no time limit). If something's wrong, say
+so and she shows the corrected card.
+
+**Fallback:** after setup, the ten lines in `staff-availability-messages.txt` set the
+same availability by WhatsApp, one message each (the test checks they give exactly what
+the sheet gives). Text `TEAM` to see the team with their days and times.
 
 ## Careful on live
 
@@ -71,3 +73,8 @@ simulated, and Stop simulating doesn't remove them. Upload them only to a test
 restaurant, or to your Pilot Zero restaurant if you're happy for its forecasts to be
 based on this made-up year. (Simulated till reports and quiet days, added from the
 admin console, are the ones Stop removes.)
+
+**To wipe them later** (e.g. if Maison Noor becomes a real customer):
+/onboarding/admin > Pilot Zero > your restaurant > **Imported sales**: remove one upload,
+or everything imported in a date range. Type the restaurant's name to confirm. Till
+report photos the owner sent are kept. It can't be undone.

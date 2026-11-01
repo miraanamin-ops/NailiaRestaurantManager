@@ -3,7 +3,7 @@ import { availableSteps, gapsFor, gapTitle, progress, STEP_DEFS, stepState, type
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
-import { DEFAULT_DISCOUNT_CAP, hourWords, ROLE_WORDS, type CoverRule } from "./ops-content";
+import { DEFAULT_DISCOUNT_CAP, hourWords, ROLE_WORDS, teamCard, type CoverRule, type TeamDraft } from "./ops-content";
 import type { Hours, MenuCategory } from "../profile-data";
 
 // What the web chat draws, made from what's saved: the conversation (with which
@@ -69,6 +69,10 @@ export function cardFor(card: string, sources: CardSources): ConfirmationData | 
   if (card === "hours") {
     const draft = stepState(sources.state, "hours_faqs").data.hours_draft as Hours | undefined;
     return hoursCard(draft ?? ((sources.restaurant.opening_hours ?? {}) as Hours));
+  }
+  if (card === "team") {
+    const draft = stepState(sources.state, "team").data.team_draft as TeamDraft | undefined;
+    return draft ? teamCard(draft) : null;
   }
   return null;
 }

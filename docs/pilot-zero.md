@@ -234,18 +234,27 @@ lines that set each person's availability. Made by `pilot-zero/make-files.mjs` (
 the same output). `tests/pilot-zero-files.test.ts` runs them through the real
 importers: none was rejected, so nothing needed fixing.
 
-**A gap with what's built:** Dina's team step saves name, role, pay, contracted hours
-and cover rules, but not availability (days, times, max hours). For now availability
-goes in afterwards by WhatsApp (the ten lines, read by the rota's staff parser). Open
-question for you: extend her team step to save availability too?
+**Availability (your call, 1 Nov):** Dina's team step now saves each person's days, times
+and max hours too. `save_team` only notes the team (`team_draft`); the **Your team** card
+(`teamCard` in `ops-content.ts`, from the draft) shows it, and "Looks right" saves it
+(`confirmTeam` in `ops-step.ts`, through `saveStaff`). Days and times in the owner's words
+are read by the rota's own parser (`parseDays`, `parseTimes`); one it can't read goes back
+to Dina to ask about. A change on the card means a corrected `save_team`. Dina's prompt is
+0.13. The WhatsApp "add …" lines still work as a fallback.
+
+**Removing imported sales** (`src/lib/pilot-zero-sales.ts`; Pilot Zero page > Imported
+sales): one upload, or a date range, for a restaurant marked for Pilot Zero, after typing
+its name. Imported days, hours and items go; uploads wholly covered are marked removed and
+their files deleted; till reports the owner sent stay. Audit action `sales_removed`.
 
 ## Notes for the run sheet (phase 7)
 - Each simulated day starts with: send any WhatsApp message to the restaurant, so the
   brief isn't held by WhatsApp's 24-hour window (your call, 1 Nov).
+- The last step of Pilot Zero: remove the made-up imported sales (Pilot Zero page >
+  Imported sales), so they can't shape a real restaurant's forecasts later.
 
 ## Open items (deferred by your call)
 - Close account for the owner on the web and WhatsApp (the admin console version
   comes in phase 5).
 - Injected customer sign-ups in the simulation (you'll sign up a couple yourself
   with plus-addresses).
-- Availability in Dina's team step (phase 4: for now by WhatsApp after setup).

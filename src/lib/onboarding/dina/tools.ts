@@ -145,7 +145,7 @@ export const TOOLS: DinaTool[] = [
     name: "save_team",
     status: "Saving your team…",
     description:
-      "Step 8: save the team once the owner has told you who works there (from chat or the staff list they sent) and their labour target. staff: each person with a role (kitchen, front, delivery or manager), hourly rate in pounds and contracted hours a week if given (null if not). manager: who runs the site day to day (a name on the list, or 'me' for the owner), or null. cover_rules: the least of each role on any shift, if they said. labour_target_pct: their target as a % of sales, or null if they didn't pick one (code uses 30%, flagged). Only what they said: never guess a rate.",
+      "Step 8: note the team once the owner has told you who works there (from chat or the staff list they sent) and their labour target; code shows it on the team card and saves it when they tap Looks right. staff: each person with a role (kitchen, front, delivery or manager), hourly rate in pounds and contracted hours a week if given (null if not), and their availability if given: days in their words (e.g. 'Fri-Sun', 'weekdays', 'Mon Wed Fri'; null = any day), times in their words (e.g. '5pm-11pm', 'evenings', 'lunchtimes'; null = any time), max_hours a week (null if not given). manager: who runs the site day to day (a name on the list, or 'me' for the owner), or null. cover_rules: the least of each role on any shift, if they said. labour_target_pct: their target as a % of sales, or null if they didn't pick one (code uses 30%, flagged). Only what they said: never guess a rate or availability.",
     schema: z.object({
       staff: z
         .array(
@@ -154,6 +154,9 @@ export const TOOLS: DinaTool[] = [
             role: z.enum(STAFF_ROLES),
             hourly_rate: z.number().nullable(),
             contracted_hours: z.number().nullable(),
+            days: words(40).nullable(),
+            times: words(40).nullable(),
+            max_hours: z.number().nullable(),
           }),
         )
         .max(40),

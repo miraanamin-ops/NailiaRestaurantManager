@@ -1,3 +1,5 @@
+import type { ConfirmationData } from "@/components/chat/types";
+import { parseDays, parseTimes } from "@/lib/rota/staff-input";
 import { offerProblems } from "./facts-content";
 
 // Steps 7 to 12 in plain code (unit-tested in tests/dina-ops.test.ts): how much
@@ -52,13 +54,72 @@ export const ROLE_WORDS: Record<StaffRole, string> = { kitchen: "kitchen", front
 export const DEFAULT_LABOUR_TARGET = 30;
 export const LABOUR_HINT = "Most UK independents aim for 25 to 35% of sales; 30% is a common target.";
 
-export type StaffInputRow = { name: string; role: StaffRole; hourly_rate: number | null; contracted_hours: number | null };
+// days and times in the owner's words ("Fri-Sun", "weekdays", "5pm-11pm", "evenings"),
+// read by the rota's own parser (lib/rota/staff-input.ts, the same as the "add Ali,
+// kitchen, £13, weekdays" WhatsApp line); null = any day / any time.
+export type StaffInputRow = {
+  name: string;
+  role: StaffRole;
+  hourly_rate: number | null;
+  contracted_hours: number | null;
+  days?: string | null;
+  times?: string | null;
+  max_hours?: number | null;
+};
 export type CoverRule = { role: StaffRole; min_on_shift: number };
+export type TeamDraft = { staff: StaffInputRow[]; manager: string | null; cover_rules: CoverRule[]; labour_target_pct: number | null };
+
+// "Any time", "all day", "flexible" (as a staff sheet may say): no limit, the same as blank.
+const ANY_TIME = /^(any ?time|any|all day|all-day|flexible|whenever needed|n\/?a|-)$/i;
+const timesGiven = (t: string | null | undefined) => Boolean(t?.trim()) && !ANY_TIME.test(t!.trim());
+
+// One person's availability as the rota saves it (null days = every day, null times = all day).
+export function availabilityOf(s: Pick<StaffInputRow, "days" | "times" | "max_hours">) {
+  const days = s.days?.trim() ? parseDays(s.days) : null;
+  const times = timesGiven(s.times) ? parseTimes(s.times!) : null;
+  return { days, starts: times?.starts ?? null, ends: times?.ends ?? null, maxHours: s.max_hours ?? null };
+}
+
+const DAY_SHORT = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+function daysWords(days: number[] | null) {
+  if (!days || days.length === 7) return "every day";
+  const run = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  if (run && days.length > 2) return `${DAY_SHORT[days[0]]} to ${DAY_SHORT[days.at(-1)!]}`;
+  return days.map((d) => DAY_SHORT[d]).join(", ");
+}
+const ROLE_LABEL: Record<StaffRole, string> = { kitchen: "Kitchen", front: "Front of house", delivery: "Delivery", manager: "Manager" };
+
+// "Your team": what save_team noted, for the owner to check before code saves it.
+// From the draft code holds, never from Dina's words.
+export function teamCard(d: TeamDraft): ConfirmationData {
+  const people = d.staff.map((s) => {
+    const a = availabilityOf(s);
+    const parts = [
+      ROLE_LABEL[s.role],
+      s.hourly_rate !== null ? `£${s.hourly_rate.toFixed(2)} an hour` : "rate not given",
+      s.contracted_hours !== null ? `${s.contracted_hours}h contracted` : null,
+      daysWords(a.days),
+      a.starts && a.ends ? `${a.starts} to ${a.ends === "23:59" ? "close" : a.ends}` : null,
+      a.maxHours !== null ? `max ${a.maxHours}h a week` : null,
+    ].filter(Boolean);
+    return { key: `staff::${s.name.trim().toLowerCase()}`, label: s.name.trim(), value: parts.join(" · ") };
+  });
+  const cover = d.cover_rules.map((c) => `at least ${c.min_on_shift} ${ROLE_WORDS[c.role]}`).join(", ");
+  return {
+    title: "Your team",
+    fields: [
+      ...people,
+      { key: "manager", label: "Site manager", value: d.manager },
+      { key: "cover", label: "On every shift", value: cover || null },
+      { key: "labour_target_pct", label: "Labour target", value: d.labour_target_pct !== null ? `${d.labour_target_pct}% of sales` : `${DEFAULT_LABOUR_TARGET}% (the usual default)` },
+    ],
+  };
+}
 
 // What's wrong with the team as given, in words for Dina to ask about (empty: fine).
 // The UK minimum wage is checked loosely: a rate under £5 or over £60 an hour is
 // probably a typo (a weekly or monthly figure), so she asks.
-export function teamProblems(input: { staff: StaffInputRow[]; manager: string | null; cover_rules: CoverRule[]; labour_target_pct: number | null }) {
+export function teamProblems(input: TeamDraft) {
   const problems: string[] = [];
   const names = new Set<string>();
   for (const s of input.staff) {
@@ -67,6 +128,9 @@ export function teamProblems(input: { staff: StaffInputRow[]; manager: string | 
     names.add(key);
     if (s.hourly_rate !== null && (s.hourly_rate < 5 || s.hourly_rate > 60)) problems.push(`${s.name}'s rate of £${s.hourly_rate} an hour looks wrong (is it weekly or monthly?).`);
     if (s.contracted_hours !== null && (s.contracted_hours < 0 || s.contracted_hours > 60)) problems.push(`${s.name}'s ${s.contracted_hours} contracted hours a week looks wrong.`);
+    if (s.days?.trim() && !parseDays(s.days)) problems.push(`I couldn't read ${s.name}'s days ("${s.days}"). Ask in words like weekdays, weekends, Fri-Sun or Mon, Wed, Fri.`);
+    if (timesGiven(s.times) && !parseTimes(s.times!)) problems.push(`I couldn't read ${s.name}'s times ("${s.times}"). Ask in words like 5pm-11pm, evenings or lunchtimes.`);
+    if (s.max_hours != null && (s.max_hours <= 0 || s.max_hours > 80)) problems.push(`A maximum of ${s.max_hours} hours a week for ${s.name} looks wrong.`);
   }
   if (input.manager && input.staff.length && !names.has(input.manager.trim().toLowerCase()) && !/\b(me|myself|i do|owner)\b/i.test(input.manager))
     problems.push(`The site manager, ${input.manager}, isn't on the staff list. Add them, or check the name.`);

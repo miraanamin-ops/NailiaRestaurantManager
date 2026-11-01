@@ -204,32 +204,74 @@ describe("step 8, team and labour", () => {
     db.tables.onboarding_sessions[0].current_step = "team";
   });
 
-  test("the team into the rota (the manager gets the manager role), contracted hours, cover rules, the target", async () => {
+  // "Looks right" on the team card she showed.
+  const confirmCard = async () => {
+    db.tables.onboarding_messages.push({ id: "m-team", restaurant_id: R, role: "dina", body: "Here's your team", parts: [{ type: "editable_card", card: "team" }] });
+    const { handleAnswer } = await import("@/lib/onboarding/dina/answers");
+    return handleAnswer({ restaurantId: R, messageId: "m-team", choiceId: "confirm", channel: "web" });
+  };
+
+  test("save_team only notes the team for the card; Looks right saves it into the rota with each person's availability", async () => {
     const out = await tool("save_team", {
       staff: [
-        { name: "Bilal", role: "kitchen", hourly_rate: 12.5, contracted_hours: 30 },
-        { name: "Sara", role: "front", hourly_rate: null, contracted_hours: null },
+        { name: "Bilal", role: "kitchen", hourly_rate: 12.5, contracted_hours: 30, days: "Wed-Sun", times: "evenings", max_hours: 35 },
+        { name: "Sara", role: "front", hourly_rate: null, contracted_hours: null, days: null, times: null, max_hours: null },
       ],
       manager: "Sara",
       cover_rules: [{ role: "kitchen", min_on_shift: 2 }],
       labour_target_pct: 28,
     });
-    expect(out).toMatchObject({ ok: true, text: expect.stringMatching(/2 on the team, Sara as site manager, cover: at least 2 kitchen, labour target 28%\. Team and labour is done/) });
-    expect(saveStaff.mock.calls.map((c) => [c[1].name, c[1].roles, c[1].ratePence])).toEqual([
-      ["Bilal", ["kitchen"], 1250],
-      ["Sara", ["front", "manager"], null],
+    expect(out).toMatchObject({ ok: true, text: expect.stringMatching(/Show editable_card team for them to check: nothing is saved until they tap "Looks right"/) });
+    expect(saveStaff).not.toHaveBeenCalled();
+    expect(step("team")?.status).not.toBe("done");
+
+    // The card, from the draft code holds.
+    const { cardFor } = await import("@/lib/onboarding/dina/view");
+    const { loadFlow } = await import("@/lib/onboarding/sessions");
+    const card = cardFor("team", { restaurant: r(), state: (await loadFlow(R)).state });
+    expect(card?.title).toBe("Your team");
+    expect(card?.fields.map((x) => [x.label, x.value])).toEqual([
+      ["Bilal", "Kitchen · £12.50 an hour · 30h contracted · Wed to Sun · 17:00 to close · max 35h a week"],
+      ["Sara", "Front of house · rate not given · every day"],
+      ["Site manager", "Sara"],
+      ["On every shift", "at least 2 kitchen"],
+      ["Labour target", "28% of sales"],
+    ]);
+
+    expect(await confirmCard()).toContain("Code saved the team: 2 on the team (1 with their days, times or limits), Sara as site manager, cover: at least 2 kitchen, labour target 28%. Team and labour is done");
+    expect(saveStaff.mock.calls.map((c) => [c[1].name, c[1].roles, c[1].ratePence, c[1].days, c[1].starts, c[1].ends, c[1].maxHours])).toEqual([
+      ["Bilal", ["kitchen"], 1250, [3, 4, 5, 6, 7], "17:00", "23:59", 35],
+      ["Sara", ["front", "manager"], null, null, null, null, null],
     ]);
     expect(db.tables.staff[0]).toMatchObject({ contracted_hours: 30 });
     expect(db.tables.rota_rules).toEqual([expect.objectContaining({ restaurant_id: R, role: "kitchen", min_on_shift: 2 })]);
     expect(r().labour_target_pct).toBe(28);
-    expect(step("team")).toMatchObject({ status: "done", data: { labour_defaulted: false } });
+    expect(step("team")).toMatchObject({ status: "done", data: { labour_defaulted: false, with_availability: 1 } });
   });
 
-  test("no target picked: 30%, flagged as the default; a rate that looks weekly is sent back", async () => {
-    expect(await tool("save_team", { staff: [{ name: "Bilal", role: "kitchen", hourly_rate: 450, contracted_hours: null }], manager: null, cover_rules: [], labour_target_pct: null })).toMatchObject({ ok: false, text: expect.stringMatching(/weekly or monthly/) });
-    expect(await tool("save_team", { staff: [{ name: "Bilal", role: "kitchen", hourly_rate: null, contracted_hours: null }], manager: null, cover_rules: [], labour_target_pct: null })).toMatchObject({ ok: true, text: expect.stringMatching(/labour target 30% \(the default/) });
+  test("availability she couldn't read, a rate that looks weekly: sent back, nothing noted; no target: 30%, flagged", async () => {
+    const one = (extra: Record<string, unknown>) => ({ staff: [{ name: "Bilal", role: "kitchen", hourly_rate: null, contracted_hours: null, days: null, times: null, max_hours: null, ...extra }], manager: null, cover_rules: [], labour_target_pct: null });
+    expect(await tool("save_team", one({ hourly_rate: 450 }))).toMatchObject({ ok: false, text: expect.stringMatching(/weekly or monthly/) });
+    expect(await tool("save_team", one({ days: "most days" }))).toMatchObject({ ok: false, text: expect.stringContaining(`couldn't read Bilal's days ("most days")`) });
+    expect(await tool("save_team", one({ times: "whenever" }))).toMatchObject({ ok: false, text: expect.stringMatching(/couldn't read Bilal's times/) });
+    expect(await tool("save_team", one({ max_hours: 120 }))).toMatchObject({ ok: false, text: expect.stringMatching(/maximum of 120 hours/) });
+    expect(step("team")?.data?.team_draft).toBeUndefined();
+    expect(await confirmCard()).toMatch(/no team to save yet/);
+    expect(await tool("save_team", one({}))).toMatchObject({ ok: true });
+    expect(await confirmCard()).toContain("labour target 30% (the default");
     expect(r().labour_target_pct).toBe(30);
     expect(step("team")?.data).toMatchObject({ labour_defaulted: true });
+  });
+
+  test("a change on the card means a corrected save_team: the card shows the new version", async () => {
+    const team = (days: string) => ({ staff: [{ name: "Bilal", role: "kitchen", hourly_rate: 13, contracted_hours: null, days, times: null, max_hours: null }], manager: null, cover_rules: [], labour_target_pct: 30 });
+    await tool("save_team", team("weekdays"));
+    await tool("save_team", team("weekends"));
+    const { cardFor } = await import("@/lib/onboarding/dina/view");
+    const { loadFlow } = await import("@/lib/onboarding/sessions");
+    expect(cardFor("team", { restaurant: r(), state: (await loadFlow(R)).state })?.fields[0].value).toBe("Kitchen · £13.00 an hour · Sat, Sun");
+    await confirmCard();
+    expect(saveStaff.mock.calls[0][1].days).toEqual([6, 7]);
   });
 
   test("a staff spreadsheet reaches Dina as data, never as instructions", async () => {

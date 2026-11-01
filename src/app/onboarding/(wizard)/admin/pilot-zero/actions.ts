@@ -80,3 +80,12 @@ export async function simClear(form: FormData) {
   const { clearSimulatedData } = await import("@/lib/simulation");
   return sim(form, "Simulated data cleared", (r, by) => clearSimulatedData(r, by));
 }
+
+// ---------- Imported sales (lib/pilot-zero-sales.ts) ----------
+
+export async function removeSales(form: FormData) {
+  const { removeImportedSales } = await import("@/lib/pilot-zero-sales");
+  const importId = String(form.get("import") ?? "");
+  const target = importId ? { importId } : { from: String(form.get("from") ?? ""), to: String(form.get("to") ?? "") };
+  return run(form, "Imported sales removed", (r, by) => removeImportedSales({ restaurantId: r, target, confirm: String(form.get("confirm") ?? ""), builderEmail: by }));
+}

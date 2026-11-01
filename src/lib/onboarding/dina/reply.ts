@@ -23,7 +23,7 @@ export const Component = z.discriminatedUnion("type", [
     cards: z.array(z.object({ id: z.string().min(1).max(40), title: z.string().min(1), body: z.string().min(1) })).min(2).max(6),
   }),
   z.object({ type: z.literal("upload"), accept: z.enum(["photo", "document", "spreadsheet", "any"]), multiple: z.boolean(), label: z.string().min(1) }),
-  z.object({ type: z.literal("editable_card"), card: z.enum(["basics", "menu", "hours", "faqs"]) }),
+  z.object({ type: z.literal("editable_card"), card: z.enum(["basics", "menu", "hours", "faqs", "team"]) }),
   z.object({ type: z.literal("summary") }),
   // Step 2 (Google): code fills these from google-content.ts.
   z.object({ type: z.literal("google_steps"), device: z.enum(["phone", "laptop"]) }),

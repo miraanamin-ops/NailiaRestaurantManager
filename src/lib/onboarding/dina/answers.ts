@@ -11,7 +11,7 @@ import { ALLERGEN_ACTIONS, GOOGLE_ACTIONS, QUEUE_ACTIONS } from "./view";
 
 // Taps that code acts on before Dina answers, the same on the web and WhatsApp:
 // the Google steps' two buttons, a tone card, the offer to queue replies, "Looks
-// right" on the hours and menu cards, and the allergen cards. What code did comes
+// right" on the hours, menu and team cards, and the allergen cards. What code did comes
 // back as a note for Dina, so she says it and carries on in the same single Claude
 // call; or, for an allergen card, as code's own next card (no Claude call at all).
 // Any other tap is just the owner's answer.
@@ -55,6 +55,10 @@ export async function handleAnswer(input: { restaurantId: string; messageId: str
       if (input.choiceId !== "confirm") return null;
       if (part.card === "hours") return confirmHours(input.restaurantId, input.channel);
       if (part.card === "menu") return confirmMenu(input.restaurantId, input.channel);
+      if (part.card === "team") {
+        const { confirmTeam } = await import("./ops-step");
+        return confirmTeam(input.restaurantId, input.channel);
+      }
       return null;
     case "allergen_check": {
       if (!part.dish) return null;

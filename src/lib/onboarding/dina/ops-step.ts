@@ -28,10 +28,12 @@ import {
   MIN_SALES_WEEKS,
   SALES_GAP_LINE,
   salesCoverage,
+  availabilityOf,
   teamProblems,
   timingProblems,
   type CoverRule,
   type StaffInputRow,
+  type TeamDraft,
 } from "./ops-content";
 
 // Steps 7 to 12 (11, languages and key dates, comes later). Code does the work,
@@ -149,16 +151,41 @@ function columnUsed(rows: { mapping: PosMapping | null; imported_at: string | nu
 
 // ---------- 8. Team and labour ----------
 
-export type TeamInput = { staff: StaffInputRow[]; manager: string | null; cover_rules: CoverRule[]; labour_target_pct: number | null };
+export type TeamInput = TeamDraft;
 
+const teamData = async (restaurantId: string) => stepState((await loadFlow(restaurantId)).state, "team").data as { team_draft?: TeamDraft };
+
+// save_team: the team as the owner gave it (from chat or the staff sheet), with
+// each person's days, times and max hours, kept as a draft for the team card.
+// Nothing is saved until the owner taps "Looks right" (confirmTeam). Changes on
+// the card go to Dina in their words, and she calls save_team again.
 export async function saveTeam(restaurantId: string, input: TeamInput, channel: Channel) {
   const problems = teamProblems(input);
   if (problems.length) return { ok: false as const, text: `Not saved: ${problems.join(" ")}` };
+  await noteStep(restaurantId, "team", { team_draft: input }, { channel });
+  return {
+    ok: true as const,
+    text: `Code noted ${input.staff.length} on the team, with their days, times and limits where given. Show editable_card team for them to check: nothing is saved until they tap "Looks right" (code saves it then). If they change something, call save_team again with the whole team as corrected.`,
+  };
+}
+
+// "Looks right" on the team card: into the rota's team (availability included),
+// its cover rules and the labour target. Returns what Dina is told.
+export async function confirmTeam(restaurantId: string, channel: Channel) {
+  const input = (await teamData(restaurantId)).team_draft;
+  if (!input) return "There's no team to save yet. Ask for their staff list first.";
+  const problems = teamProblems(input);
+  if (problems.length) return `Not saved: ${problems.join(" ")}`;
   const day = today();
   for (const s of input.staff) {
     const isManager = input.manager?.trim().toLowerCase() === s.name.trim().toLowerCase();
     const roles = [...new Set([roleKey(s.role), ...(isManager ? ["manager"] : [])])];
-    const { member } = await saveStaff(restaurantId, { name: s.name.trim(), roles, ratePence: s.hourly_rate === null ? null : Math.round(s.hourly_rate * 100), maxHours: null, days: null, starts: null, ends: null }, { today: day, source: "owner_message", actor: "owner" });
+    const a = availabilityOf(s);
+    const { member } = await saveStaff(
+      restaurantId,
+      { name: s.name.trim(), roles, ratePence: s.hourly_rate === null ? null : Math.round(s.hourly_rate * 100), maxHours: a.maxHours, days: a.days, starts: a.starts, ends: a.ends },
+      { today: day, source: "owner_message", actor: "owner" },
+    );
     if (s.contracted_hours !== null) check(await getSupabase().from("staff").update({ contracted_hours: s.contracted_hours }).eq("restaurant_id", restaurantId).eq("id", member.id));
   }
   for (const rule of input.cover_rules) {
@@ -173,18 +200,16 @@ export async function saveTeam(restaurantId: string, input: TeamInput, channel: 
   const r = await getRestaurant(restaurantId);
   if (!defaulted || r.labour_target_pct == null) await saveProfileFields(r, { labour_target_pct: target }, defaulted ? "Labour target (the 30% default) at setup with Dina" : "Labour target, with Dina at setup");
   const outcome = input.staff.length ? "done" : "partial";
+  const withAvailability = input.staff.filter((s) => s.days?.trim() || s.times?.trim() || s.max_hours != null).length;
   await completeStep(
     restaurantId,
     "team",
     outcome,
-    { staff: input.staff.length, manager: input.manager, cover_rules: input.cover_rules, labour_target_pct: target, labour_defaulted: defaulted, gap_unlock: outcome === "partial" ? "Tell me who's on your team and I'll suggest rotas and track labour % daily." : null },
+    { team_draft: input, staff: input.staff.length, with_availability: withAvailability, manager: input.manager, cover_rules: input.cover_rules, labour_target_pct: target, labour_defaulted: defaulted, gap_unlock: outcome === "partial" ? "Tell me who's on your team and I'll suggest rotas and track labour % daily." : null },
     { channel },
   );
   const rules = input.cover_rules.map((c) => `at least ${c.min_on_shift} ${ROLE_WORDS[c.role]}`).join(", ");
-  return {
-    ok: true as const,
-    text: `Saved: ${input.staff.length} on the team${input.manager ? `, ${input.manager} as site manager` : ""}${rules ? `, cover: ${rules}` : ""}, labour target ${target}%${defaulted ? " (the default, since they didn't pick one: say they can change it any time)" : ""}. Team and labour is ${outcome === "done" ? "done" : "half done (no staff yet)"}.`,
-  };
+  return `Code saved the team: ${input.staff.length} on the team${withAvailability ? ` (${withAvailability} with their days, times or limits)` : ""}${input.manager ? `, ${input.manager} as site manager` : ""}${rules ? `, cover: ${rules}` : ""}, labour target ${target}%${defaulted ? " (the default, since they didn't pick one: say they can change it any time)" : ""}. Team and labour is ${outcome === "done" ? "done" : "half done (no staff yet)"}.`;
 }
 
 // A staff list sent as a spreadsheet: its rows as text for Dina to read (data, never instructions).
