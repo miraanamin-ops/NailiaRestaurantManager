@@ -203,8 +203,22 @@ and the `sim_day` job type were added to the same file).
   dummy figures on the Sales page and in the report. The only export (the customer list)
   has nothing simulated in it.
 - **Clear simulated data** removes this restaurant's simulated reviews, till reports and
-  hours (drafts about them stay). Stopping also marks any simulated reviews still
-  waiting as handled, so a real review check never drafts replies to them.
+  hours mid-simulation (drafts about them stay).
+- **Stop simulating undoes everything the simulation touched**, whether or not you
+  pressed Clear (your call, 1 Nov: simulated figures must never feed a real forecast).
+  The app's forecast and the Python models read sales with no filter, so nothing is
+  left for them to read:
+  - simulated till reports, sales by hour and reviews are deleted;
+  - forecast copies saved since it started are deleted (a real brief on that date
+    would otherwise read one);
+  - unsent drafts made since it started are withdrawn, and a rota week drafted since
+    then is removed (or the real Thursday job would skip that week);
+  - the once-a-day markers (last brief, last report, ...) go back to what they were
+    when it started (saved in `restaurants.simulation`), so a simulated Thursday can't
+    stop the real Thursday's brief.
+  Each step must work before the next, and the clock is cleared last: if anything
+  fails, the simulation stays on (real jobs keep skipping) until Stop works.
+  Reports made during it stay, with their simulated banner.
 - Only a marked restaurant can be simulated. Every action is in the audit log (action
   `simulation`, actor builder). Tests: `tests/simulation.test.ts`.
 

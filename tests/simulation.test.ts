@@ -135,14 +135,40 @@ describe("starting, moving and stopping", () => {
     expect(Math.abs(restaurantNow({ ...base, fake_now: "2020-01-01T00:00:00Z" } as never).getTime() - Date.now())).toBeLessThan(5000);
   });
 
-  test("stopping goes back to real time and leaves waiting simulated reviews handled, so the real check never drafts them", async () => {
-    const { setSimulatedDay, injectReview, stopSimulation } = await sim();
-    await setSimulatedDay(PZ, "2026-11-06", "me@b.dev");
+  test("stopping without pressing Clear undoes everything the simulation touched, and nothing real", async () => {
+    const { setSimulatedDay, nextSimulatedDay, injectReview, injectZReport, stopSimulation } = await sim();
+    // Before: real markers, a real draft, a real forecast copy and a real rota week.
+    Object.assign(row(PZ), { last_brief_on: "2026-11-01", last_report_on: "2026-10-26", morning_failures: 0 });
+    const old = "2026-10-01T00:00:00.000Z";
+    db.tables.drafts = [{ id: "real-d", restaurant_id: PZ, status: "pending", created_at: old }];
+    db.tables.forecast_snapshots = [{ restaurant_id: PZ, week_start: "2026-10-26", made_on: "2026-10-26", created_at: old }];
+    db.tables.rota_weeks = [{ id: "real-w", restaurant_id: PZ, week_start: "2026-11-09", draft_id: null, created_at: old }];
+
+    await setSimulatedDay(PZ, "2026-11-12", "me@b.dev");
+    await injectZReport(PZ, { quiet: false }, "me@b.dev");
     await injectReview(PZ, 1, "me@b.dev");
-    await stopSimulation(PZ, "me@b.dev");
-    expect(row(PZ).fake_now).toBeNull();
-    expect(db.tables.reviews.find((r) => r.restaurant_id === PZ)!.handled_at).toEqual(expect.any(String));
-    expect(db.tables.reviews.find((r) => r.id === "rv9")!.handled_at).toBeNull(); // another restaurant's: untouched
+    // What Run day would have made on the simulated Thursday.
+    const during = new Date(Date.now() + 1000).toISOString();
+    db.tables.forecast_snapshots.push({ restaurant_id: PZ, week_start: "2026-11-09", made_on: "2026-11-12", created_at: during });
+    db.tables.drafts.push({ id: "sim-d", restaurant_id: PZ, status: "pending", created_at: during }, { id: "sim-rota", restaurant_id: PZ, status: "pending", created_at: during });
+    db.tables.rota_weeks.push({ id: "sim-w", restaurant_id: PZ, week_start: "2026-11-16", draft_id: "sim-rota", created_at: during });
+    db.tables.rota_weeks[0].draft_id = "sim-rota"; // a real week the simulation drafted into
+    Object.assign(row(PZ), { last_brief_on: "2026-11-12", last_report_on: "2026-11-09", morning_failures: 2 });
+    await nextSimulatedDay(PZ, "me@b.dev"); // moving on keeps what was saved at the start
+
+    const counts = await stopSimulation(PZ, "me@b.dev");
+    expect(counts).toMatchObject({ sales_days: 1, sales_hours: 10, reviews: 1, forecasts: 1, drafts: 2, rota_weeks: 1 });
+    // No simulated sales left for any forecast (the app's or the Python models') to read.
+    expect(db.tables.sales_days.filter((d) => d.restaurant_id === PZ && d.simulated)).toEqual([]);
+    expect(db.tables.sales_days.filter((d) => d.restaurant_id === PZ).map((d) => d.id).sort()).toEqual(["s1", "s2", "s3"]);
+    expect(db.tables.forecast_snapshots.map((s) => s.made_on)).toEqual(["2026-10-26"]);
+    expect(db.tables.drafts.map((d) => [d.id, d.status])).toEqual([["real-d", "pending"], ["sim-d", "withdrawn"], ["sim-rota", "withdrawn"]]);
+    expect(db.tables.rota_weeks).toEqual([expect.objectContaining({ id: "real-w", draft_id: null })]);
+    expect(row(PZ)).toMatchObject({ fake_now: null, simulation: null, last_brief_on: "2026-11-01", last_report_on: "2026-10-26", morning_failures: 0 });
+    // Another restaurant's simulated rows are untouched.
+    expect(db.tables.reviews.find((r) => r.id === "rv9")).toBeTruthy();
+    expect(db.tables.sales_days.find((d) => d.id === "s9")).toBeTruthy();
+    expect(db.tables.audit_log.at(-1)?.detail).toMatch(/Removed 1 till reports, 1 reviews, 1 forecast copies, 1 rota weeks; withdrew 2 unsent drafts/);
   });
 });
 

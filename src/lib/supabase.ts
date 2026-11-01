@@ -142,6 +142,8 @@ export type Restaurant = {
   pilot_zero?: boolean | null;
   google_dry_run?: boolean | null;
   google_profile_writes?: boolean | null;
+  // The simulation in progress: when it started and the markers to put back (lib/simulation.ts).
+  simulation?: import("@/lib/simulation-rules").SimulationState | null;
   // The review replies the owner picked during onboarding (026, lib/onboarding/reply-examples.ts).
   profile_examples?: import("@/lib/onboarding/reply-examples").ProfileExamples | null;
   // Phase 3b (022): the owner's language and quiet hours (UK time, "23:00:00" to "09:00:00").

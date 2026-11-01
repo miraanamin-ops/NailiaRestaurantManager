@@ -20,11 +20,14 @@
 --                          so it can be filtered out or cleared
 --   job type sim_day       Run day, one try (it alerts the builder if it dies)
 --
+--   restaurants.simulation when the simulation started and what Stop puts back
+--
 -- Only adds things, so the code before it keeps working. Safe to re-run.
 
 alter table restaurants add column if not exists pilot_zero boolean not null default false;
 alter table restaurants add column if not exists google_dry_run boolean;
 alter table restaurants add column if not exists google_profile_writes boolean;
+alter table restaurants add column if not exists simulation jsonb; -- when it started, and the once-a-day markers to put back on Stop
 
 alter table reviews add column if not exists simulated boolean not null default false;
 alter table sales_days add column if not exists simulated boolean not null default false;

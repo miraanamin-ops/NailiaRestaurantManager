@@ -16,7 +16,7 @@ import { kickWorkers } from "@/lib/queue/kick";
 import { concurrencyKeys, morningStepsFor } from "@/lib/queue/rules";
 import { enqueue } from "@/lib/queue/store";
 import { SIMULATED_REVIEW_SOURCE } from "@/lib/gate-rules";
-import { REST_HOUR, runDaySteps, simulatedDay, simulatedReview, simulatedZ, simulationOn, usualTakings } from "@/lib/simulation-rules";
+import { REST_HOUR, runDaySteps, simulatedDay, type SimulationState, simulatedReview, simulatedZ, simulationOn, usualTakings } from "@/lib/simulation-rules";
 import { getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
 
 // The Pilot Zero simulation (docs/pilot-zero.md, phase 3; rules in
@@ -56,12 +56,22 @@ async function setClock(r: Restaurant, when: Date | null) {
 const log = (r: Restaurant, builderEmail: string, detail: string, data: Record<string, unknown> = {}) =>
   logAction({ restaurantId: r.id, actor: "builder", action: "simulation", detail: `${detail} (by ${builderEmail})`, data });
 
+// The restaurant's once-a-day markers: Run day moves them to the simulated date
+// (e.g. last_brief_on), so they're saved when the simulation starts and put back
+// when it stops. Otherwise a simulated Thursday would stop the real Thursday's brief.
+export const MARKERS = ["last_brief_on", "last_brief_at", "brief_waiting_since", "last_report_on", "last_birthday_campaign_on", "last_post_draft_on", "morning_failures", "morning_failed_on"] as const;
+export type { SimulationState };
+
 // Starts the simulation on a date, or moves it to another (Next day). The clock
 // rests at midday on that date. Real scheduled jobs skip the restaurant from now on.
 export async function setSimulatedDay(restaurantId: string, day: string, builderEmail: string) {
   if (!DAY.test(day) || Number.isNaN(Date.parse(`${day}T12:00:00Z`))) throw new SimulationError("Pick a date (YYYY-MM-DD).");
   const r = await load(restaurantId);
   const before = simulatedDay(r, londonYmd);
+  if (!before || !r.simulation) {
+    const state: SimulationState = { started_at: new Date().toISOString(), markers: Object.fromEntries(MARKERS.map((m) => [m, r[m] ?? null])) };
+    check(await getSupabase().from("restaurants").update({ simulation: state }).eq("id", r.id).eq("pilot_zero", true));
+  }
   await setClock(r, at(day, REST_HOUR));
   await log(r, builderEmail, before ? `Simulated date moved from ${before} to ${day}` : `Simulation started on ${day}: real scheduled jobs skip this restaurant`, { before, after: day });
   return day;
@@ -73,21 +83,59 @@ export async function nextSimulatedDay(restaurantId: string, builderEmail: strin
   return setSimulatedDay(restaurantId, next, builderEmail);
 }
 
-// Back to real time. Simulated reviews still waiting are marked handled, so the
-// real review check never drafts replies to them (they stay until cleared).
+const MISSING_TABLE = new Set(["42P01", "PGRST205"]);
+
+// Back to real time, undoing everything the simulation touched, so none of it
+// can reach a real brief, forecast, report or rota (whether or not Clear was pressed):
+//   - simulated till reports, sales by hour and reviews are deleted (the forecast,
+//     the Python models and the report read sales and reviews without a filter);
+//   - forecast copies saved since it started are deleted (they carry simulated
+//     dates, and a real brief on that date would read them);
+//   - drafts made since it started and not sent are withdrawn (so they never reach
+//     a real brief), and a rota week drafted since then is removed (or the real
+//     Thursday job would skip that week);
+//   - the once-a-day markers go back to what they were before it started.
+// Each step must work before the next; the clock is cleared last, so if anything
+// fails the simulation stays on (and real jobs keep skipping) until Stop works.
 export async function stopSimulation(restaurantId: string, builderEmail: string) {
   const r = await load(restaurantId);
+  const supabase = getSupabase();
   const day = simulatedDay(r, londonYmd);
-  check(
-    await getSupabase()
-      .from("reviews")
-      .update({ handled_at: new Date().toISOString() })
-      .eq("restaurant_id", r.id)
-      .eq("simulated", true)
-      .is("handled_at", null),
+  const state = (r.simulation as SimulationState | null | undefined) ?? null;
+  const counts: Record<string, number> = {};
+  for (const table of ["reviews", "sales_hours", "sales_days"]) {
+    counts[table] = check(await supabase.from(table).delete().eq("restaurant_id", r.id).eq("simulated", true).select("id"))?.length ?? 0;
+  }
+  if (state?.started_at) {
+    const since = state.started_at;
+    const snaps = await supabase.from("forecast_snapshots").delete().eq("restaurant_id", r.id).gte("created_at", since).select("week_start");
+    if (snaps.error && !MISSING_TABLE.has(snaps.error.code)) throw new Error(`Couldn't remove the simulated forecasts: ${snaps.error.message}`);
+    counts.forecasts = snaps.data?.length ?? 0;
+    const withdrawn =
+      check(
+        await supabase
+          .from("drafts")
+          .update({ status: "withdrawn", waiting_for: null, scheduled_for: null, block_reason: "Made during the Pilot Zero simulation" })
+          .eq("restaurant_id", r.id)
+          .gte("created_at", since)
+          .in("status", ["pending", "approved", "queued", "blocked"])
+          .select("id"),
+      ) ?? [];
+    counts.drafts = withdrawn.length;
+    counts.rota_weeks = check(await supabase.from("rota_weeks").delete().eq("restaurant_id", r.id).gte("created_at", since).select("id"))?.length ?? 0;
+    if (withdrawn.length) {
+      check(await supabase.from("rota_weeks").update({ draft_id: null }).eq("restaurant_id", r.id).in("draft_id", withdrawn.map((d) => d.id)));
+    }
+    check(await supabase.from("restaurants").update(state.markers).eq("id", r.id).eq("pilot_zero", true));
+  }
+  check(await supabase.from("restaurants").update({ fake_now: null, simulation: null }).eq("id", r.id).eq("pilot_zero", true));
+  await log(
+    r,
+    builderEmail,
+    `Simulation stopped${day ? ` (it was on ${day})` : ""}: back to real time and the real scheduled jobs. Removed ${counts.sales_days} till reports, ${counts.reviews} reviews, ${counts.forecasts ?? 0} forecast copies, ${counts.rota_weeks ?? 0} rota weeks; withdrew ${counts.drafts ?? 0} unsent drafts`,
+    counts,
   );
-  await setClock(r, null);
-  await log(r, builderEmail, `Simulation stopped${day ? ` (it was on ${day})` : ""}: back to real time and the real scheduled jobs`);
+  return counts;
 }
 
 // A till report for the simulated date: the usual takings for that weekday (or

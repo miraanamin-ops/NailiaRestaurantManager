@@ -114,3 +114,7 @@ export function simulatedReview(rating: number, n = 0) {
 
 // The line at the top of a brief or report made while the simulation is on.
 export const simulatedLabel = (longDate: string) => `🧪 Simulated day: ${longDate}. Figures and reviews here may be simulated.`;
+
+// What the restaurant row keeps while a simulation is on (restaurants.simulation):
+// when it started, and the once-a-day markers Stop puts back.
+export type SimulationState = { started_at: string; markers: Record<string, unknown> };

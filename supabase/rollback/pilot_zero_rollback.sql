@@ -11,6 +11,7 @@ delete from sales_days where simulated;
 alter table sales_hours drop column if exists simulated;
 alter table sales_days drop column if exists simulated;
 alter table reviews drop column if exists simulated;
+alter table restaurants drop column if exists simulation;
 alter table restaurants drop column if exists google_profile_writes;
 alter table restaurants drop column if exists google_dry_run;
 alter table restaurants drop column if exists pilot_zero;
