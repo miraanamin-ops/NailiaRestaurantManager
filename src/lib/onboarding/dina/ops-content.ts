@@ -68,6 +68,8 @@ export function teamProblems(input: { staff: StaffInputRow[]; manager: string | 
 // ---------- 9. Rewards and the discount cap ----------
 
 export const DEFAULT_SIGNUP_REWARD = "a free dessert";
+// The database's own default (004_safety_rules.sql), for a row that somehow has none.
+export const DEFAULT_DISCOUNT_CAP = 20;
 export const MIN_CAP = 5;
 export const MAX_CAP = 50;
 

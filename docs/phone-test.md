@@ -15,10 +15,9 @@ your phone ──WhatsApp──► a SEPARATE Twilio sandbox (a Twilio subaccoun
 
 Three things matter:
 
-1. **Previews currently use the live database.** `SUPABASE_URL` and the Supabase
-   keys are set for Production and Preview with the same values. Step 3 overrides
-   them for this one branch, so its previews use dev. Do step 3 before opening the
-   preview at all.
+1. **Previews use the dev database** (for every branch, since 1 Nov), with the test
+   switches on, and a preview only ever sends WhatsApp to `BUILDER_WHATSAPP` (your
+   number). Step 3 only adds this branch's own Twilio test sandbox.
 2. **Previews are behind Vercel's login**, which Twilio can't pass. Vercel's
    "Protection Bypass for Automation" key goes on the webhook link (step 2). The
    app adds it itself to the pictures Twilio fetches and to its own worker calls
@@ -54,7 +53,11 @@ account with another email instead, and do 4 and 5 there.
 
 Previews stay behind Vercel's login for everyone else.
 
-## 3. Point this branch's previews at dev
+## 3. Give this branch's previews the test sandbox
+
+The dev database, Google, email and `BUILDER_WHATSAPP` settings are already set
+for every preview (1 Nov; checked with a test sign-up that landed in dev, not
+live). Only the Twilio test sandbox is left.
 
 **Settings** > **Environment Variables**. For each line below: **Add New**, type
 the name and value, tick only **Preview**, choose **Git branch: onboarding-dina**,
@@ -63,26 +66,12 @@ branches are untouched.
 
 | Name | Value |
 |---|---|
-| `SUPABASE_URL` | the dev value, from `C:\Users\miraa\dev\naila-dina\.env.local` |
-| `SUPABASE_SECRET_KEY` | the dev value, same file |
-| `SUPABASE_PUBLISHABLE_KEY` | the dev value, same file |
 | `TWILIO_ACCOUNT_SID` | the subaccount's (1.5) |
 | `TWILIO_AUTH_TOKEN` | the subaccount's (1.5) |
 | `TWILIO_SANDBOX_JOIN` | the test sandbox's join phrase (1.4) |
-| `GOOGLE_MANAGER_EMAIL` | `dina@dinerai.co.uk` |
-| `GOOGLE_PLACES_API_KEY` | your dev key (from `.env.local`) |
-| `BUILDER_WHATSAPP` | `whatsapp:+447463775130` (so "Link my WhatsApp" works) |
-
-`EMAIL_REDIRECT` and `TEST_TOOLS` are already on for previews, so emails go only
-to you.
 
 Then redeploy, because settings only reach a new build: **Deployments** > the
 newest `onboarding-dina` one > **⋯** > **Redeploy**.
-
-**Check it's on dev before going further:** open
-`<preview address>/start?invite=PHONE-TEST-DINA` (you're logged in to Vercel, so
-it opens). Sign up with a made-up email and restaurant. Then ask Claude to check
-the dev database for that restaurant. It must be there, and not on live.
 
 ## 4. Logging in on the preview (for your test controls)
 

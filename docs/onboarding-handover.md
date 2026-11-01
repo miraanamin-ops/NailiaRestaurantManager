@@ -26,7 +26,11 @@ Read with:
 | 8. Summary and test controls | Finishing (WhatsApp linked, both setup records closed, switched on by the access rule), the summary card with Change links, `/onboarding/admin` test controls incl. Mark Google accepted, the full real run ($0.18), the Vercel test-mode build fix, the preview bypass, `docs/phone-test.md`, `docs/merge-checklist.md` | see git log |
 | 5. WhatsApp | Dina on WhatsApp through the same turn: buttons, lists and the numbered fallback, replies read back, photos/PDF/CSV/Excel into a private bucket (16 MB, checked by content), one reply per burst of photos, linking hands over to Dina at the exact step, the sandbox check script, migration 051 | see git log |
 
-Milestone A (pilot-usable Dina) is built. Before merging: your phone test (`docs/phone-test.md`) and the merge checklist (`docs/merge-checklist.md`).
+| Previews on dev (1 Nov) | Every Vercel Preview uses the dev database (the `SUPABASE_*` settings split; Production unchanged), with its own safe switches; a preview only sends WhatsApp to `BUILDER_WHATSAPP` (`whatsAppSendAllowed` in `switches.ts`). Checked: a test sign-up on the preview landed in dev, not live | d275d61 |
+| "Not answered" is a gap (1 Nov) | A common question Dina notes "(not answered)" makes Hours and FAQs half done, with a gap line naming those questions; answering later closes it. A half-done step can carry its own gap line (`gap_unlock`) | 9541075 |
+| 9. Steps 7 to 10 and 12 (1 Nov) | Sales history (the existing POS importer, "Got it: 11 months of sales…", under 8 weeks half done), team and labour (rota team, cover rules, 30% default flagged), rewards and the cap, the QR codes (email and WhatsApp), approvals and timing (brief hour 7 to 11, sending hours). Per-restaurant brief hour in the morning job and the late-brief alert; migration 054 | 49eb9dc |
+
+Milestone A (pilot-usable Dina) is built, and milestone B's phase 9. Before merging: your phone test (`docs/phone-test.md`) and the merge checklist (`docs/merge-checklist.md`).
 
 ## 2. Every decision you made
 
@@ -54,6 +58,11 @@ Milestone A (pilot-usable Dina) is built. Before merging: your phone test (`docs
 - **The look**: signed off from the screenshots (29 Oct, "all good").
 - **Streaming**: message by message, after the checks (each message appears whole once checked; never word by word, which would show unchecked text). Agreed with the same "all good".
 - **The browser check**: you meant to test it yourself. A test invite code is set up for you (section 6).
+
+### Decisions of 1 Nov
+
+- **Previews**: every Preview deployment uses the dev database, not just this branch's; Preview-only `TEST_MODE`, `TEST_TOOLS`, `GOOGLE_MODE=dummy`, `EMAIL_REDIRECT`; outbound WhatsApp from a preview only to the builder's number.
+- **Brief time**: a job every hour sends the brief to restaurants whose chosen hour it is, and the late-brief alert checks each restaurant's own time. It was a small change (the hourly job already gated on the hour), so it's built for real, not just saved.
 
 ## 3. The test-site wall
 
@@ -104,10 +113,16 @@ Checked on live on 29 Oct (`check-schema --live`): 046 and 047 ran on 27 Oct; th
 4. `supabase/051_onboarding_uploads.sql` (phase 5: the private bucket for setup files)
 5. `supabase/052_setup_nudges.sql` (phase 6: the hourly setup nudges job)
 6. `supabase/053_restaurant_faqs.sql` (phase 7: the answers to common questions)
+7. `supabase/054_brief_hour.sql` (phase 9: each owner's brief hour; applied to dev 1 Nov)
 
 Rollback for all of them: `supabase/rollback/onboarding_dina_rollback.sql`.
 
 ## 6. Open items
+
+- **POS export tips** are placeholders (`POS_TIPS` in `src/lib/onboarding/dina/ops-content.ts`): replace with the real click paths for Square, Lightspeed and Epos Now.
+- **"How often a customer can redeem"** (step 9 in the spec) isn't asked: today every reward and offer is once per customer by design, so Dina explains that instead of offering a setting nothing would enforce. Say if you want it as a real setting.
+- **Cover rules by day** ("3 in the kitchen on Friday nights"): the rota stores the least per role on any shift, not per day, so a day-specific rule is kept only in the step's data. Per-day cover would be a rota change.
+- **Customer list import** (the rest of step 10) and **languages and key dates** (step 11) come in milestone C.
 
 - **Google screenshots**: placeholders in `public/onboarding/google/` (phone-1.png to laptop-4.png). Replace with real screenshots, same names. A short video slot is ready (`VIDEO_SLOT` in `src/lib/onboarding/dina/google-content.ts`).
 - **GOOGLE_MANAGER_EMAIL**: set it on Vercel (and in the dev settings) so the steps show our manager email; without it they fall back to the manager login's email, or say it's being set up.

@@ -3,7 +3,7 @@ import { availableSteps, gapsFor, progress, STEP_DEFS, stepState, type FlowState
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
-import { hourWords, ROLE_WORDS, type CoverRule } from "./ops-content";
+import { DEFAULT_DISCOUNT_CAP, hourWords, ROLE_WORDS, type CoverRule } from "./ops-content";
 import type { Hours, MenuCategory } from "../profile-data";
 
 // What the web chat draws, made from what's saved: the conversation (with which
@@ -136,7 +136,7 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
     const cover = (d.cover_rules ?? []).map((c) => `at least ${c.min_on_shift} ${ROLE_WORDS[c.role]}`).join(", ");
     return [`${d.staff ?? 0} on the team`, d.manager ? `${d.manager} runs the site` : null, cover || null, `labour target ${d.labour_target_pct ?? 30}%${d.labour_defaulted ? " (the default)" : ""}`].filter(Boolean).join("; ");
   },
-  rewards: ({ restaurant }) => `Sign-up reward: ${restaurant.signup_reward ?? "not set"}; offers never over ${restaurant.discount_cap_percent ?? 20}% off`,
+  rewards: ({ restaurant }) => `Sign-up reward: ${restaurant.signup_reward ?? "not set"}; offers never over ${restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP}% off`,
   customers_qr: (s) => {
     const via = (data(s, "customers_qr").qr_via as string[] | undefined) ?? [];
     return via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready";

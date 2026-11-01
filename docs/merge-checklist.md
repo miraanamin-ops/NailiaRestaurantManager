@@ -12,7 +12,7 @@ through the older setup carry on with it.
 
 ## Before merging
 
-### 1. Database: migrations 048 to 053, in this order
+### 1. Database: migrations 048 to 054, in this order
 
 Supabase > the **live** project (gfrkcvcqmdhdhpcytlkc) > **SQL Editor** > **New
 query**. Paste each file, click **Run**, and wait for "Success" before the next.
@@ -27,16 +27,17 @@ site as it is now keeps working with them.
 | 4 | `supabase/051_onboarding_uploads.sql` | the private bucket for setup files (16 MB, photos, PDF, CSV, Excel) |
 | 5 | `supabase/052_setup_nudges.sql` | the hourly setup nudges job |
 | 6 | `supabase/053_restaurant_faqs.sql` | the answers to common questions |
+| 7 | `supabase/054_brief_hour.sql` | the hour each owner's morning brief arrives (9am unless they pick another) |
 
 **Check:** in the SQL Editor, run:
 
 ```sql
 select name from schema_migrations
-where name between '048' and '054'
+where name between '048' and '055'
 order by name;
 ```
 
-Six rows, 048 to 053. Or ask Claude to run
+Seven rows, 048 to 054. Or ask Claude to run
 `node --env-file=.env.live.local scripts/check-schema.mjs --live` (read only).
 
 ### 2. Vercel: production settings
@@ -65,10 +66,14 @@ Vercel > **nailiarestaurantmanager** > **Settings** > **Environment Variables**.
 live's Places key the same way as dev's: Places API (New) only, low per-minute
 quotas, a budget alert.
 
-**Strongly recommended:** previews currently share the live database (the
-`SUPABASE_*` settings are set for Production *and* Preview). Give **Preview** its
-own dev values (`SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY`
-from `.env.local`), so no preview of any branch can touch live data.
+**Done (1 Nov):** every Preview deployment now uses the dev database. The
+`SUPABASE_*` settings were split: Production keeps live, Preview has its own dev
+values. Preview also has its own safe switches (`TEST_MODE=true`,
+`TEST_TOOLS=true`, `GOOGLE_MODE=dummy`, `EMAIL_REDIRECT=true`),
+`GOOGLE_PLACES_API_KEY` (the dev key), `GOOGLE_MANAGER_EMAIL`,
+`EMAIL_FROM_DOMAIN` and `BUILDER_WHATSAPP`. Since this branch, a preview only
+sends WhatsApp to `BUILDER_WHATSAPP` (it shares production's Twilio account).
+Production's values weren't changed.
 
 ### 3. Invite codes for your pilots
 
@@ -134,7 +139,7 @@ If something is wrong on live after the merge:
    from **before** the merge > **⋯** > **Instant Rollback** (or **Promote to
    Production**). The site is back on the older code straight away, including
    the older sign-up and setup.
-   - The database stays as it is. Migrations 048 to 053 only added things, and
+   - The database stays as it is. Migrations 048 to 054 only added things, and
      the older code ignores them (it ran with them before the merge).
    - Restaurants that signed up with Dina meanwhile keep their details. Their
      sign-up also made the older setup record, so with the older code they carry

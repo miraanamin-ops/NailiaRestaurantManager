@@ -142,8 +142,7 @@ function salesCsv() {
     const d = new Date(t).toISOString().slice(0, 10).split("-").reverse().join("/");
     lines.push(`${d},18:30,Mixed Grill,${2 + (t / 86_400_000) % 5},${(18 * (2 + (t / 86_400_000) % 5)).toFixed(2)}`, `${d},19:15,Chips,4,14.00`);
   }
-  return Buffer.from(lines.join("
-"));
+  return Buffer.from(lines.join("\n"));
 }
 
 // What the owner does next, from the step and Dina's last message.
@@ -243,6 +242,8 @@ describe("a whole onboarding, for real", () => {
       to = e.to;
     }
     restaurantId = db.tables.restaurants[0].id as string;
+    // The in-memory database has no column defaults: the real ones (profile version, discount cap, brief hour, sending hours).
+    Object.assign(db.tables.restaurants[0], { profile_version: 0, discount_cap_percent: 20, brief_hour: 9, send_window_start: "09:00:00", send_window_end: "21:00:00", ...db.tables.restaurants[0] });
     console.log(`Sign-up -> ${to}`);
     expect(to).toBe(`/onboarding/chat?r=${restaurantId}`);
 

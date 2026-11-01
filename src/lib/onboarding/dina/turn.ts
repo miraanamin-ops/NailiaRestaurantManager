@@ -16,7 +16,7 @@ import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
 import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
-import { LABOUR_HINT, POS_TIPS } from "./ops-content";
+import { DEFAULT_DISCOUNT_CAP, LABOUR_HINT, POS_TIPS } from "./ops-content";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
 
 // One turn of the setup conversation, whichever channel it came from (the web
@@ -134,6 +134,8 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     // Path A: the owner can connect Google directly (google_connect) instead of the manager steps.
     ...(googleConnectOn() ? { google_connect: "available: offer google_connect in the Google step" } : {}),
     ...Object.fromEntries((step ? (STEP_FIELDS[step] ?? []) : []).map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
+    // The cap always has a value (the database default), so she never guesses one.
+    ...(step === "rewards" ? { discount_cap_percent: restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP } : {}),
     ...(step === "sales" ? { pos_tips: POS_TIPS } : {}),
     ...(step === "team" ? { labour_hint: LABOUR_HINT } : {}),
   };

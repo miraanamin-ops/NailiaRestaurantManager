@@ -5,6 +5,7 @@ import type { Hours } from "../profile-data";
 import { completeStep, loadFlow, noteStep, type Channel } from "../sessions";
 import { getRestaurant } from "../store";
 import { FAQ_IDS, FAQ_SKIPPED, faqGapLine, faqsLeft, hoursFromNotes, offerProblems } from "./facts-content";
+import { DEFAULT_DISCOUNT_CAP } from "./ops-content";
 
 // Steps 4 and 6: what's saved, checked in code. Dina asks; these save.
 //   4. save_make_it_right (her tool): the offers (none over the discount cap) and
@@ -15,11 +16,9 @@ import { FAQ_IDS, FAQ_SKIPPED, faqGapLine, faqsLeft, hoursFromNotes, offerProble
 //      and all seven questions are answered; partial if some were passed on
 //      ("(not answered)"), which makes a setup gap naming those questions.
 
-const DEFAULT_CAP = 15;
-
 export async function saveMakeItRight(restaurantId: string, input: { offers: string[]; handler: string; contact?: string | null }, channel: Channel) {
   const r = await getRestaurant(restaurantId);
-  const cap = r.discount_cap_percent ?? DEFAULT_CAP;
+  const cap = r.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP;
   const problems = offerProblems(input.offers, cap);
   if (problems.length) return { ok: false as const, text: `Not saved: ${problems.join(" ")} Ask the owner for something within the cap (or to raise the cap later in settings).` };
   const contact = [input.handler.trim(), input.contact?.trim()].filter(Boolean).join(", ");
