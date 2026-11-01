@@ -26,6 +26,10 @@ export function simulationStep(input: { channel: SendChannel; google: "dummy" | 
     : { outcome: "ok", detail: "Emails go to the customers." };
 }
 
+// Reviews made by the Pilot Zero simulation (reviews.source): never replied to on
+// Google, whatever the dry run switch says.
+export const SIMULATED_REVIEW_SOURCE = "simulated";
+
 // Google writes: dry run (Pilot Zero, migration 056). Per restaurant, set only in
 // the admin console (/onboarding/admin/pilot-zero), never by the owner, WhatsApp,
 // Dina or a profile edit. Two kinds of write:
@@ -35,21 +39,37 @@ export function simulationStep(input: { channel: SendChannel; google: "dummy" | 
 // the default: dry run for a Pilot Zero restaurant, live for everyone else.
 // Profile writes are dry run whenever replies are, and for a Pilot Zero restaurant
 // also until google_profile_writes is switched on separately.
-// Before 056 the columns aren't there: nothing is dry run, as before.
-// Reviews made by the Pilot Zero simulation (reviews.source): never replied to on
-// Google, whatever the dry run switch says.
-export const SIMULATED_REVIEW_SOURCE = "simulated";
-
-export type DryRunRestaurant = { pilot_zero?: boolean | null; google_dry_run?: boolean | null; google_profile_writes?: boolean | null };
+// On Production it fails closed:
+//   - before 056 (the columns aren't there) every Google write is refused;
+//   - a restaurant on the builder's own number counts as Pilot Zero from the
+//     start, before it's marked (so Maison Noor is dry run the moment it connects).
+// Previews and local work keep the old behaviour (they never write to live Google
+// anyway, lib/switches.ts), so the phone test isn't changed.
+export type DryRunRestaurant = { pilot_zero?: boolean | null; google_dry_run?: boolean | null; google_profile_writes?: boolean | null; owner_whatsapp?: string | null };
 export type GoogleWriteKind = "replies" | "profile";
+export type DryRunContext = { production: boolean; builderWhatsApp?: string | null };
 
-export function googleDryRun(restaurant: DryRunRestaurant | null | undefined, what: GoogleWriteKind) {
-  if (!restaurant) return false;
-  const pilot = restaurant.pilot_zero === true;
-  const replies = restaurant.google_dry_run ?? pilot;
-  if (what === "replies") return replies;
-  return replies || !(restaurant.google_profile_writes ?? !pilot);
+export const dryRunContext = (env: Record<string, string | undefined>): DryRunContext => ({ production: env.VERCEL_ENV === "production", builderWhatsApp: env.BUILDER_WHATSAPP ?? null });
+
+const digits = (n: string | null | undefined) => (n ?? "").replace(/\D/g, "");
+
+// Counts as Pilot Zero for the dry run: marked, or (on Production) on the builder's number.
+export function pilotForDryRun(restaurant: DryRunRestaurant, ctx: DryRunContext) {
+  if (restaurant.pilot_zero === true) return true;
+  return ctx.production && digits(ctx.builderWhatsApp) !== "" && digits(restaurant.owner_whatsapp) === digits(ctx.builderWhatsApp);
 }
+
+// Why this kind of write is dry run for this restaurant (null: it goes to Google).
+export function googleDryRunReason(restaurant: DryRunRestaurant | null | undefined, what: GoogleWriteKind, ctx: DryRunContext): "missing_056" | "dry_run" | null {
+  if (!restaurant) return null;
+  if (!("pilot_zero" in restaurant)) return ctx.production ? "missing_056" : null;
+  const pilot = pilotForDryRun(restaurant, ctx);
+  const replies = restaurant.google_dry_run ?? pilot;
+  if (what === "replies") return replies ? "dry_run" : null;
+  return replies || !(restaurant.google_profile_writes ?? !pilot) ? "dry_run" : null;
+}
+
+export const googleDryRun = (restaurant: DryRunRestaurant | null | undefined, what: GoogleWriteKind, ctx: DryRunContext) => googleDryRunReason(restaurant, what, ctx) !== null;
 
 export const writeKindForDraft = (kind: string): GoogleWriteKind => (kind === "hours_update" || kind === "menu_update" ? "profile" : "replies");
 
@@ -59,11 +79,13 @@ export const writeKindForCall = (method: string, url: string): GoogleWriteKind =
 // The last wall before Google: a test site never changes anything on live Google
 // (reads are fine), and nor does a restaurant whose writes of that kind are dry run.
 // A write that doesn't say which restaurant it's for is refused too.
-export function googleWriteRefused(method: string, restaurant: ({ is_test?: boolean | null } & DryRunRestaurant) | null | undefined, url = "") {
+export function googleWriteRefused(method: string, restaurant: ({ is_test?: boolean | null } & DryRunRestaurant) | null | undefined, url: string, ctx: DryRunContext) {
   if (method.toUpperCase() === "GET") return null;
   if (!restaurant) return "A Google write must say which restaurant it's for";
   if (restaurant.is_test) return "Test sites never write to live Google";
-  return googleDryRun(restaurant, writeKindForCall(method, url)) ? "Google writes are dry run for this restaurant" : null;
+  const why = googleDryRunReason(restaurant, writeKindForCall(method, url), ctx);
+  if (why === "missing_056") return "Google writes are refused until supabase/056_pilot_zero.sql has run on this database";
+  return why ? "Google writes are dry run for this restaurant" : null;
 }
 
 // What the owner sees instead of a write that was dry run, or a reply to a

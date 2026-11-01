@@ -1,5 +1,5 @@
 import "server-only";
-import { googleWriteRefused } from "@/lib/gate-rules";
+import { dryRunContext, googleWriteRefused } from "@/lib/gate-rules";
 import type { Restaurant } from "@/lib/supabase";
 import { accessToken, loginBroken, type GoogleConnection, type GoogleLink } from "./connections";
 import { backoffMs, performanceQuery, retryable, type GLocation, type GMedia, type GPeriod, type GReview, type GSpecialPeriod } from "./mapping";
@@ -31,7 +31,7 @@ export class GoogleApiError extends Error {
 export const retryTiming = { wait: (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) };
 
 export async function gbp<T>(conn: GoogleConnection, method: string, url: string, body?: unknown, restaurant?: Restaurant | null): Promise<T> {
-  const refused = googleWriteRefused(method, restaurant, url);
+  const refused = googleWriteRefused(method, restaurant, url, dryRunContext(process.env));
   if (refused) throw new GoogleApiError(refused, 403);
   let refreshed = false;
   for (let attempt = 1; ; attempt++) {

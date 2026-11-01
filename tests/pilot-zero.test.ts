@@ -6,26 +6,54 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { dryRunNote, googleDryRun, googleWriteRefused, writeKindForCall, writeKindForDraft } from "@/lib/gate-rules";
+import { dryRunNote, googleDryRun, googleDryRunReason, googleWriteRefused, writeKindForCall, writeKindForDraft } from "@/lib/gate-rules";
 import { moneyAndRisk, type RuleDraft } from "@/lib/checks/money";
 import { memoryDb } from "./support/memory-db";
 
+const PROD = { production: true, builderWhatsApp: "+447463775130" };
+const PREVIEW = { production: false, builderWhatsApp: "+447463775130" };
+const after056 = { pilot_zero: false, google_dry_run: null, google_profile_writes: null };
+
 describe("the dry run rules", () => {
   test("off for everyone unless set; on by default for a Pilot Zero restaurant", () => {
-    expect(googleDryRun({}, "replies")).toBe(false);
-    expect(googleDryRun({}, "profile")).toBe(false);
-    expect(googleDryRun(null, "replies")).toBe(false);
-    expect(googleDryRun({ pilot_zero: true }, "replies")).toBe(true);
-    expect(googleDryRun({ pilot_zero: true }, "profile")).toBe(true);
-    expect(googleDryRun({ google_dry_run: true }, "replies")).toBe(true);
-    expect(googleDryRun({ google_dry_run: true }, "profile")).toBe(true);
+    for (const ctx of [PROD, PREVIEW]) {
+      expect(googleDryRun(after056, "replies", ctx)).toBe(false);
+      expect(googleDryRun(after056, "profile", ctx)).toBe(false);
+      expect(googleDryRun(null, "replies", ctx)).toBe(false);
+      expect(googleDryRun({ ...after056, pilot_zero: true }, "replies", ctx)).toBe(true);
+      expect(googleDryRun({ ...after056, pilot_zero: true }, "profile", ctx)).toBe(true);
+      expect(googleDryRun({ ...after056, google_dry_run: true }, "replies", ctx)).toBe(true);
+      expect(googleDryRun({ ...after056, google_dry_run: true }, "profile", ctx)).toBe(true);
+    }
+  });
+
+  test("fails closed on Production: before 056 every write is refused; previews carry on as before", () => {
+    expect(googleDryRunReason({}, "replies", PROD)).toBe("missing_056");
+    expect(googleDryRunReason({ owner_whatsapp: "whatsapp:+447700900555" }, "profile", PROD)).toBe("missing_056");
+    expect(googleWriteRefused("PUT", {}, "https://x/reviews/g1/reply", PROD)).toMatch(/refused until supabase\/056_pilot_zero\.sql has run/);
+    expect(googleDryRunReason({}, "replies", PREVIEW)).toBeNull();
+    expect(googleWriteRefused("GET", {}, "https://x/reviews", PROD)).toBeNull();
+  });
+
+  test("on Production a restaurant on the builder's number is dry run from the start, before it's marked", () => {
+    const mine = { ...after056, owner_whatsapp: "whatsapp:+447463775130" };
+    expect(googleDryRun(mine, "replies", PROD)).toBe(true);
+    expect(googleDryRun(mine, "profile", PROD)).toBe(true);
+    expect(googleDryRun({ ...mine, owner_whatsapp: "+44 7463 775130" }, "replies", PROD)).toBe(true);
+    // Hours and photos still need their own switch once replies are live.
+    expect(googleDryRun({ ...mine, google_dry_run: false }, "profile", PROD)).toBe(true);
+    // Previews (the phone test) and other numbers: unchanged.
+    expect(googleDryRun(mine, "replies", PREVIEW)).toBe(false);
+    expect(googleDryRun({ ...mine, owner_whatsapp: "whatsapp:+447700900555" }, "replies", PROD)).toBe(false);
+    expect(googleDryRun(mine, "replies", { production: true, builderWhatsApp: null })).toBe(false);
   });
 
   test("Pilot Zero: replies live doesn't make hours and photos live; both switches do", () => {
-    expect(googleDryRun({ pilot_zero: true, google_dry_run: false }, "replies")).toBe(false);
-    expect(googleDryRun({ pilot_zero: true, google_dry_run: false }, "profile")).toBe(true);
-    expect(googleDryRun({ pilot_zero: true, google_profile_writes: true }, "profile")).toBe(true);
-    expect(googleDryRun({ pilot_zero: true, google_dry_run: false, google_profile_writes: true }, "profile")).toBe(false);
+    const p = { ...after056, pilot_zero: true };
+    expect(googleDryRun({ ...p, google_dry_run: false }, "replies", PROD)).toBe(false);
+    expect(googleDryRun({ ...p, google_dry_run: false }, "profile", PROD)).toBe(true);
+    expect(googleDryRun({ ...p, google_profile_writes: true }, "profile", PROD)).toBe(true);
+    expect(googleDryRun({ ...p, google_dry_run: false, google_profile_writes: true }, "profile", PROD)).toBe(false);
   });
 
   test("which writes are profile writes", () => {
@@ -40,12 +68,12 @@ describe("the dry run rules", () => {
   });
 
   test("the wall: reads always pass, dry-run writes are refused", () => {
-    const pilot = { pilot_zero: true, google_dry_run: false };
-    expect(googleWriteRefused("GET", { pilot_zero: true }, "https://x/reviews")).toBeNull();
-    expect(googleWriteRefused("PUT", pilot, "https://x/reviews/g1/reply")).toBeNull();
-    expect(googleWriteRefused("POST", pilot, "https://x/media")).toMatch(/dry run/);
-    expect(googleWriteRefused("PUT", { pilot_zero: true }, "https://x/reviews/g1/reply")).toMatch(/dry run/);
-    expect(googleWriteRefused("PUT", { is_test: true, google_dry_run: false }, "https://x/reviews/g1/reply")).toMatch(/Test sites/);
+    const pilot = { ...after056, pilot_zero: true, google_dry_run: false };
+    expect(googleWriteRefused("GET", { ...after056, pilot_zero: true }, "https://x/reviews", PROD)).toBeNull();
+    expect(googleWriteRefused("PUT", pilot, "https://x/reviews/g1/reply", PROD)).toBeNull();
+    expect(googleWriteRefused("POST", pilot, "https://x/media", PROD)).toMatch(/dry run/);
+    expect(googleWriteRefused("PUT", { ...after056, pilot_zero: true }, "https://x/reviews/g1/reply", PROD)).toMatch(/dry run/);
+    expect(googleWriteRefused("PUT", { ...after056, is_test: true, google_dry_run: false }, "https://x/reviews/g1/reply", PROD)).toMatch(/Test sites/);
   });
 
   test("the owner's note says 'would have', names the profile, and follows Dina's style rules", () => {
@@ -123,7 +151,7 @@ describe("marking a restaurant for Pilot Zero", () => {
 
     await markPilotZero(MINE, "me@builder.dev");
     expect(row(MINE)).toMatchObject({ pilot_zero: true, google_dry_run: null });
-    expect(googleDryRun(row(MINE), "replies")).toBe(true);
+    expect(googleDryRun(row(MINE), "replies", PREVIEW)).toBe(true);
     expect(db.tables.audit_log).toEqual([expect.objectContaining({ restaurant_id: MINE, actor: "builder", detail: expect.stringMatching(/Marked for Pilot Zero.*dry run/) })]);
   });
 

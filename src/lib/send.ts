@@ -9,7 +9,7 @@ import { GoogleAuthError } from "@/lib/google/oauth";
 import { WriteInProgressError } from "@/lib/google/writes";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { CHECKED_GOOGLE_KINDS, channelFor, dryRunNote, googleCheckerStep, googleDryRun, SIMULATED_REVIEW_SOURCE, simulationStep, writeKindForDraft } from "@/lib/gate-rules";
+import { CHECKED_GOOGLE_KINDS, channelFor, dryRunContext, dryRunNote, googleCheckerStep, googleDryRunReason, SIMULATED_REVIEW_SOURCE, simulationStep, writeKindForDraft } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { emailRedirectSwitch, googleSwitch } from "@/lib/switches";
 
@@ -142,7 +142,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   });
   const testCheck = checkResult(testStep.outcome === "simulate" ? [testStep.detail] : [], [], "pass");
   // 3b. Google dry run (Pilot Zero) and replies to simulated reviews: shown as
-  //     "would have posted", nothing reaches Google (lib/gate-rules.ts googleDryRun).
+  //     "would have posted", nothing reaches Google (lib/gate-rules.ts googleDryRunReason).
   const dryRun = await googleDryRunNote(draft, restaurant);
   const reachesPlatform = testStep.outcome === "ok" && !dryRun;
 
@@ -264,7 +264,12 @@ async function googleDryRunNote(draft: Draft, restaurant: Restaurant): Promise<s
       ? check(await getSupabase().from("reviews").select("source").eq("id", draft.review_id).eq("restaurant_id", restaurant.id).maybeSingle<{ source: string | null }>())
       : null;
   const simulatedReview = review?.source === SIMULATED_REVIEW_SOURCE;
-  if (!simulatedReview && !googleDryRun(restaurant, writeKindForDraft(draft.kind))) return null;
+  const why = googleDryRunReason(restaurant, writeKindForDraft(draft.kind), dryRunContext(process.env));
+  if (!simulatedReview && !why) return null;
+  if (why === "missing_056") {
+    const { alertBuilder } = await import("@/lib/builder-alerts");
+    await alertBuilder("google-needs-056", "A Google write was refused (shown to the owner as a dry run): Production is running without supabase/056_pilot_zero.sql. Run it in Supabase > SQL Editor.");
+  }
   return dryRunNote({ kind: draft.kind, content: draft.content, profile: restaurant.google_location_title, simulatedReview });
 }
 

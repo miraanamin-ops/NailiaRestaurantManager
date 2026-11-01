@@ -126,6 +126,10 @@ const restaurant = (id: string, extra: Record<string, unknown>) => ({
   is_demo: false,
   trust_levels: {},
   created_at: "2026-01-01T00:00:00Z",
+  // Migration 056 has run (without it, Production refuses every Google write).
+  pilot_zero: false,
+  google_dry_run: null,
+  google_profile_writes: null,
   ...extra,
 });
 
@@ -457,8 +461,8 @@ describe("Google dry run (Pilot Zero)", () => {
 
   test("hours and photos switched on while replies are dry run: everything stays dry run", async () => {
     pilot({ google_profile_writes: true });
-    const { googleDryRun } = await import("@/lib/gate-rules");
-    expect(googleDryRun(r(), "profile")).toBe(true);
+    const { dryRunContext, googleDryRun } = await import("@/lib/gate-rules");
+    expect(googleDryRun(r(), "profile", dryRunContext(process.env))).toBe(true);
   });
 
   test("a simulated review is never replied to on Google, even with dry run off", async () => {
@@ -491,12 +495,45 @@ describe("Google dry run (Pilot Zero)", () => {
     expect(undoPlan(entry, { kind: "review_reply", status: "sent", review_id: "x", checks: {} }, "live")).toEqual({ type: "withdraw_reply" });
   });
 
-  test("a restaurant that isn't Pilot Zero (or a database before 056) writes as before", async () => {
+  test("a restaurant that isn't Pilot Zero writes as before", async () => {
     const review = await reviewG1();
     approved("d1", { review_id: review.id });
     const { attemptSend } = await import("@/lib/send");
     expect(await attemptSend("d1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/Reply posted on Google/) });
     expect(googleCalls("PUT", "/reviews/g1/reply")).toHaveLength(1);
+  });
+
+  test("fails closed: Production before 056 refuses every write (owner sees a dry run, builder alerted); a preview doesn't", async () => {
+    const before056 = db.tables.restaurants.find((x) => x.id === R)!;
+    for (const k of ["pilot_zero", "google_dry_run", "google_profile_writes"]) delete before056[k];
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    const { attemptSend } = await import("@/lib/send");
+    const out = await attemptSend("d1", r(), NOON_UK, "approve");
+    expect(out.outcome === "sent" && out.note).toMatch(/^🧪 Dry run: nothing changed on Google\. Would have posted this reply/);
+    expect(builderAlerts).toEqual([expect.stringMatching(/without supabase\/056_pilot_zero\.sql/)]);
+    // The wall refuses anything that skips the gate, hours and photos included.
+    const { google } = await import("@/lib/google");
+    await expect(google().replyToReview(R, String(review.id), "Thanks")).rejects.toThrow(/refused until supabase\/056_pilot_zero\.sql/);
+    const { liveGoogle } = await import("@/lib/google/live");
+    await expect(liveGoogle.updateHours!(R, "job-h")).rejects.toThrow(/056/);
+    expect(writes()).toEqual([]);
+    // Not Production: as before (previews never reach live Google anyway).
+    vi.stubEnv("VERCEL_ENV", "preview");
+    await google().replyToReview(R, String(review.id), "Thanks");
+    expect(googleCalls("PUT", "/reviews/g1/reply")).toHaveLength(1);
+  });
+
+  test("a restaurant on the builder's number is dry run from the moment it connects, before it's marked", async () => {
+    vi.stubEnv("BUILDER_WHATSAPP", "+447700900111"); // the fixture's owner number
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    approved("h1", { kind: "hours_update", review_id: null, content: "Friday 18:00 – 23:00", audience: "Google listing" });
+    const { attemptSend } = await import("@/lib/send");
+    expect(await attemptSend("d1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/^🧪 Dry run.*Would have posted this reply on Google \(Ember & Spice Grill\)/) });
+    expect(await attemptSend("h1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/Dry run.*hours/) });
+    expect(writes()).toEqual([]);
+    expect(builderAlerts).toEqual([]);
   });
 });
 

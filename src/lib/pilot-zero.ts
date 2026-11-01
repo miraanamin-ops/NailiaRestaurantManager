@@ -1,7 +1,7 @@
 import "server-only";
 import { logAction } from "@/lib/audit";
 import { check } from "@/lib/drafts";
-import { googleDryRun, type GoogleWriteKind } from "@/lib/gate-rules";
+import { dryRunContext, googleDryRun, type GoogleWriteKind } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
 // Pilot Zero (docs/pilot-zero.md, migration 056): the builder's own restaurant on
@@ -28,7 +28,7 @@ export function canBePilotZero(r: Pick<Restaurant, "is_demo" | "owner_whatsapp">
 }
 
 export type DryRunState = { replies: boolean; profile: boolean };
-export const dryRunState = (r: Restaurant): DryRunState => ({ replies: googleDryRun(r, "replies"), profile: googleDryRun(r, "profile") });
+export const dryRunState = (r: Restaurant): DryRunState => ({ replies: googleDryRun(r, "replies", dryRunContext(process.env)), profile: googleDryRun(r, "profile", dryRunContext(process.env)) });
 
 // The Pilot Zero restaurants, and the ones that could be marked. null: 056 hasn't run.
 export async function pilotZeroOverview() {

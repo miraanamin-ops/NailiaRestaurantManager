@@ -165,6 +165,21 @@ minutes; the tests run first).
    and a plus-address, following `docs/pilot-zero.md`. Check first that step 8 is
    done: Supabase > live > **Table Editor** > `restaurants`, filter
    `owner_whatsapp` is `whatsapp:+447463775130`: no rows.
+12. **Before you connect Maison Noor's Google profile**, check all three:
+   - **056 is applied on live:** Supabase > live > **SQL Editor** > run
+     `select name from schema_migrations where name = '056_pilot_zero.sql';`
+     One row. (No row: stop and run step 1's file 9 first.)
+   - **Your Pilot Zero restaurant is marked:** https://app.dinerai.co.uk/onboarding/admin
+     (builder login) > **Pilot Zero** > choose your restaurant > **Mark**. Its card
+     shows both switches as **dry run**.
+   - **Settings shows Dry run:** log in as the Pilot Zero owner (your plus-address,
+     in a separate browser profile) > **Settings**. The Google Business Profile
+     card says "🧪 Dry run: … nothing changes on Google. Only DinerAI can switch
+     this."
+
+   Only then connect Maison Noor by the manager route (invite dina@dinerai.co.uk on
+   the profile). Afterwards the Pilot Zero page shows "connected to Maison Noor",
+   still dry run.
 
 ---
 

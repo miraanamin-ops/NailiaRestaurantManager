@@ -114,8 +114,19 @@ never goes to a number that moved (`tests/queue.test.ts`).
 **Migration 056** (`supabase/056_pilot_zero.sql`, rollback in `supabase/rollback/`) adds three
 columns to `restaurants`: `pilot_zero` (the mark), `google_dry_run` and
 `google_profile_writes`. Later phases may add to the same file before it runs anywhere.
-Before 056 the columns aren't there and nothing is dry run (the code works as before),
-so it isn't needed for your phone test.
+**Fails closed on Production** (your call, 1 Nov):
+- If 056 hasn't run, every Google write on Production is refused. The owner sees a
+  dry run, and you get one alert ("Production is running without 056"). No exception
+  for Ember & Spice: no live Google test for it is pending (its Google connection is
+  disconnected, and there's no profile for it other than Maison Noor).
+- A restaurant whose owner number is `BUILDER_WHATSAPP` counts as Pilot Zero for the
+  dry run from the start, before it's marked. So Maison Noor is dry run the moment it
+  connects.
+- Previews and local work behave as before 056 (nothing is dry run unless set, and
+  your number gets no default), so your phone test isn't changed. Previews never
+  write to live Google anyway.
+- Side effect: between the merge and step 8, Ember & Spice is still on your number,
+  so its (dummy) Google replies show as dry run. Nothing reaches Google either way.
 
 **The rules** (`googleDryRun` in `src/lib/gate-rules.ts`, pure and unit-tested):
 - Two kinds of write: review replies and posts; hours and photos.

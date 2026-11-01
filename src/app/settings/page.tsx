@@ -10,7 +10,7 @@ import { AllergenEditor, MenuEditor } from "@/app/onboarding/(wizard)/setup/edit
 import { button, Card, Frame, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
-import { googleDryRun } from "@/lib/gate-rules";
+import { dryRunContext, googleDryRun } from "@/lib/gate-rules";
 import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
 import { BillingBanner, BillingCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
@@ -67,7 +67,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <Card>
           <h2 className="text-lg font-bold">Google Business Profile</h2>
           <p className="text-stone-700">{r.google_location_id ? `Connected: ${r.google_location_title ?? "your listing"}.` : "Not connected yet. Connect it so the replies and posts you approve go straight onto Google."}</p>
-          {googleDryRun(r, "replies") && (
+          {googleDryRun(r, "replies", dryRunContext(process.env)) && (
             <p className="text-sm text-stone-600">🧪 Dry run: what you approve for Google shows as &quot;would have posted&quot; on WhatsApp and in your log, and nothing changes on Google. Only DinerAI can switch this.</p>
           )}
           <Link href={`/settings/google?r=${restaurantId}`} className="text-sm font-medium text-emerald-700 underline">
