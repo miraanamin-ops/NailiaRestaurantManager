@@ -1,5 +1,5 @@
 import type { ChatComponent, ChatMessage, ConfirmationData, ProgressData, StepStatus, SummaryData } from "@/components/chat/types";
-import { availableSteps, gapsFor, gapTitle, progress, STEP_DEFS, stepState, type FlowState, type FlowStepKey } from "../flow";
+import { availableSteps, currentStep, gapsFor, gapTitle, progress, STEP_DEFS, stepState, type FlowState, type FlowStepKey } from "../flow";
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
@@ -110,7 +110,7 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
   hello: ({ restaurant }) => [restaurant.name, restaurant.cuisine, restaurant.address].filter(Boolean).join(", "),
   google: (s) => {
     const reviews = data(s, "google").reviews as { count: number; average: number | null } | undefined;
-    if (!reviews?.count) return reviews ? "Connected (no reviews yet)" : "Connected";
+    if (!reviews?.count) return "Connected";
     return `Connected: ${reviews.count} review${reviews.count === 1 ? "" : "s"}${reviews.average ? `, rated ${reviews.average.toFixed(1)}` : ""}`;
   },
   tone: (s) => {
@@ -182,6 +182,7 @@ export function summaryFrom(sources: CardSources): SummaryData {
       ...(queued ? [`${queued} review repl${queued === 1 ? "y is" : "ies are"} waiting for your approval in that first brief.`] : []),
       qr ? `Your QR codes are ready to print: ${qr}` : "Your QR codes will be ready to print.",
     ],
+    dashboardHref: currentStep(sources.state) === null && sources.restaurant.id ? `/?r=${sources.restaurant.id}` : null,
   };
 }
 
@@ -218,7 +219,7 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     return { type: "choice_cards", quote: { ...options.review, real: options.real }, cards: toneCards(setup.tones, options) };
   }
   if (p.type === "allergen_check") return dishCheck((part as { dish?: string }).dish, sources);
-  if (p.type === "qr_kit") return sources.restaurant.slug ? { type: "link", label: "Open your QR codes", href: `/r/${sources.restaurant.slug}/qr-pack`, hint: "Four table cards and a counter sign, ready to print." } : null;
+  if (p.type === "qr_kit") return sources.restaurant.slug ? { type: "link", label: "Open your QR codes", href: `/r/${sources.restaurant.slug}/qr-pack`, hint: "Four table cards and a counter sign, ready to print.", continueLabel: "I've opened my QR codes" } : null;
   if (p.type === "whatsapp_link") return { type: "link", label: "Link my WhatsApp", href: `/onboarding/in?r=${sources.restaurant.id ?? ""}`, hint: null };
   if (p.type === "queue_replies")
     return {
@@ -237,12 +238,15 @@ export function chatMessage(row: StoredMessage, sources: CardSources): ChatMessa
 
 // The whole conversation, oldest first. A question with buttons counts as answered
 // once the owner has said anything after it; a tap's choice stays highlighted.
+// Tone cards stay open: the owner can change their mind and pick another later
+// (Pilot Zero, 2 Nov); saveToneChoice saves the new pick over the old one.
+export const stayOpen = (r: StoredMessage) => (r.parts?.[0] as { type?: string } | undefined)?.type === "tone_choices";
 export function chatFrom(rows: StoredMessage[], sources: CardSources) {
   const shown = rows.filter((r) => r.role !== "system");
   const lastOwner = shown.map((r) => r.role).lastIndexOf("owner");
   const chosen: Record<string, string> = {};
   for (const r of shown) for (const p of r.parts ?? []) if (isAnswer(p)) chosen[p.to] = p.choice;
-  const messages = shown.map((r, i) => ({ ...chatMessage(r, sources), answered: r.role === "dina" && i < lastOwner }));
+  const messages = shown.map((r, i) => ({ ...chatMessage(r, sources), answered: r.role === "dina" && i < lastOwner && !stayOpen(r) }));
   return { messages, chosen };
 }
 

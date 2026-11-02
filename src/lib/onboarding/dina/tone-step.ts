@@ -114,6 +114,12 @@ export async function saveToneChoice(restaurantId: string, voice: Voice, pick: {
   if (both) await completeStep(restaurantId, "tone", "done", { picks: nextPicks }, { channel });
   else await noteStep(restaurantId, "tone", { picks: nextPicks }, { channel });
   const named = example.own ? "their own words" : tone!.name;
+  // A change of mind on an earlier tone card (they stay open): say so, and carry on where they were.
+  const earlier = picks[voice];
+  if (earlier && (earlier.tone ?? null) !== (tone?.id ?? null)) {
+    const was = earlier.own ? "their own words" : (config.tones.find((t) => t.id === earlier.tone)?.name ?? "the earlier one");
+    return `The owner changed their mind: code saved the ${voice === "praise" ? "good" : "bad"} review voice as ${named} (it was ${was}). Confirm it in a short line, then carry on from where you were.`;
+  }
   const anyReal = VOICES.some((v) => nextPicks[v]?.real);
   if (!both) return `Code saved the ${voice} voice: ${named}. Now the ${voice === "praise" ? "complaint" : "praise"} review the same way (tone_choices, voice ${voice === "praise" ? "complaint" : "praise"}).`;
   return `Code saved the ${voice} voice: ${named}. Both voices are set, so the tone step is done.${anyReal ? " Those were their real Google reviews: offer to queue the chosen replies for their approval (queue_replies) before moving on." : ""}`;

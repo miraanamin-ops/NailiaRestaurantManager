@@ -85,9 +85,12 @@ describe("which real reviews set the tone (the owner's rules)", () => {
 });
 
 describe("the Google step's fixed words", () => {
-  test("the four steps, for a phone or a laptop, our email to copy, a screenshot each", () => {
+  test("the four steps, for a phone or a laptop, our email to copy, a button to the profile; screenshots only once real ones exist", () => {
     const phone = managerSteps("phone", "manager@dinerai.co.uk");
-    expect(phone.map((s) => s.image)).toEqual(["/onboarding/google/phone-1.png", "/onboarding/google/phone-2.png", "/onboarding/google/phone-3.png", "/onboarding/google/phone-4.png"]);
+    // Placeholders are never shown to owners (Pilot Zero, 2 Nov).
+    expect(phone.map((s) => s.image)).toEqual([undefined, undefined, undefined, undefined]);
+    expect(phone[0].link).toEqual({ label: "Open your Google Business Profile", href: "https://business.google.com/locations" });
+    expect(managerSteps("phone", "m@d.co", { screenshots: true }).map((s) => s.image)).toEqual(["/onboarding/google/phone-1.png", "/onboarding/google/phone-2.png", "/onboarding/google/phone-3.png", "/onboarding/google/phone-4.png"]);
     expect(phone[1].text).toMatch(/^Tap Menu/);
     expect(managerSteps("laptop", "x@y.z")[1].text).toMatch(/^Click Menu/);
     expect(phone[2]).toMatchObject({ copy: "manager@dinerai.co.uk", text: expect.stringContaining("manager@dinerai.co.uk") });
@@ -106,7 +109,8 @@ describe("the Google step's fixed words", () => {
   test("once we're in: something concrete, and Google's 7-day wait", () => {
     expect(acceptedText({ count: 47, average: 4.6 })).toBe("I'm in! You have 47 reviews and a 4.6 rating. Google makes new managers wait 7 days before some features unlock, so a few things may take a week to switch on.");
     expect(acceptedText({ count: 1, average: 5 })).toMatch(/^I'm in! You have 1 review and a 5.0 rating\./);
-    expect(acceptedText({ count: 0, average: null })).toMatch(/^I'm in! Your profile has no reviews yet/);
+    // No reviews read: it never claims there are none (Google may not show them yet).
+    expect(acceptedText({ count: 0, average: null })).toBe("I'm in! Google makes new managers wait 7 days before some features unlock, so a few things may take a week to switch on.");
   });
 
   test("the forwardable message names the restaurant and our email; the email has the steps and screenshots", () => {
@@ -114,7 +118,8 @@ describe("the Google step's fixed words", () => {
     const email = stepsEmail({ restaurantName: "Ember Grill", device: "phone", managerEmail: "m@d.co", appUrl: "https://app.test" });
     expect(email.subject).toBe("Your steps: adding DinerAI to Ember Grill's Google profile");
     expect(email.text).toMatch(/1\. Open Google Maps[\s\S]*4\. Under Access/);
-    expect(email.html).toContain('src="https://app.test/onboarding/google/phone-3.png"');
+    expect(email.html).toContain('<a href="https://business.google.com/locations">Open your Google Business Profile</a>');
+    expect(email.html).not.toContain("<img");
     expect(stepsEmail({ restaurantName: "E", device: "laptop", managerEmail: "m", appUrl: "u", nudge: true }).text.startsWith(NUDGE_TEXT)).toBe(true);
   });
 
@@ -157,9 +162,10 @@ describe("drawing the Google and tone cards", () => {
     expect(dina({ type: "google_forward" }).component).toMatchObject({ type: "forward", text: expect.stringContaining("Ember Grill") });
   });
 
-  test("WhatsApp: each step on its own with its screenshot, the email to copy, then the two buttons", () => {
+  test("WhatsApp: each step on its own (the first with the profile link; no placeholder pictures), the email to copy, then the two buttons", () => {
     const out = renderForWhatsApp([dina({ type: "google_steps", device: "phone" })], wa);
-    expect(out.slice(1, 5).map((o) => o.kind === "text" && o.mediaUrl)).toEqual([1, 2, 3, 4].map((n) => `https://app.test/onboarding/google/phone-${n}.png`));
+    expect(out.slice(1, 5).map((o) => o.kind === "text" && o.mediaUrl)).toEqual([undefined, undefined, undefined, undefined]);
+    expect(out[1]).toMatchObject({ kind: "text", body: expect.stringMatching(/^\*1\.\* Open Google Maps[\s\S]*\nhttps:\/\/business\.google\.com\/locations$/) });
     expect(out[5]).toEqual({ kind: "text", body: "manager@dinerai.co.uk" });
     expect(out[6]).toMatchObject({ kind: "buttons", options: [{ title: "Done, invited you" }, { title: "Email me the steps" }, { title: "Skip for now" }] });
   });
@@ -338,7 +344,7 @@ describe("the Google step, whole turns", () => {
     db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "google", status: "in_progress", waiting_on: "google", data: { invited_at: "2026-10-30T10:00:00Z" } });
     db.tables.messages.push({ restaurant_id: R, direction: "inbound", from_number: "whatsapp:+447700900123", body: "hi", created_at: new Date().toISOString() });
     const { handleBuilderCommand } = await import("@/lib/feeds/builder");
-    expect(await handleBuilderCommand("BUILDER GOOGLE ACCEPTED ember-grill")).toMatch(/^✅ Ember Grill: Google step done\. Dina told the owner: "I'm in! Your profile has no reviews yet/);
+    expect(await handleBuilderCommand("BUILDER GOOGLE ACCEPTED ember-grill")).toMatch(/^✅ Ember Grill: Google step done\. Dina told the owner: "I'm in! Google makes new managers wait 7 days/);
     expect(step("google")).toMatchObject({ status: "done", data: { accepted_by: "builder" } });
     expect(db.tables.onboarding_messages.at(-1)).toMatchObject({ role: "dina", channel: "whatsapp", body: expect.stringMatching(/^I'm in!/) });
     expect(sentWhatsApp).toEqual([expect.stringMatching(/^I'm in!/)]);
@@ -381,6 +387,10 @@ describe("the tone step, whole turns", () => {
     expect(r.profile_examples).toMatchObject({ review_replies: { positive: { style: "Warm and personal", own: false }, negative: { style: "Short and simple", reply: expect.stringMatching(/^Sorry James, that wait/) } } });
     expect(r.brand_voice).toMatch(/^Warm and personal:/);
     expect(step("tone")?.status).toBe("done");
+    // Changing their mind later on the same (still open) card: saved over, and Dina is told.
+    expect(await handleAnswer({ restaurantId: R, messageId: praise, choiceId: "short", channel: "web" })).toMatch(/^The owner changed their mind: code saved the good review voice as Short and simple \(it was Warm and personal\)/);
+    expect(r.profile_examples).toMatchObject({ review_replies: { positive: { style: "Short and simple" } } });
+    expect(r.brand_voice).toMatch(/^Short and simple/);
   });
 
   test("'Write my own': Dina is asked to get their words; save_tone keeps them exactly", async () => {

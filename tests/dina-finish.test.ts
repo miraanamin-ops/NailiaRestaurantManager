@@ -92,8 +92,12 @@ describe("finishing setup", () => {
     callDina.mockResolvedValue(answer("All done!", { type: "summary" }));
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
     const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "ok", externalId: "c" });
-    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual(["summary"]);
+    // The summary (with its dashboard button), then the closing line (Pilot Zero, 2 Nov).
+    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual(["summary", null]);
+    expect(out.duplicate === false && out.messages[1].text).toBe("You're all set up. You'll next hear from me tomorrow morning at 9am with your first brief.");
     expect(session().completed_at).toEqual(expect.any(String));
+    // No brief, and no "brief is late" alert, on the day it finishes.
+    expect(r().last_brief_on).toBe(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()));
     expect(db.tables.onboarding.find((o) => o.restaurant_id === R)?.completed_at).toEqual(expect.any(String));
     expect(r().active).toBe(true);
     const { finishIfDone } = await import("@/lib/onboarding/dina/finish");
@@ -104,7 +108,7 @@ describe("finishing setup", () => {
     finishLastStep();
     Object.assign(r(), { owner_whatsapp: "whatsapp:+447700900111", billing_exempt: false });
     const { finishIfDone } = await import("@/lib/onboarding/dina/finish");
-    expect(await finishIfDone(R)).toEqual({ finished: true, active: false });
+    expect(await finishIfDone(R)).toEqual({ finished: true, active: false, allSet: expect.stringMatching(/^You're all set up\./) });
     expect(r().active).toBe(false);
   });
 
@@ -191,7 +195,7 @@ describe("the builder's test controls", () => {
     const { markAcceptedByBuilder, setupsForAdmin } = await import("@/lib/onboarding/dina/test-sites");
     const before = await setupsForAdmin();
     expect(before.find((s) => s.id === REAL)).toMatchObject({ google: "Invited: waiting", googleWaiting: true, stalled: true });
-    expect(await markAcceptedByBuilder(REAL)).toMatch(/^I'm in! Your profile has no reviews yet/);
+    expect(await markAcceptedByBuilder(REAL)).toMatch(/^I'm in! Google makes new managers wait 7 days/);
     expect(db.tables.onboarding_steps.find((s) => s.restaurant_id === REAL && s.step_key === "google")?.status).toBe("done");
     expect(db.tables.onboarding_messages.at(-1)).toMatchObject({ restaurant_id: REAL, role: "dina", body: expect.stringMatching(/^I'm in!/) });
   });

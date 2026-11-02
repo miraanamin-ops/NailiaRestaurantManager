@@ -65,8 +65,15 @@ export function StepsCard({
                 <CopyButton text={s.copy} />
               </div>
             )}
-            {/* eslint-disable-next-line @next/next/no-img-element -- plain screenshots from /public, swapped by the builder */}
-            <img src={s.image} alt={`Step ${s.n}: ${s.text}`} loading="lazy" className="w-full rounded-xl border border-ink-700" />
+            {s.link && (
+              <a href={s.link.href} target="_blank" rel="noopener noreferrer" className={`${primary} inline-flex items-center justify-center`}>
+                {s.link.label} ↗
+              </a>
+            )}
+            {s.image && (
+              // eslint-disable-next-line @next/next/no-img-element -- plain screenshots from /public, swapped by the builder
+              <img src={s.image} alt={`Step ${s.n}: ${s.text}`} loading="lazy" className="w-full rounded-xl border border-ink-700" />
+            )}
           </li>
         ))}
       </ol>
@@ -99,12 +106,18 @@ export function ForwardCard({ intro, text }: { intro: string; text: string }) {
   );
 }
 
-export function LinkCard({ label, href, hint }: { label: string; href: string; hint: string | null }) {
+// onOpen: it opens in a new tab and tells Dina, so the chat carries on (the QR codes).
+export function LinkCard({ label, href, hint, onOpen }: { label: string; href: string; hint: string | null; onOpen?: () => void }) {
   return (
     <div className={`${card} space-y-3 p-4`}>
       {hint && <p className="text-[14px] text-fog">{hint}</p>}
-      <a href={href} className={`${primary} inline-flex items-center justify-center`}>
+      <a
+        href={href}
+        {...(onOpen ? { target: "_blank", rel: "noopener noreferrer", onClick: () => onOpen() } : {})}
+        className={`${primary} inline-flex items-center justify-center`}
+      >
         {label}
+        {onOpen ? " ↗" : ""}
       </a>
     </div>
   );

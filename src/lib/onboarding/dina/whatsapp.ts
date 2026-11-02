@@ -108,7 +108,7 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
     } else if (c?.type === "steps") {
       // Each step on its own with its screenshot, then the buttons.
       if (m.text) out.push({ kind: "text", body: clip(m.text, WA.text) });
-      for (const st of c.steps) out.push({ kind: "text", body: clip(`*${st.n}.* ${st.text}`, WA.text), mediaUrl: abs(st.image) });
+      for (const st of c.steps) out.push({ kind: "text", body: clip(`*${st.n}.* ${st.text}${st.link ? `\n${st.link.href}` : ""}`, WA.text), ...(st.image ? { mediaUrl: abs(st.image) } : {}) });
       // The email on its own too, so it's easy to copy.
       for (const st of c.steps) if (st.copy) out.push({ kind: "text", body: st.copy });
       out.push(withChoices(`${c.note}\n\nTell me when it's done.`, m.id, choices));

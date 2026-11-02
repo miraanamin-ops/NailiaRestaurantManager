@@ -40,6 +40,7 @@ export function ChatLayout({
   status = null,
   error = null,
   whatsappHref = null,
+  exitHref = null,
   handlers,
 }: {
   restaurantName: string;
@@ -58,6 +59,8 @@ export function ChatLayout({
   error?: string | null;
   // Where "Continue on WhatsApp" goes (the same setup, carried on there).
   whatsappHref?: string | null;
+  // The way out to the owner's dashboard (Pilot Zero, 2 Nov: "I'm stuck on the chat").
+  exitHref?: string | null;
   handlers: ChatHandlers;
 }) {
   // The newest message in view: straight there when the chat opens, smoothly as new ones arrive.
@@ -77,6 +80,14 @@ export function ChatLayout({
             <p className="text-[16px] font-semibold leading-tight text-mist">Dina</p>
             <p className="truncate text-[13px] text-fog">Your DinerAI manager · setting up {restaurantName}</p>
           </div>
+          {exitHref && (
+            <a
+              href={exitHref}
+              className="inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-[14px] font-medium text-fog transition hover:text-mist focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+            >
+              Dashboard
+            </a>
+          )}
           {whatsappHref && (
             <a
               href={whatsappHref}
@@ -168,7 +179,7 @@ function Component({ message, chosen, uploadStatus, handlers }: { message: ChatM
     case "forward":
       return <ForwardCard intro={c.intro} text={c.text} />;
     case "link":
-      return <LinkCard label={c.label} href={c.href} hint={c.hint} />;
+      return <LinkCard label={c.label} href={c.href} hint={c.hint} onOpen={c.continueLabel && !done ? () => handlers.onPick(message.id, { id: "opened", label: c.continueLabel! }) : undefined} />;
     case "dish_check":
       return (
         <DishCheckCard

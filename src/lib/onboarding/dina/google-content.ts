@@ -11,10 +11,18 @@
 export type Device = "phone" | "laptop";
 export const VIDEO_SLOT: Record<Device, string | null> = { phone: null, laptop: null };
 
-export type GoogleStep = { n: number; text: string; image: string; copy?: string };
+export type GoogleStep = { n: number; text: string; image?: string; copy?: string; link?: { label: string; href: string } };
 
-export function managerSteps(device: Device, managerEmail: string): GoogleStep[] {
-  const img = (n: number) => `/onboarding/google/${device}-${n}.png`;
+// Screenshots of each step (public/onboarding/google/<device>-<n>.png). Off until real
+// ones replace the placeholders: owners saw "Placeholder: replace with a screenshot"
+// (Pilot Zero, 2 Nov). Turn on per device once its four images are real.
+export const SCREENSHOTS_READY: Record<Device, boolean> = { laptop: false, phone: false };
+// Opens the owner's Business Profile (Google sends them to their own listing).
+export const PROFILE_LINK = { label: "Open your Google Business Profile", href: "https://business.google.com/locations" };
+
+export function managerSteps(device: Device, managerEmail: string, opts: { screenshots?: boolean } = {}): GoogleStep[] {
+  const shots = opts.screenshots ?? SCREENSHOTS_READY[device];
+  const img = (n: number) => (shots ? { image: `/onboarding/google/${device}-${n}.png` } : {});
   const tap = device === "phone" ? "Tap" : "Click";
   return [
     {
@@ -22,12 +30,13 @@ export function managerSteps(device: Device, managerEmail: string): GoogleStep[]
       text:
         device === "phone"
           ? "Open Google Maps (or google.com) signed in with the account that manages your profile, and search your restaurant's name."
-          : "Sign in to Google with the account that manages your profile, and search your restaurant's name.",
-      image: img(1),
+          : "Sign in to Google with the account that manages your profile, and search your restaurant's name (or use the button).",
+      ...img(1),
+      link: PROFILE_LINK,
     },
-    { n: 2, text: `${tap} Menu (or the three dots), then Business Profile settings, then People and access.`, image: img(2) },
-    { n: 3, text: `${tap} Add at the top and paste our email: ${managerEmail}`, image: img(3), copy: managerEmail },
-    { n: 4, text: `Under Access, choose Manager, then ${tap.toLowerCase()} Invite.`, image: img(4) },
+    { n: 2, text: `${tap} Menu (or the three dots), then Business Profile settings, then People and access.`, ...img(2) },
+    { n: 3, text: `${tap} Add at the top and paste our email: ${managerEmail}`, ...img(3), copy: managerEmail },
+    { n: 4, text: `Under Access, choose Manager, then ${tap.toLowerCase()} Invite.`, ...img(4) },
   ];
 }
 
@@ -45,11 +54,13 @@ export function forwardMessage(restaurantName: string, managerEmail: string) {
   ].join("\n");
 }
 
-// Once we're in: something concrete from the profile, and Google's 7-day wait.
+// Once we're in: the reviews we've actually read (never "no reviews" on a guess:
+// Google can take a while to show a new manager everything; Pilot Zero, 2 Nov),
+// and Google's 7-day wait.
 export function acceptedText(reviews: { count: number; average: number | null }) {
   const first =
     reviews.count === 0
-      ? "I'm in! Your profile has no reviews yet, so I'll be ready for the first one."
+      ? "I'm in!"
       : `I'm in! You have ${reviews.count} review${reviews.count === 1 ? "" : "s"}${reviews.average ? ` and a ${reviews.average.toFixed(1)} rating` : ""}.`;
   return `${first} Google makes new managers wait 7 days before some features unlock, so a few things may take a week to switch on.`;
 }
@@ -79,7 +90,7 @@ export function stepsEmail(input: { restaurantName: string; device: Device; mana
   const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const html = `<div style="font-family:system-ui,sans-serif;max-width:560px;line-height:1.5;color:#1c1917">
 <p>${esc(intro)}</p>
-${steps.map((s) => `<p><b>${s.n}.</b> ${esc(s.text)}<br><img src="${input.appUrl}${s.image}" alt="Step ${s.n}" width="480" style="max-width:100%;border-radius:8px;margin-top:6px"></p>`).join("\n")}
+${steps.map((s) => `<p><b>${s.n}.</b> ${esc(s.text)}${s.link ? ` <a href="${s.link.href}">${esc(s.link.label)}</a>` : ""}${s.image ? `<br><img src="${input.appUrl}${s.image}" alt="Step ${s.n}" width="480" style="max-width:100%;border-radius:8px;margin-top:6px">` : ""}</p>`).join("\n")}
 <p><b>${esc(REASSURANCE)}</b></p>
 <p>When it's done, tell Dina on WhatsApp or in the <a href="${input.appUrl}/onboarding/chat">setup chat</a>.</p>
 <p>Dina, your DinerAI manager</p></div>`;

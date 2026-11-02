@@ -9,7 +9,8 @@ export type ChoiceCard = { id: string; title: string; body: string; short?: stri
 // The review a set of reply cards answers, shown above them.
 export type Quote = { author: string; rating: number; text: string; real: boolean };
 // A numbered how-to step with its screenshot; copy: text with a tap-to-copy button (an email address).
-export type HowToStep = { n: number; text: string; image: string; copy?: string };
+// image: a screenshot (only once real ones exist); link: a button that opens the page the step is on.
+export type HowToStep = { n: number; text: string; image?: string; copy?: string; link?: { label: string; href: string } };
 
 export type ChatComponent =
   | { type: "quick_replies"; options: ChatOption[] }
@@ -19,7 +20,8 @@ export type ChatComponent =
   // A message to forward to someone else, with a copy button.
   | { type: "forward"; intro: string; text: string }
   // A button that opens a page (e.g. Connect Google).
-  | { type: "link"; label: string; href: string; hint: string | null }
+  // continueLabel: opening it (in a new tab) also tells Dina, so the chat carries on (e.g. the QR codes).
+  | { type: "link"; label: string; href: string; hint: string | null; continueLabel?: string | null }
   // One dish's suggested allergens to check (marked as suggestions), with its buttons.
   | { type: "dish_check"; dish: string; section: string; suggested: string[]; position: number; total: number; actions: ChatOption[] }
   | { type: "upload"; accept: "photo" | "document" | "spreadsheet" | "any"; multiple: boolean; label: string }
@@ -51,4 +53,6 @@ export type SummaryData = {
   // Skipped or half-done steps: what each would unlock.
   locked: { key: string; title: string; unlock: string }[];
   next: string[];
+  // Setup finished: the button to the owner's dashboard.
+  dashboardHref?: string | null;
 };

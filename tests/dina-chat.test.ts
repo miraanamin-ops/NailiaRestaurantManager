@@ -50,6 +50,23 @@ describe("what the chat draws", () => {
     expect(messages[2].component).toMatchObject({ type: "confirmation", card: { title: "Your basics" } });
   });
 
+  test("Pilot Zero feedback: tone cards stay open to change your mind; the QR button carries the chat on; a finished setup has the dashboard button", () => {
+    const rows = [
+      row("d1", "dina", "Which tone?", [{ type: "tone_choices", voice: "praise" }]),
+      row("o1", "owner", "Warm", [{ type: "answer", to: "d1", choice: "warm" }]),
+      row("d2", "dina", "Your QR codes.", [{ type: "qr_kit" }]),
+      row("o2", "owner", "thanks"),
+    ];
+    const { messages } = chatFrom(rows, { restaurant: { ...restaurant, slug: "ember" }, state: {} });
+    expect(messages.find((m) => m.id === "d1")?.answered).toBe(false);
+    expect(messages.find((m) => m.id === "d2")).toMatchObject({ answered: true, component: { type: "link", href: "/r/ember/qr-pack", continueLabel: "I've opened my QR codes" } });
+    // Every step dealt with: the summary links to the dashboard; part way through it doesn't.
+    let state = complete({}, "hello", "done", {}, T);
+    expect(summaryFrom({ restaurant: { ...restaurant, id: "r-1" }, state }).dashboardHref).toBeNull();
+    for (const k of ["google", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "approvals_timing"]) state = skip(state, k as never, T);
+    expect(summaryFrom({ restaurant: { ...restaurant, id: "r-1" }, state }).dashboardHref).toBe("/?r=r-1");
+  });
+
   test("a card for a step that isn't built yet, or an unknown part, shows no component; the hours card shows the hours", () => {
     const { messages } = chatFrom(
       [row("d1", "dina", "Your FAQs.", [{ type: "editable_card", card: "faqs" }]), row("d2", "dina", "Hi.", [{ type: "nonsense" }]), row("d3", "dina", "Your hours.", [{ type: "editable_card", card: "hours" }])],

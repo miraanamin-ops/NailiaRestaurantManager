@@ -42,6 +42,13 @@ export function SummaryCard({ summary }: { summary: SummaryData }) {
           </ul>
         </div>
       )}
+      {summary.dashboardHref && (
+        <div className="border-t border-ink-700 p-4">
+          <a href={summary.dashboardHref} className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-signal px-4 text-[15px] font-semibold text-ink-950">
+            Go to your dashboard
+          </a>
+        </div>
+      )}
       {summary.next.length > 0 && (
         <div className="border-t border-ink-700 bg-signal/5 p-4">
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-signal">What happens next</p>

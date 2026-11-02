@@ -136,6 +136,7 @@ export function ChatClient(props: {
       chosen={chosen}
       uploadStatus={uploadStatus}
       whatsappHref={`/onboarding/in?r=${props.restaurantId}`}
+      exitHref={`/?r=${props.restaurantId}`}
       handlers={{
         onSend: (text) => void send({ kind: "message", text }, text),
         onPick: (messageId, o) => {

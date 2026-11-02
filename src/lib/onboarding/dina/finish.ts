@@ -3,6 +3,7 @@ import { logAction } from "@/lib/audit";
 import { shouldBeActive } from "@/lib/billing/access";
 import { check } from "@/lib/drafts";
 import { enqueueBackfill } from "@/lib/feeds/backfill";
+import { londonYmd } from "@/lib/clock";
 import { getSupabase } from "@/lib/supabase";
 import { currentStep } from "../flow";
 import { getSession, loadFlow } from "../sessions";
@@ -20,7 +21,12 @@ import { getRestaurant, updateRestaurantFields } from "../store";
 //   - queues the outside data history for its forecasts
 // Safe to call again: it does nothing once finished.
 
-export type FinishOutcome = { finished: true; active: boolean } | { finished: false; needsWhatsapp: boolean };
+// allSet: the closing line ("You're all set up..."), for the chat and WhatsApp.
+export type FinishOutcome = { finished: true; active: boolean; allSet: string } | { finished: false; needsWhatsapp: boolean };
+
+const hourText = (h: number) => (h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`);
+// The first brief is the morning after setup finishes (the summary says so too).
+export const allSetLine = (briefHour: number) => `You're all set up. You'll next hear from me tomorrow morning at ${hourText(briefHour)} with your first brief.`;
 
 export async function finishIfDone(restaurantId: string): Promise<FinishOutcome | null> {
   const session = await getSession(restaurantId);
@@ -43,12 +49,14 @@ export async function finishIfDone(restaurantId: string): Promise<FinishOutcome 
   if (!won?.length) return null;
   check(await supabase.from("onboarding").update({ completed_at: now, wa_waiting: null }).eq("restaurant_id", restaurantId));
   const active = shouldBeActive(true, r);
-  if (active !== r.active) await updateRestaurantFields(restaurantId, { active });
+  // Today's brief counts as done: the first one is tomorrow morning (no brief, and no
+  // "brief is late" alert, on the evening it finishes; Pilot Zero, 2 Nov).
+  await updateRestaurantFields(restaurantId, { ...(active !== r.active ? { active } : {}), last_brief_on: londonYmd(new Date()) });
   await logAction({ restaurantId, actor: "owner", action: "setting", detail: `Setup with Dina finished${active ? ": switched on" : " (not switched on: no trial, subscription, pilot code or exemption)"}` });
   try {
     await enqueueBackfill(restaurantId, "created");
   } catch (err) {
     console.error("Couldn't queue the outside data backfill", err);
   }
-  return { finished: true, active };
+  return { finished: true, active, allSet: allSetLine(r.brief_hour ?? 9) };
 }
