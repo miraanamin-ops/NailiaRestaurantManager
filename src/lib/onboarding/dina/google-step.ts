@@ -1,7 +1,8 @@
 import "server-only";
 import { logAction } from "@/lib/audit";
 import { sendOwnerEmail } from "@/lib/email";
-import { google, googleModeFor } from "@/lib/google";
+import { google } from "@/lib/google";
+import { googleSwitch } from "@/lib/switches";
 import { appUrl, getSupabase } from "@/lib/supabase";
 import { stepState } from "../flow";
 import { completeStep, getSession, loadFlow, noteStep, patchStepData, skipStep, waitOnStep, type Channel } from "../sessions";
@@ -36,7 +37,12 @@ export async function applyGoogleNotes(restaurantId: string, notes: Notes, chann
 // "Done, I've invited you". Returns what Dina is told.
 export async function googleInvited(restaurantId: string, channel: Channel) {
   await waitOnStep(restaurantId, "google", "google", { invited_at: new Date().toISOString() }, { channel });
-  if ((await googleModeFor(restaurantId)) === "dummy") {
+  // Simulated only where Google itself is dummy (previews, local) or for a test site.
+  // Not googleModeFor: a restaurant counts as dummy until its location is linked,
+  // which during setup is always, so on live every real invite was "accepted" at
+  // once (Pilot Zero, 2 Nov).
+  const r = await getRestaurant(restaurantId);
+  if (googleSwitch(process.env).mode === "dummy" || (r as { is_test?: boolean }).is_test === true) {
     const text = await markGoogleAccepted(restaurantId, { by: "simulated", quiet: true });
     return `The owner tapped "Done, I've invited you". In test mode Google's acceptance is simulated, so DinerAI is in now. Tell them in these words (you may add one short line after): "${text}"`;
   }

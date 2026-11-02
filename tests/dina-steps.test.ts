@@ -293,6 +293,19 @@ describe("the Google step, whole turns", () => {
     expect(step("google")).toMatchObject({ status: "done", data: { accepted_by: "simulated", reviews: { count: 2, average: 4.5 }, invited_at: expect.any(String) } });
   });
 
+  test("'Done, I've invited you' on live: it waits for the real acceptance (never simulated, though no location is linked yet)", async () => {
+    // Pilot Zero, 2 Nov: on live the restaurant counted as dummy (nothing linked yet), so it was "accepted" at once.
+    vi.stubEnv("GOOGLE_MODE", "live");
+    vi.stubEnv("VERCEL_ENV", "production");
+    const msg = shown({ type: "google_steps", device: "laptop" });
+    const { handleAnswer } = await import("@/lib/onboarding/dina/answers");
+    const note = await handleAnswer({ restaurantId: R, messageId: msg, choiceId: "invited", channel: "web" });
+    expect(note).toMatch(/now waits on our side to accept the invite/);
+    expect(step("google")).toMatchObject({ status: "in_progress", waiting_on: "google", data: { invited_at: expect.any(String) } });
+    expect(step("google")?.data?.accepted_by).toBeUndefined();
+    vi.unstubAllEnvs();
+  });
+
   test("'Email me these steps': the steps go to the owner, and a repeat of the same tap does nothing twice", async () => {
     const msg = shown({ type: "google_steps", device: "phone" });
     const { handleAnswer } = await import("@/lib/onboarding/dina/answers");
