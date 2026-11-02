@@ -345,7 +345,9 @@ async function runDailyImport(row: PosImport, table: Table, mapping: PosMapping,
     for (const l of lines) if (l.receipt && l.amount > 0) ids.set(l.day, (ids.get(l.day) ?? new Set()).add(l.receipt));
     for (const [day, set] of ids) orders.set(day, set.size);
   }
-  const totals = dayTotals(lines.map((l) => ({ day: l.day, hour: null, receipt: null, amount: l.amount }))).map((d) => ({ ...d, transactions: orders.has(d.day) ? Math.round(orders.get(d.day)!) : null }));
+  // A file with one row per payment and a time (Square's Transactions export) gives
+  // each day's sales by the hour too: the rota staffs to them, the monthly report uses them.
+  const totals = dayTotals(lines.map((l) => ({ day: l.day, hour: mapping.time ? l.hour : null, receipt: null, amount: l.amount }))).map((d) => ({ ...d, transactions: orders.has(d.day) ? Math.round(orders.get(d.day)!) : null }));
   const days = totals.map((d) => d.day).sort();
   const [first, last] = [days[0], days.at(-1)!];
   // Real takings replace seeded hours for the same days (as an item import does).

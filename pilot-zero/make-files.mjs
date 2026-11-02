@@ -121,6 +121,23 @@ const dmy = (t) => {
 };
 
 const txRows = [TX_HEAD.map(q).join(",")];
+// Square's Item sales export: one row per dish line of each payment.
+const ITEM_HEAD = ["Date", "Time", "Time Zone", "Category", "Item", "Qty", "Price Point Name", "Gross Sales", "Discounts", "Net Sales", "Tax", "Transaction ID", "Payment ID", "Device Name", "Event Type", "Location", "Dining Option"];
+const itemRows = [ITEM_HEAD.map(q).join(",")];
+// Which counter (the menu's sections, dummy-menu.pdf) each dish comes from.
+const COUNTER_OF = {
+  "Lamb Shawarma Wrap": "Shawarma Corner",
+  "Falafel Wrap": "Shawarma Corner",
+  "Chicken Tikka Box": "Charcoal Grill",
+  "Mixed Grill Platter": "Charcoal Grill",
+  "Peri Peri Half Chicken": "Charcoal Grill",
+  "Lamb Biryani": "Biryani House",
+  "Smash Burger": "Smash Burgers",
+  "Masala Chips": "Smash Burgers",
+  "Mango Lassi": "Sweets & Drinks",
+  "Karak Chai": "Sweets & Drinks",
+  Kunafa: "Sweets & Drinks",
+};
 const txNet = {}; // each day's net sales from its transactions (refunds included)
 const txOrders = {};
 let txId = 0;
@@ -154,6 +171,15 @@ for (let t = TX_FIRST; t <= LAST; t += DAY) {
         .map(q)
         .join(","),
     );
+    // The same order, dish by dish, for the Item sales export (no extra random draws,
+    // so the other files stay exactly as they were).
+    const qty = new Map();
+    for (const [name, price] of o.items) qty.set(name, { price, n: (qty.get(name)?.n ?? 0) + 1 });
+    for (const [name, { price, n }] of qty) {
+      const gross = round2(price * n);
+      const itemNet = round2(gross / 1.2);
+      itemRows.push([dmy(t), time, "Europe/London", COUNTER_OF[name], name, n, "Regular", money(gross), "£0.00", money(itemNet), money(round2(gross - itemNet)), id, `P${id}`, "Counter iPad", "Payment", NAME, "Eat in"].map(q).join(","));
+    }
   }
   let dayTotal = round2(orders.reduce((s, o) => s + o.net, 0));
   if (REFUNDS[d]) {
@@ -167,6 +193,7 @@ for (let t = TX_FIRST; t <= LAST; t += DAY) {
   txOrders[d] = orders.length;
 }
 writeFileSync(join(OUT, "square-transactions-6-weeks.csv"), txRows.join("\r\n") + "\r\n");
+writeFileSync(join(OUT, "square-item-sales-6-weeks.csv"), itemRows.join("\r\n") + "\r\n");
 
 // ---------- The year's Sales summary (the last six weeks match the transactions) ----------
 

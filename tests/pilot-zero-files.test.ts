@@ -106,6 +106,25 @@ describe("the 12-month Square Sales summary", () => {
   });
 });
 
+describe("the 6-week Square Item sales file (dish by dish, for the monthly report)", () => {
+  test("imports as item sales: every dish line, each day's takings and orders, and sales by the hour", async () => {
+    const ITEMS = "square-item-sales-6-weeks.csv";
+    expect(statSync(path(ITEMS)).size).toBeLessThan(MAX_FILE_BYTES);
+    const mapping: PosMapping = { date: "Date", time: "Time", item: "Item", quantity: "Qty", price: "Gross Sales", price_is: "line_total", receipt: "Transaction ID", date_order: "dmy", amount_basis: "gross" };
+    const done = await importFile(ITEMS, mapping);
+    expect(done.status).toBe("imported");
+    expect(db.tables.sales_items).toHaveLength(10335);
+    expect(new Set(db.tables.sales_items.map((i) => i.item))).toEqual(new Set(["Lamb Shawarma Wrap", "Chicken Tikka Box", "Mixed Grill Platter", "Peri Peri Half Chicken", "Lamb Biryani", "Falafel Wrap", "Smash Burger", "Masala Chips", "Mango Lassi", "Karak Chai", "Kunafa"]));
+    expect(db.tables.sales_days).toHaveLength(42);
+    expect(db.tables.sales_hours.length).toBeGreaterThan(42 * 8);
+    // Each day's takings match the transactions file's (to a few pence of rounding; refunds aren't dish lines).
+    const items = new Map(db.tables.sales_days.map((d) => [String(d.day), Number(d.net_sales)]));
+    db.tables.sales_days.length = 0;
+    await importFile(TRANSACTIONS, daily("dmy", "Transaction ID"));
+    for (const d of db.tables.sales_days) expect(Math.abs(Number(d.net_sales) - items.get(String(d.day))!)).toBeLessThan(25);
+  });
+});
+
 describe("the 6-week Square Transactions file", () => {
   test("small enough to send on WhatsApp, and imports 42 days with each day's number of orders", async () => {
     expect(statSync(path(TRANSACTIONS)).size).toBeLessThan(MAX_FILE_BYTES);

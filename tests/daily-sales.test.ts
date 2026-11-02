@@ -138,6 +138,18 @@ describe("importing daily takings", () => {
     expect(db.tables.sales_items).toEqual([]);
   });
 
+  test("…with its Time column: sales by the hour are saved too (the rota and the monthly report need them)", async () => {
+    const mapping: PosMapping = { ...daily("Date", "Net Sales", "dmy", "net"), receipt: "Transaction ID", time: "Time" };
+    suggestMapping.mockResolvedValue({ mapping, posName: "Square", problem: null });
+    const first = await upload("square-transactions.csv");
+    const { confirmImport } = await import("@/lib/sales/pos-import");
+    expect(await confirmImport(R, first.importId!, mapping)).toMatchObject({ status: "imported" });
+    const firstDay = db.tables.sales_hours.filter((h) => h.day === "2026-08-01");
+    expect(firstDay.length).toBeGreaterThan(5);
+    expect(firstDay.every((h) => Number(h.hour) >= 12 && Number(h.hour) <= 21)).toBe(true);
+    expect(db.tables.sales_items).toEqual([]);
+  });
+
   test("a file with one total for the whole period isn't daily takings", async () => {
     suggestMapping.mockResolvedValue({ mapping: null, posName: "Square", problem: "It has one total for the whole period, not one per day." });
     expect((await upload("square-sales-summary.csv")).message).toBe("I couldn't use that file: It has one total for the whole period, not one per day.");

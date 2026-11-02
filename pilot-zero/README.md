@@ -14,6 +14,8 @@ Square export ever looks different, trust the real one.
 |---|---|---|
 | `square-sales-summary-12-months.csv` | Square **Sales summary**, one row per day, 1 Nov 2025 to 31 Oct 2026 (361 days: 4 closed days left out, as Square does). Net sales about £653,000 for the year. | Dina's **sales** step (or Sales page > Upload). The columns to confirm: Date, takings = "Net Sales". |
 | `square-transactions-6-weeks.csv` | Square **Transactions** export, one row per payment, 20 Sep to 31 Oct 2026: 5,463 rows, 3 refunds, 1.8 MB (small enough for WhatsApp). Each day's net sales match the summary. | After the summary, if you want each day's **number of orders** too (forecasts are better with it). Columns: Date, takings = "Net Sales", orders = one per "Transaction ID". |
+| `square-item-sales-6-weeks.csv` | Square **Item sales** export, one row per dish line of each payment, 20 Sep to 31 Oct 2026: 10,335 lines over the 11 dishes on `dummy-menu.pdf`, with their counter as the Category. The same orders as the transactions file. | For dish-by-dish insights (the monthly report). Columns: Date, Time, Item, Qty, takings = "Gross Sales" (including VAT), receipt = "Transaction ID". |
+| `dummy-menu.pdf` | A one-page menu for the food hall: 5 counters, 19 dishes. | Dina's menu step. |
 | `staff-sheet.csv` | The team: 10 people, all at £12.71 an hour or more (the National Living Wage from April 2026), with role, pay, contracted hours, days, times and max hours. | Dina's **team** step. |
 | `staff-availability-messages.txt` | One WhatsApp line per person, e.g. `add Aisha Patel, front of house, £12.71, fri-sun, 5pm-11pm, max 20 hours`. | The fallback (see "Availability" below). |
 

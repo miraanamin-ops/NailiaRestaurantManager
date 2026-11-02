@@ -104,9 +104,12 @@ export async function suggestMapping(sample: { headers: string[]; rows: string[]
   );
   // A daily summary or one row per payment (no items): kept as day totals, never as
   // dish sales; the orders each day from an orders column, or counted by transaction id.
+  // One row per payment keeps its time, so sales by the hour are saved too (Pilot
+  // Zero, 2 Nov: Square's Transactions export lost its Time column here, and the
+  // rota then couldn't staff to a forecast).
   if (!out.is_item_sales && out.is_daily_totals && out.date && out.price) {
     return {
-      mapping: { date: out.date, time: null, item: null, quantity: out.quantity, price: out.price, price_is: "line_total", receipt: out.quantity ? null : out.receipt, date_order: out.date_order, amount_basis: out.amount_basis },
+      mapping: { date: out.date, time: out.time, item: null, quantity: out.quantity, price: out.price, price_is: "line_total", receipt: out.quantity ? null : out.receipt, date_order: out.date_order, amount_basis: out.amount_basis },
       posName: out.pos_name,
       problem: null,
     };
