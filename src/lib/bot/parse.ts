@@ -114,13 +114,15 @@ export type Command =
   | { name: "staff" | "sales" | "run_weather" }
   | { name: "test_forecast"; on: boolean }
   | { name: "sample_z" | "test_z"; sample: ZSample }
-  | { name: "run_rota" | "rota" };
+  | { name: "run_rota" | "rota" }
+  | { name: "monthly_report"; month: number | null }; // month: 1-12, or null for last month
 
 // The sample till reports (public/samples/): 1-3 read cleanly, "bad" is blurred and cut off.
 export const Z_SAMPLES = ["1", "2", "3", "bad"] as const;
 export type ZSample = (typeof Z_SAMPLES)[number];
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const MONTHS = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
 
 // Exact typed commands. Anything else is treated as normal chat.
 // todayWeekday (0 = Sunday, London) is for "TIME THURSDAY 18:00".
@@ -141,6 +143,12 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (t === "RUN BRIEF" || t === "BRIEF") return { name: "run_brief" };
   // WEEKLY was the old Sunday round-up; the Monday report replaced it.
   if (t === "RUN REPORT" || t === "WEEKLY" || t === "WEEKLY REPORT") return { name: "run_report" };
+  // MONTHLY REPORT, MONTHLY REPORT SEPTEMBER (or SEPT / SEP)
+  const monthly = t.match(/^MONTHLY(?: REPORT)?(?: (?:FOR )?([A-Z]+))?[.!]?$/);
+  if (monthly) {
+    const n = monthly[1] ? MONTHS.findIndex((m) => monthly[1].length >= 3 && m.startsWith(monthly[1].slice(0, 3)) && m.startsWith(monthly[1].replace(/^SEPT$/, "SEP"))) + 1 : null;
+    if (n !== 0) return { name: "monthly_report", month: n };
+  }
   if (/^APPROVE ALL[.!]?$/.test(t)) return { name: "approve_all" };
   if (t === "UNDO" || t === "UNDO!") return { name: "undo" };
   const newReview = t.match(/^NEW REVIEW(?: ([1-5])(?: ?STARS?)?)?$/);

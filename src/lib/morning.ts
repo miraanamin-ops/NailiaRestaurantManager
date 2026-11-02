@@ -14,6 +14,7 @@ import { mondayVisibility } from "@/lib/agents/visibility";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
 import type { MorningStep } from "@/lib/queue/rules";
 import { createReport, reportPeriod } from "@/lib/report/build";
+import { deliverMonthlyReport, makeMonthlyIfDue, monthlyForBrief } from "@/lib/report/monthly";
 import { processQueue } from "@/lib/send";
 import type { ReportData } from "@/lib/report/types";
 import { simulatedLabel, simulationOn } from "@/lib/simulation-rules";
@@ -108,12 +109,19 @@ export async function runMorningStep(
       return { done: "Google post", carry };
     }
 
-    // 4. Monday: last week's report.
+    // 4. Monday: last week's report. Early in the month: last month's report, once
+    //    its sales are in (or on the 4th with what there is), emailed as a PDF now
+    //    and sent on WhatsApp with the brief (lib/report/monthly.ts).
     case "report": {
-      if (weekday !== 1 || r.last_report_on === today) return { done: "report: nothing to do", carry };
-      await createReport(await loadRestaurantContext(r.id, realTime), reportPeriod(now, true));
-      await setFields(r, { last_report_on: today });
-      return { done: "report", carry };
+      const done: string[] = [];
+      if (weekday === 1 && r.last_report_on !== today) {
+        await createReport(await loadRestaurantContext(r.id, realTime), reportPeriod(now, true));
+        await setFields(r, { last_report_on: today });
+        done.push("report");
+      }
+      const monthly = await makeMonthlyIfDue(r, today);
+      if (monthly) done.push(monthly);
+      return { done: done.join("; ") || "report: nothing to do", carry };
     }
 
     // 5. Monday: Visibility looks 4 weeks ahead for bank holidays with no special
@@ -143,9 +151,11 @@ export async function runMorningStep(
       } else if (channel) {
         // A simulated day's brief says so (a footnote: it doesn't make a quiet day send one).
         const note = simulating ? simulatedLabel(londonLongDate(now)) : undefined;
-        brief = await briefFor(fresh, channel, now, { extra: carry.released ? [carry.released] : [], note });
+        const month = await monthlyForBrief(fresh, today);
+        brief = await briefFor(fresh, channel, now, { extra: [...(carry.released ? [carry.released] : []), ...month.extra], note });
         const headline = await mondayReportHeadline(fresh, now);
         if (headline) await messageOwner(channel, headline);
+        if (month.report) await deliverMonthlyReport(fresh, month.report, { whatsapp: true, email: false });
       }
       await setFields(fresh, { last_brief_on: today, morning_failures: 0, morning_failed_on: null, morning_lock_until: null });
       return { done: "brief", carry, brief };
@@ -157,8 +167,10 @@ export async function runMorningStep(
 export async function deliverWaitingBrief(r: Restaurant, channel: OwnerChannel, now: Date) {
   if (!r.brief_waiting_since) return;
   const note = "_This morning's brief, held until you messaged (WhatsApp only lets me message you within 24 hours of your last message)._";
-  const outcome = await briefFor(r, channel, now, { note });
+  const month = await monthlyForBrief(r, londonYmd(new Date(r.brief_waiting_since)));
+  const outcome = await briefFor(r, channel, now, { note, extra: month.extra });
   if (!outcome.sent) check(await getSupabase().from("restaurants").update({ brief_waiting_since: null }).eq("id", r.id));
   const headline = await mondayReportHeadline(r, new Date(r.brief_waiting_since));
   if (headline) await messageOwner(channel, headline);
+  if (month.report) await deliverMonthlyReport(r, month.report, { whatsapp: true, email: false });
 }

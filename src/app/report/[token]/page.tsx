@@ -5,19 +5,21 @@ import { NotFoundCard } from "@/components/brand-shell";
 import { requireOwner } from "@/lib/auth";
 import { getReportByToken } from "@/lib/report/build";
 import { REPORT_LINK_DAYS, reportExpired, sectionKey } from "@/lib/report/types";
+import { isMonthly } from "@/lib/report/monthly-rules";
+import { MonthlyReport } from "./monthly";
 import { Section } from "./sections";
 
 function ExpiredCard() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-stone-100 p-6 text-center text-stone-700">
       <p>
-        This report link has expired (links last {REPORT_LINK_DAYS} days). Your newest report link arrives on WhatsApp every Monday morning.
+        This report link has expired (links last {REPORT_LINK_DAYS} days). Your newest report link arrives on WhatsApp every Monday morning, and the monthly one early each month.
       </p>
     </div>
   );
 }
 
-export const metadata: Metadata = { title: "Weekly report", robots: { index: false } };
+export const metadata: Metadata = { title: "Your report", robots: { index: false } };
 
 // The Monday report: a frozen snapshot behind a private link, read on the owner's phone.
 export default function ReportPage({ params }: PageProps<"/report/[token]">) {
@@ -36,6 +38,8 @@ async function Report({ params }: Pick<PageProps<"/report/[token]">, "params">) 
   const report = await getReportByToken(token);
   if (!report || !owner.restaurantIds.includes(report.restaurant_id)) return <NotFoundCard />;
   if (reportExpired(report.expires_at, new Date())) return <ExpiredCard />;
+  const raw: unknown = report.data;
+  if (isMonthly(raw)) return <MonthlyReport token={token} data={raw} createdAt={report.created_at} />;
   const { data } = report;
   const brand = data.restaurant.brandColor;
 

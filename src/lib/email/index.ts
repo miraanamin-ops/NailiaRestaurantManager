@@ -151,7 +151,11 @@ export function sendFeedbackEmail(i: { restaurant: Restaurant; customer: Person;
 // Google). With EMAIL_REDIRECT on (or for a test site), a demo restaurant's owner
 // email goes to the builder instead: test sign-ups use made-up addresses, which
 // may belong to a real stranger. A real restaurant's owner gets their own.
-export async function sendOwnerEmail(restaurant: Restaurant, email: { subject: string; text: string; html: string }): Promise<Delivery> {
+// attachments: files sent with it (e.g. the monthly report's PDF).
+export async function sendOwnerEmail(
+  restaurant: Restaurant,
+  email: { subject: string; text: string; html: string; attachments?: { filename: string; content: Buffer }[]; kind?: string },
+): Promise<Delivery> {
   const to = restaurant.owner_email?.trim();
   if (!to || !isEmail(to)) return { delivery: "simulated", id: null, to: null, redirectedFrom: null, reason: "no owner email" };
   const route = routeEmail(to, {
@@ -168,7 +172,8 @@ export async function sendOwnerEmail(restaurant: Restaurant, email: { subject: s
     subject: route.redirectedFrom ? `[Test → ${route.redirectedFrom}] ${email.subject}` : email.subject,
     text: email.text,
     html: email.html,
-    tags: [{ name: "kind", value: "owner_setup" }],
+    ...(email.attachments?.length ? { attachments: email.attachments } : {}),
+    tags: [{ name: "kind", value: email.kind ?? "owner_setup" }],
   });
   if (error) throw new Error(`Resend: ${error.message}`);
   return { delivery: "email", id: data?.id ?? null, to: route.to, redirectedFrom: route.redirectedFrom };

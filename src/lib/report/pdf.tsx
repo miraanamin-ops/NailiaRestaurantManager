@@ -40,7 +40,7 @@ const GOOD = "#047857";
 const BAD = "#b91c1c";
 
 // Keeps only characters Helvetica can draw (Latin-1 plus common punctuation).
-function clean(text: string) {
+export function clean(text: string) {
   return noEmDash(text)
     .replace(/[−]/g, "-")
     .replace(/[‘’]/g, "'")

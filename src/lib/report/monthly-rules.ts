@@ -66,7 +66,8 @@ export type MonthlyFigures = {
     slow: { item: string; perWeek: number }[];
     topShare: number;
   } | null;
-  labour: { cost: number; pct: number; target: number | null } | null;
+  // days: the days with a rota (the % is against those days' takings only).
+  labour: { cost: number; pct: number; target: number | null; days: number } | null;
   reviews: { count: number; average: number | null } | null;
   // What's missing, and what it would unlock (one line each).
   missing: string[];
@@ -206,12 +207,14 @@ export function monthlyFigures(input: { data: MetricsData; month: string; calend
     if (!beforeDays) missing.push(`Dishes rising and falling: needs ${monthName(lastMonth)}'s dish-by-dish sales too.`);
   } else missing.push("Your dishes: needs a dish-by-dish export (e.g. Square's Item sales).");
 
-  // Labour: the rota's staff cost on the month's days, against the month's takings.
+  // Labour: the rota's staff cost on the month's days, against the takings of those
+  // same days (a month with one week of rotas isn't compared with four weeks' takings).
   let labour: MonthlyFigures["labour"] = null;
   const byDayCost = (data.labour_weeks ?? []).flatMap((w) => Object.entries(w.by_day)).filter(([d]) => d.startsWith(month));
-  if (byDayCost.length) {
+  const rotaTakings = byDayCost.reduce((s, [d]) => s + (byDay.get(d)?.net ?? 0), 0);
+  if (byDayCost.length && rotaTakings > 0) {
     const cost = round(byDayCost.reduce((s, [, c]) => s + c, 0));
-    labour = { cost, pct: round((cost / net) * 100, 1), target: data.labour_target_pct ?? null };
+    labour = { cost, pct: round((cost / rotaTakings) * 100, 1), target: data.labour_target_pct ?? null, days: byDayCost.length };
   } else missing.push("Labour as a share of takings: needs the month's rotas.");
 
   const monthReviews = data.reviews.filter((r) => r.date.startsWith(month));
@@ -255,7 +258,7 @@ export function monthlyFacts(f: MonthlyFigures, restaurant: string) {
     f.dishes?.rising.length ? `Rising: ${f.dishes.rising.map((d) => `${d.item} +${d.change}%`).join(", ")}.` : "",
     f.dishes?.falling.length ? `Falling: ${f.dishes.falling.map((d) => `${d.item} ${d.change}%`).join(", ")}.` : "",
     f.dishes?.slow.length ? `Selling under 5 a week: ${f.dishes.slow.map((d) => d.item).join(", ")}.` : "",
-    f.labour ? `Labour: ${money(f.labour.cost)}, ${f.labour.pct}% of takings${f.labour.target ? ` (target ${f.labour.target}%)` : ""}.` : "",
+    f.labour ? `Labour: ${money(f.labour.cost)}, ${f.labour.pct}% of takings${f.labour.days < f.traded ? ` on the ${f.labour.days} days with a rota` : ""}${f.labour.target ? ` (target ${f.labour.target}%)` : ""}.` : "",
     f.reviews ? `Reviews: ${f.reviews.count}${f.reviews.average ? `, average ${f.reviews.average} stars` : ""}.` : "",
   ];
   return lines.filter(Boolean).join("\n");
@@ -273,3 +276,64 @@ export function fallbackWords(f: MonthlyFigures) {
   ];
   return { headline, actions };
 }
+
+// What's saved in reports.data for a monthly report (frozen when made).
+export type MonthlyWords = { headline: string; summary: string; actions: { title: string; why: string; message: string }[] };
+export type MonthlyReportData = {
+  kind: "monthly";
+  version: 1;
+  restaurant: { name: string; brandColor: string; brandDark: string };
+  figures: MonthlyFigures;
+  words: MonthlyWords;
+  // The WhatsApp number the action buttons open a chat with (digits only), if known.
+  whatsappNumber: string | null;
+  simulated: string | null;
+};
+export const isMonthly = (data: unknown): data is MonthlyReportData => (data as { kind?: string } | null)?.kind === "monthly";
+
+// The WhatsApp message with the report (the PDF goes just before it).
+export const monthlyWhatsApp = (d: MonthlyReportData, url: string) => `📊 *${d.figures.label} at ${d.restaurant.name}*\n${d.words.headline}\n🔗 ${url}`;
+
+// The end-of-month prompts in the brief (batched, never on their own):
+//   last day of the month: "tomorrow I'll write your report: send the month's export tonight"
+//   1st and 3rd, while the month isn't covered: a reminder
+//   covered (the last day has figures), or the 4th: the report is made with what there is
+export type MonthStep = { kind: "ask"; month: string } | { kind: "remind"; month: string } | { kind: "make"; month: string } | { kind: "none" };
+export function monthStep(input: { today: string; reportExists: boolean; lastDayCovered: boolean; hasSales: boolean }): MonthStep {
+  if (!input.hasSales) return { kind: "none" };
+  const dom = Number(input.today.slice(8));
+  const thisMonth = input.today.slice(0, 7);
+  if (daysOf(thisMonth).at(-1) === input.today) return { kind: "ask", month: thisMonth };
+  if (dom > 4) return { kind: "none" };
+  const month = previousMonth(input.today);
+  if (input.reportExists) return { kind: "none" };
+  if (input.lastDayCovered || dom === 4) return { kind: "make", month };
+  return dom === 1 || dom === 3 ? { kind: "remind", month } : { kind: "none" };
+}
+
+export function monthPrompt(step: Extract<MonthStep, { kind: "ask" | "remind" }>, uploadUrl: string) {
+  const name = monthName(step.month).split(" ")[0];
+  const how = "From Square: Reports, then Item sales, set the dates to the whole month, then Export (a daily sales summary works too).";
+  return step.kind === "ask"
+    ? `📊 Tomorrow I'll write your ${name} report. After you close tonight, send me ${name}'s sales export here, dish by dish if your till has it. ${how} Or upload it: ${uploadUrl}`
+    : `📊 Your ${name} report is waiting for ${name}'s last sales. Send me the export here (${how.charAt(0).toLowerCase()}${how.slice(1)}) or upload it: ${uploadUrl}. If it isn't in by the 4th, I'll write it with what I have.`;
+}
+
+// Shared by the page and the PDF.
+export const gbp = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
+export const changeLine = (c: { label: string; raw: number | null; likeForLike: number | null }) =>
+  c.likeForLike === null ? `vs ${c.label}: not enough figures to compare` : `${c.likeForLike >= 0 ? "Up" : "Down"} ${Math.abs(c.likeForLike)}% on ${c.label} like for like${c.raw !== null ? ` (${c.raw >= 0 ? "+" : ""}${c.raw}% before adjusting for the mix of weekdays)` : ""}`;
+export const MONTHLY_FOOTNOTE = "Like for like: compared at the same mix of weekdays, so five Saturdays don't count as growth. Information about your business, not financial advice.";
+
+// MONTHLY REPORT [SEPTEMBER]: which month. No name: last month; a name: the latest
+// finished month of that name (in November, OCTOBER is this year's, DECEMBER last year's).
+export function monthFor(today: string, monthNumber: number | null) {
+  const last = previousMonth(today);
+  if (!monthNumber) return last;
+  const [y, m] = last.split("-").map(Number);
+  return `${monthNumber <= m ? y : y - 1}-${String(monthNumber).padStart(2, "0")}`;
+}
+
+export const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
+export const labourLine = (l: NonNullable<MonthlyFigures["labour"]>, traded: number) =>
+  `staff cost of takings (${gbp(l.cost)}${l.days < traded ? ` over the ${l.days} days with a rota` : ""}${l.target ? `, target ${l.target}%` : ""})`;

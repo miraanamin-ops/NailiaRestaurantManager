@@ -2,13 +2,14 @@ import "server-only";
 import { logSetting } from "@/lib/audit";
 import { approveAll, sendBrief } from "@/lib/brief";
 import { recentCampaignStats, statsText } from "@/lib/campaigns";
-import { formatLondon, formatWindow, isInSendWindow, londonTimeOn } from "@/lib/clock";
+import { formatLondon, formatWindow, isInSendWindow, londonTimeOn, londonYmd } from "@/lib/clock";
 import { getActiveDraft, getQueue, KIND_LABELS } from "@/lib/drafts";
 import { draftPreviewUrl } from "@/lib/email/previews";
 import { draftMessage, sendResultMessage } from "@/lib/format";
 import { releaseQueue } from "@/lib/followups";
 import { presentNext, runPostJob, runReviewCheck } from "@/lib/google-jobs";
 import { createReport, reportPeriod } from "@/lib/report/build";
+import { isMonthly, monthFor, monthName } from "@/lib/report/monthly-rules";
 import { attemptSend } from "@/lib/send";
 import { undoLast } from "@/lib/undo";
 import { appUrl, getSupabase, restaurantNow, type Restaurant } from "@/lib/supabase";
@@ -41,6 +42,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - *MY EMAIL you@example.com*: where your copy of each campaign email goes
 - *BIRTHDAY CAMPAIGN*: draft this week's birthday email now (normally every Monday)
 - *CAMPAIGN RESULTS*: how the latest email campaign did
+- *MONTHLY REPORT*: last month's report as a PDF (*MONTHLY REPORT SEPTEMBER* for another month). It comes on its own early each month
 - *EMAIL PREVIEWS*: see the automatic emails (confirm, welcome, "how was your visit?")
 - *EXPORT CUSTOMERS*: a download link for your customer list
 - Send a *photo of your till report* (Z-report) at the end of the day and I'll save the sales
@@ -226,7 +228,21 @@ export async function runCommand(command: Command, turn: Turn) {
       return send(latest ? statsText(latest) : "No email campaigns have been sent yet. Try: Thursday is quiet");
     }
     case "which_report":
-      return send("Which one? 📊\n- *RUN REPORT*: your weekly report (last 7 days)\n- *CAMPAIGN RESULTS*: how the latest email campaign did");
+      return send("Which one? 📊\n- *MONTHLY REPORT*: last month's report (PDF)\n- *RUN REPORT*: your weekly report (last 7 days)\n- *CAMPAIGN RESULTS*: how the latest email campaign did");
+    case "monthly_report": {
+      // Last month's (or the named month's) report: the one already made, or made now.
+      const month = monthFor(londonYmd(ctx.now), command.month);
+      const { createMonthlyReport, deliverMonthlyReport, findMonthlyReport } = await import("@/lib/report/monthly");
+      const row = await findMonthlyReport(r.id, month);
+      if (row && isMonthly(row.data) && !(row.expires_at && new Date(row.expires_at) < new Date())) {
+        await deliverMonthlyReport(r, { token: row.token, url: `${appUrl()}/report/${row.token}`, data: row.data }, { whatsapp: true, email: false });
+        return;
+      }
+      const made = await createMonthlyReport(r, month);
+      if (!made) return send(`📊 I don't have any sales for ${monthName(month)} yet. Send me the month's sales export here (from Square: Reports, then Item sales, then Export), or upload it: ${appUrl()}/sales?r=${r.id}`);
+      await deliverMonthlyReport(r, made, { whatsapp: true, email: true });
+      return;
+    }
     case "run_brief": {
       // Exactly what 9am sends, minus the once-a-day jobs (so tomorrow's real brief still comes).
       const outcome = await sendBrief(r, channel, ctx.now);

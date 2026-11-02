@@ -5,7 +5,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { MetricsData } from "@/lib/agents/insights-metrics";
-import { daysOf, fallbackWords, monthlyFacts, monthlyFigures, previousMonth } from "@/lib/report/monthly-rules";
+import { daysOf, fallbackWords, monthFor, monthlyFacts, monthlyFigures, monthlyWhatsApp, monthPrompt, monthStep, previousMonth, type MonthlyReportData } from "@/lib/report/monthly-rules";
+import { parseCommand } from "@/lib/bot/parse";
 import { parseCsv } from "@/lib/sales/pos-table";
 
 const csv = (name: string) => {
@@ -91,7 +92,8 @@ describe("the month's numbers", () => {
     expect(f.dishes!.top).toHaveLength(5);
     expect(f.dishes!.top[0].amount).toBeGreaterThan(f.dishes!.top[4].amount);
     expect(f.dishes!.topShare).toBeGreaterThan(20);
-    expect(f.labour).toMatchObject({ cost: 2280, target: 28 });
+    expect(f.labour).toMatchObject({ cost: 2280, target: 28, days: 6 });
+    expect(f.labour!.pct).toBeGreaterThan(15); // against those 6 days' takings, not the whole month's
     expect(f.reviews).toEqual({ count: 2, average: 4.5 });
     expect(f.missing).not.toContain(expect.stringMatching(/dishes/));
   });
@@ -110,4 +112,68 @@ describe("the month's numbers", () => {
   test("a month with no figures at all has no report", () => {
     expect(monthlyFigures({ data: pilotData(), month: "2027-01", calendar: [] })).toBeNull();
   });
+});
+
+describe("the end of the month", () => {
+  const at = (today: string, o: { reportExists?: boolean; lastDayCovered?: boolean; hasSales?: boolean } = {}) =>
+    monthStep({ today, reportExists: false, lastDayCovered: false, hasSales: true, ...o });
+
+  test("last day: ask for the month's export; 1st and 3rd: remind; once it's in (or the 4th): make it; then nothing", () => {
+    expect(at("2026-11-30")).toEqual({ kind: "ask", month: "2026-11" });
+    expect(at("2026-02-28")).toEqual({ kind: "ask", month: "2026-02" });
+    expect(at("2026-12-01")).toEqual({ kind: "remind", month: "2026-11" });
+    expect(at("2026-12-02")).toEqual({ kind: "none" }); // no nagging every day
+    expect(at("2026-12-03")).toEqual({ kind: "remind", month: "2026-11" });
+    expect(at("2026-12-04")).toEqual({ kind: "make", month: "2026-11" }); // with what there is
+    expect(at("2026-12-02", { lastDayCovered: true })).toEqual({ kind: "make", month: "2026-11" });
+    expect(at("2026-12-02", { lastDayCovered: true, reportExists: true })).toEqual({ kind: "none" });
+    expect(at("2026-12-05")).toEqual({ kind: "none" });
+    expect(at("2026-11-15")).toEqual({ kind: "none" });
+  });
+
+  test("a restaurant that never sends sales isn't asked", () => {
+    expect(at("2026-11-30", { hasSales: false })).toEqual({ kind: "none" });
+    expect(at("2026-12-04", { hasSales: false })).toEqual({ kind: "none" });
+  });
+
+  test("the prompts say how to export from Square and where to upload; no dashes", () => {
+    const ask = monthPrompt({ kind: "ask", month: "2026-11" }, "https://app.dinerai.co.uk/sales?r=x");
+    expect(ask).toMatch(/^📊 Tomorrow I'll write your November report/);
+    expect(ask).toContain("Item sales");
+    expect(ask).toContain("https://app.dinerai.co.uk/sales?r=x");
+    const remind = monthPrompt({ kind: "remind", month: "2026-11" }, "u");
+    expect(remind).toMatch(/If it isn't in by the 4th/);
+    for (const t of [ask, remind]) expect(t).not.toMatch(/[—–]/);
+  });
+
+  test("MONTHLY REPORT: last month, or the latest finished month with that name", () => {
+    expect(parseCommand("monthly report", 1)).toEqual({ name: "monthly_report", month: null });
+    expect(parseCommand("Monthly", 1)).toEqual({ name: "monthly_report", month: null });
+    expect(parseCommand("MONTHLY REPORT SEPTEMBER", 1)).toEqual({ name: "monthly_report", month: 9 });
+    expect(parseCommand("monthly report sept", 1)).toEqual({ name: "monthly_report", month: 9 });
+    expect(parseCommand("monthly report for oct", 1)).toEqual({ name: "monthly_report", month: 10 });
+    expect(parseCommand("monthly report banana", 1)).toBeNull();
+    expect(monthFor("2026-11-02", null)).toBe("2026-10");
+    expect(monthFor("2026-11-02", 10)).toBe("2026-10");
+    expect(monthFor("2026-11-02", 11)).toBe("2025-11"); // this November isn't finished
+    expect(monthFor("2026-11-02", 12)).toBe("2025-12");
+  });
+
+  test("the PDF renders (October, every section) and the WhatsApp line carries the headline and link", async () => {
+    const { renderMonthlyPdf } = await import("@/lib/report/monthly-pdf");
+    const figures = monthlyFigures({ data: pilotData(), month: "2026-10", calendar: [] })!;
+    const data: MonthlyReportData = {
+      kind: "monthly",
+      version: 1,
+      restaurant: { name: "Maison Noor", brandColor: "#c8a24a", brandDark: "#1d1a14" },
+      figures,
+      words: { headline: "£40,000 net in October.", summary: "A steady month.", actions: [1, 2, 3].map((i) => ({ title: `Action ${i}`, why: "Because.", message: "Do it" })) },
+      whatsappNumber: "14155238886",
+      simulated: null,
+    };
+    const pdf = await renderMonthlyPdf(data);
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(pdf.length).toBeGreaterThan(3000);
+    expect(monthlyWhatsApp(data, "https://x/report/t")).toBe("📊 *October 2026 at Maison Noor*\n£40,000 net in October.\n🔗 https://x/report/t");
+  }, 30_000);
 });
