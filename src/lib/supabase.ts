@@ -109,6 +109,7 @@ export type Restaurant = {
   // Sales and weather (step 15).
   latitude: number | null;
   longitude: number | null;
+  benchmark_opt_out?: boolean; // left out of nearby comparisons (and gets none); migration 057
   weather_backfilled_at: string | null;
   last_weather_on: string | null;
   // Agent organisation, phase 1 (017, 018): each agent's mode, and profile v1.

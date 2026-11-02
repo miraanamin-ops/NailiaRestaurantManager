@@ -12,6 +12,7 @@ import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 import { clip, noEmDash } from "@/lib/text";
 import { daysOf, fallbackWords, monthlyFacts, monthlyFigures, monthlyWhatsApp, monthName, monthPrompt, monthStep, previousMonth, isMonthly, type CalendarDay, type MonthlyReportData, type MonthlyWords } from "./monthly-rules";
 import { REPORT_LINK_DAYS } from "./types";
+import { benchmarkFacts } from "./benchmark-rules";
 
 // The monthly report (plan: docs/monthly-report.md). The numbers are plain code
 // (monthly-rules.ts); Claude writes the headline, one summary sentence and three
@@ -97,7 +98,13 @@ export async function findMonthlyReport(restaurantId: string, month: string) {
 export async function createMonthlyReport(r: Restaurant, month: string) {
   const figures = await monthlyFiguresFor(r, month);
   if (!figures) return null;
-  const words = await writeWords(r, monthlyFacts(figures, r.name), r.discount_cap_percent).catch((err) => {
+  const { benchmarkFor } = await import("./benchmark");
+  const benchmark = await benchmarkFor(r, month, figures).catch((err) => {
+    console.error("Monthly report: nearby comparison failed; left out", err);
+    return null;
+  });
+  const facts = [monthlyFacts(figures, r.name), benchmark ? benchmarkFacts(benchmark) : ""].filter(Boolean).join("\n");
+  const words = await writeWords(r, facts, r.discount_cap_percent).catch((err) => {
     console.error("Monthly report words failed; using code's own", err);
     const f = fallbackWords(figures);
     return { headline: f.headline, highlights: f.highlights, actions: f.actions.map((a) => ({ title: a, why: "", message: a })) };
@@ -108,6 +115,7 @@ export async function createMonthlyReport(r: Restaurant, month: string) {
     restaurant: { name: r.name, brandColor: r.brand_color ?? "#c8f03c", brandDark: r.brand_dark ?? "#0b0c0a" },
     figures,
     words,
+    benchmark,
     whatsappNumber: r.whatsapp_from?.replace(/\D/g, "") || null,
     simulated: simulationOn(r) ? simulatedLabel(londonLongDate(new Date(r.fake_now!))) : null,
   };

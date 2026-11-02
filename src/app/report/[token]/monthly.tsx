@@ -1,5 +1,6 @@
 import { gbp, highlightsOf, labourLine, MONTHLY_FOOTNOTE, notIncluded, ordinal, type MonthlyReportData } from "@/lib/report/monthly-rules";
 import { whatsappLink } from "@/lib/report/types";
+import { benchmarkTitle, STAND } from "@/lib/report/benchmark-rules";
 
 // The monthly report on the owner's phone (the same content as its PDF): numbers and
 // charts, the 3 or 4 key messages about them, then three actions.
@@ -122,6 +123,34 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
               )}
               {f.reviews && <Tile value={String(f.reviews.count)} label={`new Google reviews${f.reviews.average ? `, ${f.reviews.average} stars average` : ""}`} />}
             </div>
+          </Card>
+        )}
+
+        {data.benchmark && (
+          <Card title="How you compare nearby">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-stone-500">
+                  <th className="pb-2 font-normal" />
+                  <th className="pb-2 text-right font-normal">You</th>
+                  <th className="pb-2 text-right font-normal">Nearby</th>
+                  <th className="pb-2 text-right font-normal">Where you stand</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.benchmark.rows.map((r) => (
+                  <tr key={r.key} className="border-t border-stone-100">
+                    <td className="py-2 pr-2 text-stone-600">{r.label}</td>
+                    <td className="py-2 text-right font-semibold tabular-nums">{r.you}</td>
+                    <td className="py-2 text-right tabular-nums">{r.nearby}</td>
+                    <td className="py-2 pl-2 text-right text-xs font-medium" style={{ color: STAND[r.position] }}>
+                      {r.position}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-3 text-xs text-stone-500">{benchmarkTitle(data.benchmark)}. Nearby = the middle restaurant (median); no restaurant&apos;s own figures are shown.</p>
           </Card>
         )}
 

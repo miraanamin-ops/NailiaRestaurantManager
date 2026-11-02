@@ -8,6 +8,7 @@
 // Each section is left out (with what would unlock it) when its data isn't there.
 
 import type { MetricsData } from "@/lib/agents/insights-metrics";
+import type { Benchmark } from "./benchmark-rules";
 
 export type CalendarDay = { day: string; name: string; type: string };
 
@@ -297,7 +298,8 @@ export function fallbackHighlights(f: MonthlyFigures): Highlight[] {
     out.push({ title: `${FULL_DAY[best.weekday]} is your big day`, detail: `${gbp(best.avg!)} on average, against ${gbp(worst.avg!)} on a ${FULL_DAY[worst.weekday]}.` });
   }
   if (f.dishes) out.push({ title: `${f.dishes.top[0].item} leads the menu`, detail: `${gbp(f.dishes.top[0].amount)} this month; your top 3 dishes are ${f.dishes.topShare}% of dish sales.` });
-  const m = f.movers.find((x) => !x.reason.startsWith("No obvious"));
+  // (Reports made before the reason fix can hold a very long list: never shown.)
+  const m = f.movers.find((x) => !x.reason.startsWith("No obvious") && x.reason.length <= 80);
   if (m) out.push({ title: `${m.label}: ${m.diff >= 0 ? "+" : "-"}${gbp(Math.abs(m.diff))} on a usual day`, detail: `${m.reason}.` });
   else if (f.closures.length) out.push({ title: `${f.closures.length} day${f.closures.length === 1 ? "" : "s"} with no sales`, detail: `Worth about ${gbp(f.closures.reduce((s, x) => s + x.usual, 0))} on usual days.` });
   return out.slice(0, 4);
@@ -315,6 +317,8 @@ export type MonthlyReportData = {
   restaurant: { name: string; brandColor: string; brandDark: string };
   figures: MonthlyFigures;
   words: MonthlyWords;
+  // How you compare nearby (benchmark-rules.ts); absent or null: not enough restaurants nearby.
+  benchmark?: Benchmark | null;
   // The WhatsApp number the action buttons open a chat with (digits only), if known.
   whatsappNumber: string | null;
   simulated: string | null;

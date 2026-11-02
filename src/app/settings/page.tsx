@@ -11,14 +11,14 @@ import { button, Card, Frame, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { dryRunContext, googleDryRun } from "@/lib/gate-rules";
-import { saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
+import { saveBenchmark, saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
 import { BillingBanner, BillingCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 import { OutsideDataCard, TeamsCard } from "./outside-cards";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
-const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked on WhatsApp.", teams: "✅ Teams saved." };
+const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked on WhatsApp.", teams: "✅ Teams saved.", benchmark: "✅ Nearby comparison saved." };
 
 // Change anything set up during onboarding. (Or just message Naila on WhatsApp:
 // "change Friday hours to 11pm", "add lamb chops, £14".)
@@ -200,6 +200,22 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           <a href={`/export/customers?r=${restaurantId}`} className={button}>
             Download customer list (CSV)
           </a>
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-bold">Nearby comparison</h2>
+          <form action={saveBenchmark} className="space-y-4">
+            <input type="hidden" name="r" value={restaurantId} />
+            <label className="flex items-start gap-3 text-sm">
+              <input name="benchmark" type="checkbox" value="yes" defaultChecked={!r.benchmark_opt_out} className="mt-0.5 h-5 w-5" />
+              <span>
+                Compare my month with other DinerAI restaurants nearby in my monthly report. Only the middle figure of 5 or more restaurants is ever shown, never any
+                restaurant&apos;s name or own numbers. If you switch this off, your figures are left out of everyone&apos;s comparison and your report doesn&apos;t
+                get one either.
+              </span>
+            </label>
+            <button className={button}>Save</button>
+          </form>
         </Card>
 
         <Card>

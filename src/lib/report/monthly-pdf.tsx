@@ -3,6 +3,7 @@ import { Document, Link, Page, Rect, renderToBuffer, StyleSheet, Svg, Text, View
 import { gbp, highlightsOf, labourLine, MONTHLY_FOOTNOTE, notIncluded, ordinal, type MonthlyReportData } from "./monthly-rules";
 import { clean } from "./pdf";
 import { whatsappLink } from "./types";
+import { benchmarkTitle, STAND, type Benchmark } from "./benchmark-rules";
 
 // The monthly report as an A4 PDF in the restaurant's colours: the file the owner
 // gets on WhatsApp and by email each month. Numbers and charts first, then the AI's
@@ -93,6 +94,31 @@ function Tile({ value, label, color }: { value: string; label: string; color?: s
   );
 }
 
+// "How you compare nearby": medians only (benchmark-rules.ts).
+function Nearby({ b }: { b: Benchmark }) {
+  const cell = { fontSize: 8.5, paddingVertical: 4 };
+  return (
+    <View style={s.block} wrap={false}>
+      <Text style={s.h2}>How you compare nearby</Text>
+      <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: LINE }}>
+        <Text style={[cell, { flex: 3, color: FAINT }]}> </Text>
+        <Text style={[cell, { flex: 1, color: FAINT, textAlign: "right" }]}>You</Text>
+        <Text style={[cell, { flex: 1, color: FAINT, textAlign: "right" }]}>Nearby</Text>
+        <Text style={[cell, { flex: 1.6, color: FAINT, textAlign: "right" }]}>Where you stand</Text>
+      </View>
+      {b.rows.map((r) => (
+        <View key={r.key} style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: LINE }}>
+          <Text style={[cell, { flex: 3, color: SOFT }]}>{clean(r.label)}</Text>
+          <Text style={[cell, { flex: 1, textAlign: "right", fontFamily: "Helvetica-Bold" }]}>{clean(r.you)}</Text>
+          <Text style={[cell, { flex: 1, textAlign: "right" }]}>{clean(r.nearby)}</Text>
+          <Text style={[cell, { flex: 1.6, textAlign: "right", color: STAND[r.position] }]}>{r.position}</Text>
+        </View>
+      ))}
+      <Text style={s.note}>{clean(`${benchmarkTitle(b)}. Nearby = the middle restaurant (median); no restaurant's own figures are shown.`)}</Text>
+    </View>
+  );
+}
+
 function MonthlyPdf({ data }: { data: MonthlyReportData }) {
   const f = data.figures;
   const brand = data.restaurant.brandColor;
@@ -156,6 +182,8 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
               {f.reviews ? <Tile value={String(f.reviews.count)} label={`new Google reviews${f.reviews.average ? `, ${f.reviews.average} stars average` : ""}`} /> : null}
             </View>
           ) : null}
+
+          {data.benchmark ? <Nearby b={data.benchmark} /> : null}
 
           <View style={s.block} wrap={false}>
             <Text style={s.h2}>Three things for next month</Text>

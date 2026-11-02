@@ -43,3 +43,31 @@ This runs in the morning job (`src/lib/morning.ts`) with the rules in `monthStep
 - **Links:**
   - The page and its "Download PDF" (`/report/<token>/pdf`) need the owner's login.
   - WhatsApp's copy comes from `/api/report-pdf/<token>?s=…`, a signed link that lasts 7 days, because Twilio can't log in.
+
+## How you compare nearby
+
+A table in the report comparing the month with other DinerAI restaurants nearby. Code: `src/lib/report/benchmark-rules.ts` (pure, tested in `tests/benchmark.test.ts`) and `benchmark.ts` (loading).
+
+**What's compared:**
+- takings vs last month, like for like;
+- vs the same month last year;
+- new 4 and 5 star Google reviews;
+- Google rating;
+- reviews replied to;
+- average order.
+
+Each row shows you, the nearby median, and where you stand (top quarter, above most, about the same, below most, bottom quarter). The comparison also goes into Claude's facts, so a key message can use it.
+
+**Who's in the group:**
+- Live restaurants within 1 mile, widening to 2 and then 3 miles until there are at least 5 others. Otherwise there's no section.
+- Real restaurants only with real ones; demo and test sites only with each other.
+- Distance comes from `restaurants.latitude` and `longitude`, which the location feed fills from the postcode.
+
+**Privacy rules:**
+- Only medians are shown, never another restaurant's name or own figure.
+- At least 5 others with a figure for every row, or the row is hidden. Your own figure must exist too.
+- Takings are compared as % changes only; average order is the one £ median.
+- Opting out: settings has a "Nearby comparison" switch, on by default, stored in `restaurants.benchmark_opt_out` (migration 057). Opting out leaves the restaurant out of everyone's comparison, and its own report gets none. UNDO reverses it.
+- The terms (the DPA) must allow combined, anonymised use of figures before this is shown to real owners.
+
+**Later:** comparing Google ratings with all restaurants nearby, not just DinerAI ones, using Places data. This waits until Google's storage terms and the cost have been checked.

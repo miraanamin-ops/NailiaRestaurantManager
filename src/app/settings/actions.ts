@@ -14,7 +14,7 @@ import type { AgentName } from "@/lib/agents/definition";
 import { goLiveChecklistFor, promptOwnerForGoLive } from "@/lib/agents/go-live";
 import { GO_LIVE_FIELDS } from "@/lib/profile/fields";
 import { agentMode, MODES_AVAILABLE } from "@/lib/agents/modes";
-import { logAction } from "@/lib/audit";
+import { logAction, logSetting } from "@/lib/audit";
 import { check } from "@/lib/drafts";
 import { entryProblems } from "@/lib/local-calendar-rules";
 import { OFFER_TYPES } from "@/lib/offers";
@@ -297,4 +297,16 @@ export async function openBilling(form: FormData) {
   if (!url) redirect(`/settings?r=${restaurantId}&error=${encodeURIComponent("Couldn't open billing just now. Please try again.")}`);
   await logAction({ restaurantId, actor: "owner", action: "billing", detail: "Opened Manage billing" });
   redirect(url!);
+}
+
+// "Include my restaurant in nearby comparisons" (the monthly report). Off also hides
+// the comparison from their own report.
+export async function saveBenchmark(form: FormData) {
+  const r = await own(String(form.get("r") ?? ""));
+  const optOut = form.get("benchmark") !== "yes";
+  if (optOut === !!r.benchmark_opt_out) back(r.id, "saved=benchmark");
+  const { error } = await getSupabase().from("restaurants").update({ benchmark_opt_out: optOut }).eq("id", r.id);
+  if (error) back(r.id, `error=${encodeURIComponent("Couldn't save that yet: the database needs a quick update first.")}`);
+  await logSetting(r.id, "benchmark_opt_out", !!r.benchmark_opt_out, optOut, optOut ? "Left nearby comparisons" : "Joined nearby comparisons");
+  back(r.id, "saved=benchmark");
 }

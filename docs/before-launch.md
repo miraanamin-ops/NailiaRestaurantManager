@@ -65,3 +65,4 @@ What needs no outside service, and so no decision:
 ## Legal documents owners accept at sign-up
 
 - **Data processing agreement** (`/dpa`, `src/app/site/dpa/page.tsx`, version in `DPA_VERSION`): a plain-English **draft** written with onboarding with Dina (28 Oct 2026). Have someone qualified check it (with the terms and the privacy notice) before the first real restaurant signs. Changing it means a new `DPA_VERSION`; each restaurant keeps the version it accepted (`restaurants.dpa_version`).
+- **Nearby comparison in the monthly report** (`docs/monthly-report.md`): the DPA and terms must say we may use each restaurant's figures, anonymised and combined, as medians of 5 or more restaurants, with an opt-out in settings. It shows automatically once 5 real restaurants are within 3 miles of each other, so settle this before then.

@@ -39,6 +39,7 @@ const SETTINGS = [
   "tagline",
   "reply_to_email",
   "feedback_emails",
+  "benchmark_opt_out",
   // Profile v1 (settings page)
   "sign_off_name",
   "greeting",
