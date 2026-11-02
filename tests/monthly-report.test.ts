@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import type { MetricsData } from "@/lib/agents/insights-metrics";
-import { daysOf, fallbackWords, monthFor, monthlyFacts, monthlyFigures, monthlyWhatsApp, monthPrompt, monthStep, previousMonth, type MonthlyReportData } from "@/lib/report/monthly-rules";
+import { daysOf, fallbackHighlights, fallbackWords, monthFor, notIncluded, monthlyFacts, monthlyFigures, monthlyWhatsApp, monthPrompt, monthStep, previousMonth, type MonthlyReportData } from "@/lib/report/monthly-rules";
 import { parseCommand } from "@/lib/bot/parse";
 import { parseCsv } from "@/lib/sales/pos-table";
 
@@ -109,6 +109,26 @@ describe("the month's numbers", () => {
     for (const t of [facts, words.headline, ...words.actions]) expect(t).not.toMatch(/[—–]/);
   });
 
+  test("only real causes count as a day's reason: not the hundreds of shows in the events feed, and each name once", () => {
+    const shard = Array.from({ length: 40 }, () => ({ day: "2026-10-30", name: "The View from The Shard (The View from The Shard)", type: "local_event" }));
+    const calendar = [...shard, { day: "2026-10-30", name: "Arsenal v Leeds", type: "football" }, { day: "2026-10-30", name: "Payday (last working day)", type: "payday" }, { day: "2026-10-30", name: "Half term (Redbridge)", type: "school_holiday" }, { day: "2026-10-30", name: "Half term (Newham)", type: "school_holiday" }];
+    const f = monthlyFigures({ data: pilotData({ withItems: false, withHours: false }), month: "2026-10", calendar })!;
+    const fri = f.movers.find((m) => m.day === "2026-10-30");
+    expect(fri?.reason).toBe("Payday, Half term");
+    const plain = monthlyFigures({ data: pilotData({ withItems: false, withHours: false }), month: "2026-10", calendar: shard })!;
+    expect(plain.movers.find((m) => m.day === "2026-10-30")?.reason).toMatch(/^No obvious reason/);
+  });
+
+  test("code's own key messages: 3 or 4, none repeating the headline numbers", () => {
+    const f = monthlyFigures({ data: pilotData(), month: "2026-10", calendar: [] })!;
+    const h = fallbackHighlights(f);
+    expect(h.length).toBeGreaterThanOrEqual(3);
+    expect(h.length).toBeLessThanOrEqual(4);
+    expect(h.map((x) => x.title)).toEqual(expect.arrayContaining([expect.stringMatching(/ is your big day$/), expect.stringMatching(/ leads the menu$/)]));
+    expect(h.some((x) => x.detail.includes(f.orders!.toLocaleString("en-GB")))).toBe(false);
+    expect(notIncluded(f)).toMatch(/^Not included yet: compared with October 2025/);
+  });
+
   test("a month with no figures at all has no report", () => {
     expect(monthlyFigures({ data: pilotData(), month: "2027-01", calendar: [] })).toBeNull();
   });
@@ -164,10 +184,10 @@ describe("the end of the month", () => {
     const figures = monthlyFigures({ data: pilotData(), month: "2026-10", calendar: [] })!;
     const data: MonthlyReportData = {
       kind: "monthly",
-      version: 1,
+      version: 2,
       restaurant: { name: "Maison Noor", brandColor: "#c8a24a", brandDark: "#1d1a14" },
       figures,
-      words: { headline: "£40,000 net in October.", summary: "A steady month.", actions: [1, 2, 3].map((i) => ({ title: `Action ${i}`, why: "Because.", message: "Do it" })) },
+      words: { headline: "£40,000 net in October.", highlights: [{ title: "Saturday is your big day", detail: "£2,849 on average." }], actions: [1, 2, 3].map((i) => ({ title: `Action ${i}`, why: "Because.", message: "Do it" })) },
       whatsappNumber: "14155238886",
       simulated: null,
     };

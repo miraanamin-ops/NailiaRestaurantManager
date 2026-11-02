@@ -30,8 +30,10 @@ const nextMonthFirst = (month: string) => {
 };
 
 const WordsSchema = z.object({
-  headline: z.string().describe("Two short sentences for WhatsApp: the month's takings and the main reason, plainly. No emojis."),
-  summary: z.string().describe("One sentence on the month for the top of the report."),
+  headline: z.string().describe("One short sentence for WhatsApp: the month's net takings and the like for like change on last month. No emojis, no explaining how the comparison works."),
+  highlights: z
+    .array(z.object({ title: z.string().describe("The message in at most 8 words, with its number"), detail: z.string().describe("One short sentence: the evidence or what it means") }))
+    .describe("The 3 or 4 most important things the owner should take from the month, most important first. Each about something different; never repeat a number another highlight or the headline already gives."),
   actions: z
     .array(z.object({ title: z.string().describe("The action in a few words"), why: z.string().describe("Why, from the numbers, in one short sentence"), message: z.string().describe("What the owner would send their WhatsApp assistant to start it") }))
     .describe("Exactly 3 actions for next month"),
@@ -45,6 +47,8 @@ async function writeWords(r: Restaurant, facts: string, capPercent: number): Pro
     output_config: { effort: "medium", format: betaZodOutputFormat(WordsSchema) },
     system: `You write the monthly report for the owner of ${r.name}, a ${r.cuisine ?? "restaurant"}. The owner reads it on their phone: plain British English, short, specific, no jargon, no hype, no dashes as punctuation.
 
+The report shows the numbers as charts; your highlights say what they mean. Pick what matters most to running the business (a trend, the shape of the week, a dish, a day that stood out for a real reason, staff cost against target, reviews), not a list of every figure.
+
 Only use the facts you're given. Never invent numbers, dishes or events. Comparisons are "like for like" (adjusted for the month's mix of weekdays): use those. When a day's reason is "No obvious reason", don't make one up.
 
 Actions must be things the owner's WhatsApp assistant can start now: an email campaign with an offer within a ${capPercent}% discount cap, a Google post about a dish, offer or event, a change to the menu or opening hours, replying to reviews, or a staffing change in next month's rotas. Each "message" is written as the owner talking to the assistant, ready to send.`,
@@ -54,10 +58,12 @@ Actions must be things the owner's WhatsApp assistant can start now: an email ca
   const out = response.parsed_output;
   const actions = out.actions.filter((a) => a.title.trim() && a.message.trim()).slice(0, 3);
   if (actions.length < 3) throw new Error("Fewer than 3 actions");
+  const highlights = out.highlights.filter((h) => h.title.trim()).slice(0, 4);
+  if (highlights.length < 3) throw new Error("Fewer than 3 highlights");
   const tidy = (t: string, n: number) => clip(noEmDash(t.trim()), n);
   return {
-    headline: tidy(out.headline, 280),
-    summary: tidy(out.summary, 220),
+    headline: tidy(out.headline, 200),
+    highlights: highlights.map((h) => ({ title: tidy(h.title, 70), detail: tidy(h.detail, 160) })),
     actions: actions.map((a) => ({ title: tidy(a.title, 70), why: tidy(a.why, 160), message: tidy(a.message, 300) })),
   };
 }
@@ -94,11 +100,11 @@ export async function createMonthlyReport(r: Restaurant, month: string) {
   const words = await writeWords(r, monthlyFacts(figures, r.name), r.discount_cap_percent).catch((err) => {
     console.error("Monthly report words failed; using code's own", err);
     const f = fallbackWords(figures);
-    return { headline: f.headline, summary: f.headline, actions: f.actions.map((a) => ({ title: a, why: "", message: a })) };
+    return { headline: f.headline, highlights: f.highlights, actions: f.actions.map((a) => ({ title: a, why: "", message: a })) };
   });
   const data: MonthlyReportData = {
     kind: "monthly",
-    version: 1,
+    version: 2,
     restaurant: { name: r.name, brandColor: r.brand_color ?? "#c8f03c", brandDark: r.brand_dark ?? "#0b0c0a" },
     figures,
     words,

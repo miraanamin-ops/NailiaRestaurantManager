@@ -1,40 +1,51 @@
 import "server-only";
 import { Document, Link, Page, Rect, renderToBuffer, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
-import { changeLine, gbp, labourLine, MONTHLY_FOOTNOTE, ordinal, type MonthlyReportData } from "./monthly-rules";
+import { gbp, highlightsOf, labourLine, MONTHLY_FOOTNOTE, notIncluded, ordinal, type MonthlyReportData } from "./monthly-rules";
 import { clean } from "./pdf";
 import { whatsappLink } from "./types";
 
 // The monthly report as an A4 PDF in the restaurant's colours: the file the owner
-// gets on WhatsApp and by email each month. Same content as the web page.
+// gets on WhatsApp and by email each month. Numbers and charts first, then the AI's
+// 3 or 4 key messages about them, then three actions. Same content as the web page.
 
 const INK = "#1c1917";
 const SOFT = "#57534e";
 const FAINT = "#78716c";
 const LINE = "#e7e5e4";
+const TILE = "#f5f5f4";
 const GOOD = "#047857";
 const BAD = "#b91c1c";
 const MUTED = "#d6d3d1";
 
 const s = StyleSheet.create({
   page: { paddingTop: 32, paddingBottom: 40, fontFamily: "Helvetica", fontSize: 10, color: INK, backgroundColor: "#ffffff" },
-  header: { marginTop: -32, paddingHorizontal: 40, paddingTop: 32, paddingBottom: 24, color: "#ffffff" },
+  header: { marginTop: -32, paddingHorizontal: 40, paddingTop: 30, paddingBottom: 22, color: "#ffffff" },
   accent: { width: 28, height: 3, borderRadius: 2, marginBottom: 10 },
   small: { fontSize: 9, color: "#d6d3d1" },
   title: { fontSize: 22, fontFamily: "Helvetica-Bold", marginTop: 4 },
-  body: { paddingHorizontal: 40, paddingTop: 20 },
-  section: { marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: LINE },
-  h2: { fontSize: 9, fontFamily: "Helvetica-Bold", color: FAINT, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" },
-  sentence: { fontSize: 14, fontFamily: "Helvetica-Bold", lineHeight: 1.35, marginBottom: 6 },
-  row: { flexDirection: "row", gap: 14 },
-  stat: { flex: 1 },
+  body: { paddingHorizontal: 40, paddingTop: 18 },
+  block: { marginBottom: 16 },
+  h2: { fontSize: 8.5, fontFamily: "Helvetica-Bold", color: FAINT, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" },
+  tiles: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  tile: { flex: 1, backgroundColor: TILE, borderRadius: 6, padding: 10 },
   value: { fontSize: 18, fontFamily: "Helvetica-Bold" },
-  label: { fontSize: 9, color: SOFT, marginTop: 1 },
-  h3: { fontSize: 10, fontFamily: "Helvetica-Bold", marginBottom: 4 },
-  item: { fontSize: 9.5, color: SOFT, marginBottom: 3, lineHeight: 1.35 },
-  action: { flexDirection: "row", gap: 10, marginBottom: 10 },
-  num: { width: 18, height: 18, borderRadius: 9, color: "#ffffff", fontSize: 9, fontFamily: "Helvetica-Bold", textAlign: "center", paddingTop: 4 },
-  link: { fontSize: 9, marginTop: 3, textDecoration: "none" },
-  footnote: { fontSize: 8, color: FAINT, lineHeight: 1.35 },
+  label: { fontSize: 8.5, color: SOFT, marginTop: 2 },
+  highlights: { borderLeftWidth: 3, paddingLeft: 12, paddingVertical: 2, marginBottom: 18 },
+  hlItem: { marginBottom: 7 },
+  hlTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", lineHeight: 1.3 },
+  hlDetail: { fontSize: 9.5, color: SOFT, lineHeight: 1.35, marginTop: 1 },
+  axis: { flexDirection: "row", justifyContent: "space-between", marginTop: 2, fontSize: 7.5, color: FAINT },
+  barRow: { flexDirection: "row", alignItems: "center", marginBottom: 3 },
+  barLabel: { width: 110, fontSize: 8.5, color: SOFT },
+  barTrack: { flex: 1, height: 7, backgroundColor: TILE },
+  barValue: { width: 52, fontSize: 8.5, textAlign: "right" },
+  note: { fontSize: 8.5, color: SOFT, marginTop: 5 },
+  action: { flexDirection: "row", gap: 10, marginBottom: 8 },
+  num: { width: 16, height: 16, borderRadius: 8, color: "#ffffff", fontSize: 8.5, fontFamily: "Helvetica-Bold", textAlign: "center", paddingTop: 3.5 },
+  aTitle: { fontSize: 10, fontFamily: "Helvetica-Bold" },
+  aWhy: { fontSize: 9, color: SOFT, lineHeight: 1.35, marginTop: 1 },
+  link: { fontSize: 8.5, marginTop: 2, color: INK },
+  footnote: { fontSize: 7.5, color: FAINT, lineHeight: 1.35, marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: LINE },
   footer: { position: "absolute", bottom: 18, left: 40, right: 40, fontSize: 8, color: FAINT, flexDirection: "row", justifyContent: "space-between" },
 });
 
@@ -42,11 +53,11 @@ const W = 515; // A4 width less the margins
 
 // One bar per day of the month (grey where there were no sales).
 function DailyBars({ daily, brand }: { daily: { day: string; net: number | null }[]; brand: string }) {
-  const h = 70;
+  const h = 60;
   const max = Math.max(1, ...daily.map((d) => d.net ?? 0));
   const step = W / daily.length;
   return (
-    <Svg width={W} height={h + 2}>
+    <Svg width={W} height={h}>
       {daily.map((d, i) => {
         const v = d.net ?? 0;
         const bh = v > 0 ? Math.max(2, (v / max) * h) : 2;
@@ -56,19 +67,28 @@ function DailyBars({ daily, brand }: { daily: { day: string; net: number | null 
   );
 }
 
-function HBars({ rows, brand, format = gbp }: { rows: { label: string; value: number }[]; brand: string; format?: (n: number) => string }) {
+function HBars({ rows, brand }: { rows: { label: string; value: number }[]; brand: string }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <View>
       {rows.map((r) => (
-        <View key={r.label} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
-          <Text style={{ width: 120, fontSize: 9, color: SOFT }}>{clean(r.label)}</Text>
-          <View style={{ flex: 1, height: 8, backgroundColor: "#f5f5f4" }}>
-            <View style={{ width: `${Math.max(1, (r.value / max) * 100)}%`, height: 8, backgroundColor: brand }} />
+        <View key={r.label} style={s.barRow}>
+          <Text style={s.barLabel}>{clean(r.label)}</Text>
+          <View style={s.barTrack}>
+            <View style={{ width: `${Math.max(1, (r.value / max) * 100)}%`, height: 7, backgroundColor: brand }} />
           </View>
-          <Text style={{ width: 60, fontSize: 9, textAlign: "right" }}>{format(r.value)}</Text>
+          <Text style={s.barValue}>{gbp(r.value)}</Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+function Tile({ value, label, color }: { value: string; label: string; color?: string }) {
+  return (
+    <View style={s.tile}>
+      <Text style={[s.value, color ? { color } : {}]}>{clean(value)}</Text>
+      <Text style={s.label}>{clean(label)}</Text>
     </View>
   );
 }
@@ -77,6 +97,8 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
   const f = data.figures;
   const brand = data.restaurant.brandColor;
   const lfl = f.vsLastMonth?.likeForLike;
+  const yoy = f.vsLastYear?.likeForLike;
+  const left = notIncluded(f);
   return (
     <Document title={`${data.restaurant.name} ${f.label} report`} author={data.restaurant.name}>
       <Page size="A4" style={s.page}>
@@ -87,94 +109,55 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
           {data.simulated ? <Text style={[s.small, { marginTop: 6, color: "#fcd34d" }]}>{clean(data.simulated)}</Text> : null}
         </View>
         <View style={s.body}>
-          <View style={s.section} wrap={false}>
-            <Text style={s.sentence}>{clean(data.words.headline)}</Text>
-            {data.words.summary !== data.words.headline ? <Text style={s.item}>{clean(data.words.summary)}</Text> : null}
-            <View style={[s.row, { marginTop: 8 }]}>
-              <View style={s.stat}>
-                <Text style={s.value}>{gbp(f.net)}</Text>
-                <Text style={s.label}>net takings, {f.traded} trading days</Text>
+          <View style={s.tiles}>
+            <Tile value={gbp(f.net)} label={`net takings, ${f.traded} trading days`} />
+            {f.orders ? <Tile value={f.orders.toLocaleString("en-GB")} label={`orders, ${gbp(f.avgOrder ?? 0)} average`} /> : null}
+            {lfl != null ? <Tile value={`${lfl >= 0 ? "+" : "-"}${Math.abs(lfl)}%`} label={`vs ${f.vsLastMonth!.label.split(" ")[0]}, like for like`} color={lfl >= 0 ? GOOD : BAD} /> : null}
+            {yoy != null ? <Tile value={`${yoy >= 0 ? "+" : "-"}${Math.abs(yoy)}%`} label={`vs ${f.vsLastYear!.label}`} color={yoy >= 0 ? GOOD : BAD} /> : null}
+          </View>
+
+          <View style={[s.highlights, { borderLeftColor: brand }]}>
+            <Text style={s.h2}>What stood out</Text>
+            {highlightsOf(data).map((h) => (
+              <View key={h.title} style={s.hlItem}>
+                <Text style={s.hlTitle}>{clean(h.title)}</Text>
+                {h.detail ? <Text style={s.hlDetail}>{clean(h.detail)}</Text> : null}
               </View>
-              {f.orders ? (
-                <View style={s.stat}>
-                  <Text style={s.value}>{f.orders.toLocaleString("en-GB")}</Text>
-                  <Text style={s.label}>orders, {gbp(f.avgOrder ?? 0)} average</Text>
-                </View>
-              ) : null}
-              {lfl != null ? (
-                <View style={s.stat}>
-                  <Text style={[s.value, { color: lfl >= 0 ? GOOD : BAD }]}>{`${lfl >= 0 ? "+" : "-"}${Math.abs(lfl)}%`}</Text>
-                  <Text style={s.label}>vs {clean(f.vsLastMonth!.label)}, like for like</Text>
-                </View>
-              ) : null}
-            </View>
-            {f.vsLastMonth ? <Text style={[s.item, { marginTop: 8 }]}>{clean(changeLine(f.vsLastMonth))}.</Text> : null}
-            {f.vsLastYear ? <Text style={s.item}>{clean(changeLine(f.vsLastYear))}.</Text> : null}
+            ))}
           </View>
 
-          <View style={s.section} wrap={false}>
-            <Text style={s.h2}>Day by day</Text>
+          <View style={s.block} wrap={false}>
+            <Text style={s.h2}>Takings day by day</Text>
             <DailyBars daily={f.daily} brand={brand} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
-              <Text style={s.footnote}>1st</Text>
-              <Text style={s.footnote}>{ordinal(f.days)}</Text>
+            <View style={s.axis}>
+              <Text>1st</Text>
+              <Text>{ordinal(f.days)}</Text>
             </View>
           </View>
 
-          {f.movers.length || f.closures.length ? (
-            <View style={s.section} wrap={false}>
-              <Text style={s.h2}>What moved the month</Text>
-              {f.movers.map((m) => (
-                <Text key={m.day} style={s.item}>
-                  {clean(`${m.label}: ${gbp(m.net)}, ${m.diff >= 0 ? "+" : "-"}${gbp(Math.abs(m.diff))} on a usual ${m.label.split(" ")[0]}. ${m.reason}.`)}
-                </Text>
-              ))}
-              {f.closures.map((c) => (
-                <Text key={c.day} style={s.item}>
-                  {clean(`${c.label}: no sales (closed?). A usual day like it takes ${gbp(c.usual)}.`)}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-
-          <View style={s.section} wrap={false}>
-            <Text style={s.h2}>Your week</Text>
-            <HBars rows={f.weekdays.filter((w) => w.avg !== null).map((w) => ({ label: `${w.weekday} (average)`, value: w.avg! }))} brand={brand} />
-            {f.hours ? <Text style={[s.item, { marginTop: 6 }]}>{clean(`Busiest hour: ${f.hours.busiest}. Quietest: ${f.hours.quietest}.`)}</Text> : null}
+          <View style={s.block} wrap={false}>
+            <Text style={s.h2}>Average by weekday</Text>
+            <HBars rows={f.weekdays.filter((w) => w.avg !== null).map((w) => ({ label: w.weekday, value: w.avg! }))} brand={brand} />
+            {f.hours ? <Text style={s.note}>{clean(`Busiest hour: ${f.hours.busiest}. Quietest: ${f.hours.quietest}.`)}</Text> : null}
           </View>
 
           {f.dishes ? (
-            <View style={s.section} wrap={false}>
-              <Text style={s.h2}>Your dishes</Text>
+            <View style={s.block} wrap={false}>
+              <Text style={s.h2}>Top dishes</Text>
               <HBars rows={f.dishes.top.map((d) => ({ label: d.item, value: d.amount }))} brand={brand} />
-              <Text style={[s.item, { marginTop: 6 }]}>{clean(`Your top 3 dishes are ${f.dishes.topShare}% of dish sales.`)}</Text>
-              {f.dishes.rising.length ? <Text style={s.item}>{clean(`Rising: ${f.dishes.rising.map((d) => `${d.item} +${d.change}%`).join(", ")}.`)}</Text> : null}
-              {f.dishes.falling.length ? <Text style={s.item}>{clean(`Falling: ${f.dishes.falling.map((d) => `${d.item} ${d.change}%`).join(", ")}.`)}</Text> : null}
-              {f.dishes.slow.length ? <Text style={s.item}>{clean(`Selling under 5 a week: ${f.dishes.slow.map((d) => d.item).join(", ")}.`)}</Text> : null}
             </View>
           ) : null}
 
           {f.labour || f.reviews ? (
-            <View style={s.section} wrap={false}>
-              <Text style={s.h2}>Staff and reviews</Text>
-              <View style={s.row}>
-                {f.labour ? (
-                  <View style={s.stat}>
-                    <Text style={[s.value, f.labour.target ? { color: f.labour.pct <= f.labour.target ? GOOD : BAD } : {}]}>{f.labour.pct}%</Text>
-                    <Text style={s.label}>{clean(labourLine(f.labour, f.traded))}</Text>
-                  </View>
-                ) : null}
-                {f.reviews ? (
-                  <View style={s.stat}>
-                    <Text style={s.value}>{f.reviews.count}</Text>
-                    <Text style={s.label}>{`new Google reviews${f.reviews.average ? `, ${f.reviews.average} stars average` : ""}`}</Text>
-                  </View>
-                ) : null}
-              </View>
+            <View style={s.tiles} wrap={false}>
+              {f.labour ? (
+                <Tile value={`${f.labour.pct}%`} label={labourLine(f.labour, f.traded)} color={f.labour.target ? (f.labour.pct <= f.labour.target ? GOOD : BAD) : undefined} />
+              ) : null}
+              {f.reviews ? <Tile value={String(f.reviews.count)} label={`new Google reviews${f.reviews.average ? `, ${f.reviews.average} stars average` : ""}`} /> : null}
             </View>
           ) : null}
 
-          <View style={s.section} wrap={false}>
+          <View style={s.block} wrap={false}>
             <Text style={s.h2}>Three things for next month</Text>
             {data.words.actions.map((a, i) => {
               const link = whatsappLink(data.whatsappNumber, a.message);
@@ -182,10 +165,10 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
                 <View key={a.title} style={s.action}>
                   <Text style={[s.num, { backgroundColor: brand }]}>{i + 1}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.h3}>{clean(a.title)}</Text>
-                    {a.why ? <Text style={s.item}>{clean(a.why)}</Text> : null}
+                    <Text style={s.aTitle}>{clean(a.title)}</Text>
+                    {a.why ? <Text style={s.aWhy}>{clean(a.why)}</Text> : null}
                     {link ? (
-                      <Link src={link} style={[s.link, { color: INK }]}>
+                      <Link src={link} style={s.link}>
                         Start in WhatsApp
                       </Link>
                     ) : null}
@@ -195,17 +178,7 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
             })}
           </View>
 
-          {f.missing.length ? (
-            <View style={[s.section, { borderBottomWidth: 0 }]} wrap={false}>
-              <Text style={s.h2}>More next month</Text>
-              {f.missing.map((m) => (
-                <Text key={m} style={s.item}>
-                  {clean(m)}
-                </Text>
-              ))}
-            </View>
-          ) : null}
-          <Text style={s.footnote}>{MONTHLY_FOOTNOTE}</Text>
+          <Text style={s.footnote}>{clean([left, MONTHLY_FOOTNOTE].filter(Boolean).join(" "))}</Text>
         </View>
         <View style={s.footer} fixed>
           <Text>{clean(data.restaurant.name)} · {clean(f.label)}</Text>

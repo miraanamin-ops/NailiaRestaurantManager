@@ -39,6 +39,8 @@ const shiftMonth = (month: string, by: number) => {
 };
 export const monthName = (month: string) => new Date(`${month}-01T12:00:00Z`).toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 
+const NOT_A_REASON = new Set(["local_event", "football", "event", "sport"]);
+
 // Most of the month has figures: it can be compared.
 const COVERED = 0.8;
 
@@ -108,7 +110,11 @@ export function monthlyFigures(input: { data: MetricsData; month: string; calend
 
   // The usual for a day: the median of the same weekday over the 8 weeks before it.
   const usualFor = (day: string) => median(Array.from({ length: 8 }, (_, i) => byDay.get(addDays(day, -7 * (i + 1)))?.net).filter((x): x is number => typeof x === "number"));
-  const calendarOn = (day: string) => input.calendar.filter((c) => c.day === day).map((c) => c.name);
+  // Only dates that move a whole day's trade count as a reason: the events feed lists
+  // every show and attraction in London (hundreds a month), and football fixtures
+  // aren't local. At most two, without repeats ("Half term" once, not per borough).
+  const calendarOn = (day: string) =>
+    [...new Set(input.calendar.filter((c) => c.day === day && !NOT_A_REASON.has(c.type)).map((c) => c.name.replace(/\s*\(.*\)$/, "")))].slice(0, 2);
   const weatherOn = new Map(data.weather.map((w) => [w.day, w]));
   const reasonFor = (day: string, up: boolean) => {
     const named = calendarOn(day);
@@ -274,14 +280,38 @@ export function fallbackWords(f: MonthlyFigures) {
     f.dishes?.slow.length ? `Look again at ${f.dishes.slow[0].item}: it sells under 5 a week.` : "Check your best sellers are easy to find on the menu and on Google.",
     "Reply to every review this month, good and bad.",
   ];
-  return { headline, actions };
+  return { headline, actions, highlights: fallbackHighlights(f) };
 }
 
+// Code's own key messages (3 or 4, each with a different number).
+export function fallbackHighlights(f: MonthlyFigures): Highlight[] {
+  const out: Highlight[] = [];
+  const c = f.vsLastMonth?.likeForLike;
+  out.push({
+    title: c != null ? `${c >= 0 ? "Up" : "Down"} ${Math.abs(c)}% on ${f.vsLastMonth!.label.split(" ")[0]}` : `${gbp(f.net)} in ${f.label.split(" ")[0]}`,
+    detail: f.vsLastMonth ? `${f.vsLastMonth.label.split(" ")[0]} took ${gbp(f.vsLastMonth.net)}, allowing for the mix of weekdays.` : `Over ${f.traded} trading days.`,
+  });
+  const days = f.weekdays.filter((w) => w.avg !== null).sort((a, b) => b.avg! - a.avg!);
+  if (days.length >= 2) {
+    const [best, worst] = [days[0], days.at(-1)!];
+    out.push({ title: `${FULL_DAY[best.weekday]} is your big day`, detail: `${gbp(best.avg!)} on average, against ${gbp(worst.avg!)} on a ${FULL_DAY[worst.weekday]}.` });
+  }
+  if (f.dishes) out.push({ title: `${f.dishes.top[0].item} leads the menu`, detail: `${gbp(f.dishes.top[0].amount)} this month; your top 3 dishes are ${f.dishes.topShare}% of dish sales.` });
+  const m = f.movers.find((x) => !x.reason.startsWith("No obvious"));
+  if (m) out.push({ title: `${m.label}: ${m.diff >= 0 ? "+" : "-"}${gbp(Math.abs(m.diff))} on a usual day`, detail: `${m.reason}.` });
+  else if (f.closures.length) out.push({ title: `${f.closures.length} day${f.closures.length === 1 ? "" : "s"} with no sales`, detail: `Worth about ${gbp(f.closures.reduce((s, x) => s + x.usual, 0))} on usual days.` });
+  return out.slice(0, 4);
+}
+const FULL_DAY: Record<string, string> = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+
 // What's saved in reports.data for a monthly report (frozen when made).
-export type MonthlyWords = { headline: string; summary: string; actions: { title: string; why: string; message: string }[] };
+// highlights: the 3 or 4 key messages (reports made before they existed have a summary instead).
+export type Highlight = { title: string; detail: string };
+export type MonthlyWords = { headline: string; summary?: string; highlights?: Highlight[]; actions: { title: string; why: string; message: string }[] };
 export type MonthlyReportData = {
   kind: "monthly";
-  version: 1;
+  // 2: with highlights. MONTHLY REPORT remakes a version 1 report rather than resend it.
+  version: 1 | 2;
   restaurant: { name: string; brandColor: string; brandDark: string };
   figures: MonthlyFigures;
   words: MonthlyWords;
@@ -321,8 +351,6 @@ export function monthPrompt(step: Extract<MonthStep, { kind: "ask" | "remind" }>
 
 // Shared by the page and the PDF.
 export const gbp = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
-export const changeLine = (c: { label: string; raw: number | null; likeForLike: number | null }) =>
-  c.likeForLike === null ? `vs ${c.label}: not enough figures to compare` : `${c.likeForLike >= 0 ? "Up" : "Down"} ${Math.abs(c.likeForLike)}% on ${c.label} like for like${c.raw !== null ? ` (${c.raw >= 0 ? "+" : ""}${c.raw}% before adjusting for the mix of weekdays)` : ""}`;
 export const MONTHLY_FOOTNOTE = "Like for like: compared at the same mix of weekdays, so five Saturdays don't count as growth. Information about your business, not financial advice.";
 
 // MONTHLY REPORT [SEPTEMBER]: which month. No name: last month; a name: the latest
@@ -337,3 +365,10 @@ export function monthFor(today: string, monthNumber: number | null) {
 export const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 export const labourLine = (l: NonNullable<MonthlyFigures["labour"]>, traded: number) =>
   `staff cost of takings (${gbp(l.cost)}${l.days < traded ? ` over the ${l.days} days with a rota` : ""}${l.target ? `, target ${l.target}%` : ""})`;
+
+// The key messages to show (reports made before highlights existed get code's own).
+export const highlightsOf = (d: MonthlyReportData) => (d.words.highlights?.length ? d.words.highlights : fallbackHighlights(d.figures));
+
+// One small line at the bottom for everything left out: "Not included yet: ...".
+export const notIncluded = (f: MonthlyFigures) =>
+  f.missing.length ? `Not included yet: ${f.missing.map((m) => m.split(":")[0].replace(/^./, (c) => c.toLowerCase())).join("; ")}. Send the exports to add them next month.` : null;

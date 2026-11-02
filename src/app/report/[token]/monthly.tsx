@@ -1,7 +1,8 @@
-import { changeLine, gbp, labourLine, MONTHLY_FOOTNOTE, ordinal, type MonthlyReportData } from "@/lib/report/monthly-rules";
+import { gbp, highlightsOf, labourLine, MONTHLY_FOOTNOTE, notIncluded, ordinal, type MonthlyReportData } from "@/lib/report/monthly-rules";
 import { whatsappLink } from "@/lib/report/types";
 
-// The monthly report on the owner's phone (the same content as its PDF).
+// The monthly report on the owner's phone (the same content as its PDF): numbers and
+// charts, the 3 or 4 key messages about them, then three actions.
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
@@ -9,6 +10,15 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
       {title && <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-stone-500">{title}</h2>}
       {children}
     </section>
+  );
+}
+
+function Tile({ value, label, tone }: { value: string; label: string; tone?: "good" | "bad" }) {
+  return (
+    <div className="rounded-xl bg-stone-50 p-3">
+      <p className={`text-xl font-bold tabular-nums ${tone === "good" ? "text-emerald-700" : tone === "bad" ? "text-red-700" : ""}`}>{value}</p>
+      <p className="text-xs text-stone-500">{label}</p>
+    </div>
   );
 }
 
@@ -29,11 +39,15 @@ function Bars({ rows, brand }: { rows: { label: string; value: number }[]; brand
   );
 }
 
+const pct = (n: number) => `${n >= 0 ? "+" : "-"}${Math.abs(n)}%`;
+
 export function MonthlyReport({ token, data, createdAt }: { token: string; data: MonthlyReportData; createdAt: string }) {
   const f = data.figures;
   const brand = data.restaurant.brandColor;
   const lfl = f.vsLastMonth?.likeForLike;
+  const yoy = f.vsLastYear?.likeForLike;
   const max = Math.max(1, ...f.daily.map((d) => d.net ?? 0));
+  const left = notIncluded(f);
   return (
     <div className="min-h-dvh bg-stone-100 text-stone-900">
       <header className="px-4 pb-10 pt-8 text-white" style={{ background: data.restaurant.brandDark }}>
@@ -49,36 +63,26 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
       </header>
       <main className="mx-auto -mt-5 w-full max-w-xl space-y-4 px-4 pb-12">
         <Card>
-          <p className="text-lg font-bold leading-snug">{data.words.headline}</p>
-          {data.words.summary !== data.words.headline && <p className="mt-2 text-sm text-stone-600">{data.words.summary}</p>}
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-2xl font-bold tabular-nums">{gbp(f.net)}</p>
-              <p className="text-xs text-stone-500">net, {f.traded} trading days</p>
-            </div>
-            {f.orders ? (
-              <div>
-                <p className="text-2xl font-bold tabular-nums">{f.orders.toLocaleString("en-GB")}</p>
-                <p className="text-xs text-stone-500">orders, {gbp(f.avgOrder ?? 0)} average</p>
-              </div>
-            ) : null}
-            {lfl != null && (
-              <div>
-                <p className={`text-2xl font-bold tabular-nums ${lfl >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                  {lfl >= 0 ? "+" : "-"}
-                  {Math.abs(lfl)}%
-                </p>
-                <p className="text-xs text-stone-500">vs {f.vsLastMonth!.label}, like for like</p>
-              </div>
-            )}
-          </div>
-          <div className="mt-3 space-y-1 text-sm text-stone-600">
-            {f.vsLastMonth && <p>{changeLine(f.vsLastMonth)}.</p>}
-            {f.vsLastYear && <p>{changeLine(f.vsLastYear)}.</p>}
+          <div className="grid grid-cols-2 gap-3">
+            <Tile value={gbp(f.net)} label={`net takings, ${f.traded} trading days`} />
+            {f.orders ? <Tile value={f.orders.toLocaleString("en-GB")} label={`orders, ${gbp(f.avgOrder ?? 0)} average`} /> : null}
+            {lfl != null && <Tile value={pct(lfl)} label={`vs ${f.vsLastMonth!.label.split(" ")[0]}, like for like`} tone={lfl >= 0 ? "good" : "bad"} />}
+            {yoy != null && <Tile value={pct(yoy)} label={`vs ${f.vsLastYear!.label}`} tone={yoy >= 0 ? "good" : "bad"} />}
           </div>
         </Card>
 
-        <Card title="Day by day">
+        <Card title="What stood out">
+          <ul className="space-y-3 border-l-4 pl-4" style={{ borderColor: brand }}>
+            {highlightsOf(data).map((h) => (
+              <li key={h.title}>
+                <p className="font-semibold leading-snug">{h.title}</p>
+                {h.detail && <p className="text-sm text-stone-600">{h.detail}</p>}
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Card title="Takings day by day">
           <div className="flex h-24 items-end gap-px" aria-label="Takings each day">
             {f.daily.map((d) => (
               <span
@@ -95,30 +99,8 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
           </div>
         </Card>
 
-        {(f.movers.length > 0 || f.closures.length > 0) && (
-          <Card title="What moved the month">
-            <ul className="space-y-2 text-sm">
-              {f.movers.map((m) => (
-                <li key={m.day}>
-                  <b>{m.label}</b>: {gbp(m.net)},{" "}
-                  <span className={m.diff >= 0 ? "text-emerald-700" : "text-red-700"}>
-                    {m.diff >= 0 ? "+" : "-"}
-                    {gbp(Math.abs(m.diff))}
-                  </span>{" "}
-                  on a usual {m.label.split(" ")[0]}. {m.reason}.
-                </li>
-              ))}
-              {f.closures.map((c) => (
-                <li key={c.day}>
-                  <b>{c.label}</b>: no sales (closed?). A usual day like it takes {gbp(c.usual)}.
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
-
-        <Card title="Your week">
-          <Bars rows={f.weekdays.filter((w) => w.avg !== null).map((w) => ({ label: `${w.weekday} (average)`, value: w.avg! }))} brand={brand} />
+        <Card title="Average by weekday">
+          <Bars rows={f.weekdays.filter((w) => w.avg !== null).map((w) => ({ label: w.weekday, value: w.avg! }))} brand={brand} />
           {f.hours && (
             <p className="mt-3 text-sm text-stone-600">
               Busiest hour: <b>{f.hours.busiest}</b>. Quietest: <b>{f.hours.quietest}</b>.
@@ -127,32 +109,18 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
         </Card>
 
         {f.dishes && (
-          <Card title="Your dishes">
+          <Card title="Top dishes">
             <Bars rows={f.dishes.top.map((d) => ({ label: d.item, value: d.amount }))} brand={brand} />
-            <div className="mt-3 space-y-1 text-sm text-stone-600">
-              <p>Your top 3 dishes are {f.dishes.topShare}% of dish sales.</p>
-              {f.dishes.rising.length > 0 && <p>Rising: {f.dishes.rising.map((d) => `${d.item} +${d.change}%`).join(", ")}.</p>}
-              {f.dishes.falling.length > 0 && <p>Falling: {f.dishes.falling.map((d) => `${d.item} ${d.change}%`).join(", ")}.</p>}
-              {f.dishes.slow.length > 0 && <p>Selling under 5 a week: {f.dishes.slow.map((d) => d.item).join(", ")}.</p>}
-            </div>
           </Card>
         )}
 
         {(f.labour || f.reviews) && (
-          <Card title="Staff and reviews">
-            <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <div className="grid grid-cols-2 gap-3">
               {f.labour && (
-                <div>
-                  <p className={`text-2xl font-bold ${f.labour.target ? (f.labour.pct <= f.labour.target ? "text-emerald-700" : "text-red-700") : ""}`}>{f.labour.pct}%</p>
-                  <p className="text-xs text-stone-500">{labourLine(f.labour, f.traded)}</p>
-                </div>
+                <Tile value={`${f.labour.pct}%`} label={labourLine(f.labour, f.traded)} tone={f.labour.target ? (f.labour.pct <= f.labour.target ? "good" : "bad") : undefined} />
               )}
-              {f.reviews && (
-                <div>
-                  <p className="text-2xl font-bold">{f.reviews.count}</p>
-                  <p className="text-xs text-stone-500">new Google reviews{f.reviews.average ? `, ${f.reviews.average} stars average` : ""}</p>
-                </div>
-              )}
+              {f.reviews && <Tile value={String(f.reviews.count)} label={`new Google reviews${f.reviews.average ? `, ${f.reviews.average} stars average` : ""}`} />}
             </div>
           </Card>
         )}
@@ -181,17 +149,8 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
           </ol>
         </Card>
 
-        {f.missing.length > 0 && (
-          <Card title="More next month">
-            <ul className="list-disc space-y-1 pl-5 text-sm text-stone-600">
-              {f.missing.map((m) => (
-                <li key={m}>{m}</li>
-              ))}
-            </ul>
-          </Card>
-        )}
-
         <p className="pt-2 text-center text-xs text-stone-500">
+          {left ? `${left} ` : ""}
           {MONTHLY_FOOTNOTE} Made{" "}
           {new Date(createdAt).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
         </p>

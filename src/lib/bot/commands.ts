@@ -234,7 +234,7 @@ export async function runCommand(command: Command, turn: Turn) {
       const month = monthFor(londonYmd(ctx.now), command.month);
       const { createMonthlyReport, deliverMonthlyReport, findMonthlyReport } = await import("@/lib/report/monthly");
       const row = await findMonthlyReport(r.id, month);
-      if (row && isMonthly(row.data) && !(row.expires_at && new Date(row.expires_at) < new Date())) {
+      if (row && isMonthly(row.data) && row.data.version === 2 && !(row.expires_at && new Date(row.expires_at) < new Date())) {
         await deliverMonthlyReport(r, { token: row.token, url: `${appUrl()}/report/${row.token}`, data: row.data }, { whatsapp: true, email: false });
         return;
       }
