@@ -297,12 +297,29 @@ describe("the Google step, whole turns", () => {
     // Pilot Zero, 2 Nov: on live the restaurant counted as dummy (nothing linked yet), so it was "accepted" at once.
     vi.stubEnv("GOOGLE_MODE", "live");
     vi.stubEnv("VERCEL_ENV", "production");
+    // No invitation to accept yet (lib/google/invitations.ts): it looks again in 3 and 10 minutes.
+    const queued: { key: string; runAt?: Date }[] = [];
+    vi.doMock("@/lib/google/invitations", () => ({ acceptManagerInvitations: async () => ({ accepted: [], linked: [], left: [], said: {} }) }));
+    vi.doMock("@/lib/queue/store", async (orig) => ({ ...(await orig<object>()), enqueue: async (j: { key: string; runAt?: Date }) => (queued.push(j), { id: "j" }) }));
     const msg = shown({ type: "google_steps", device: "laptop" });
     const { handleAnswer } = await import("@/lib/onboarding/dina/answers");
     const note = await handleAnswer({ restaurantId: R, messageId: msg, choiceId: "invited", channel: "web" });
-    expect(note).toMatch(/now waits on our side to accept the invite/);
+    expect(note).toMatch(/code accepts it as soon as it arrives/);
     expect(step("google")).toMatchObject({ status: "in_progress", waiting_on: "google", data: { invited_at: expect.any(String) } });
     expect(step("google")?.data?.accepted_by).toBeUndefined();
+    expect(queued.map((q) => q.key)).toEqual([`setup_nudges:invite:${R}:3`, `setup_nudges:invite:${R}:10`]);
+    vi.doUnmock("@/lib/google/invitations");
+    vi.doUnmock("@/lib/queue/store");
+    vi.unstubAllEnvs();
+  });
+
+  test("'Done, I've invited you' on live, with the invitation already there: accepted and linked at once, and Dina says she's in", async () => {
+    vi.stubEnv("GOOGLE_MODE", "live");
+    vi.doMock("@/lib/google/invitations", () => ({ acceptManagerInvitations: async () => ({ accepted: [R], linked: [R], left: [], said: { [R]: "I'm in! Your profile has no reviews yet." } }) }));
+    const msg = shown({ type: "google_steps", device: "laptop" });
+    const { handleAnswer } = await import("@/lib/onboarding/dina/answers");
+    expect(await handleAnswer({ restaurantId: R, messageId: msg, choiceId: "invited", channel: "web" })).toMatch(/already accepted the invitation and linked their profile[\s\S]*"I'm in! Your profile has no reviews yet\."/);
+    vi.doUnmock("@/lib/google/invitations");
     vi.unstubAllEnvs();
   });
 

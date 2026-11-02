@@ -79,8 +79,13 @@ export const writeKindForCall = (method: string, url: string): GoogleWriteKind =
 // The last wall before Google: a test site never changes anything on live Google
 // (reads are fine), and nor does a restaurant whose writes of that kind are dry run.
 // A write that doesn't say which restaurant it's for is refused too.
+const INVITATION_ACCEPT = /^https:\/\/mybusinessaccountmanagement\.googleapis\.com\/v1\/accounts\/[^/]+\/invitations\/[^/:?]+:accept$/;
+
 export function googleWriteRefused(method: string, restaurant: ({ is_test?: boolean | null } & DryRunRestaurant) | null | undefined, url: string, ctx: DryRunContext) {
   if (method.toUpperCase() === "GET") return null;
+  // Our manager account accepting an owner's invitation (lib/google/invitations.ts)
+  // changes nothing on anyone's listing: allowed, even under dry run.
+  if (method.toUpperCase() === "POST" && INVITATION_ACCEPT.test(url)) return null;
   if (!restaurant) return "A Google write must say which restaurant it's for";
   if (restaurant.is_test) return "Test sites never write to live Google";
   const why = googleDryRunReason(restaurant, writeKindForCall(method, url), ctx);

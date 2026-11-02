@@ -170,11 +170,17 @@ const healthCheck: JobHandler = {
 // Hourly: nudges for restaurants still setting up with Dina (the 24-hour Google nudge).
 const setupNudges: JobHandler = {
   run: async () => {
+    // Owners' Google invitations to our manager account: accepted and linked (lib/google/invitations.ts).
+    const { acceptManagerInvitations } = await import("@/lib/google/invitations");
+    const invitations = await acceptManagerInvitations().catch(async (err) => {
+      await alertBuilder("google-invitations-failed", `Checking our manager account's Google invitations failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 400));
+      return null;
+    });
     const { runGoogleNudges } = await import("@/lib/onboarding/dina/google-step");
     const google = await runGoogleNudges(new Date());
     const failed = google.filter((g) => g.error);
     if (failed.length) await alertBuilder("setup-nudges-failed", `${failed.length} setup nudge(s) failed: ${failed.map((f) => f.error).join("; ").slice(0, 300)}`);
-    return { google };
+    return { google, invitations };
   },
 };
 

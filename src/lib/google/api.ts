@@ -104,6 +104,24 @@ export async function listLocations(conn: GoogleConnection, accountId: string) {
   return out;
 }
 
+// ---------- Manager invitations (our manager account, lib/google/invitations.ts) ----------
+
+export type GInvitation = {
+  name: string; // accounts/{a}/invitations/{i}
+  role?: string;
+  targetType?: string;
+  targetLocation?: { locationName?: string; address?: string };
+  targetAccount?: { accountName?: string };
+};
+
+// The invitations waiting for one of our accounts (its own, personal account).
+export async function listInvitations(conn: GoogleConnection, accountName: string) {
+  const res = await gbp<{ invitations?: GInvitation[] }>(conn, "GET", `${ACCOUNTS}/${accountName}/invitations`);
+  return res.invitations ?? [];
+}
+
+export const acceptInvitation = (conn: GoogleConnection, invitationName: string) => gbp<object>(conn, "POST", `${ACCOUNTS}/${invitationName}:accept`, {});
+
 // ---------- The profile ----------
 
 const PROFILE_MASK = "name,title,phoneNumbers,storefrontAddress,regularHours,specialHours,categories,websiteUri,metadata";

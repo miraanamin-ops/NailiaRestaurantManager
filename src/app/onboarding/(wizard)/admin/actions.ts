@@ -39,3 +39,12 @@ export const deleteTest = async (form: FormData) => run(form, "Deleted", deleteT
 export const linkMyNumber = async (form: FormData) => run(form, "Your WhatsApp is linked to it", linkBuilderNumber);
 export const markGoogleAccepted = async (form: FormData) => run(form, "Google marked accepted; Dina has told the owner", markAcceptedByBuilder);
 export const jumpTest = async (form: FormData) => run(form, "Moved to that step", (r) => jumpTestSite(r, String(form.get("step") ?? "")));
+
+// Owners' Google invitations to our manager account: check now instead of waiting for the hourly job.
+export async function checkGoogleInvitations() {
+  await builder();
+  const { acceptManagerInvitations } = await import("@/lib/google/invitations");
+  const run = await acceptManagerInvitations();
+  if (run.skipped) back("error=" + encodeURIComponent(`Not checked: ${run.skipped}`));
+  back(`done=${encodeURIComponent(`Google invitations: ${run.accepted.length} accepted, ${run.linked.length} profile(s) linked, ${run.left.length} left for you (see the alerts)`)}`);
+}

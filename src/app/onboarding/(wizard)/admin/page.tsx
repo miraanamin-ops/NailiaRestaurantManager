@@ -8,7 +8,7 @@ import { requireOwner } from "@/lib/auth";
 import { availableSteps, STEP_DEFS } from "@/lib/onboarding/flow";
 import { setupsForAdmin } from "@/lib/onboarding/dina/test-sites";
 import { Card, Frame } from "@/app/onboarding/ui";
-import { deleteTest, jumpTest, linkMyNumber, markGoogleAccepted, resetTest, startTest } from "./actions";
+import { checkGoogleInvitations, deleteTest, jumpTest, linkMyNumber, markGoogleAccepted, resetTest, startTest } from "./actions";
 
 export const metadata: Metadata = { title: "Setup test controls · DinerAI", robots: { index: false, follow: false } };
 
@@ -117,6 +117,11 @@ async function Admin({ searchParams }: Pick<PageProps<"/onboarding/admin">, "sea
         </Link>
         <span className="text-stone-500">: export, then delete everything (asks twice, 24-hour cooling-off).</span>
       </p>
+
+      <form action={checkGoogleInvitations} className="mt-2">
+        <button className={small}>Check Google invitations now</button>
+        <span className="ml-2 text-sm text-stone-500">Accepts owners&apos; invitations to our manager account and links their profiles (it also runs every hour).</span>
+      </form>
 
       <h2 className="mt-8 text-xl font-semibold">Test restaurants ({tests.length})</h2>
       <div className="mt-3 space-y-3">{tests.length ? tests.map(row) : <p className="text-sm text-stone-500">None yet.</p>}</div>

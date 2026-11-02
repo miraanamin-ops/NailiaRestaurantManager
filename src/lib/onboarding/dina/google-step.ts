@@ -46,7 +46,19 @@ export async function googleInvited(restaurantId: string, channel: Channel) {
     const text = await markGoogleAccepted(restaurantId, { by: "simulated", quiet: true });
     return `The owner tapped "Done, I've invited you". In test mode Google's acceptance is simulated, so DinerAI is in now. Tell them in these words (you may add one short line after): "${text}"`;
   }
-  return 'The owner tapped "Done, I\'ve invited you". The Google step now waits on our side to accept the invite (usually within a day). Say you\'ll let them know when you\'re in, then carry on with the next step.';
+  // Live: accept their invitation now if it's there (lib/google/invitations.ts), and
+  // look again in 3 and 10 minutes (Google can take a moment); the hourly job after that.
+  const { acceptManagerInvitations } = await import("@/lib/google/invitations");
+  const run = await acceptManagerInvitations({ only: restaurantId, quiet: true }).catch((err) => (console.error("Accepting the Google invitation failed", err), null));
+  const said = run?.said[restaurantId];
+  if (said) return `The owner tapped "Done, I've invited you", and code has already accepted the invitation and linked their profile. Tell them in these words (you may add one short line after): "${said}"`;
+  const { enqueue } = await import("@/lib/queue/store");
+  for (const minutes of [3, 10]) {
+    await enqueue({ type: "setup_nudges", restaurantId: null, key: `setup_nudges:invite:${restaurantId}:${minutes}`, runAt: new Date(Date.now() + minutes * 60_000) }).catch((err) =>
+      console.error("Couldn't queue the invitation check", err),
+    );
+  }
+  return 'The owner tapped "Done, I\'ve invited you". The Google step now waits for Google to deliver the invitation; code accepts it as soon as it arrives (usually within minutes). Say you\'ll let them know when you\'re in, then carry on with the next step.';
 }
 
 // "Email me these steps". Returns what Dina is told.
