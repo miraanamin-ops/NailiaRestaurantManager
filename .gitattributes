@@ -1,0 +1,5 @@
+# The Pilot Zero test files are kept byte for byte as made (Square's exports use
+# Windows line endings), on every machine: git never converts their line endings.
+# Without this, a Windows commit stored them with "\n" and a Linux checkout (Vercel,
+# GitHub Actions) read them differently from a Windows one.
+pilot-zero/*.csv -text

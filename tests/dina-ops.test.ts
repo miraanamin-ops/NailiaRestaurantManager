@@ -257,7 +257,8 @@ describe("step 8, team and labour", () => {
     expect(await tool("save_team", one({ max_hours: 120 }))).toMatchObject({ ok: false, text: expect.stringMatching(/maximum of 120 hours/) });
     expect(step("team")?.data?.team_draft).toBeUndefined();
     expect(await confirmCard()).toMatch(/no team to save yet/);
-    expect(await tool("save_team", one({}))).toMatchObject({ ok: true });
+    // No cover rules: she's told to ask about them (with an example) before the card.
+    expect(await tool("save_team", one({}))).toMatchObject({ ok: true, text: expect.stringContaining("No cover rules: if you haven't asked about them yet, ask now") });
     expect(await confirmCard()).toContain("labour target 30% (the default");
     expect(r().labour_target_pct).toBe(30);
     expect(step("team")?.data).toMatchObject({ labour_defaulted: true });

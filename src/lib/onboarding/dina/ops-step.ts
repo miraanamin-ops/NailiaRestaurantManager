@@ -155,6 +155,10 @@ export type TeamInput = TeamDraft;
 
 const teamData = async (restaurantId: string) => stepState((await loadFlow(restaurantId)).state, "team").data as { team_draft?: TeamDraft };
 
+// Told to her when save_team has no cover rules (the real run of 1 Nov skipped the question).
+const NO_COVER_YET =
+  "No cover rules: if you haven't asked about them yet, ask now (e.g. \"at least 2 in the kitchen and 1 front of house on every shift\") before showing the card, then call save_team again with their answer. If they said there are none, carry on. ";
+
 // save_team: the team as the owner gave it (from chat or the staff sheet), with
 // each person's days, times and max hours, kept as a draft for the team card.
 // Nothing is saved until the owner taps "Looks right" (confirmTeam). Changes on
@@ -165,7 +169,7 @@ export async function saveTeam(restaurantId: string, input: TeamInput, channel: 
   await noteStep(restaurantId, "team", { team_draft: input }, { channel });
   return {
     ok: true as const,
-    text: `Code noted ${input.staff.length} on the team, with their days, times and limits where given. Show editable_card team for them to check: nothing is saved until they tap "Looks right" (code saves it then). If they change something, call save_team again with the whole team as corrected.`,
+    text: `Code noted ${input.staff.length} on the team, with their days, times and limits where given. ${input.cover_rules.length ? "" : NO_COVER_YET}Show editable_card team for them to check: nothing is saved until they tap "Looks right" (code saves it then). If they change something, call save_team again with the whole team as corrected.`,
   };
 }
 

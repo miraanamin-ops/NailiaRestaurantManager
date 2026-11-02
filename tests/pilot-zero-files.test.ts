@@ -64,6 +64,18 @@ const datesBetween = (from: string, to: string, weekdays: number[]) => {
   return out;
 };
 
+describe("the files themselves", () => {
+  test("byte for byte as made, with Square's Windows line endings, on every machine (.gitattributes)", () => {
+    // A Windows commit used to store them with "\n", so Vercel's Linux checkout differed
+    // from a Windows one (the two-day test read no staff there).
+    for (const f of [SUMMARY, TRANSACTIONS, "staff-sheet.csv"]) {
+      const text = file(f).toString("utf8");
+      expect(text.split("\n").length - 1, f).toBe(text.split("\r\n").length - 1);
+      expect(text.endsWith("\r\n"), f).toBe(true);
+    }
+  });
+});
+
 describe("the 12-month Square Sales summary", () => {
   test("imports as a year of daily takings, Nov 2025 to Oct 2026, with the closed days missing", async () => {
     const done = await importFile(SUMMARY, daily("mdy"));

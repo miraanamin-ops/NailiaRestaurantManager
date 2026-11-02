@@ -101,7 +101,9 @@ beforeAll(async () => {
   await confirmImport(PZ, first.importId!, SUMMARY_MAPPING);
   const { saveStaff } = await import("@/lib/rota/staff");
   const { availabilityOf } = await import("@/lib/onboarding/dina/ops-content");
-  const sheet = readFileSync("pilot-zero/staff-sheet.csv", "utf8").trim().split("\r\n").slice(1).map((l) => l.slice(1, -1).split('","'));
+  // (parseCsv, not a split on "\r\n": a Linux checkout, like Vercel's, has "\n" line endings.)
+  const { parseCsv } = await import("@/lib/sales/pos-table");
+  const sheet = parseCsv(readFileSync("pilot-zero/staff-sheet.csv", "utf8")).slice(1);
   for (const [n, role, rate, , days, times, max] of sheet) {
     const a = availabilityOf({ days, times, max_hours: Number(max) });
     await saveStaff(PZ, { name: n, roles: [role === "Front of house" ? "front" : role.toLowerCase()], ratePence: Math.round(Number(rate.replace("£", "")) * 100), maxHours: a.maxHours, days: a.days, starts: a.starts, ends: a.ends }, { today: "2026-11-01", source: "owner_message", actor: "owner" });
@@ -157,10 +159,11 @@ describe("two simulated days, Google dry run", () => {
     expect(sent.some((t) => /🧪 Simulated day: Thursday, 12 November 2026./.test(t))).toBe(true);
     expect(r().last_brief_on).toBe("2026-11-12");
     expect(db.tables.rota_weeks.some((w) => w.week_start === "2026-11-16")).toBe(true);
-    // With a year of sales it never says "less than 8 weeks" (with daily totals only it
-    // says it needs sales by the hour: tests/rota-fill.test.ts has the wording).
+    // A year of daily totals isn't sales by the hour: the rota says so (not "less than 8 weeks").
+    expect(db.tables.staff).toHaveLength(10);
     const rotaText = sent.find((t) => t.includes("labour ·")) ?? "(no rota summary sent)";
-    expect(rotaText, rotaText).not.toContain("less than 8 weeks");
+    expect(rotaText, rotaText).toContain("your sales so far are daily totals, and I need sales by the hour");
+    expect(rotaText).not.toContain("less than 8 weeks");
 
     // Approving both replies: neither reaches Google.
     const { attemptSend } = await import("@/lib/send");

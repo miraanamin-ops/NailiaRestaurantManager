@@ -103,7 +103,8 @@ describe("step 8 with the staff sheet, for real", () => {
 
     // What was saved, against the sheet as the rota's parser reads it.
     const { availabilityOf } = await import("@/lib/onboarding/dina/ops-content");
-    const sheet = readFileSync("pilot-zero/staff-sheet.csv", "utf8").trim().split("\r\n").slice(1).map((l) => l.slice(1, -1).split('","'));
+    const { parseCsv } = await import("@/lib/sales/pos-table");
+    const sheet = parseCsv(readFileSync("pilot-zero/staff-sheet.csv", "utf8")).slice(1);
     const staff = db.tables.staff as Record<string, unknown>[];
     console.log(`\n=== Saved: ${staff.length} staff ===`);
     for (const [name, , rate, hours, days, times, max] of sheet) {
@@ -126,6 +127,9 @@ describe("step 8 with the staff sheet, for real", () => {
       if (gotTimes !== wantTimes) stumbles.push(`${name}: times ${gotTimes} (sheet "${times}")`);
       if (Number(pay) !== Math.round(Number(rate.replace("£", "")) * 100)) stumbles.push(`${name}: pay ${String(pay)}p (sheet ${rate})`);
     }
+    // She always asks about cover rules (prompt 0.14); the owner's answer is saved.
+    const rules = (db.tables.rota_rules as { role: string; min_on_shift: number }[]).map((x) => `${x.role} ${x.min_on_shift}`).sort();
+    if (rules.join(",") !== "front 2,kitchen 2,manager 1") stumbles.push(`cover rules saved: ${rules.join(", ") || "none"} (owner said 1 manager, 2 kitchen, 2 front)`);
     const team = db.tables.onboarding_steps.find((s) => s.step_key === "team");
     console.log(`\nTeam step: ${JSON.stringify(team?.status)} ${JSON.stringify((team?.data as Record<string, unknown>)?.with_availability)} with availability; rules ${JSON.stringify(db.tables.rota_rules)}; target ${String(db.tables.restaurants[0].labour_target_pct)}`);
     console.log(`\n=== Cost: $${cost.toFixed(3)} ===\n=== Stumbles (${stumbles.length}) ===\n${stumbles.join("\n") || "none"}`);

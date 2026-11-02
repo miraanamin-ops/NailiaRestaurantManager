@@ -321,9 +321,21 @@ $0.06 and $0.05):
   test in `tests/dina-ops.test.ts`). An owner would have hit this too.
 - Run 2: sheet, one question (target), `save_team`, the team card, Looks right: all 10
   saved with days, times, max hours, contracted hours and pay exactly as in the sheet.
-- Still to watch: she didn't ask about cover rules (the sheet has none), so none were
-  saved. The run sheet tells you to say them. Making her always ask is a small prompt
-  change if you want it.
+- Run 2 didn't ask about cover rules (the sheet has none), so none were saved. **Fixed**
+  (your call, 2 Nov): prompt 0.14 always asks, with an example ("at least 2 in the kitchen
+  and 1 front of house on every shift", quick replies including "No fixed rules"); and if
+  `save_team` arrives with none, code's answer tells her to ask first. Run 3 ($0.11): site
+  manager, cover rules, target, one at a time; the card; all 10 saved with availability and
+  the cover rules. No stumbles.
+
+**Why the two-day test differed on Vercel** (2 Nov): not the time zone (same result in UK
+time, UTC and New York). Line endings: on this Windows machine git stored the pilot-zero
+CSVs with Unix line endings (LF, because of core.autocrlf), Windows checkouts turned them
+back into Windows ones (CRLF), Vercel's Linux checkout didn't; the test split the staff
+sheet on CRLF only, so on Vercel it saved no staff and the rota said "nobody on your team"
+(no labour summary). Fixed at the cause: `.gitattributes` keeps `pilot-zero/*.csv` byte for
+byte (Square's CRLF) on every machine, the tests read the sheet with the real CSV parser, a
+test checks the line endings, and the strict rota check is back.
 
 **The run sheet**: `docs/pilot-zero-run-sheet.md`.
 
