@@ -24,6 +24,25 @@ describe("the morning job runs once a day, from 9am UK", () => {
   });
 });
 
+describe("each restaurant's own brief hour (7 to 11, setup step 12)", () => {
+  const fresh = { last_brief_on: null, morning_failed_on: null, morning_failures: 0 };
+  test("the morning job waits for the chosen hour; anything else means 9am", () => {
+    expect(morningGate({ ...fresh, brief_hour: 7 }, at("2026-10-09T06:05:00Z"), 3)).toBeNull(); // 07:05 BST
+    expect(morningGate({ ...fresh, brief_hour: 11 }, at("2026-10-09T09:05:00Z"), 3)).toBe("before 11am"); // 10:05 BST
+    expect(morningGate({ ...fresh, brief_hour: 11 }, at("2026-10-09T10:05:00Z"), 3)).toBeNull(); // 11:05 BST
+    expect(morningGate({ ...fresh, brief_hour: 3 }, at("2026-10-09T07:05:00Z"), 3)).toBe("before 9am");
+    expect(morningGate({ ...fresh, brief_hour: null }, at("2026-10-09T07:05:00Z"), 3)).toBe("before 9am");
+  });
+  test("the late-brief alert waits until half an hour after it", () => {
+    const base = { today: "2026-10-09", lastBriefOn: null };
+    expect(briefIsLate({ ...base, londonMinutes: 10 * 60, briefHour: 11 })).toBe(false);
+    expect(briefIsLate({ ...base, londonMinutes: 11 * 60 + 29, briefHour: 11 })).toBe(false);
+    expect(briefIsLate({ ...base, londonMinutes: 11 * 60 + 30, briefHour: 11 })).toBe(true);
+    expect(briefIsLate({ ...base, londonMinutes: 7 * 60 + 30, briefHour: 7 })).toBe(true);
+    expect(briefIsLate({ ...base, londonMinutes: 7 * 60 + 30, briefHour: 7, lastBriefOn: "2026-10-09" })).toBe(false);
+  });
+});
+
 describe("spotting jobs that failed, got stuck or didn't run", () => {
   const now = at("2026-10-09T12:00:00Z");
   test("a run still 'running' after 15 minutes is stuck", () => {

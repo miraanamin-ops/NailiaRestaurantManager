@@ -4,6 +4,7 @@ import { check } from "@/lib/drafts";
 import { ownerChannel } from "@/lib/followups";
 import { MAX_FAILURES, type MorningCarry } from "@/lib/morning";
 import { morningGate } from "@/lib/morning-gate";
+import { simulationOn } from "@/lib/simulation-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { analyticsJobsSwitch } from "@/lib/switches";
 import { enqueueBackfill } from "@/lib/feeds/backfill";
@@ -32,7 +33,10 @@ export async function enqueueMorningStep(restaurantId: string, day: string, step
 }
 
 export async function dispatch(job: "hourly" | "daily", now: Date) {
-  const restaurants = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
+  const all = check(await getSupabase().from("restaurants").select("*").eq("active", true).order("created_at").returns<Restaurant[]>()) ?? [];
+  // A Pilot Zero restaurant with its simulation on is skipped: "Run day" in the
+  // admin console runs its jobs for the simulated date (lib/simulation.ts).
+  const restaurants = all.filter((r) => !simulationOn(r));
   const summary: Record<string, unknown>[] = [];
   // The analytics service's models, only once its worker is deployed (ANALYTICS_JOBS).
   const models = analyticsJobsSwitch(process.env).on ? NIGHTLY_MODELS : [];
@@ -76,6 +80,13 @@ export async function dispatch(job: "hourly" | "daily", now: Date) {
     const day = londonYmd(now);
     if (await enqueue({ type: "health_check", restaurantId: null, key: keys.health(day), runAt: briefCheckTime(now) })) system.push("health_check");
     if (await enqueue({ type: "cleanup", restaurantId: null, key: keys.cleanup(day) })) system.push("cleanup");
+    // Restaurants still setting up aren't active, so they get one hourly job between them.
+    if (job === "hourly" && (await enqueue({ type: "setup_nudges", restaurantId: null, key: keys.setupNudges(now) }))) system.push("setup_nudges");
+    // Accounts whose 24-hour cooling-off is over: closed now (lib/closure.ts).
+    const { dueClosures } = await import("@/lib/closure");
+    for (const c of await dueClosures(now)) {
+      if (await enqueue({ type: "account_close", restaurantId: null, key: `account_close:${c.id}:due`, payload: { closure: c.id }, priority: 20 })) system.push("account_close");
+    }
   } catch (err) {
     console.error("Couldn't queue the system jobs", err);
     summary.push({ restaurant: null, dispatch: { error: err instanceof Error ? err.message : String(err) } });

@@ -3,13 +3,14 @@ import twilio from "twilio";
 import { handleMessage } from "@/lib/bot";
 import { findLinkCode } from "@/lib/onboarding/steps";
 import { handleOnboardingMessage, linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
+import { dinaSetupInProgress, handleDinaWhatsApp } from "@/lib/onboarding/dina/whatsapp-turn";
 import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
-import { replyUnregistered } from "@/lib/unregistered";
+import { linkSignupNumber, pendingSignupsFor } from "@/lib/onboarding/entry";
 import { getSupabase } from "@/lib/supabase";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { handleBuilderCommand } from "@/lib/feeds/builder";
-import { isBuilderCommand, isBuilderNumber } from "@/lib/feeds/builder-parse";
+import { isBuilderCommand, isBuilderNumber, isNoteCommand } from "@/lib/feeds/builder-parse";
 import { sendText } from "@/lib/whatsapp";
 import { messageOwner } from "@/lib/notify";
 import { kickWorkers } from "@/lib/queue/kick";
@@ -76,9 +77,18 @@ export async function POST(req: NextRequest) {
   // Not an owner: maybe a staff number the owner registered (ADD STAFF), which
   // can only send till reports and sales files for that one restaurant.
   const staff = restaurant || linkCode ? null : await findStaff(owner);
+  // Not an owner or staff: maybe the number typed on a Dina sign-up, sending its first message.
+  const signups = restaurant || linkCode || staff ? [] : await pendingSignupsFor(owner).catch((err) => (console.error("Couldn't look up sign-ups", err), []));
   // The builder's own commands (BUILDER ...), from BUILDER_WHATSAPP only. The same
   // phone can also be a demo restaurant's owner: anything else it sends goes there as usual.
   const builderCommand = !media && isBuilderNumber(owner, process.env.BUILDER_WHATSAPP) && isBuilderCommand(body);
+  // "BUILDER ..." from any other number (an owner's included) does nothing and gets
+  // no reply at all: it never reaches the assistant or Dina as a chat message.
+  const builderAttempt = !media && !builderCommand && isBuilderCommand(body);
+  // "#note ..." from the builder's number: an observation for the Pilot Zero log
+  // (lib/pilot-notes.ts), never a message to the assistant or Dina. From any other
+  // number it's an ordinary message.
+  const noteCommand = !media && isBuilderNumber(owner, process.env.BUILDER_WHATSAPP) && isNoteCommand(body);
   const { error: inboundError } = await supabase.from("messages").insert({
     restaurant_id: restaurant?.id ?? staff?.restaurant_id ?? null,
     direction: "inbound",
@@ -87,7 +97,11 @@ export async function POST(req: NextRequest) {
     body: media ? `[📷 photo]${body ? ` ${body}` : ""}` : body,
     twilio_sid: params.MessageSid ?? null,
     status: "received",
-    error: restaurant || linkCode || staff || builderCommand ? null : "Ignored: not a registered owner number",
+    error: builderAttempt
+      ? "Ignored: a builder command from a number that isn't the builder's"
+      : restaurant || linkCode || staff || signups.length || builderCommand || noteCommand
+        ? null
+        : "Ignored: not a registered owner number",
   });
   // Twilio sometimes delivers the same message twice. Each message id can only be
   // logged once (unique index), so a second copy is a duplicate: do nothing.
@@ -97,6 +111,11 @@ export async function POST(req: NextRequest) {
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
   if (inboundError) console.error("Failed to log inbound message", inboundError);
+
+  if (builderAttempt) {
+    console.warn("Ignored a builder command from a number that isn't the builder's");
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
 
   if (builderCommand) {
     after(async () => {
@@ -108,6 +127,18 @@ export async function POST(req: NextRequest) {
         reply = "⚠️ That builder command failed: " + (err instanceof Error ? err.message : String(err));
       }
       await sendText(sandbox, owner, reply).catch((err) => console.error("Couldn't answer the builder", err));
+    });
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
+
+  if (noteCommand) {
+    after(async () => {
+      const { saveNote } = await import("@/lib/pilot-notes");
+      const reply = await saveNote({ body, restaurantId: restaurant?.id ?? null, messageSid: params.MessageSid ?? null }).catch((err) => {
+        console.error("A #note failed", err);
+        return `⚠️ That note wasn't saved: ${err instanceof Error ? err.message : String(err)}`;
+      });
+      if (reply) await sendText(sandbox, owner, reply).catch((err) => console.error("Couldn't answer the builder", err));
     });
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
@@ -126,11 +157,16 @@ export async function POST(req: NextRequest) {
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
-  // Anyone else can't trigger anything: they get one polite "not registered" reply
-  // (at most once a day) and nothing else.
+  // The number given at sign-up: its first message links it (never one that's
+  // already someone's: those were found above as an owner or staff number).
+  if (!restaurant && signups.length) {
+    after(() => linkSignupNumber(owner, sandbox, signups));
+    return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
+  }
+
+  // Anyone else can't trigger anything, and gets no reply at all (logged above as ignored).
   if (!restaurant) {
     console.warn("WhatsApp message from an unregistered number");
-    after(() => replyUnregistered(owner, sandbox));
     return new Response(EMPTY_TWIML, { headers: { "Content-Type": "text/xml" } });
   }
 
@@ -138,7 +174,11 @@ export async function POST(req: NextRequest) {
   // slow work and sends answers as separate WhatsApp messages. Everything from
   // here on works with this one restaurant only. A restaurant still being set up
   // gets the onboarding conversation instead (decided by the worker).
-  await queueMessage({ kind: "owner", owner, sandbox, body, buttonPayload: params.ButtonPayload, media: allMedia }, restaurant.id, params.MessageSid, async () => {
+  const payload: OwnerMessagePayload = { kind: "owner", owner, sandbox, body, buttonPayload: params.ButtonPayload, listId: params.ListId, messageSid: params.MessageSid, media: allMedia };
+  await queueMessage(payload, restaurant.id, params.MessageSid, async () => {
+    if (await dinaSetupInProgress(restaurant.id)) {
+      return handleDinaWhatsApp({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, listId: params.ListId, media: allMedia, messageSid: params.MessageSid });
+    }
     if (await onboardingInProgress(restaurant.id)) {
       return handleOnboardingMessage({ restaurantId: restaurant.id, owner, sandbox, body, media: allMedia });
     }

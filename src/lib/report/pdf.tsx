@@ -390,6 +390,7 @@ function ReportPdf({ data }: { data: ReportData }) {
           <Text style={s.small}>Weekly report · {clean(data.period.label)}</Text>
           <Text style={s.title}>{clean(data.restaurant.name)}</Text>
           <Text style={[s.small, { marginTop: 4, color: "#a8a29e" }]}>Compared with the week before ({clean(data.period.prevLabel)})</Text>
+          {data.simulated ? <Text style={[s.small, { marginTop: 6, color: "#fcd34d" }]}>{clean(data.simulated)}</Text> : null}
         </View>
         <View style={s.body}>
           {data.sections.map((section) => (

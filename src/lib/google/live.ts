@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { londonYmd } from "@/lib/clock";
+import { SIMULATED_REVIEW_SOURCE } from "@/lib/gate-rules";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 import * as api from "./api";
@@ -93,6 +94,8 @@ export const liveGoogle: GoogleConnector = {
 
   async replyToReview(restaurantId, reviewId, text) {
     const row = await reviewRowFor(restaurantId, reviewId);
+    // Belt and braces (the send gate stops these first): a simulated review is never replied to on Google.
+    if (row?.source === SIMULATED_REVIEW_SOURCE) throw new api.GoogleApiError("Simulated reviews are never replied to on Google", 403);
     // A dummy review on a connected restaurant stays dummy.
     if (!row?.google_review_id) return dummyGoogle.replyToReview(restaurantId, reviewId, text);
     const link = await mustLink(restaurantId);

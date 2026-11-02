@@ -2,7 +2,8 @@
 // every case is unit-tested (tests/undo.test.ts); lib/undo.ts carries it out.
 
 export type UndoEntry = { action: string; data: Record<string, unknown> | null };
-export type UndoDraft = { kind: string; status: string; review_id: string | null };
+// checks.send.dry_run: the send was a Google dry run (or a reply to a simulated review).
+export type UndoDraft = { kind: string; status: string; review_id: string | null; checks?: { send?: { dry_run?: unknown } } | null };
 
 export type UndoPlan =
   | { type: "reopen" } // approved but not sent (queued or blocked): back to pending
@@ -47,6 +48,10 @@ const SETTINGS = [
   "recovery_offers",
   "words_to_avoid",
   "emoji_allowed",
+  // Onboarding with Dina's Hello step
+  "name",
+  "cuisine",
+  "owner_name",
 ];
 
 export const GOOGLE_KINDS = ["review_reply", "google_post", "hours_update", "menu_update"];
@@ -85,8 +90,8 @@ export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: 
     if (draft.kind === "email_campaign") {
       return { type: "cannot", reason: "The emails have already been sent, and emails can't be unsent." };
     }
-    // Simulated Google posted nothing, so there's nothing to take down.
-    if (googleMode === "simulated" && GOOGLE_KINDS.includes(draft.kind)) return { type: "withdraw_simulated" };
+    // Simulated Google and dry runs posted nothing, so there's nothing to take down.
+    if ((googleMode === "simulated" || draft.checks?.send?.dry_run) && GOOGLE_KINDS.includes(draft.kind)) return { type: "withdraw_simulated" };
     // Dummy and live: replies and posts can be deleted (live: through the API).
     if (draft.kind === "review_reply" && draft.review_id) return { type: "withdraw_reply" };
     if (draft.kind === "google_post") return { type: "withdraw_post" };

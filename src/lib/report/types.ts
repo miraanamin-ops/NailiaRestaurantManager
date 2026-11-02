@@ -118,6 +118,8 @@ export type ReportData = {
   // The WhatsApp number the action buttons open a chat with (digits only), if known.
   whatsappNumber: string | null;
   sections: ReportSection[];
+  // Made during a Pilot Zero simulation: the line shown at the top (lib/simulation-rules.ts).
+  simulated?: string | null;
 };
 
 export const SECTION_TITLES: Record<SectionId, string> = {

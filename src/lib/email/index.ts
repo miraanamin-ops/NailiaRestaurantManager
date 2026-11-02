@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
 import { builderEmails } from "@/lib/builder-emails";
+import { redirectEmails } from "@/lib/gate-rules";
 import { emailRedirectSwitch } from "@/lib/switches";
 import type { Restaurant } from "@/lib/supabase";
 import { brandFor } from "./brand";
@@ -41,7 +42,7 @@ export async function sendCustomerEmail(input: {
 }): Promise<Delivery> {
   const { restaurant, content } = input;
   const route = routeEmail(input.to, {
-    redirect: emailRedirectSwitch(process.env).on,
+    redirect: redirectEmails(emailRedirectSwitch(process.env).on, restaurant),
     allowed: [...builderEmails(), restaurant.owner_email ?? "", ...(process.env.TEST_EMAIL_ALLOW ?? "").split(",")].filter(Boolean),
     builder: builderEmails()[0] ?? null,
     seed: input.seed,
@@ -144,4 +145,31 @@ export function sendFeedbackEmail(i: { restaurant: Restaurant; customer: Person;
     links: customerLinks(i.baseUrl, i.customer.unsubscribe_token),
   });
   return sendCustomerEmail({ restaurant: i.restaurant, to: i.customer.email, content, oneClickUrl: oneClick(i.baseUrl, i.customer), seed: i.customer.source === "seed" });
+}
+
+// An email from Dina to the restaurant's owner (e.g. the steps to add DinerAI on
+// Google). With EMAIL_REDIRECT on (or for a test site), a demo restaurant's owner
+// email goes to the builder instead: test sign-ups use made-up addresses, which
+// may belong to a real stranger. A real restaurant's owner gets their own.
+export async function sendOwnerEmail(restaurant: Restaurant, email: { subject: string; text: string; html: string }): Promise<Delivery> {
+  const to = restaurant.owner_email?.trim();
+  if (!to || !isEmail(to)) return { delivery: "simulated", id: null, to: null, redirectedFrom: null, reason: "no owner email" };
+  const route = routeEmail(to, {
+    redirect: redirectEmails(emailRedirectSwitch(process.env).on, restaurant),
+    allowed: [...builderEmails(), ...(restaurant.is_demo ? [] : [to]), ...(process.env.TEST_EMAIL_ALLOW ?? "").split(",")].filter(Boolean),
+    builder: builderEmails()[0] ?? null,
+  });
+  if (route.kind === "simulate") return { delivery: "simulated", id: null, to: null, redirectedFrom: null, reason: route.reason };
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("Missing RESEND_API_KEY");
+  const { data, error } = await new Resend(apiKey).emails.send({
+    from: fromHeader("Dina at DinerAI", senderAddress(process.env)),
+    to: route.to,
+    subject: route.redirectedFrom ? `[Test → ${route.redirectedFrom}] ${email.subject}` : email.subject,
+    text: email.text,
+    html: email.html,
+    tags: [{ name: "kind", value: "owner_setup" }],
+  });
+  if (error) throw new Error(`Resend: ${error.message}`);
+  return { delivery: "email", id: data?.id ?? null, to: route.to, redirectedFrom: route.redirectedFrom };
 }

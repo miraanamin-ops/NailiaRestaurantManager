@@ -1,8 +1,10 @@
 // Inspects the latest email campaign and pokes its owner-copy link like a customer would.
 // Usage: node --env-file=.env.local scripts/campaign-probe.mjs <base url> [summary|open|page|redeem]
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
-const [base, action = "summary"] = process.argv.slice(2);
+guardLive(process.env, "campaign-probe");
+const [base, action = "summary"] = withoutLiveFlag(process.argv.slice(2));
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 
 const { data: campaign } = await supabase.from("campaigns").select("*").order("created_at", { ascending: false }).limit(1).single();

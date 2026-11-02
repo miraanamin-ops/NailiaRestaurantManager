@@ -5,7 +5,9 @@
 // workers never touch it), and removes everything it made at the end.
 // Usage: node --env-file=.env.local scripts/queue-race.mjs
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
+guardLive(process.env, "queue-race");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const TYPE = "race_test";
 const JOBS = 60;

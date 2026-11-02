@@ -3,6 +3,8 @@ import { alertBuilder } from "@/lib/builder-alerts";
 import { londonMinutes, londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { backlogProblem, briefIsLate } from "@/lib/job-health";
+import { briefHourOf } from "@/lib/morning-gate";
+import { simulationOn } from "@/lib/simulation-rules";
 import { getSupabase } from "@/lib/supabase";
 import { deadJobs, queueStats, requeueExpired } from "./store";
 import { handleExpired, jobDied } from "./worker";
@@ -10,19 +12,21 @@ import { handleExpired, jobDied } from "./worker";
 // Health checks for the builder (never the owner): run by the 9:31 health job
 // and by every hourly run.
 
-// Every active restaurant's brief should be out by 9:30 UK. A brief held for
+// Every active restaurant's brief should be out half an hour after its brief
+// hour (9:30 UK unless the owner picked another hour). A brief held for
 // WhatsApp's 24-hour rule counts as ready (it goes with the owner's next message).
 export async function checkLateBriefs(now: Date) {
   const today = londonYmd(now);
   const restaurants =
     check(
-      await getSupabase().from("restaurants").select("id, name, last_brief_on").eq("active", true).returns<{ id: string; name: string; last_brief_on: string | null }[]>(),
+      await getSupabase().from("restaurants").select("*").eq("active", true).returns<{ id: string; name: string; last_brief_on: string | null; brief_hour: number | null; pilot_zero?: boolean | null; fake_now?: string | null }[]>(),
     ) ?? [];
-  const late = restaurants.filter((r) => briefIsLate({ londonMinutes: londonMinutes(now), today, lastBriefOn: r.last_brief_on }));
+  // A restaurant in a Pilot Zero simulation gets its brief from "Run day", not 9am.
+  const late = restaurants.filter((r) => !simulationOn(r) && briefIsLate({ londonMinutes: londonMinutes(now), today, lastBriefOn: r.last_brief_on, briefHour: briefHourOf(r) }));
   for (const r of late) {
     await alertBuilder(
       `brief-late:${r.id}:${today}`,
-      `${r.name}'s morning brief hasn't gone out (it was due by 9:30). See the morning jobs on /log. The owner hasn't been told.`,
+      `${r.name}'s morning brief hasn't gone out (it was due by ${briefHourOf(r)}:30). See the morning jobs on /log. The owner hasn't been told.`,
     );
   }
   return late.map((r) => r.id);

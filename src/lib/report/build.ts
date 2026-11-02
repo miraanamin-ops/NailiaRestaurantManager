@@ -3,7 +3,8 @@ import { insightsMode, legacyReportText, queueInsightsShadow, reportWordsFromIns
 import { reputationMode, weeklyThemesFor } from "@/lib/agents/reputation";
 import { noEmDash } from "@/lib/text";
 import { writeReportInsights, type RestaurantContext } from "@/lib/assistant";
-import { londonYmd, startOfLondonDay } from "@/lib/clock";
+import { londonLongDate, londonYmd, startOfLondonDay } from "@/lib/clock";
+import { simulatedLabel, simulationOn } from "@/lib/simulation-rules";
 import { addDays } from "@/lib/sales/format";
 import { buildSalesSection, salesFacts, type SalesDayRow, type SalesItemRow } from "@/lib/sales/report-section";
 import { forecastReportDays } from "@/lib/forecast";
@@ -455,6 +456,7 @@ export async function createReport(ctx: RestaurantContext, period: Period): Prom
     googleMode: await googleModeFor(restaurant.id),
     whatsappNumber: restaurant.whatsapp_from?.replace(/\D/g, "") || null,
     sections: [headline, ...features.sections, ...dataSections.filter((s) => !features.replaces.has(s.id)), actions],
+    simulated: simulationOn(restaurant) ? simulatedLabel(londonLongDate(new Date(restaurant.fake_now!))) : null,
   };
 
   const token = newToken();

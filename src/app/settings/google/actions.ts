@@ -36,14 +36,29 @@ export async function chooseLocation(form: FormData) {
   await linkLocation(rid, { connectionId: conn!.id, accountId: get("account"), locationId: location!.name, title: location!.title ?? null });
   const actor = owner.isBuilder ? "builder" : "owner";
   await logAction({ restaurantId: rid, actor, action: "google", detail: `Linked Google location "${location!.title ?? location!.name}"${conn!.kind === "manager" ? " through DinerAI's manager account" : ""}` });
+  let importError: string | null = null;
   try {
     await importFromGoogle(rid, actor);
     // Still setting up: the import completes onboarding's Google step.
     await confirmFromGoogleImport(rid);
   } catch (err) {
     console.error("Google import failed", err);
-    back(rid, `saved=linked&error=${encodeURIComponent(`Linked, but the import didn't finish: ${message(err)}. Try "Import again".`)}`);
+    importError = message(err);
   }
+  // Setting up with Dina ("Connect Google", Path A): her Google step is done, and the owner goes back to the chat.
+  let toChat = false;
+  try {
+    const { afterGoogleConnected } = await import("@/lib/onboarding/dina/google-step");
+    const { dinaSetupInProgress } = await import("@/lib/onboarding/dina/whatsapp-turn");
+    if (await dinaSetupInProgress(rid)) {
+      await afterGoogleConnected(rid);
+      toChat = actor === "owner";
+    }
+  } catch (err) {
+    console.error("Couldn't finish Dina's Google step after linking", err);
+  }
+  if (toChat) redirect(`/onboarding/chat?r=${rid}`);
+  if (importError) back(rid, `saved=linked&error=${encodeURIComponent(`Linked, but the import didn't finish: ${importError}. Try "Import again".`)}`);
   back(rid, "saved=linked");
 }
 

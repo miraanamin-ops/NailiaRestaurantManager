@@ -17,6 +17,8 @@ export const JOB_TYPES = [
   "weather",
   "health_check",
   "cleanup",
+  // Hourly: nudges for restaurants still setting up with Dina (supabase/052_setup_nudges.sql)
+  "setup_nudges",
   // The outside data feeds (lib/feeds, supabase/041_outside_feeds.sql)
   "feed_weather",
   "feed_calendar",

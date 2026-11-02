@@ -5,11 +5,13 @@
 // Takes effect on the restaurant's next message (no deploy). Logged on /log as the builder.
 // "agents" also needs AGENTS_LIVE_ALLOWED=true on Vercel, and each agent's readiness
 // check (settings page, builder controls) to pass; until then that agent stays in shadow.
-// Note .env.local points at the LIVE database.
+// Runs against the dev project; add --live (with the live settings file) to change live.
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 import { agentModesFor, ASSISTANT_AGENTS, assistantModeOf } from "./lib/assistant-modes.mjs";
 
-const [who, mode] = process.argv.slice(2);
+guardLive(process.env, "assistant-mode");
+const [who, mode] = withoutLiveFlag(process.argv.slice(2));
 if (!who || (mode && mode !== "agents" && mode !== "old")) {
   console.error("Usage: node --env-file=.env.local scripts/assistant-mode.mjs <restaurant slug or id> [agents|old]");
   process.exit(1);

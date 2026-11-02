@@ -314,6 +314,10 @@ describe("Test Kitchen's dummy week makes a sensible rota", () => {
   test("under 8 weeks of history, the draft says it's minimum staffing only", () => {
     const min = buildPlan({ staff: DUMMY_STAFF, rules: effectiveRules(DUMMY_RULES, DUMMY_STAFF), settings: DEFAULT_SETTINGS, days, basis: "minimum" });
     expect(rotaDraftText(WEEK, min)).toContain(MINIMUM_NOTE);
+    // Plenty of history but daily totals only (Pilot Zero's Sales summary): it says that instead.
+    const daily = rotaDraftText(WEEK, { ...min, minimumReason: "hourly" } as typeof min);
+    expect(daily).toContain("your sales so far are daily totals, and I need sales by the hour");
+    expect(daily).not.toContain("less than 8 weeks");
     expect(min.totals.costPence).toBeLessThan(plan.totals.costPence);
   });
 

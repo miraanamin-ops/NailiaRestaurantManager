@@ -1,4 +1,5 @@
 import "server-only";
+import { bypassHeaders } from "@/lib/preview-bypass";
 import { appUrl } from "@/lib/supabase";
 
 // Starts n workers now, each its own function call with its own time budget
@@ -11,7 +12,7 @@ export async function kickWorkers(n = 1) {
   if (!secret || n < 1) return 0;
   const url = `${appUrl()}/api/jobs/work`;
   const calls = Array.from({ length: n }, () =>
-    fetch(url, { method: "POST", headers: { authorization: `Bearer ${secret}` }, signal: AbortSignal.timeout(5000) })
+    fetch(url, { method: "POST", headers: { authorization: `Bearer ${secret}`, ...bypassHeaders() }, signal: AbortSignal.timeout(5000) })
       .then((res) => res.ok)
       .catch((err) => {
         console.error("Couldn't start a worker", err);

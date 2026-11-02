@@ -37,6 +37,10 @@ export type AuditAction =
   | "profile_reverted" // Revert on one profile change
   | "job_retried" // the builder retried a dead job from /log
   | "builder_command" // a BUILDER ... WhatsApp command from BUILDER_WHATSAPP
+  | "demo_phone" // the builder sent a message as a demo restaurant's owner (/onboarding/admin/phone)
+  | "closure" // closing a restaurant's account: requested, confirmed, cancelled (/onboarding/admin/close)
+  | "sales_removed" // the builder removed imported sales from the Pilot Zero restaurant (/onboarding/admin/pilot-zero)
+  | "simulation" // the Pilot Zero simulation: date set, something injected, Run day, cleared (/onboarding/admin/pilot-zero)
   | "outside_data" // the builder changed outside data on /feeds (a confirmed date, term dates, a timetable...)
   | "google" // Google connected, location linked, imported, disconnected, a login needing reconnecting, or an UNDO Google could not do
   | "rota_staff" // someone added to, changed on or removed from the rota team (WhatsApp or /staff)

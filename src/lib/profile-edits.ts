@@ -18,6 +18,9 @@ import type { Restaurant } from "@/lib/supabase";
 export type EditableFields = ProfileFields &
   Pick<
     Restaurant,
+    // Onboarding with Dina's Hello step
+    | "name"
+    | "cuisine"
     | "logo_url"
     | "brand_color"
     | "brand_dark"
@@ -34,6 +37,8 @@ export type EditableFields = ProfileFields &
     | "words_to_avoid"
     | "emoji_allowed"
     | "special_hours"
+    // Dina's step 6 (053)
+    | "faqs"
     // The owner (settings page): name, language, quiet hours
     | "owner_name"
     | "owner_language"
@@ -42,9 +47,16 @@ export type EditableFields = ProfileFields &
     // Offers (settings page)
     | "approved_offer_types"
     | "birthday_offer"
+    // Dina's steps 8 and 12 (labour target; sending hours and brief hour, 054)
+    | "labour_target_pct"
+    | "send_window_start"
+    | "send_window_end"
+    | "brief_hour"
   >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
+  name: "restaurant name",
+  cuisine: "cuisine",
   opening_hours: "opening hours",
   menu: "menu",
   signup_reward: "sign-up reward",
@@ -67,12 +79,17 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   words_to_avoid: "words to avoid",
   emoji_allowed: "emojis",
   special_hours: "special hours",
+  faqs: "answers to common questions",
   owner_name: "your name",
   owner_language: "language",
   quiet_hours_start: "quiet hours start",
   quiet_hours_end: "quiet hours end",
   approved_offer_types: "kinds of offer",
   birthday_offer: "birthday offer",
+  labour_target_pct: "labour target",
+  send_window_start: "sending hours start",
+  send_window_end: "sending hours end",
+  brief_hour: "morning brief time",
 };
 
 // The menu goes through saveMenu (src/lib/ops/menu.ts): sent with the settings

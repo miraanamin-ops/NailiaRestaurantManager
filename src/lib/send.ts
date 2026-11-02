@@ -9,7 +9,7 @@ import { GoogleAuthError } from "@/lib/google/oauth";
 import { WriteInProgressError } from "@/lib/google/writes";
 import { logAction } from "@/lib/audit";
 import { check, draftName, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { CHECKED_GOOGLE_KINDS, channelFor, googleCheckerStep, simulationStep } from "@/lib/gate-rules";
+import { CHECKED_GOOGLE_KINDS, channelFor, dryRunContext, dryRunNote, googleCheckerStep, googleDryRunReason, SIMULATED_REVIEW_SOURCE, simulationStep, writeKindForDraft } from "@/lib/gate-rules";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { emailRedirectSwitch, googleSwitch } from "@/lib/switches";
 
@@ -49,7 +49,7 @@ async function logBlock(draft: Draft, reason: BlockReason, detail: string) {
 }
 
 // The send-time results of the two code checks, kept alongside the draft-time ones.
-function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money" | "test_mode", CheckResult>>): DraftChecks {
+function withSendChecks(draft: Draft, send: Partial<Record<"compliance" | "money" | "test_mode" | "dry_run", CheckResult>>): DraftChecks {
   return { ...(draft.checks ?? {}), send: { ...(draft.checks?.send ?? {}), ...send } };
 }
 
@@ -134,9 +134,17 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   // 3. Simulation, as a gate step: GOOGLE_MODE=simulated posts nothing to Google,
   //    EMAIL_REDIRECT keeps emails away from customers (lib/switches.ts).
   //    (WhatsApp to customers stays off until Meta verification.)
-  const testStep = simulationStep({ channel: channelFor(draft.kind), google: googleSwitch(process.env).mode, emailRedirect: emailRedirectSwitch(process.env).on });
+  const testStep = simulationStep({
+    channel: channelFor(draft.kind),
+    google: googleSwitch(process.env).mode,
+    emailRedirect: emailRedirectSwitch(process.env).on,
+    testSite: restaurant.is_test === true,
+  });
   const testCheck = checkResult(testStep.outcome === "simulate" ? [testStep.detail] : [], [], "pass");
-  const reachesPlatform = testStep.outcome === "ok";
+  // 3b. Google dry run (Pilot Zero) and replies to simulated reviews: shown as
+  //     "would have posted", nothing reaches Google (lib/gate-rules.ts googleDryRunReason).
+  const dryRun = await googleDryRunNote(draft, restaurant);
+  const reachesPlatform = testStep.outcome === "ok" && !dryRun;
 
   // All checks passed. Claim the draft in one atomic update so that two sends
   // racing each other can't both succeed.
@@ -149,7 +157,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
       scheduled_for: null,
       block_reason: null,
       updated_at: new Date().toISOString(),
-      checks: withSendChecks(draft, { money: checkResult([], []), compliance, test_mode: testCheck }),
+      checks: withSendChecks(draft, { money: checkResult([], []), compliance, test_mode: testCheck, ...(dryRun ? { dry_run: checkResult([dryRun], [], "pass") } : {}) }),
       // Auto: approved by the trust level and the checker, at the moment it goes out.
       ...(auto ? { approved_at: new Date().toISOString(), waiting_for: null } : {}),
     })
@@ -184,8 +192,8 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     note = deliveryNote(summary);
     simulated = summary.emailed === 0;
   } else if (!reachesPlatform) {
-    // Simulated Google (or customer WhatsApp): nothing goes out; it is logged as simulated.
-    note = `🧪 ${testStep.detail}`;
+    // Dry run, simulated Google (or customer WhatsApp): nothing goes out; it is logged as simulated.
+    note = dryRun ?? `🧪 ${testStep.detail}`;
   } else if (claimed.kind === "review_reply" || claimed.kind === "google_post" || claimed.kind === "hours_update" || claimed.kind === "menu_update") {
     // Google: this restaurant's own connector (live once it has linked its location, else dummy).
     const g = await googleFor(restaurant.id);
@@ -245,6 +253,24 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
     data: { source, simulated },
   });
   return { outcome: "sent", draft: claimed, note };
+}
+
+// What the owner sees instead of a Google write that is dry run for this
+// restaurant, or a reply to a simulated review; null = it goes to Google.
+async function googleDryRunNote(draft: Draft, restaurant: Restaurant): Promise<string | null> {
+  if (channelFor(draft.kind) !== "google") return null;
+  const review =
+    draft.kind === "review_reply" && draft.review_id
+      ? check(await getSupabase().from("reviews").select("source").eq("id", draft.review_id).eq("restaurant_id", restaurant.id).maybeSingle<{ source: string | null }>())
+      : null;
+  const simulatedReview = review?.source === SIMULATED_REVIEW_SOURCE;
+  const why = googleDryRunReason(restaurant, writeKindForDraft(draft.kind), dryRunContext(process.env));
+  if (!simulatedReview && !why) return null;
+  if (why === "missing_056") {
+    const { alertBuilder } = await import("@/lib/builder-alerts");
+    await alertBuilder("google-needs-056", "A Google write was refused (shown to the owner as a dry run): Production is running without supabase/056_pilot_zero.sql. Run it in Supabase > SQL Editor.");
+  }
+  return dryRunNote({ kind: draft.kind, content: draft.content, profile: restaurant.google_location_title, simulatedReview });
 }
 
 // The checker step for a Google write: null = fine to go. A version with no live

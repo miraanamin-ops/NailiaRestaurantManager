@@ -1,6 +1,8 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { LIVE_APP_URL } from "@/lib/hosts";
+import { assertNotLiveByAccident } from "@/lib/live-guard";
+import { simulationOn } from "@/lib/simulation-rules";
 import { testToolsOn } from "@/lib/test-mode";
 
 // Server-side Supabase client. Uses the secret key, so it must never be
@@ -13,6 +15,8 @@ export function getSupabase() {
       "Missing SUPABASE_URL or SUPABASE_SECRET_KEY environment variable.",
     );
   }
+  // On this computer: the dev project, never live by accident (lib/live-guard.ts).
+  assertNotLiveByAccident();
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -62,6 +66,11 @@ export type Restaurant = {
   morning_failed_on: string | null;
   // A demo restaurant: everything belonging to it is dummy data (step 10).
   is_demo: boolean;
+  // A test site (048; always a demo too): never emails customers or writes to
+  // live Google, whatever the switches say (lib/gate-rules.ts). Missing before 048 ran.
+  is_test?: boolean;
+  // Answers to customers' common questions, by topic, in the owner's words (053; Dina's step 6).
+  faqs?: Record<string, string> | null;
   // Scheduled jobs only run for active restaurants (step 11).
   active: boolean;
   // Billing (025_billing.sql, lib/billing/). Optional so older rows and test fixtures still fit.
@@ -77,10 +86,14 @@ export type Restaurant = {
   pilot_invite_code?: string | null;
   terms_accepted_at?: string | null;
   terms_version?: string | null;
+  // The privacy notice and data processing agreement accepted with the terms (048).
+  privacy_version?: string | null;
+  dpa_version?: string | null;
   // Show forecasts from runs that didn't pass, labelled TEST (042; demo restaurants with TEST_TOOLS only).
   forecast_unvalidated?: boolean;
   // The owner's labour target, % of sales; the builder's forecast error limit, % (046).
   labour_target_pct?: number | string | null;
+  brief_hour?: number | null; // 7 to 11, the morning brief's hour (054); 9 if unset
   forecast_error_limit_pct?: number | string | null;
   // Found or chosen during onboarding (step 12).
   owner_name: string | null;
@@ -124,6 +137,13 @@ export type Restaurant = {
   google_linked_at?: string | null;
   google_import?: import("@/lib/google/mapping").GoogleImport | null;
   google_imported_at?: string | null;
+  // Pilot Zero (056): the builder's own pilot restaurant, and its Google dry run
+  // switches (lib/gate-rules.ts googleDryRun). Set only in the admin console.
+  pilot_zero?: boolean | null;
+  google_dry_run?: boolean | null;
+  google_profile_writes?: boolean | null;
+  // The simulation in progress: when it started and the markers to put back (lib/simulation.ts).
+  simulation?: import("@/lib/simulation-rules").SimulationState | null;
   // The review replies the owner picked during onboarding (026, lib/onboarding/reply-examples.ts).
   profile_examples?: import("@/lib/onboarding/reply-examples").ProfileExamples | null;
   // Phase 3b (022): the owner's language and quiet hours (UK time, "23:00:00" to "09:00:00").
@@ -163,9 +183,10 @@ export function baseUrlFrom(headers: Headers) {
 }
 
 // The clock the rules use: the fake test time if one is set (TEST_TOOLS on, and
-// only for a demo restaurant), otherwise now.
-export function restaurantNow(restaurant: Pick<Restaurant, "fake_now" | "is_demo">) {
-  return restaurant.fake_now && testToolsOn(restaurant) ? new Date(restaurant.fake_now) : new Date();
+// only for a demo restaurant) or the Pilot Zero simulation's clock (set only from
+// the admin console, lib/simulation-rules.ts), otherwise now.
+export function restaurantNow(restaurant: Pick<Restaurant, "fake_now" | "is_demo"> & { pilot_zero?: boolean | null; owner_whatsapp?: string | null }) {
+  return restaurant.fake_now && (testToolsOn(restaurant) || simulationOn(restaurant)) ? new Date(restaurant.fake_now) : new Date();
 }
 
 export type Customer = {

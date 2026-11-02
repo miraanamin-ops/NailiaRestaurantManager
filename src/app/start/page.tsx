@@ -4,7 +4,7 @@ import { Check } from "@/app/site/_components/bits";
 import { Wordmark } from "@/app/site/_components/wordmark";
 import { Turnstile } from "@/components/turnstile";
 import { fill, site } from "@/content/site";
-import { PRICE_GBP, publicSignupOpen, trialDays } from "@/lib/billing/config";
+import { onboardingRequiresPayment, PRICE_GBP, publicSignupOpen, trialDays } from "@/lib/billing/config";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { startSignup } from "./actions";
 import "../site/landing.css";
@@ -12,6 +12,7 @@ import "../site/landing.css";
 export const metadata: Metadata = { title: "Start your free trial · DinerAI" };
 
 const CONTACT_EMAIL = process.env.CONTACT_EMAIL || "hello@dinerai.co.uk";
+const LEGAL_LINKS: Record<string, string> = { Terms: "/terms", "Data processing agreement": "/dpa", "Privacy notice": "/privacy" };
 
 // Step zero: the sign-up form, in the landing page's style. All words are in
 // src/content/site.ts (signup). ?invite=CODE fills in a pilot code.
@@ -127,9 +128,9 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
           <label className="flex items-start gap-3 text-[14px] text-mist/90">
             <input type="checkbox" name="terms" value="yes" required className="mt-0.5 h-5 w-5 shrink-0 accent-[#c8f03c]" />
             <span>
-              {s.fields.terms.split(/(Terms|Privacy notice)/).map((part, i) =>
-                part === "Terms" || part === "Privacy notice" ? (
-                  <a key={i} href={part === "Terms" ? "/terms" : "/privacy"} target="_blank" className="underline decoration-signal underline-offset-4">
+              {s.fields.terms.split(/(Terms|Data processing agreement|Privacy notice)/).map((part, i) =>
+                LEGAL_LINKS[part] ? (
+                  <a key={i} href={LEGAL_LINKS[part]} target="_blank" className="underline decoration-signal underline-offset-4">
                     {part}
                   </a>
                 ) : (
@@ -157,14 +158,14 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
       <aside className="h-fit rounded-3xl border border-ink-700 bg-ink-900 p-5 sm:p-6 lg:sticky lg:top-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-fog">{s.stepsLabel}</p>
         <ol className="mt-4 space-y-3">
-          {s.steps.map((step, i) => (
+          {(onboardingRequiresPayment() ? s.steps : s.stepsInvite).map((step, i) => (
             <li key={step} className="flex items-center gap-3">
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-[13px] ${i === 0 ? "border-signal bg-signal text-ink-950" : "border-ink-700 text-fog"}`}
               >
                 {i + 1}
               </span>
-              <span className={i === 0 ? "text-mist" : "text-fog"}>{inviteFirst && i === 1 ? s.pilotStep : t(step)}</span>
+              <span className={i === 0 ? "text-mist" : "text-fog"}>{inviteFirst && i === 1 && onboardingRequiresPayment() ? s.pilotStep : t(step)}</span>
             </li>
           ))}
         </ol>

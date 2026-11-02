@@ -13,6 +13,9 @@ import {
   applyMapping,
   dayTotals,
   describeMapping,
+  amountBasis,
+  basisWords,
+  isDailyTotals,
   layoutSignature,
   mappingProblems,
   mappingWorks,
@@ -158,12 +161,17 @@ export function mappingQuestion(row: PosImport, table: Table) {
   const first = lines[0];
   const days = lines.map((l) => l.day).sort();
   const intro = `📊 *New sales file layout*${m.pos_name ? ` (looks like ${m.pos_name})` : ""}. Here's how I read the columns:`;
-  const example = first ? `\nFirst sale: ${dayLabel(first.day)}${first.hour !== null ? ` ${String(first.hour).padStart(2, "0")}:00` : ""}, ${first.item} ×${first.quantity}, ${gbp(first.amount, true)}` : "";
+  const daily = isDailyTotals(m);
+  const example = !first
+    ? ""
+    : daily
+      ? `\nFirst day: ${dayLabel(first.day)}, ${gbp(first.amount, true)}`
+      : `\nFirst sale: ${dayLabel(first.day)}${first.hour !== null ? ` ${String(first.hour).padStart(2, "0")}:00` : ""}, ${first.item} ×${first.quantity}, ${gbp(first.amount, true)}`;
   const link = importPageUrl(row.id, row.restaurant_id);
   if (!works) {
     return `${intro}\n${describeMapping(m).map((l) => `- ${l}`).join("\n")}\n\nThat doesn't read most rows properly, so please check the columns here: ${link}`;
   }
-  return `${intro}\n${describeMapping(m).map((l) => `- ${l}`).join("\n")}${example}\n\nReply *YES* to import ${plural(lines.length, "sales line")} (${dayLabel(days[0])} to ${dayLabel(days.at(-1)!)}), or change the columns here: ${link}\nAfter this, files like it import straight away.`;
+  return `${intro}\n${describeMapping(m).map((l) => `- ${l}`).join("\n")}${example}\n\nReply *YES* to import ${daily ? `${plural(new Set(days).size, "day")} of daily takings` : plural(lines.length, "sales line")} (${dayLabel(days[0])} to ${dayLabel(days.at(-1)!)}), or change the columns here: ${link}\nAfter this, files like it import straight away.`;
 }
 
 // The owner confirmed (or corrected) the columns: save the layout and import.
@@ -190,6 +198,7 @@ export async function confirmImport(restaurantId: string, importId: string, mapp
     price_is: mapping.price_is,
     receipt: mapping.receipt,
     date_order: mapping.date_order,
+    ...(mapping.amount_basis ? { amount_basis: mapping.amount_basis } : {}),
   };
   const layout = checkRow(
     await supabase
@@ -212,6 +221,7 @@ export async function cancelImport(restaurantId: string, importId: string) {
 
 // Saves the file's sale lines (skipping any already imported) and works out each day's totals.
 async function runImport(row: PosImport, table: Table, mapping: PosMapping, actor: "owner" | "staff"): Promise<ImportOutcome> {
+  if (isDailyTotals(mapping)) return runDailyImport(row, table, mapping, actor);
   const supabase = getSupabase();
   const rid = row.restaurant_id;
   const { lines, skipped } = applyMapping(table, mapping);
@@ -311,6 +321,49 @@ async function runImport(row: PosImport, table: Table, mapping: PosMapping, acto
     importId: row.id,
     message: `📊 Imported ${plural(fresh.length, "sales line")}, ${period} (${gbp(amount)} including VAT).${extras.length ? `\n${extras.join(" ")}` : ""}`,
   };
+}
+
+// A daily summary: each day's takings saved as that day's totals (the forecasts
+// read those), never as dish sales, so dish-level insights only ever see real
+// items. Uploading the same days again just saves the same totals.
+async function runDailyImport(row: PosImport, table: Table, mapping: PosMapping, actor: "owner" | "staff"): Promise<ImportOutcome> {
+  const supabase = getSupabase();
+  const rid = row.restaurant_id;
+  const { lines, skipped } = applyMapping(table, mapping);
+  if (!lines.length) {
+    await setImport(row, { status: "failed", error: "No readable days", rows_skipped: skipped });
+    return { status: "failed", importId: row.id, message: "I couldn't find any days with takings in that file with those columns." };
+  }
+  // The orders that day, which sharpen forecasts: a daily summary's orders column
+  // (quantity), or, for a file with one row per payment (Square's Transactions
+  // export), the number of different transaction ids that day (receipt), counting
+  // payments only: a refund row lowers the takings but isn't an order.
+  const orders = new Map<string, number>();
+  if (mapping.quantity) for (const l of lines) orders.set(l.day, (orders.get(l.day) ?? 0) + l.quantity);
+  else if (mapping.receipt) {
+    const ids = new Map<string, Set<string>>();
+    for (const l of lines) if (l.receipt && l.amount > 0) ids.set(l.day, (ids.get(l.day) ?? new Set()).add(l.receipt));
+    for (const [day, set] of ids) orders.set(day, set.size);
+  }
+  const totals = dayTotals(lines.map((l) => ({ day: l.day, hour: null, receipt: null, amount: l.amount }))).map((d) => ({ ...d, transactions: orders.has(d.day) ? Math.round(orders.get(d.day)!) : null }));
+  const days = totals.map((d) => d.day).sort();
+  const [first, last] = [days[0], days.at(-1)!];
+  // Real takings replace seeded hours for the same days (as an item import does).
+  check(await supabase.from("sales_hours").delete().eq("restaurant_id", rid).eq("source", "seed").gte("day", first).lte("day", last));
+  await saveDaysFromPos(rid, totals, amountBasis(mapping));
+  if (historicImport(first, londonYmd(new Date()))) {
+    try {
+      await enqueueBackfill(rid, "pos_import");
+    } catch (err) {
+      console.error("Couldn't queue the outside data backfill", err);
+    }
+  }
+  const amount = round2(totals.reduce((sum, d) => sum + d.gross, 0));
+  await setImport(row, { status: "imported", rows_imported: totals.length, rows_duplicate: 0, rows_skipped: skipped, first_day: first, last_day: last, total_amount: amount, imported_at: new Date().toISOString() });
+  const period = first === last ? dayLabel(first) : `${dayLabel(first)} to ${dayLabel(last)}`;
+  await logAction({ restaurantId: rid, actor, action: "sales_imported", detail: `Daily takings imported: ${plural(totals.length, "day")}, ${period}`, data: { import_id: row.id, daily: true } });
+  const extra = skipped ? `\n${plural(skipped, "row")} ${skipped === 1 ? "wasn't a day" : "weren't days"} (totals or blanks).` : "";
+  return { status: "imported", importId: row.id, message: `📊 Imported daily takings for ${plural(totals.length, "day")}, ${period} (${gbp(amount)}, from "${mapping.price}": ${basisWords(mapping)}).${extra}` };
 }
 
 // The newest file waiting for its columns to be confirmed on WhatsApp (from the last day).

@@ -132,10 +132,36 @@ export function agentModeReason(env: Env, agent: LiveAgent, set: string, ready: 
   return ready ? null : "its readiness check doesn't pass";
 }
 
+// A placeholder owner number: +44 7700 900400 to 900499, a block of Ofcom's drama
+// range (never given to a real phone; the tests use other numbers in that range
+// as strangers). Ember & Spice is 900401, Cardamom Corner 900402
+// (scripts/demo-numbers.mjs). The demo restaurants use these once the
+// builder's own number belongs to a real restaurant: nobody can text from one
+// (Twilio signs every inbound message, and no WhatsApp account has such a
+// number), so only the builder's demo phone (/onboarding/admin/phone) acts as
+// their owner, and nothing is ever sent to one (lib/whatsapp.ts).
+export function isPlaceholderNumber(n: string | null | undefined) {
+  return /^4477009004\d{2}$/.test((n ?? "").replace(/\D/g, ""));
+}
+
 // Test tools only ever act on a demo restaurant: a real one is never affected,
-// whatever TEST_TOOLS says.
-export function testToolsFor(env: Env, restaurant: { is_demo?: boolean | null }) {
-  return testToolsSwitch(env).on && restaurant.is_demo === true;
+// whatever TEST_TOOLS says. On production they're the builder's alone: only a
+// demo restaurant whose owner number is BUILDER_WHATSAPP or a placeholder (which
+// only the builder's demo phone can use), so a pilot owner never gets TIME, RUN
+// BRIEF or RESET ONBOARDING, even on a demo restaurant.
+export function testToolsFor(env: Env, restaurant: { is_demo?: boolean | null; owner_whatsapp?: string | null }) {
+  if (!testToolsSwitch(env).on || restaurant.is_demo !== true) return false;
+  if (environmentOf(env) !== "production") return true;
+  if (isPlaceholderNumber(restaurant.owner_whatsapp)) return true;
+  const digits = (n: string | null | undefined) => (n ?? "").replace(/\D/g, "");
+  return digits(env.BUILDER_WHATSAPP) !== "" && digits(restaurant.owner_whatsapp) === digits(env.BUILDER_WHATSAPP);
+}
+
+// New sign-ups are demo restaurants only with TEST_TOOLS on and never on
+// production: a real pilot must never be treated as dummy data. (Test sites from
+// /onboarding/admin are made demo by the builder's own controls.)
+export function signupsAreDemo(env: Env) {
+  return testToolsSwitch(env).on && environmentOf(env) !== "production";
 }
 
 export function allSwitches(env: Env): Switches {
@@ -175,4 +201,15 @@ export function switchChanges(previous: Record<string, unknown> | null | undefin
   return Object.keys(current)
     .filter((k) => previous[k] !== current[k])
     .map((k) => `${k}: ${String(previous[k] ?? "unset")} → ${String(current[k])}`);
+}
+
+// Preview deployments share production's Twilio account, so a preview may only
+// send WhatsApp to the builder's own number (BUILDER_WHATSAPP, Preview's own
+// value). Anyone else is refused, and so is everyone if it isn't set.
+// Production and local development are unaffected.
+export function whatsAppSendAllowed(env: Env, to: string) {
+  if (environmentOf(env) !== "preview") return true;
+  const digits = (n: string | undefined) => (n ?? "").replace(/\D/g, "");
+  const builder = digits(env.BUILDER_WHATSAPP);
+  return builder !== "" && digits(to) === builder;
 }

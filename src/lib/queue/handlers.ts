@@ -42,6 +42,10 @@ export type OwnerMessagePayload = {
   sandbox: string; // our number they wrote to
   body: string;
   buttonPayload?: string;
+  // A row picked from a list message (Dina's setup chat).
+  listId?: string;
+  // Twilio's id for the message: Dina saves it, so a repeat is answered once.
+  messageSid?: string;
   media?: { url: string; contentType: string }[];
 };
 
@@ -55,7 +59,12 @@ const ownerMessage: JobHandler = {
       await handleStaffMessage({ restaurantId, staffNumber: p.owner, sandbox: p.sandbox, body: p.body, media: media[0] ?? null });
       return { handled: "staff" };
     }
-    // A restaurant still being set up gets the onboarding conversation instead.
+    // A restaurant setting up with Dina gets Dina; one on the older setup gets that.
+    const { dinaSetupInProgress, handleDinaWhatsApp } = await import("@/lib/onboarding/dina/whatsapp-turn");
+    if (await dinaSetupInProgress(restaurantId)) {
+      await handleDinaWhatsApp({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, buttonPayload: p.buttonPayload, listId: p.listId, media, messageSid: p.messageSid });
+      return { handled: "dina" };
+    }
     const { handleOnboardingMessage, onboardingInProgress } = await import("@/lib/onboarding/whatsapp-flow");
     if (await onboardingInProgress(restaurantId)) {
       await handleOnboardingMessage({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, media });
@@ -72,6 +81,9 @@ const ownerMessage: JobHandler = {
     if (err instanceof OwnerToldError) return;
     const p = job.payload as OwnerMessagePayload;
     if (!job.restaurant_id || !p?.owner || !p?.sandbox) return;
+    // The owner number may have moved since the message came in (scripts/demo-numbers.mjs):
+    // the old number isn't this restaurant's any more, so it hears nothing.
+    if (p.kind === "owner" && (await restaurantFor(job))?.owner_whatsapp !== p.owner) return;
     await messageOwner({ restaurantId: job.restaurant_id, from: p.sandbox, to: p.owner }, SORRY);
   },
 };
@@ -155,9 +167,37 @@ const healthCheck: JobHandler = {
   },
 };
 
+// Hourly: nudges for restaurants still setting up with Dina (the 24-hour Google nudge).
+const setupNudges: JobHandler = {
+  run: async () => {
+    const { runGoogleNudges } = await import("@/lib/onboarding/dina/google-step");
+    const google = await runGoogleNudges(new Date());
+    const failed = google.filter((g) => g.error);
+    if (failed.length) await alertBuilder("setup-nudges-failed", `${failed.length} setup nudge(s) failed: ${failed.map((f) => f.error).join("; ").slice(0, 300)}`);
+    return { google };
+  },
+};
+
 // Daily: old finished and dead jobs (lib/queue/config.ts RETENTION).
+// Also: closed accounts' exports past their 7 days (lib/closure.ts).
 const cleanupJob: JobHandler = {
-  run: async () => ({ removed: await cleanup(), feedCache: await clearFeedCache() }),
+  run: async () => {
+    const { deleteExpiredExports } = await import("@/lib/closure");
+    return { removed: await cleanup(), feedCache: await clearFeedCache(), exportsDeleted: await deleteExpiredExports(new Date()) };
+  },
+};
+
+// Closing an account once it's confirmed and its cooling-off is over (lib/closure.ts).
+// Each step is recorded as it's done, so a retry carries on where it stopped.
+const accountClose: JobHandler = {
+  run: async (job) => {
+    const { runClosing } = await import("@/lib/closure");
+    return runClosing(String(job.payload.closure ?? ""));
+  },
+  onDead: async (job, err) => {
+    const { closingFailed } = await import("@/lib/closure");
+    await closingFailed(String(job.payload.closure ?? ""), err);
+  },
 };
 
 // Thursday 10am: next week's rota, sent to the owner as a draft (lib/rota/build.ts).
@@ -169,6 +209,14 @@ const rotaWeekJob: JobHandler = {
     if (!r || !channel) return { skipped: "no owner WhatsApp yet" };
     const { suggestRota } = await import("@/lib/rota/build");
     return suggestRota(r, { now: new Date(), send: (text, withButtons = false, mediaUrl = null) => messageOwner(channel, text, withButtons, { mediaUrl }), mode: "urgent", actor: "scheduled job", rebuild: false });
+  },
+};
+
+// Pilot Zero: Run day for a simulated date, queued from the admin console (lib/simulation.ts).
+const simDay: JobHandler = {
+  run: async (job) => {
+    const { runDayStep } = await import("@/lib/simulation");
+    return runDayStep(job.restaurant_id!, job.payload as import("@/lib/simulation").DayPayload);
   },
 };
 
@@ -184,6 +232,9 @@ export const HANDLERS: Record<string, JobHandler> = {
   weather,
   health_check: healthCheck,
   cleanup: cleanupJob,
+  setup_nudges: setupNudges,
+  sim_day: simDay,
+  account_close: accountClose,
   ...FEED_JOB_HANDLERS,
   feed_backfill: backfillJob,
 };

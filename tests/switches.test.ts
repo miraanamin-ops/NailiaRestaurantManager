@@ -12,11 +12,14 @@ import {
   emailRedirectSwitch,
   environmentOf,
   googleSwitch,
+  isPlaceholderNumber,
   readFlag,
   switchChanges,
   switchesRecord,
   testToolsFor,
+  signupsAreDemo,
   testToolsSwitch,
+  whatsAppSendAllowed,
 } from "@/lib/switches";
 
 const PROD = { VERCEL_ENV: "production" };
@@ -233,7 +236,7 @@ describe("customer emails with the real sender", () => {
     vi.doUnmock("@/lib/email/templates");
   });
 
-  async function deliver(env: Record<string, string>) {
+  async function deliver(env: Record<string, string>, restaurant: Record<string, unknown> = {}) {
     vi.resetModules();
     for (const k of ["TEST_MODE", "EMAIL_REDIRECT", "VERCEL_ENV", "TEST_EMAIL_ALLOW"]) vi.stubEnv(k, "");
     for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
@@ -248,7 +251,7 @@ describe("customer emails with the real sender", () => {
     vi.doMock("@/lib/email/templates", () => ({ renderEmail: async () => ({ html: "<p>Hi</p>", text: "Hi" }) }));
     const { sendCustomerEmail } = await import("@/lib/email");
     const delivery = await sendCustomerEmail({
-      restaurant: { name: "Ember & Spice Grill", owner_email: "owner@grill.co.uk", reply_to_email: null } as never,
+      restaurant: { name: "Ember & Spice Grill", owner_email: "owner@grill.co.uk", reply_to_email: null, ...restaurant } as never,
       to: "ayesha@gmail.com",
       content: { kind: "campaign", subject: "A Thursday treat" } as never,
       oneClickUrl: null,
@@ -273,8 +276,69 @@ describe("customer emails with the real sender", () => {
     expect(delivery).toMatchObject({ to: "builder@dinerai.co.uk", redirectedFrom: "ayesha@gmail.com" });
   });
 
+  test("a test site's email is redirected to the builder even with EMAIL_REDIRECT=false in production; its owner still gets their own", async () => {
+    const testSite = { is_demo: true, is_test: true };
+    const { delivery, sends } = await deliver({ VERCEL_ENV: "production", EMAIL_REDIRECT: "false" }, testSite);
+    expect(delivery).toMatchObject({ to: "builder@dinerai.co.uk", redirectedFrom: "ayesha@gmail.com" });
+    expect(sends.map((s) => s.to)).toEqual(["builder@dinerai.co.uk"]);
+    const owner = await deliver({ VERCEL_ENV: "production", EMAIL_REDIRECT: "false" }, { ...testSite, owner_email: "ayesha@gmail.com" });
+    expect(owner.delivery).toMatchObject({ to: "ayesha@gmail.com", redirectedFrom: null });
+  });
+
   test("TEST_EMAIL_ALLOW addresses still get their own while redirecting", async () => {
     const { delivery } = await deliver({ VERCEL_ENV: "production", EMAIL_REDIRECT: "true", TEST_EMAIL_ALLOW: "ayesha@gmail.com" });
     expect(delivery).toMatchObject({ to: "ayesha@gmail.com", redirectedFrom: null });
+  });
+});
+
+describe("WhatsApp on previews", () => {
+  const BUILDER = "whatsapp:+447700900123";
+  test("a preview only messages the builder number", () => {
+    const env = { ...PREVIEW, BUILDER_WHATSAPP: BUILDER };
+    expect(whatsAppSendAllowed(env, BUILDER)).toBe(true);
+    expect(whatsAppSendAllowed(env, "+44 7700 900123")).toBe(true);
+    expect(whatsAppSendAllowed(env, "whatsapp:+447700900999")).toBe(false);
+  });
+  test("a preview without BUILDER_WHATSAPP messages nobody", () => {
+    expect(whatsAppSendAllowed(PREVIEW, BUILDER)).toBe(false);
+    expect(whatsAppSendAllowed({ ...PREVIEW, BUILDER_WHATSAPP: " " }, "whatsapp:+")).toBe(false);
+  });
+  test("production and local development are unchanged", () => {
+    expect(whatsAppSendAllowed(PROD, "whatsapp:+447700900999")).toBe(true);
+    expect(whatsAppSendAllowed({}, "whatsapp:+447700900999")).toBe(true);
+  });
+});
+
+describe("test tools on production are the builder's alone", () => {
+  const BUILDER = "whatsapp:+447700900123";
+  const prod = { ...PROD, TEST_TOOLS: "true", BUILDER_WHATSAPP: BUILDER };
+  test("only a demo restaurant whose owner number is the builder's", () => {
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: BUILDER })).toBe(true);
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: "whatsapp:+447700900999" })).toBe(false);
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: null })).toBe(false);
+    expect(testToolsFor(prod, { is_demo: false, owner_whatsapp: BUILDER })).toBe(false);
+    expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "" }, { is_demo: true, owner_whatsapp: "" })).toBe(false);
+  });
+  test("the number is compared as digits, whatever the format", () => {
+    expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "+44 7700 900123" }, { is_demo: true, owner_whatsapp: BUILDER })).toBe(true);
+    expect(testToolsFor({ ...prod, BUILDER_WHATSAPP: "+447700900123" }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900124" })).toBe(false);
+  });
+  test("a demo restaurant on a placeholder number (only the builder's demo phone can use it)", () => {
+    expect(testToolsFor(prod, { is_demo: true, owner_whatsapp: "whatsapp:+447700900401" })).toBe(true);
+    expect(testToolsFor(prod, { is_demo: false, owner_whatsapp: "whatsapp:+447700900401" })).toBe(false);
+    expect(testToolsFor({ ...PROD, BUILDER_WHATSAPP: BUILDER }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900401" })).toBe(false);
+  });
+  test("placeholder numbers are one small block of the drama range", () => {
+    for (const n of ["whatsapp:+447700900401", "+44 7700 900402", "447700900499"]) expect(isPlaceholderNumber(n)).toBe(true);
+    for (const n of ["whatsapp:+447700900123", "+447700900399", "+447700900500", "+4477009004011", "", null, undefined]) expect(isPlaceholderNumber(n)).toBe(false);
+  });
+  test("previews and local copies keep the demo-only rule", () => {
+    expect(testToolsFor({ ...PREVIEW, TEST_TOOLS: "true" }, { is_demo: true, owner_whatsapp: "whatsapp:+447700900999" })).toBe(true);
+    expect(testToolsFor({ TEST_TOOLS: "true" }, { is_demo: true })).toBe(true);
+  });
+  test("new sign-ups are never demo restaurants on production", () => {
+    expect(signupsAreDemo(prod)).toBe(false);
+    expect(signupsAreDemo({ ...PREVIEW, TEST_TOOLS: "true" })).toBe(true);
+    expect(signupsAreDemo({ ...PREVIEW })).toBe(false);
   });
 });

@@ -150,7 +150,7 @@ describe("the WhatsApp webhook", () => {
         key: "owner_message:SMq1",
         priority: 0,
         concurrencyKey: "whatsapp:r1",
-        payload: { kind: "owner", owner: OWNER, sandbox: "whatsapp:+14155238886", body: "APPROVE ALL", buttonPayload: undefined, media: [] },
+        payload: { kind: "owner", owner: OWNER, sandbox: "whatsapp:+14155238886", body: "APPROVE ALL", buttonPayload: undefined, listId: undefined, messageSid: "SMq1", media: [] },
       },
     ]);
     expect(kicks).toBe(1);
@@ -183,5 +183,91 @@ describe("the WhatsApp webhook", () => {
     const call = (handleOnboardingMessage.mock.calls[0] as unknown as [{ restaurantId: string; media: { url: string }[] }])[0];
     expect(call.restaurantId).toBe("r1");
     expect(call.media.map((x) => x.url)).toEqual(["https://x/0", "https://x/1"]);
+  });
+});
+
+describe("builder commands only from the builder's own number", () => {
+  const BUILDER = "whatsapp:+447700900999";
+  const handleBuilderCommand = vi.fn(async () => "✅ done");
+  const sendText = vi.fn(async () => ({ sid: "SMb", body: "" }));
+  beforeEach(() => {
+    handleBuilderCommand.mockClear();
+    sendText.mockClear();
+    vi.doMock("@/lib/feeds/builder", () => ({ handleBuilderCommand }));
+    vi.doMock("@/lib/whatsapp", async (orig) => ({ ...(await orig<object>()), sendText }));
+  });
+  afterEach(() => {
+    vi.doUnmock("@/lib/feeds/builder");
+    vi.doUnmock("@/lib/whatsapp");
+    delete process.env.BUILDER_WHATSAPP;
+  });
+  const builderMessage = (from: string) => ({ ...message(from, `SMb${Math.random()}`), Body: "BUILDER GOOGLE ACCEPTED ember-spice" });
+
+  test("a restaurant owner sending BUILDER ...: not run, not passed to their assistant, no reply at all", async () => {
+    process.env.BUILDER_WHATSAPP = BUILDER;
+    const m = builderMessage(OWNER);
+    const res = await post(m, sign(m));
+    expect(await res.text()).toContain("<Response></Response>");
+    expect(handleBuilderCommand).not.toHaveBeenCalled();
+    expect(handleMessage).not.toHaveBeenCalled();
+    expect(sendText).not.toHaveBeenCalled();
+    expect(sentToOwner).toEqual([]);
+    const logged = db.calls.find((c) => c.table === "messages" && c.op === "insert");
+    expect((logged?.payload as { error: string }).error).toMatch(/builder command from a number that isn't the builder's/);
+  });
+
+  test("a stranger, or anyone at all when no builder number is set: nothing", async () => {
+    process.env.BUILDER_WHATSAPP = BUILDER;
+    const stranger = builderMessage("whatsapp:+447700900555");
+    await post(stranger, sign(stranger));
+    delete process.env.BUILDER_WHATSAPP;
+    const anyone = builderMessage(BUILDER);
+    await post(anyone, sign(anyone));
+    expect(handleBuilderCommand).not.toHaveBeenCalled();
+    expect(sendText).not.toHaveBeenCalled();
+    expect(handleMessage).not.toHaveBeenCalled();
+  });
+
+  test("the builder's own number: run, and the answer goes back to the builder only", async () => {
+    process.env.BUILDER_WHATSAPP = BUILDER;
+    const m = builderMessage(BUILDER);
+    await post(m, sign(m));
+    expect(handleBuilderCommand).toHaveBeenCalledWith("BUILDER GOOGLE ACCEPTED ember-spice");
+    expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", BUILDER, "✅ done");
+  });
+});
+
+describe("#note: the Pilot Zero log, from the builder's own number only", () => {
+  const sendText = vi.fn(async () => ({ sid: "SMn", body: "" }));
+  const saveNote = vi.fn(async () => "📝 Noted for 2026-11-12 (simulated day).");
+  beforeEach(() => {
+    sendText.mockClear();
+    saveNote.mockClear();
+    vi.doMock("@/lib/whatsapp", async (orig) => ({ ...(await orig<object>()), sendText }));
+    vi.doMock("@/lib/pilot-notes", () => ({ saveNote }));
+  });
+  afterEach(() => {
+    vi.doUnmock("@/lib/whatsapp");
+    vi.doUnmock("@/lib/pilot-notes");
+    delete process.env.BUILDER_WHATSAPP;
+  });
+  const note = (from: string) => ({ ...message(from, `SMn${Math.random()}`), Body: "#note the brief came at 9:02" });
+
+  test("the builder's number (also their restaurant's owner number): saved and answered, never sent to the assistant", async () => {
+    process.env.BUILDER_WHATSAPP = OWNER; // the builder owns the Pilot Zero restaurant
+    const m = note(OWNER);
+    await post(m, sign(m));
+    expect(saveNote).toHaveBeenCalledWith({ body: "#note the brief came at 9:02", restaurantId: "r1", messageSid: m.MessageSid });
+    expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", OWNER, "📝 Noted for 2026-11-12 (simulated day).");
+    expect(handleMessage).not.toHaveBeenCalled();
+    expect(queued).toEqual([]);
+  });
+
+  test("any other number: an ordinary message to its own restaurant, nothing noted", async () => {
+    process.env.BUILDER_WHATSAPP = "whatsapp:+447700900999";
+    const m = note(OWNER);
+    await post(m, sign(m));
+    expect(saveNote).not.toHaveBeenCalled();
+    expect(handleMessage).toHaveBeenCalledWith(expect.objectContaining({ body: "#note the brief came at 9:02" }));
   });
 });

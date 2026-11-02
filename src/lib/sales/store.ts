@@ -80,10 +80,14 @@ export async function saveDayFromZ(restaurantId: string, zReportId: string, f: Z
 }
 
 // After a POS import: each day's totals from all its item sales, unless a till
-// report already covers that day (the till report wins).
+// report already covers that day (the till report wins). Amounts including VAT
+// (item lines, most exports) have their net worked out at 20% (net_estimated);
+// a daily file's net sales column (basis "net": excluding VAT, tips and service,
+// after refunds and discounts) is saved as the net itself, not an estimate.
 export async function saveDaysFromPos(
   restaurantId: string,
   days: { day: string; gross: number; transactions: number | null; hours: { hour: number; sales: number }[] }[],
+  basis: "gross" | "net" = "gross",
 ) {
   if (!days.length) return;
   const supabase = getSupabase();
@@ -104,15 +108,19 @@ export async function saveDaysFromPos(
         toSave.map((d) => ({
           restaurant_id: restaurantId,
           day: d.day,
-          gross_sales: d.gross,
-          net_sales: Math.round((d.gross / (1 + VAT_RATE)) * 100) / 100,
-          vat: Math.round((d.gross - d.gross / (1 + VAT_RATE)) * 100) / 100,
+          ...(basis === "net"
+            ? { gross_sales: null, net_sales: d.gross, vat: null, net_estimated: false }
+            : {
+                gross_sales: d.gross,
+                net_sales: Math.round((d.gross / (1 + VAT_RATE)) * 100) / 100,
+                vat: Math.round((d.gross - d.gross / (1 + VAT_RATE)) * 100) / 100,
+                net_estimated: true,
+              }),
           transactions: d.transactions,
           card: null,
           cash: null,
           discounts: null,
           refunds: null,
-          net_estimated: true,
           source: "pos",
           z_report_id: null,
           is_dummy: false,

@@ -61,14 +61,33 @@ export async function readZReport(file: ZImage, today: string, note = ""): Promi
 
 const MappingSchema = z.object({
   is_item_sales: z.boolean().describe("true if each row is a sale of an item (a line on a receipt or an item total for a date). false for other files (e.g. a summary with no items, a customer list, stock)."),
+  is_daily_totals: z
+    .boolean()
+    .describe(
+      "true if it has no item column but either one row per day with that day's total takings (a daily sales summary or turnover report), or one row per payment / transaction with its amount (e.g. Square's Transactions export; a free-text description of what was bought doesn't make it item sales). false otherwise. A file with one total for a whole month or year is neither.",
+    ),
   pos_name: z.string().nullable().describe("The POS system this export looks like it's from (e.g. Square, SumUp, Lightspeed, Toast, Epos Now, Zettle), or null"),
   date: z.string().nullable().describe("Exact heading of the column with the date of the sale"),
   time: z.string().nullable().describe("Exact heading of the column with the time (can be the same as the date column if it holds both), or null"),
   item: z.string().nullable().describe("Exact heading of the column with the item / product name"),
-  quantity: z.string().nullable().describe("Exact heading of the quantity column, or null if each row is one item"),
-  price: z.string().nullable().describe("Exact heading of the column with the amount of money for the row. Prefer the total for the line including VAT (gross sales / total / amount) over a unit price; avoid net, tax, cost or discount columns."),
+  quantity: z
+    .string()
+    .nullable()
+    .describe("Item sales: exact heading of the quantity column, or null if each row is one item. Daily totals: the heading of the number of orders that day (transactions, receipts, orders, bills, sales count; not covers or items), or null if there isn't one."),
+  price: z
+    .string()
+    .nullable()
+    .describe(
+      "Exact heading of the column with the amount of money for the row. Item sales: prefer the total for the line including VAT (gross sales / total / amount) over a unit price; avoid tax, cost or discount columns. Daily totals: the day's NET SALES (excluding VAT, tips and service charge, after refunds and discounts), e.g. Square's \"Net Sales\", \"Turnover excl. VAT\", Epos Now's \"Net Sales\"; only if there's no such column, the takings including VAT. Never tips, tax, service charge, discounts or \"total collected\" when a net sales column exists.",
+    ),
+  amount_basis: z
+    .enum(["net", "gross"])
+    .describe("What the chosen price column is: net (excluding VAT, tips and service charge) or gross (including VAT)."),
   price_is: z.enum(["line_total", "unit_price"]).describe("line_total if the price column is the total for the row's quantity, unit_price if it's the price of one item"),
-  receipt: z.string().nullable().describe("Exact heading of the receipt / order / transaction / ticket number column, or null"),
+  receipt: z
+    .string()
+    .nullable()
+    .describe("Exact heading of the receipt / order / transaction / ticket number column (for one row per payment: the transaction id, not a payment, card or customer id), or null"),
   date_order: z.enum(["dmy", "mdy", "ymd"]).describe("How dates are written, e.g. 09/10/2026 in the UK is dmy"),
   problem: z.string().nullable().describe("If it isn't item sales or you can't find the date, item or price, say why in one short sentence"),
 });
@@ -83,8 +102,17 @@ export async function suggestMapping(sample: { headers: string[]; rows: string[]
     `You look at sales exports from restaurant and café tills (POS systems) and work out which column means what. Use the exact column headings given. The restaurant is in the UK.`,
     `Column headings and the first rows (cells separated by " | "):\n${table}`,
   );
+  // A daily summary or one row per payment (no items): kept as day totals, never as
+  // dish sales; the orders each day from an orders column, or counted by transaction id.
+  if (!out.is_item_sales && out.is_daily_totals && out.date && out.price) {
+    return {
+      mapping: { date: out.date, time: null, item: null, quantity: out.quantity, price: out.price, price_is: "line_total", receipt: out.quantity ? null : out.receipt, date_order: out.date_order, amount_basis: out.amount_basis },
+      posName: out.pos_name,
+      problem: null,
+    };
+  }
   if (!out.is_item_sales || !out.date || !out.item || !out.price) {
-    return { mapping: null, posName: out.pos_name, problem: out.problem ?? "It doesn't look like a list of item sales." };
+    return { mapping: null, posName: out.pos_name, problem: out.problem ?? "It doesn't look like a list of item sales or daily takings." };
   }
   return {
     mapping: {

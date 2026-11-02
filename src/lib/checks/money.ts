@@ -4,7 +4,7 @@
 import { formatLondon, formatWindow, isInSendWindow, nextWindowStart } from "@/lib/clock";
 import { overCap } from "@/lib/discounts";
 import { offerCap, type OwnerOffers, type StructuredOffer } from "@/lib/offers";
-import { gateApproval, type GateDraft } from "@/lib/trust";
+import { gateApproval, tapOnlyForGoogle, type GateDraft } from "@/lib/trust";
 
 export type RuleDraft = {
   status: string;
@@ -28,6 +28,8 @@ export type RuleRestaurant = {
   send_window_end: string;
   // Per-task trust levels, set by the builder. Missing = Approve for everything.
   trust_levels?: Record<string, string> | null;
+  // Pilot Zero (056): Google writes always need the owner's tap.
+  pilot_zero?: boolean | null;
   // The menu, so a free item or £ off can be measured against the dish it comes with.
   menu?: unknown;
   // The owner's own offers (settings): not capped when an offer is exactly one of them.
@@ -68,7 +70,7 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
   // Draft-only tasks never send.
   const approval = gateApproval(
     { kind: draft.kind ?? "other", content: draft.content, version: draft.version, approved_at: draft.approved_at, agent_check: draft.agent_check },
-    restaurant.trust_levels,
+    restaurant.pilot_zero === true ? tapOnlyForGoogle(restaurant.trust_levels) : restaurant.trust_levels,
   );
   if (!approval.ok && approval.reason === "trust_level") return { outcome: "blocked", reason: "trust_level", detail: approval.detail };
   const sendable = approval.ok && approval.by === "auto" ? [...SENDABLE, "pending"] : SENDABLE;

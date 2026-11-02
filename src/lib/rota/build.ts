@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { logAction, type Actor } from "@/lib/audit";
 import { londonTime, londonYmd } from "@/lib/clock";
 import { createDraft, focusDraft, getDraft, updateDraft, type Draft } from "@/lib/drafts";
-import { getWeekAhead } from "@/lib/forecast/week-ahead";
+import { savedWeekAhead } from "@/lib/forecast/snapshot";
 import { addDaysYmd, weekDays, weekdayOf } from "@/lib/forecast/week-ahead-rules";
 import type { Send } from "@/lib/google-jobs";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
@@ -29,7 +29,8 @@ import type { RotaStaff, Weekday } from "./types";
 export type RotaWeek = RotaWeekRow & { adjustments: Adjustment[] | null; summary: StoredPlan | null; draft_id: string | null; share_token: string | null };
 
 // What the page and the PDF draw: the plan, plus who it's for (a snapshot, like the weekly report).
-export type StoredPlan = RotaPlan & { weekStart: string; restaurant: { name: string; brand_color: string | null }; builtAt: string };
+// minimumReason: why a minimum-staffing rota couldn't staff to a forecast (too little history, or no sales by hour).
+export type StoredPlan = RotaPlan & { weekStart: string; restaurant: { name: string; brand_color: string | null }; builtAt: string; minimumReason?: "history" | "hourly" };
 
 // History needed before the rota staffs to a forecast; under it, opening hours and minimums only.
 export const MIN_HISTORY_WEEKS = 8;
@@ -120,13 +121,14 @@ export async function planWeek(r: Restaurant, weekStart: string, now: Date, adju
     return { error: `There's nobody on your team yet. Add people like this: *add Ali, kitchen, £13, weekdays*, or on the staff page: ${appUrl()}/staff?r=${r.id}` };
   }
   const [ahead, weeks, timeOff, past] = await Promise.all([
-    getWeekAhead(r.id, weekStart, now),
+    savedWeekAhead(r.id, weekStart, now), // the saved copy: the same numbers as the brief and the report
     salesHistoryWeeks(r.id, londonYmd(now)),
     timeOffIn(r.id, weekStart),
     history(r.id, weekStart, inputs.staff),
   ]);
   const hasHourly = ahead.days.some((d) => d.orders_by_hour.length);
   const basis = weeks >= MIN_HISTORY_WEEKS && hasHourly ? "forecast" : "minimum";
+  const minimumReason = basis === "forecast" ? undefined : weeks < MIN_HISTORY_WEEKS ? ("history" as const) : ("hourly" as const);
   const rr = r as Restaurant & { special_hours?: Record<string, { hours: string }> | null; rota_settings?: Record<string, unknown> | null };
   const input: FillInput = {
     staff: inputs.staff,
@@ -148,7 +150,7 @@ export async function planWeek(r: Restaurant, weekStart: string, now: Date, adju
   };
   const plan = buildPlan(input);
   return {
-    plan: { ...plan, weekStart, restaurant: { name: r.name, brand_color: (r as { brand_color?: string | null }).brand_color ?? null }, builtAt: new Date().toISOString() },
+    plan: { ...plan, weekStart, restaurant: { name: r.name, brand_color: (r as { brand_color?: string | null }).brand_color ?? null }, builtAt: new Date().toISOString(), ...(minimumReason ? { minimumReason } : {}) },
     previous: past.previous,
     staff: inputs.staff,
   };

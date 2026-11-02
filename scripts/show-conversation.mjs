@@ -1,8 +1,10 @@
 // Prints the test conversation (fake number) and blocked sends since a time.
 // Usage: node --env-file=.env.local scripts/show-conversation.mjs <since ISO timestamp>
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
-const since = process.argv[2] ?? "1970-01-01";
+guardLive(process.env, "show-conversation");
+const since = withoutLiveFlag(process.argv.slice(2))[0] ?? "1970-01-01";
 const TEST_NUMBER = "whatsapp:+447700900999";
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 

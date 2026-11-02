@@ -8,7 +8,7 @@ import { testToolsFor } from "@/lib/switches";
 
 type Env = Record<string, string | undefined>;
 
-export function unvalidatedForecastsAllowed(env: Env, restaurant: { is_demo?: boolean | null; forecast_unvalidated?: boolean | null } | null | undefined) {
+export function unvalidatedForecastsAllowed(env: Env, restaurant: { is_demo?: boolean | null; owner_whatsapp?: string | null; forecast_unvalidated?: boolean | null } | null | undefined) {
   if (!restaurant) return false;
   return restaurant.is_demo === true && restaurant.forecast_unvalidated === true && testToolsFor(env, restaurant);
 }

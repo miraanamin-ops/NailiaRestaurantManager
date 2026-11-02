@@ -223,13 +223,13 @@ describe("incoming WhatsApp messages", () => {
     expect(handleMessage.mock.calls.map((c) => (c as unknown as [{ restaurantId: string }])[0].restaurantId)).toEqual([A, B]);
   });
 
-  test("an unknown number gets the polite 'not registered' reply and nothing else", async () => {
+  test("an unknown number gets no reply and nothing else", async () => {
     handleMessage.mockClear();
     replyUnregistered.mockClear();
     const res = await post("whatsapp:+447700900999");
     expect(res.status).toBe(200);
     expect(handleMessage).not.toHaveBeenCalled();
-    expect(replyUnregistered).toHaveBeenCalledWith("whatsapp:+447700900999", SANDBOX);
+    expect(replyUnregistered).not.toHaveBeenCalled();
   });
 
   test("a message can't act on a restaurant whose owner it isn't from", async () => {
@@ -239,7 +239,7 @@ describe("incoming WhatsApp messages", () => {
     expect(db.tables.restaurants[0].paused).toBe(false);
   });
 
-  test("the 'not registered' reply goes at most once a day per number", async () => {
+  test("the replies to a failed link code go at most a few times a day per number", async () => {
     vi.doMock("@/lib/whatsapp", () => ({ sendText: vi.fn(async (_f: string, _t: string, body: string) => ({ sid: "SMx", body })) }));
     const { replyUnregistered: real, UNREGISTERED_REPLY } = await import("@/lib/unregistered");
     await real("whatsapp:+447700900999", SANDBOX);

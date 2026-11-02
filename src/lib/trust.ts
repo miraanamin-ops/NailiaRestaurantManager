@@ -64,6 +64,14 @@ export function trustLevel(stored: Record<string, string> | null | undefined, ta
   return level as TrustLevel;
 }
 
+// Pilot Zero (056): every Google write needs the owner's tap, whatever is stored.
+export function tapOnlyForGoogle(stored: Record<string, string> | null | undefined) {
+  if (!stored) return stored;
+  const out = { ...stored };
+  for (const task of ["review_reply", "google_post"]) if (out[task] === "auto") out[task] = "approve";
+  return out;
+}
+
 export type GateDraft = {
   kind: string;
   content: string;

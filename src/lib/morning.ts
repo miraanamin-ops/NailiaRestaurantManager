@@ -2,7 +2,7 @@ import "server-only";
 import { loadRestaurantContext } from "@/lib/assistant";
 import { proposeBirthdayCampaign } from "@/lib/bot/flows";
 import { canMessageFreely, markBriefWaiting, sendBrief } from "@/lib/brief";
-import { londonWeekday, londonYmd } from "@/lib/clock";
+import { londonLongDate, londonWeekday, londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { queueResultsMessage } from "@/lib/format";
 import { ownerChannel } from "@/lib/followups";
@@ -16,6 +16,7 @@ import type { MorningStep } from "@/lib/queue/rules";
 import { createReport, reportPeriod } from "@/lib/report/build";
 import { processQueue } from "@/lib/send";
 import type { ReportData } from "@/lib/report/types";
+import { simulatedLabel, simulationOn } from "@/lib/simulation-rules";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
 // The morning job: everything that happens once a day at 9am UK time, ending
@@ -76,6 +77,10 @@ export async function runMorningStep(
   const weekday = londonWeekday(now);
   const silent = async () => {}; // drafts made here are held for the brief, not messaged
   const r = restaurant;
+  // A Pilot Zero simulation's "Run day" (lib/simulation.ts): the steps work on the
+  // simulated date (real scheduled jobs skip a restaurant while it's simulating).
+  const simulating = simulationOn(r);
+  const realTime = { realTime: !simulating };
 
   switch (step) {
     // 1. Approved drafts held overnight (outside sending hours) go out now.
@@ -88,7 +93,7 @@ export async function runMorningStep(
     // 2. Monday: this week's birthday email.
     case "birthday": {
       if (weekday !== 1 || r.last_birthday_campaign_on === today) return { done: "birthday email: nothing to do", carry };
-      const ctx = await loadRestaurantContext(r.id, { realTime: true });
+      const ctx = await loadRestaurantContext(r.id, realTime);
       // Growth live writes the birthday batch instead; otherwise today's email (Growth in shadow beside it).
       if (!(await liveGrowthBirthdays(ctx.restaurant, today))) await proposeBirthdayCampaign(ctx, silent, "hold");
       await setFields(r, { last_birthday_campaign_on: today });
@@ -98,7 +103,7 @@ export async function runMorningStep(
     // 3. Monday and Thursday: a Google post.
     case "post": {
       if (![1, 4].includes(weekday) || r.last_post_draft_on === today) return { done: "Google post: nothing to do", carry };
-      await runPostJob(await loadRestaurantContext(r.id, { realTime: true }));
+      await runPostJob(await loadRestaurantContext(r.id, realTime));
       await setFields(r, { last_post_draft_on: today });
       return { done: "Google post", carry };
     }
@@ -106,7 +111,7 @@ export async function runMorningStep(
     // 4. Monday: last week's report.
     case "report": {
       if (weekday !== 1 || r.last_report_on === today) return { done: "report: nothing to do", carry };
-      await createReport(await loadRestaurantContext(r.id, { realTime: true }), reportPeriod(now, true));
+      await createReport(await loadRestaurantContext(r.id, realTime), reportPeriod(now, true));
       await setFields(r, { last_report_on: today });
       return { done: "report", carry };
     }
@@ -127,15 +132,18 @@ export async function runMorningStep(
     // 6. The brief itself. A brief held for WhatsApp's 24-hour rule counts as done:
     //    it goes with the owner's next message.
     case "brief": {
-      const fresh = (await loadRestaurantContext(r.id, { realTime: true })).restaurant;
+      const fresh = (await loadRestaurantContext(r.id, realTime)).restaurant;
       if (fresh.last_brief_on === today) return { done: "brief: already sent today", carry };
       const channel = ownerChannel(fresh);
       let brief: unknown = "no owner WhatsApp yet";
-      if (channel && !(await canMessageFreely(fresh, now))) {
+      // WhatsApp's 24-hour rule is about real time, whatever the simulated date.
+      if (channel && !(await canMessageFreely(fresh, simulating ? new Date() : now))) {
         await markBriefWaiting(fresh, now);
         brief = "waiting for the owner to message (24h rule)";
       } else if (channel) {
-        brief = await briefFor(fresh, channel, now, { extra: carry.released ? [carry.released] : [] });
+        // A simulated day's brief says so (a footnote: it doesn't make a quiet day send one).
+        const note = simulating ? simulatedLabel(londonLongDate(now)) : undefined;
+        brief = await briefFor(fresh, channel, now, { extra: carry.released ? [carry.released] : [], note });
         const headline = await mondayReportHeadline(fresh, now);
         if (headline) await messageOwner(channel, headline);
       }

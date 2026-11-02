@@ -23,7 +23,8 @@ export async function messageOwner(
   );
 }
 
-async function sendAndLog(channel: OwnerChannel, deliver: () => Promise<{ sid: string; body: string }>, text: string) {
+// Sends one message to the owner (deliver does the Twilio call) and logs it, sent or failed.
+export async function sendAndLog(channel: OwnerChannel, deliver: () => Promise<{ sid: string; body: string }>, text: string) {
   let sid: string | null = null;
   let sentBody = text;
   let error: string | null = null;

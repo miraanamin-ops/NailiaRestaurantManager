@@ -126,6 +126,10 @@ const restaurant = (id: string, extra: Record<string, unknown>) => ({
   is_demo: false,
   trust_levels: {},
   created_at: "2026-01-01T00:00:00Z",
+  // Migration 056 has run (without it, Production refuses every Google write).
+  pilot_zero: false,
+  google_dry_run: null,
+  google_profile_writes: null,
   ...extra,
 });
 
@@ -226,6 +230,34 @@ describe("which Google a restaurant uses", () => {
     expect(await googleModeFor(DEMO)).toBe("dummy");
     vi.stubEnv("GOOGLE_MODE", "dummy");
     expect(await googleModeFor(R)).toBe("dummy");
+  });
+});
+
+describe("test sites never write to live Google", () => {
+  const makeTestSite = () => Object.assign(db.tables.restaurants.find((r) => r.id === R)!, { is_demo: true, is_test: true });
+
+  test("a linked test site counts as simulated: it reads Google, and every write is refused before Google is called", async () => {
+    makeTestSite();
+    const { google, googleFor, googleModeFor } = await import("@/lib/google");
+    expect(await googleModeFor(R)).toBe("simulated");
+    // Reading is fine (the tone step needs real reviews).
+    await google().claimNewReviews(R);
+    const review = db.tables.reviews.find((r) => r.google_review_id === "g1")!;
+    const writes = () => calls.filter((c) => c.method !== "GET" && c.path !== "/token");
+
+    await expect(google().replyToReview(R, String(review.id), "Thank you!")).rejects.toThrow(/Test sites never write to live Google/);
+    await expect(google().publishPost(R, { id: "post-1", topic: "update", text: "Lamb chops are back", photo_url: null } as never)).rejects.toThrow(/Test sites/);
+    await expect((await googleFor(R)).updateHours!(R, "job-1")).rejects.toThrow(/Test sites/);
+    await expect(google().removeReply(R, String(review.id))).rejects.toThrow(/Test sites/);
+    expect(writes()).toEqual([]);
+  });
+
+  test("a write that doesn't name its restaurant is refused", async () => {
+    const { gbp } = await import("@/lib/google/api");
+    const { getConnection } = await import("@/lib/google/connections");
+    const conn = (await getConnection(CONN))!;
+    await expect(gbp(conn, "POST", "https://mybusiness.googleapis.com/v4/accounts/1/locations/2/localPosts", {})).rejects.toThrow(/must say which restaurant/);
+    expect(calls.filter((c) => c.method === "POST" && c.path.endsWith("/localPosts"))).toEqual([]);
   });
 });
 
@@ -372,6 +404,136 @@ describe("token health", () => {
     const third = await attemptSend("d2", db.tables.restaurants[0] as never, NOON_UK, "approve");
     expect(third).toMatchObject({ outcome: "blocked", reason: "google_error" });
     expect(db.tables.drafts.find((d) => d.id === "d2")).toMatchObject({ status: "blocked" });
+  });
+});
+
+describe("Google dry run (Pilot Zero)", () => {
+  const pilot = (extra: Record<string, unknown> = {}) => Object.assign(db.tables.restaurants.find((r) => r.id === R)!, { pilot_zero: true, ...extra });
+  const r = () => db.tables.restaurants.find((x) => x.id === R) as never;
+  const writes = () => calls.filter((c) => c.method !== "GET" && c.path !== "/token");
+  const approved = (id: string, extra: Record<string, unknown>) =>
+    db.tables.drafts.push({ id, restaurant_id: R, kind: "review_reply", review_id: null, content: "Thank you Aisha!", audience: "Google review by Aisha", status: "approved", approved_at: "2026-10-26T11:00:00Z", sent_at: null, scheduled_for: null, version: 1, checks: {}, customer_id: null, ...extra });
+  const reviewG1 = async () => {
+    const { google } = await import("@/lib/google");
+    await google().claimNewReviews(R);
+    return db.tables.reviews.find((x) => x.google_review_id === "g1")!;
+  };
+
+  test("on by default for a Pilot Zero restaurant: the owner sees 'would have posted', Google is never written to", async () => {
+    pilot();
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    approved("h1", { kind: "hours_update", review_id: null, content: "Friday 18:00 – 23:00", audience: "Google listing" });
+    const { attemptSend } = await import("@/lib/send");
+    const reply = await attemptSend("d1", r(), NOON_UK, "approve");
+    expect(reply).toMatchObject({ outcome: "sent" });
+    expect(reply.outcome === "sent" && reply.note).toBe('🧪 Dry run: nothing changed on Google. Would have posted this reply on Google (Ember & Spice Grill): "Thank you Aisha!"');
+    expect(reply.outcome === "sent" && reply.note).not.toMatch(/—/);
+    const hours = await attemptSend("h1", r(), NOON_UK, "approve");
+    expect(hours.outcome === "sent" && hours.note).toMatch(/Would have updated your hours on Google/);
+    expect(writes()).toEqual([]);
+    expect(db.tables.sent_log.map((x) => x.simulated)).toEqual([true, true]);
+    expect(db.tables.drafts.find((d) => d.id === "d1")).toMatchObject({ status: "sent", checks: { send: { dry_run: { fixes: [expect.stringMatching(/Would have posted/)] } } } });
+    expect(db.tables.reviews.find((x) => x.id === review.id)).toMatchObject({ replied: false });
+    expect(db.tables.audit_log.find((a) => a.action === "sent" && a.draft_id === "d1")?.detail).toContain("(simulated): 🧪 Dry run");
+  });
+
+  test("replies switched live go to Google; hours and photos stay dry run until switched on separately", async () => {
+    pilot({ google_dry_run: false });
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    approved("h1", { kind: "hours_update", review_id: null, content: "Friday 18:00 – 23:00", audience: "Google listing" });
+    const { attemptSend } = await import("@/lib/send");
+    expect(await attemptSend("d1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/Reply posted on Google/) });
+    expect(googleCalls("PUT", "/reviews/g1/reply")).toHaveLength(1);
+    expect(await attemptSend("h1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/Dry run.*Would have updated your hours/) });
+    expect(calls.filter((c) => c.method === "PATCH")).toEqual([]);
+    // The wall itself refuses a profile write that slipped past the gate (photos too).
+    const { liveGoogle } = await import("@/lib/google/live");
+    await expect(liveGoogle.updateHours!(R, "job-x")).rejects.toThrow(/dry run/);
+    await expect(liveGoogle.uploadPhoto!(R, "https://x.test/p.jpg", "job-p")).rejects.toThrow(/dry run/);
+    // Switched on separately: hours go to Google.
+    pilot({ google_dry_run: false, google_profile_writes: true });
+    approved("h2", { kind: "hours_update", review_id: null, content: "Friday 18:00 – 23:00", audience: "Google listing" });
+    expect(await attemptSend("h2", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/hours are updated on Google/) });
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(1);
+  });
+
+  test("hours and photos switched on while replies are dry run: everything stays dry run", async () => {
+    pilot({ google_profile_writes: true });
+    const { dryRunContext, googleDryRun } = await import("@/lib/gate-rules");
+    expect(googleDryRun(r(), "profile", dryRunContext(process.env))).toBe(true);
+  });
+
+  test("a simulated review is never replied to on Google, even with dry run off", async () => {
+    pilot({ google_dry_run: false });
+    db.tables.reviews.push({ id: "sim-r1", restaurant_id: R, source: "simulated", google_review_id: "g1", author_name: "Test Guest", rating: 1, text: "Cold food", replied: false });
+    approved("d1", { review_id: "sim-r1", content: "Sorry to hear that." });
+    const { attemptSend } = await import("@/lib/send");
+    const out = await attemptSend("d1", r(), NOON_UK, "approve");
+    expect(out.outcome === "sent" && out.note).toMatch(/^🧪 Simulated review, so never replied to on Google\. Would have posted this reply/);
+    // And the connector refuses it if anything calls it directly.
+    const { google } = await import("@/lib/google");
+    await expect(google().replyToReview(R, "sim-r1", "Sorry")).rejects.toThrow(/Simulated reviews are never replied to/);
+    expect(writes()).toEqual([]);
+  });
+
+  test("the wall refuses a dry-run write that skipped the gate (replies, posts, taking them down)", async () => {
+    pilot();
+    const review = await reviewG1();
+    const { google } = await import("@/lib/google");
+    await expect(google().replyToReview(R, String(review.id), "Thank you!")).rejects.toThrow(/dry run/);
+    await expect(google().publishPost(R, { id: "post-1", topic: "update", text: "Lamb chops are back", photo_url: null } as never)).rejects.toThrow(/dry run/);
+    await expect(google().removeReply(R, String(review.id))).rejects.toThrow(/dry run/);
+    expect(writes()).toEqual([]);
+  });
+
+  test("UNDO of a dry-run reply takes nothing down from Google", async () => {
+    const { undoPlan } = await import("@/lib/undo-plan");
+    const entry = { action: "approved", data: null };
+    expect(undoPlan(entry, { kind: "review_reply", status: "sent", review_id: "x", checks: { send: { dry_run: {} } } }, "live")).toEqual({ type: "withdraw_simulated" });
+    expect(undoPlan(entry, { kind: "review_reply", status: "sent", review_id: "x", checks: {} }, "live")).toEqual({ type: "withdraw_reply" });
+  });
+
+  test("a restaurant that isn't Pilot Zero writes as before", async () => {
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    const { attemptSend } = await import("@/lib/send");
+    expect(await attemptSend("d1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/Reply posted on Google/) });
+    expect(googleCalls("PUT", "/reviews/g1/reply")).toHaveLength(1);
+  });
+
+  test("fails closed: Production before 056 refuses every write (owner sees a dry run, builder alerted); a preview doesn't", async () => {
+    const before056 = db.tables.restaurants.find((x) => x.id === R)!;
+    for (const k of ["pilot_zero", "google_dry_run", "google_profile_writes"]) delete before056[k];
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    const { attemptSend } = await import("@/lib/send");
+    const out = await attemptSend("d1", r(), NOON_UK, "approve");
+    expect(out.outcome === "sent" && out.note).toMatch(/^🧪 Dry run: nothing changed on Google\. Would have posted this reply/);
+    expect(builderAlerts).toEqual([expect.stringMatching(/without supabase\/056_pilot_zero\.sql/)]);
+    // The wall refuses anything that skips the gate, hours and photos included.
+    const { google } = await import("@/lib/google");
+    await expect(google().replyToReview(R, String(review.id), "Thanks")).rejects.toThrow(/refused until supabase\/056_pilot_zero\.sql/);
+    const { liveGoogle } = await import("@/lib/google/live");
+    await expect(liveGoogle.updateHours!(R, "job-h")).rejects.toThrow(/056/);
+    expect(writes()).toEqual([]);
+    // Not Production: as before (previews never reach live Google anyway).
+    vi.stubEnv("VERCEL_ENV", "preview");
+    await google().replyToReview(R, String(review.id), "Thanks");
+    expect(googleCalls("PUT", "/reviews/g1/reply")).toHaveLength(1);
+  });
+
+  test("a restaurant on the builder's number is dry run from the moment it connects, before it's marked", async () => {
+    vi.stubEnv("BUILDER_WHATSAPP", "+447700900111"); // the fixture's owner number
+    const review = await reviewG1();
+    approved("d1", { review_id: review.id });
+    approved("h1", { kind: "hours_update", review_id: null, content: "Friday 18:00 – 23:00", audience: "Google listing" });
+    const { attemptSend } = await import("@/lib/send");
+    expect(await attemptSend("d1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/^🧪 Dry run.*Would have posted this reply on Google \(Ember & Spice Grill\)/) });
+    expect(await attemptSend("h1", r(), NOON_UK, "approve")).toMatchObject({ outcome: "sent", note: expect.stringMatching(/Dry run.*hours/) });
+    expect(writes()).toEqual([]);
+    expect(builderAlerts).toEqual([]);
   });
 });
 

@@ -61,3 +61,7 @@ What needs no outside service, and so no decision:
 - Every feed problem goes to the builder only.
 - API keys live in Vercel's environment variables. They never go into the database, the cache or a log line (addresses are logged with the key blanked out).
 - Total cost today: £0. The only paid call is Claude reading a council's term dates page, a few pence each time, and only when the builder presses the button.
+
+## Legal documents owners accept at sign-up
+
+- **Data processing agreement** (`/dpa`, `src/app/site/dpa/page.tsx`, version in `DPA_VERSION`): a plain-English **draft** written with onboarding with Dina (28 Oct 2026). Have someone qualified check it (with the terms and the privacy notice) before the first real restaurant signs. Changing it means a new `DPA_VERSION`; each restaurant keeps the version it accepted (`restaurants.dpa_version`).

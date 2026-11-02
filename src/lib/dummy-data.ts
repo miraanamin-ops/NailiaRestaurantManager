@@ -7,6 +7,6 @@ import { testToolsOn } from "@/lib/test-mode";
 // this restaurant? Only with the test tools on, and only for a demo restaurant
 // (read from the restaurant row itself, so a caller can't claim it).
 export async function dummyDataAllowed(restaurantId: string) {
-  const r = check(await getSupabase().from("restaurants").select("is_demo").eq("id", restaurantId).maybeSingle<{ is_demo: boolean | null }>());
+  const r = check(await getSupabase().from("restaurants").select("is_demo, owner_whatsapp").eq("id", restaurantId).maybeSingle<{ is_demo: boolean | null; owner_whatsapp: string | null }>());
   return testToolsOn(r ?? {});
 }

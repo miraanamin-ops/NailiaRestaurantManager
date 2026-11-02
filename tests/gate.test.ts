@@ -130,6 +130,26 @@ describe("the simulation gate step", () => {
     expect(channelFor("promotion")).toBe("whatsapp");
     expect(simulationStep({ google: "live", channel: "whatsapp", emailRedirect: false })).toMatchObject({ outcome: "simulate" });
   });
+
+  test("a test site never reaches anyone real on any channel, whatever the switches say", async () => {
+    const { googleWriteRefused, redirectEmails, simulationStep } = await import("@/lib/gate-rules");
+    const { routeEmail } = await import("@/lib/email/route");
+    // Google: simulated even with GOOGLE_MODE=live; dummy Google stays dummy (our own database).
+    expect(simulationStep({ google: "live", channel: "google", emailRedirect: false, testSite: true })).toMatchObject({ outcome: "simulate", detail: expect.stringMatching(/Test site/) });
+    expect(simulationStep({ google: "dummy", channel: "google", emailRedirect: false, testSite: true })).toMatchObject({ outcome: "ok" });
+    // WhatsApp to customers: off.
+    expect(simulationStep({ google: "live", channel: "whatsapp", emailRedirect: false, testSite: true })).toMatchObject({ outcome: "simulate" });
+    // Email: redirected even with EMAIL_REDIRECT off.
+    const redirect = redirectEmails(false, { is_test: true });
+    expect(redirect).toBe(true);
+    expect(routeEmail("real.customer@gmail.com", { redirect, allowed: ["owner@x.co.uk"], builder: "builder@x.co.uk" })).toMatchObject({ to: "builder@x.co.uk" });
+    expect(redirectEmails(false, { is_test: false })).toBe(false);
+    // The last wall in front of Google's API: writes refused, reads allowed.
+    const prod = { production: true };
+    expect(googleWriteRefused("POST", { is_test: true, pilot_zero: false }, "", prod)).toMatch(/Test sites/);
+    expect(googleWriteRefused("GET", { is_test: true, pilot_zero: false }, "", prod)).toBeNull();
+    expect(googleWriteRefused("PUT", { is_test: false, pilot_zero: false }, "", prod)).toBeNull();
+  });
 });
 
 describe("Google simulation inside attemptSend", () => {
@@ -139,7 +159,7 @@ describe("Google simulation inside attemptSend", () => {
     vi.resetModules();
     const A = "aaaaaaaa-0000-0000-0000-000000000001";
     const db = memoryDb({
-      restaurants: [{ id: A, ...restaurant, trust_levels: {} }],
+      restaurants: [{ id: A, ...restaurant, trust_levels: {}, pilot_zero: false }], // pilot_zero: 056 has run
       drafts: [
         {
           id: "d1", restaurant_id: A, kind: "review_reply", review_id: "rv1", content: "Thank you, Aisha!", audience: "Google review by Aisha",
@@ -175,7 +195,7 @@ describe("GOOGLE_MODE=live by environment", () => {
     vi.resetModules();
     const A = "aaaaaaaa-0000-0000-0000-000000000001";
     const db = memoryDb({
-      restaurants: [{ id: A, ...restaurant, trust_levels: {} }],
+      restaurants: [{ id: A, ...restaurant, trust_levels: {}, pilot_zero: false }], // pilot_zero: 056 has run
       drafts: [
         {
           id: "d1", restaurant_id: A, kind: "review_reply", review_id: "rv1", content: "Thank you, Aisha!", audience: "Google review by Aisha",
@@ -219,7 +239,7 @@ describe("an approved hours update (Google not connected for hours yet)", () => 
     vi.resetModules();
     const A = "aaaaaaaa-0000-0000-0000-000000000001";
     const db = memoryDb({
-      restaurants: [{ id: A, ...restaurant, trust_levels: {} }],
+      restaurants: [{ id: A, ...restaurant, trust_levels: {}, pilot_zero: false }], // pilot_zero: 056 has run
       drafts: [
         {
           id: "d1", restaurant_id: A, kind: "hours_update", review_id: null, content: "Friday hours change.", audience: "your Google listing",

@@ -1,0 +1,34 @@
+{
+  "_about": "The tone step (step 3): the four tones and the default reviews and replies shown when there's no suitable real review. Words from the owner's brief of 28 Oct 2026. Checked by src/lib/onboarding/dina/tones.ts. 'short' is the label on a WhatsApp button or list row (20 characters at most); 'name' shows on the web.",
+  "default_tone": "warm",
+  "tones": [
+    { "id": "warm", "name": "Warm and personal", "short": "Warm and personal", "describe": "Warm and personal: thanks people by name, mentions what they enjoyed, sounds like a friendly owner who knows their regulars." },
+    { "id": "polished", "name": "Polished and professional", "short": "Polished", "describe": "Polished and professional: courteous and measured, 'Dear Sarah', complete sentences, no slang or emojis." },
+    { "id": "fun", "name": "Fun and chatty", "short": "Fun and chatty", "describe": "Fun and chatty: upbeat and playful, can use an emoji, light humour, still genuine." },
+    { "id": "short", "name": "Short and simple", "short": "Short and simple", "describe": "Short and simple: one or two brief sentences, friendly and to the point." }
+  ],
+  "defaults": {
+    "praise": {
+      "author": "Sarah",
+      "rating": 5,
+      "text": "Came for my sister's birthday and honestly the mixed grill was the best I've had in ages. The staff were lovely with the kids and even brought out a candle for the cake. We'll definitely be back!",
+      "replies": {
+        "warm": "Sarah, thank you so much! We're so glad your sister's birthday was a special one, and that the kids had a great time too. The team loved being part of it. Can't wait to welcome you all back soon.",
+        "polished": "Dear Sarah, thank you for celebrating your sister's birthday with us. We're delighted you enjoyed the mixed grill and our team's service. We look forward to welcoming you again.",
+        "fun": "Best mixed grill in ages? We'll take that! 🎉 Thanks Sarah, it was a joy having you all in for the birthday. Come back soon and bring the whole crew!",
+        "short": "Thanks Sarah! So glad you all enjoyed it. See you again soon."
+      }
+    },
+    "complaint": {
+      "author": "James",
+      "rating": 2,
+      "text": "Food was decent but we waited nearly 50 minutes for our mains on a Friday and nobody came over to explain. The chips were cold by the time they arrived. Expected better for the price.",
+      "replies": {
+        "warm": "James, I'm really sorry about your Friday visit. Waiting that long with no update isn't how we want anyone to feel, and cold chips made it worse. We'd love the chance to put it right, so please drop us a message and ask for the manager.",
+        "polished": "Dear James, thank you for your feedback, and please accept our apologies for the wait and the cold chips. This falls short of our standards and we have shared it with the team. We would welcome the chance to make it right, so please contact us directly.",
+        "fun": "Sorry James, that's not the Friday night we want for anyone! A 50-minute wait with no update and cold chips isn't good enough, and we've told the kitchen. Give us another go and ask for the manager, we'll look after you.",
+        "short": "Sorry James, that wait and the cold chips aren't good enough. We've shared this with the team. Please get in touch so we can put it right."
+      }
+    }
+  }
+}

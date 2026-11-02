@@ -1,0 +1,291 @@
+import "server-only";
+import { randomUUID } from "node:crypto";
+import { sendAndLog, type OwnerChannel } from "@/lib/notify";
+import { bypassUrl } from "@/lib/preview-bypass";
+import { appUrl, getSupabase } from "@/lib/supabase";
+import { sendDinaChoices, sendImage, sendText } from "@/lib/whatsapp";
+import { STEP_DEFS, type FlowStepKey } from "../flow";
+import { getSession, skipStep } from "../sessions";
+import { afterSkip, answeredPart, handleAnswer } from "./answers";
+import { chatSources } from "./chat";
+import type { DataBlock } from "./prompt";
+import { codeTurn, dinaTurn, type SavedMessage, type TurnInput } from "./turn";
+import { describeFiles, refusedText } from "./uploads";
+import { isFilePart, saveWhatsAppFiles, type FilePart } from "./uploads-store";
+import { cardFor, chatMessage, confirmText, skippableNow, type StoredMessage } from "./view";
+import { choicesOf, readWhatsAppReply, renderForWhatsApp, type Asking, type WaOut } from "./whatsapp";
+
+// Dina on WhatsApp: the same turn as the web chat (dinaTurn), the same saved
+// conversation and progress, so an owner can switch channels at any step and
+// carry on exactly there. The webhook queues each message; the worker calls
+// handleDinaWhatsApp (one at a time per restaurant). Drawing and reading the
+// messages is plain code in whatsapp.ts.
+
+// Several photos sent together arrive as separate WhatsApp messages a moment
+// apart: wait this long, and if another file came in meanwhile, let the last one
+// answer for all of them (one reply, not one per photo).
+const BURST_MS = Number(process.env.DINA_FILE_BURST_MS ?? 6000);
+// Between Dina's messages, so WhatsApp shows them in order.
+const GAP_MS = Number(process.env.DINA_MESSAGE_GAP_MS ?? 900);
+const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+// A restaurant setting up with Dina (not yet finished, not yet running). Today's
+// running restaurants never get here, even if someone opened the chat page.
+export async function dinaSetupInProgress(restaurantId: string) {
+  const session = await getSession(restaurantId);
+  if (!session || session.flow_version !== 2 || session.completed_at) return false;
+  const { data, error } = await getSupabase().from("restaurants").select("active").eq("id", restaurantId).maybeSingle<{ active: boolean }>();
+  if (error) throw new Error(error.message);
+  return Boolean(data && !data.active);
+}
+
+export type DinaWhatsAppInput = {
+  restaurantId: string;
+  owner: string;
+  sandbox: string;
+  body: string;
+  buttonPayload?: string | null;
+  listId?: string | null;
+  media: { url: string; contentType: string }[];
+  messageSid?: string | null;
+};
+
+export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
+  const channel: OwnerChannel = { restaurantId: input.restaurantId, from: input.sandbox, to: input.owner };
+  const [sources, recent] = await Promise.all([chatSources(input.restaurantId), recentMessages(input.restaurantId)]);
+  const step = sources.focus?.current_step ?? null;
+  // Coming over from the web chat: Dina is told, so she picks up right where they were.
+  const switched = recent[0]?.channel === "web" ? "The owner has just switched from the web chat to WhatsApp. Carry on exactly where you were, without starting the step again." : null;
+
+  if (input.media.length) return files(channel, input, step, switched);
+
+  const reply = readWhatsAppReply(input, askingNow(recent, sources), skippableNow(step));
+  const externalId = input.messageSid ?? null;
+  let turn: Omit<TurnInput, "restaurantId" | "channel">;
+  if (reply.kind === "skip" && step) {
+    await skipStep(input.restaurantId, step, { channel: "whatsapp" });
+    await afterSkip(input.restaurantId, step);
+    turn = {
+      event: "action",
+      text: "Skip for now",
+      externalId,
+      note: `The owner chose "Skip for now" on ${STEP_DEFS[step].title}. Code has skipped it and kept it as a setup gap, so don't ask about it now.`,
+    };
+  } else if (reply.kind === "confirm") {
+    // "Looks right": code saves the hours or the menu; the basics go to Dina's tool.
+    const part = await answeredPart(input.restaurantId, reply.messageId);
+    const done = await handleAnswer({ restaurantId: input.restaurantId, messageId: reply.messageId, choiceId: "confirm", channel: "whatsapp", externalId });
+    const note = [typeof done === "string" ? done : null, switched].filter(Boolean).join(" ") || null;
+    turn = { event: "message", text: confirmText(cardFor(part?.card ?? "basics", sources), {}), externalId, ownerParts: [{ type: "answer", to: reply.messageId, choice: "confirm" }], note };
+  } else if (reply.kind === "answer") {
+    // Some taps are acted on by code first (Google's buttons, a tone): Dina is told what happened.
+    const done = await handleAnswer({ restaurantId: input.restaurantId, messageId: reply.messageId, choiceId: reply.choiceId, channel: "whatsapp", externalId });
+    const ownerParts = [{ type: "answer", to: reply.messageId, choice: reply.choiceId }];
+    // The next allergen card: code's own message, no Claude call.
+    if (done && typeof done === "object") {
+      const result = await codeTurn({ restaurantId: input.restaurantId, channel: "whatsapp", text: reply.label, externalId, ownerParts, messages: done.reply });
+      if (!result.duplicate) await sendTurn(channel, result.messages);
+      return;
+    }
+    const note = [done, switched].filter(Boolean).join(" ") || null;
+    turn = { event: "message", text: reply.label, externalId, ownerParts, note };
+  } else {
+    turn = { event: "message", text: reply.kind === "text" ? reply.text : input.body, externalId, note: switched };
+  }
+  const result = await dinaTurn({ ...turn, restaurantId: input.restaurantId, channel: "whatsapp" });
+  if (!result.duplicate) await sendTurn(channel, result.messages);
+}
+
+// Straight after the owner's number is linked (by its first message, or by the
+// one-time code): Dina says hello, or welcome back at the step they're on.
+export async function greetOnWhatsApp(restaurantId: string, owner: string, sandbox: string) {
+  const { count } = await getSupabase().from("onboarding_messages").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurantId);
+  const result = await dinaTurn({
+    restaurantId,
+    channel: "whatsapp",
+    event: count ? "resume" : "start",
+    note: "Their WhatsApp was linked to the restaurant just now, by the message they sent. Say so in a few words before carrying on.",
+  });
+  if (!result.duplicate) await sendTurn({ restaurantId, from: sandbox, to: owner }, result.messages);
+}
+
+// ---------- Files ----------
+
+async function files(channel: OwnerChannel, input: DinaWhatsAppInput, step: FlowStepKey | null, switched: string | null) {
+  const messageId = input.messageSid ?? randomUUID();
+  const { saved, refused } = await saveWhatsAppFiles({ restaurantId: input.restaurantId, step, messageId, media: input.media });
+  const parts: FilePart[] = saved.map(({ type, path, kind, contentType, bytes }) => ({ type, path, kind, contentType, bytes }));
+  const label = saved.length ? `📎 ${describeFiles(saved)}` : "📎 a file I couldn't use";
+  const text = input.body.trim() ? `${input.body.trim()}\n${label}` : label;
+  const refusal = refusedText(refused);
+
+  // Nothing usable: say why, and no turn for Dina.
+  if (!saved.length) {
+    if (!(await saveOwnerMessage(input.restaurantId, step, text, [], input.messageSid))) return;
+    if (refusal) await say(channel, step, refusal);
+    return;
+  }
+
+  // Part of a burst: keep the files, let the last message of the burst answer.
+  if (!input.body.trim()) {
+    await sleep(BURST_MS);
+    if (await moreFilesSince(input.restaurantId, input.owner, input.messageSid)) {
+      if (!(await saveOwnerMessage(input.restaurantId, step, text, parts, input.messageSid))) return;
+      if (refusal) await say(channel, step, refusal);
+      return;
+    }
+  }
+
+  if (refusal) await say(channel, step, refusal);
+  const all = [...(await filesSinceDina(input.restaurantId)), ...saved];
+  const note = [
+    await noteForFiles(input.restaurantId, step, all, "on WhatsApp"),
+    refusal ? "Some other files couldn't be used, and code has already told them why: don't repeat it." : "",
+    switched ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const data = await dataForFiles(input.restaurantId, step, all);
+  const result = await dinaTurn({ restaurantId: input.restaurantId, channel: "whatsapp", event: "message", text, externalId: input.messageSid ?? null, ownerParts: parts, note, data });
+  if (!result.duplicate) await sendTurn(channel, result.messages);
+}
+
+// What Dina is told about files that arrived (either channel). On the menu step
+// they're read into a menu draft first; on the sales step, imported as sales; on
+// the team step, a staff spreadsheet is given to her as data (dataForFiles); on
+// other steps they're kept for later.
+export async function noteForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[], via: string, channel: "web" | "whatsapp" = via === "on WhatsApp" ? "whatsapp" : "web") {
+  const sent = `The owner has just sent ${describeFiles(files)} ${via}.`;
+  if (step === "menu") {
+    const { readMenuFiles } = await import("./menu-step");
+    const read = await readMenuFiles(restaurantId, files).catch((err) => (console.error("Reading the menu failed", err), "The menu couldn't be read this time. Ask them to send it again, flat and in good light, or as a PDF."));
+    return `${sent} ${read}`;
+  }
+  if (step === "sales") {
+    const { readSalesFiles } = await import("./ops-step");
+    const read = await readSalesFiles(restaurantId, files, channel).catch((err) => (console.error("Importing the sales file failed", err), "The sales file couldn't be imported this time. Ask them to send it again, as CSV or Excel."));
+    return `${sent} ${read}`;
+  }
+  if (step === "team") {
+    const sheet = files.some((f) => f.kind === "csv" || f.kind === "excel");
+    // Kept on the step, so the sheet stays in front of her on the next turns too
+    // (she asks one question at a time before save_team; the first real run lost it).
+    if (sheet) {
+      const { noteStep } = await import("../sessions");
+      await noteStep(restaurantId, "team", { staff_files: files.filter((f) => f.kind === "csv" || f.kind === "excel") }, { channel });
+    }
+    return `${sent} ${sheet ? "Their staff list is in the data below: read the names, roles, rates, contracted hours and, where it has them, each person's days, times and max hours a week; check anything unclear with them, then call save_team and show editable_card team." : "Ask for the staff list as a CSV or Excel file, or to type it (name, role, hourly rate, contracted hours, and when each person can work)."}`;
+  }
+  const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
+  return `${sent} They're saved safely for ${stepName}. Reading files for this step comes in a later version: say in a few words that you've got them, then carry on with the step you're on.`;
+}
+
+// Files given to Dina as data for this turn: a staff spreadsheet on the team step.
+export async function dataForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[]) {
+  if (step !== "team") return [];
+  const { staffFileAsData } = await import("./ops-step");
+  const block = await staffFileAsData(restaurantId, files).catch((err) => (console.error("Reading the staff list failed", err), null));
+  return block ? [block as DataBlock] : [];
+}
+
+// The owner's message, kept without a turn (part of a burst, or nothing usable).
+// False if it was already saved (a repeated delivery).
+async function saveOwnerMessage(restaurantId: string, step: FlowStepKey | null, body: string, parts: unknown[], externalId?: string | null) {
+  const { error } = await getSupabase()
+    .from("onboarding_messages")
+    .insert({ id: randomUUID(), restaurant_id: restaurantId, role: "owner", channel: "whatsapp", step_key: step, body, parts, external_id: externalId ?? null });
+  if (error?.code === "23505") return false;
+  if (error) throw new Error(`Couldn't save the owner's message: ${error.message}`);
+  return true;
+}
+
+// A fixed line from code (e.g. why a file was refused), sent and kept in the conversation.
+async function say(channel: OwnerChannel, step: FlowStepKey | null, text: string) {
+  const { error } = await getSupabase()
+    .from("onboarding_messages")
+    .insert({ id: randomUUID(), restaurant_id: channel.restaurantId, role: "dina", channel: "whatsapp", step_key: step, body: text, parts: [] });
+  if (error) console.error("Couldn't save a setup message", error.message);
+  await sendAndLog(channel, () => sendText(channel.from, channel.to, text), text);
+}
+
+// Did another file from this number arrive after this message? (The webhook logs
+// every message before queuing it, so a later photo is already there.)
+async function moreFilesSince(restaurantId: string, owner: string, messageSid?: string | null) {
+  if (!messageSid) return false;
+  const supabase = getSupabase();
+  const { data: self } = await supabase.from("messages").select("created_at").eq("restaurant_id", restaurantId).eq("twilio_sid", messageSid).maybeSingle<{ created_at: string }>();
+  if (!self) return false;
+  const { count } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("restaurant_id", restaurantId)
+    .eq("direction", "inbound")
+    .eq("from_number", owner)
+    .like("body", "[📷 photo]%")
+    .gt("created_at", self.created_at);
+  return (count ?? 0) > 0;
+}
+
+// Files the owner sent since Dina last spoke (the earlier messages of a burst).
+async function filesSinceDina(restaurantId: string) {
+  const rows = await recentMessages(restaurantId, 30);
+  const out: FilePart[] = [];
+  for (const r of rows) {
+    if (r.role === "dina") break;
+    if (r.role === "owner") out.push(...(r.parts ?? []).filter(isFilePart));
+  }
+  return out;
+}
+
+// ---------- The conversation ----------
+
+type Row = StoredMessage & { channel: "web" | "whatsapp" | null };
+
+async function recentMessages(restaurantId: string, limit = 10) {
+  const { data, error } = await getSupabase()
+    .from("onboarding_messages")
+    .select("id, role, body, parts, channel")
+    .eq("restaurant_id", restaurantId)
+    .order("created_at", { ascending: false })
+    .limit(limit)
+    .returns<Row[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// The question a typed number or word answers: Dina's last message with choices,
+// if the owner hasn't written since.
+function askingNow(recent: Row[], sources: Awaited<ReturnType<typeof chatSources>>): Asking | null {
+  for (const r of recent) {
+    if (r.role === "owner") return null;
+    if (r.role !== "dina") continue;
+    const message = chatMessage(r, sources);
+    if (choicesOf(message.component).length) return { messageId: r.id, component: message.component };
+  }
+  return null;
+}
+
+// Dina's messages from a turn, drawn for WhatsApp and sent in order.
+async function sendTurn(channel: OwnerChannel, messages: SavedMessage[]) {
+  const sources = await chatSources(channel.restaurantId);
+  const shown = messages.map((m) => chatMessage({ id: m.id, role: "dina", body: m.text, parts: m.component ? [m.component] : [] }, sources));
+  const outs = renderForWhatsApp(shown, {
+    skippable: skippableNow(sources.focus?.current_step ?? null),
+    chatUrl: `${appUrl()}/onboarding/chat?r=${channel.restaurantId}`,
+    appUrl: appUrl(),
+  });
+  for (const [i, out] of outs.entries()) {
+    if (i) await sleep(GAP_MS);
+    await sendOut(channel, out);
+  }
+}
+
+function sendOut(channel: OwnerChannel, out: WaOut) {
+  const deliver = () =>
+    out.kind !== "text"
+      ? sendDinaChoices(channel.from, channel.to, out)
+      : out.mediaUrl
+        ? sendImage(channel.from, channel.to, bypassUrl(out.mediaUrl), out.body)
+        : sendText(channel.from, channel.to, out.body);
+  return sendAndLog(channel, deliver, out.body);
+}

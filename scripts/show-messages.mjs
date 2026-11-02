@@ -1,7 +1,9 @@
 // Prints the WhatsApp message log from Supabase.
 // Usage: node --env-file=.env.local scripts/show-messages.mjs
 import { createClient } from "@supabase/supabase-js";
+import { guardLive } from "./lib/live-guard.mjs";
 
+guardLive(process.env, "show-messages");
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 const { data, error } = await supabase
   .from("messages")

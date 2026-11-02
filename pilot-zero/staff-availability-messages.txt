@@ -1,0 +1,10 @@
+add Yusuf Rahman, manager, £15.50, mon-fri, max 45 hours
+add Sana Akhtar, manager, £14.20, thu-sun, 12pm-11pm, max 36 hours
+add Bilal Hussain, kitchen, £13.80, weekdays, max 40 hours
+add Imran Qureshi, kitchen, £13.20, wed-sun, evenings, max 35 hours
+add Farah Begum, kitchen, £12.71, weekends, max 20 hours
+add Tomasz Nowak, kitchen, £13.00, mon tue wed thu, 12pm-6pm, max 25 hours
+add Aisha Patel, front of house, £12.71, fri-sun, 5pm-11pm, max 20 hours
+add Daniel Mensah, front of house, £12.90, every day, lunchtimes, max 30 hours
+add Zara Ali, front of house, £12.71, weekends, max 12 hours
+add Hamza Siddiqui, delivery, £12.75, thu-sun, evenings, max 28 hours

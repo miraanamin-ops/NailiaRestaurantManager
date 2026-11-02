@@ -13,7 +13,8 @@ export function mappingFromForm(get: (key: string) => string): PosMapping | null
   const date = opt("date");
   const item = opt("item");
   const price = opt("price");
-  if (!date || !item || !price) return null;
+  // No item column: a daily summary (each row one day's takings).
+  if (!date || !price) return null;
   return {
     date,
     time: opt("time"),
@@ -23,5 +24,6 @@ export function mappingFromForm(get: (key: string) => string): PosMapping | null
     price_is: get("price_is") === "unit_price" ? "unit_price" : "line_total",
     receipt: opt("receipt"),
     date_order: get("date_order") === "mdy" ? "mdy" : get("date_order") === "ymd" ? "ymd" : "dmy",
+    amount_basis: get("amount_basis") === "net" ? "net" : "gross",
   };
 }

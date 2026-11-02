@@ -2,8 +2,10 @@
 // edits and skip reasons don't teach the assistant anything.
 // Usage: node --env-file=.env.local scripts/clear-test-data.mjs <since ISO timestamp>
 import { createClient } from "@supabase/supabase-js";
+import { guardLive, withoutLiveFlag } from "./lib/live-guard.mjs";
 
-const since = process.argv[2];
+guardLive(process.env, "clear-test-data");
+const since = withoutLiveFlag(process.argv.slice(2))[0];
 if (!since) throw new Error("Pass the start time of the test run, e.g. 2026-10-07T18:00:00Z");
 const TEST_NUMBER = "whatsapp:+447700900999";
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
