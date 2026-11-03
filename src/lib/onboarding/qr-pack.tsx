@@ -109,3 +109,42 @@ export async function renderQrPack(r: Brand, signupUrl: string) {
   );
   return renderToBuffer(doc);
 }
+
+// ---------- The QR poster (the business review) ----------
+// One page, A4 (the counter or the window) or A5 (the tables): the name, the
+// sign-up reward, a big QR code to the sign-up page, "Scan to join and get ...".
+// The restaurant's colours if it has them, otherwise a clean default.
+
+export const POSTER_SIZES = ["A4", "A5"] as const;
+export type PosterSize = (typeof POSTER_SIZES)[number];
+const DEFAULT_DARK = "#1c1917";
+const DEFAULT_ACCENT = "#c2410c";
+
+export async function renderPoster(r: Partial<Brand> & Pick<Brand, "name">, signupUrl: string, size: PosterSize) {
+  const dark = r.brand_dark || DEFAULT_DARK;
+  const accent = r.brand_color || DEFAULT_ACCENT;
+  const k = size === "A4" ? 1 : 0.7; // A5 is 70% of A4 on each side
+  const qr = await QRCode.toDataURL(signupUrl, { margin: 1, width: 1000, errorCorrectionLevel: "M", color: { dark, light: "#ffffff" } });
+  const reward = clean(r.signup_reward || "a welcome treat");
+  const name = clean(r.name);
+  const doc = (
+    <Document title={`${name}: QR poster (${size})`} author="DinerAI">
+      <Page size={size} style={s.page}>
+        <View style={{ backgroundColor: dark, paddingVertical: 44 * k, paddingHorizontal: 40 * k, alignItems: "center", color: "#ffffff" }}>
+          <Text style={{ fontSize: 36 * k, fontFamily: "Helvetica-Bold", textAlign: "center" }}>{name}</Text>
+          {r.tagline ? <Text style={{ fontSize: 14 * k, color: "#e7e5e4", marginTop: 8 * k, textAlign: "center" }}>{clean(r.tagline)}</Text> : null}
+          <View style={{ width: 44 * k, height: 4 * k, borderRadius: 2, marginTop: 10 * k, backgroundColor: accent }} />
+        </View>
+        <View style={{ alignItems: "center", paddingHorizontal: 40 * k, paddingTop: 34 * k }}>
+          <Text style={{ fontSize: 26 * k, fontFamily: "Helvetica-Bold", textAlign: "center" }}>Scan to join and get</Text>
+          <Text style={{ fontSize: 32 * k, fontFamily: "Helvetica-Bold", textAlign: "center", marginTop: 6 * k, color: accent }}>{reward}</Text>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf images have no alt text */}
+          <Image src={qr} style={{ width: 110 * MM * k, height: 110 * MM * k, marginTop: 26 * k }} />
+          <Text style={{ fontSize: 12 * k, color: "#57534e", marginTop: 16 * k }}>Point your phone camera at the code</Text>
+          <Text style={{ fontSize: 10 * k, color: "#78716c", marginTop: 6 * k }}>{signupUrl.replace(/^https?:\/\//, "")}</Text>
+        </View>
+      </Page>
+    </Document>
+  );
+  return renderToBuffer(doc);
+}

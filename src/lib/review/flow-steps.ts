@@ -190,9 +190,33 @@ const themes: StepHandler = {
   choose: async () => "done",
 };
 
+// ---------- The QR poster ----------
+
+const poster: StepHandler = {
+  available: async (ctx) => Boolean(ctx.restaurant.slug && (await partResult(ctx, "poster"))?.ready),
+  show: async (ctx) => {
+    const { posterUrl } = await import("./parts/poster");
+    const slug = ctx.restaurant.slug!;
+    const reward = ctx.restaurant.signup_reward || "a welcome treat";
+    await ctx.say(
+      `🪧 *Your QR poster*
+
+Print it and put it by the till or in the window. Customers scan it to join your list and get ${reward}, and you can send them offers.
+
+A4 (above): ${posterUrl(slug, "A4")}
+A5 for the tables: ${posterUrl(slug, "A5")}`,
+      [],
+      posterUrl(slug, "A4"),
+    );
+    return "done";
+  },
+  choose: async () => "done",
+};
+
 export const FLOW_HANDLERS: Partial<Record<FlowStep, StepHandler>> = {
   replies,
   negative_replies: negativeReplies,
   profile,
   themes,
+  poster,
 };
