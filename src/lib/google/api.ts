@@ -137,6 +137,46 @@ export const updateHours = (link: GoogleLink, hours: { regular: GPeriod[]; speci
     link.restaurant,
   );
 
+// The profile in full, for the business review's health check (lib/review/google-profile.ts).
+export type GProfileLocation = GLocation & { profile?: { description?: string } };
+export const getProfileLocation = (link: GoogleLink) =>
+  gbp<GProfileLocation>(link.connection, "GET", `${INFO}/${link.locationId}?readMask=name,title,phoneNumbers,regularHours,specialHours,categories,websiteUri,profile,metadata`, undefined, link.restaurant);
+
+export type GAttribute = { name: string; valueType?: string; values?: unknown[]; uriValues?: { uri: string }[] };
+export type GAttributeMeta = { parent: string; valueType?: string; displayName?: string; groupDisplayName?: string; deprecated?: boolean };
+
+// The attributes set on the location (halal, parking, the menu link...).
+export async function getAttributes(link: GoogleLink) {
+  const res = await gbp<{ attributes?: GAttribute[] }>(link.connection, "GET", `${INFO}/${link.locationId}/attributes`, undefined, link.restaurant);
+  return res.attributes ?? [];
+}
+
+// The attributes this location's category can have (their ids come from here, never guessed).
+export async function attributeMetadata(link: GoogleLink) {
+  const res = await gbp<{ attributeMetadata?: GAttributeMeta[] }>(
+    link.connection,
+    "GET",
+    `${INFO}/attributes?parent=${link.locationId}&languageCode=en&regionCode=GB&pageSize=200`,
+    undefined,
+    link.restaurant,
+  );
+  return res.attributeMetadata ?? [];
+}
+
+// Fills (or, for UNDO, clears) the named fields: updateMask says which.
+export const patchProfile = (link: GoogleLink, body: Record<string, unknown>, mask: string[]) =>
+  gbp<GLocation>(link.connection, "PATCH", `${INFO}/${link.locationId}?updateMask=${mask.join(",")}`, body, link.restaurant);
+
+// Sets (or, left without values, unsets) the named attributes.
+export const patchAttributes = (link: GoogleLink, attributes: GAttribute[], mask: string[]) =>
+  gbp<{ attributes?: GAttribute[] }>(
+    link.connection,
+    "PATCH",
+    `${INFO}/${link.locationId}/attributes?attributeMask=${mask.join(",")}`,
+    { name: `${link.locationId}/attributes`, attributes },
+    link.restaurant,
+  );
+
 // ---------- Reviews (v4) ----------
 
 const v4Location = (link: GoogleLink) => `${V4}/${link.accountId}/${link.locationId}`;
@@ -184,6 +224,9 @@ export async function listLocalPosts(link: GoogleLink, max = 20) {
 
 export const createMedia = (link: GoogleLink, sourceUrl: string, category = "ADDITIONAL") =>
   gbp<GMedia>(link.connection, "POST", `${v4Location(link)}/media`, { mediaFormat: "PHOTO", locationAssociation: { category }, sourceUrl }, link.restaurant);
+
+// media: the full name "accounts/…/locations/…/media/…" (UNDO of a logo upload).
+export const deleteMedia = (link: GoogleLink, media: string) => gbp<object>(link.connection, "DELETE", `${V4}/${media}`, undefined, link.restaurant);
 
 export async function listMedia(link: GoogleLink, max = 20) {
   const res = await gbp<{ mediaItems?: GMedia[] }>(link.connection, "GET", `${v4Location(link)}/media?pageSize=${Math.min(100, max)}`, undefined, link.restaurant);

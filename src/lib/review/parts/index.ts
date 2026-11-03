@@ -20,6 +20,7 @@ type Runners = { [P in Part]?: PartRunner<P> };
 const RUNNERS: Runners = {
   reviews_sync: async (ctx) => (await import("./reviews")).syncPart(ctx),
   backlog: async (ctx) => (await import("./reviews")).backlogPart(ctx),
+  profile: async (ctx) => (await import("./profile")).profilePart(ctx),
 };
 
 export const registeredParts = (): Part[] => (Object.keys(RUNNERS) as Part[]).filter((p) => RUNNERS[p]);

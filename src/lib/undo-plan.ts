@@ -9,6 +9,7 @@ export type UndoPlan =
   | { type: "reopen" } // approved but not sent (queued or blocked): back to pending
   | { type: "withdraw_reply" } // a review reply posted on (dummy) Google: take it down
   | { type: "withdraw_post" } // a Google post published on (dummy) Google: take it down
+  | { type: "restore_google_profile" } // the business review's profile fixes: empty again what they filled in
   | { type: "withdraw_simulated" } // "sent" but only simulated: nothing reached anyone
   | { type: "restore_skip" }
   | { type: "restore_edit" }
@@ -55,7 +56,7 @@ const SETTINGS = [
   "owner_name",
 ];
 
-export const GOOGLE_KINDS = ["review_reply", "google_post", "hours_update", "menu_update"];
+export const GOOGLE_KINDS = ["review_reply", "google_post", "hours_update", "menu_update", "profile_fix"];
 
 // googleMode: the restaurant's Google (lib/google/index.ts googleModeFor).
 export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: "dummy" | "simulated" | "live"): UndoPlan {
@@ -96,6 +97,8 @@ export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: 
     // Dummy and live: replies and posts can be deleted (live: through the API).
     if (draft.kind === "review_reply" && draft.review_id) return { type: "withdraw_reply" };
     if (draft.kind === "google_post") return { type: "withdraw_post" };
+    // Profile fixes only filled empty fields, so UNDO empties them again (dummy and live).
+    if (draft.kind === "profile_fix") return { type: "restore_google_profile" };
     if (draft.kind === "hours_update" && googleMode === "live") {
       return { type: "cannot", reason: 'Your hours are already changed on Google, and Google can\'t be put back automatically. Text the old hours (e.g. "change Friday hours to 11pm") and I\'ll update Google again.' };
     }

@@ -194,7 +194,7 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
   } else if (!reachesPlatform) {
     // Dry run, simulated Google (or customer WhatsApp): nothing goes out; it is logged as simulated.
     note = dryRun ?? `🧪 ${testStep.detail}`;
-  } else if (claimed.kind === "review_reply" || claimed.kind === "google_post" || claimed.kind === "hours_update" || claimed.kind === "menu_update") {
+  } else if (claimed.kind === "review_reply" || claimed.kind === "google_post" || claimed.kind === "hours_update" || claimed.kind === "menu_update" || claimed.kind === "profile_fix") {
     // Google: this restaurant's own connector (live once it has linked its location, else dummy).
     const g = await googleFor(restaurant.id);
     const dummy = g.mode === "dummy";
@@ -214,6 +214,11 @@ export async function attemptSend(draftId: string, restaurant: Restaurant, now: 
           note = `📍 Post published ${where}.`;
           simulated = dummy;
         }
+      } else if (claimed.kind === "profile_fix") {
+        // The business review's profile fixes: only fields still empty on Google are filled in.
+        const { applyProfileFix } = await import("@/lib/review/google-profile");
+        note = await applyProfileFix(restaurant, claimed);
+        simulated = dummy;
       } else if (claimed.kind === "hours_update" && g.updateHours) {
         // The profile already has the new hours: copy them (and special hours) to Google.
         await g.updateHours(restaurant.id, claimed.id);

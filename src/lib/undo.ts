@@ -76,6 +76,13 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
       return { text: `↩️ Took the Google post down from ${where}.`, done: true };
     }
 
+    case "restore_google_profile": {
+      const { undoProfileFix } = await import("./review/google-profile");
+      const undone = await undoProfileFix(restaurant, draft!);
+      await updateDraft(draft!.id, { status: "withdrawn" });
+      return { text: undone.length ? `↩️ Took back the profile fixes on ${where}: ${undone.join(", ")} ${undone.length === 1 ? "is" : "are"} empty again.` : "↩️ The profile fixes are taken back.", done: true };
+    }
+
     case "withdraw_simulated":
       await updateDraft(draft!.id, { status: "withdrawn" });
       return { text: `↩️ The ${name} was only simulated, so nothing reached anyone. Marked as withdrawn.`, done: true };

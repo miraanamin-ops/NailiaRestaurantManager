@@ -71,10 +71,10 @@ export function googleDryRunReason(restaurant: DryRunRestaurant | null | undefin
 
 export const googleDryRun = (restaurant: DryRunRestaurant | null | undefined, what: GoogleWriteKind, ctx: DryRunContext) => googleDryRunReason(restaurant, what, ctx) !== null;
 
-export const writeKindForDraft = (kind: string): GoogleWriteKind => (kind === "hours_update" || kind === "menu_update" ? "profile" : "replies");
+export const writeKindForDraft = (kind: string): GoogleWriteKind => (kind === "hours_update" || kind === "menu_update" || kind === "profile_fix" ? "profile" : "replies");
 
 // From an API call: photos (media) and changes to the location itself (hours) are profile writes.
-export const writeKindForCall = (method: string, url: string): GoogleWriteKind => (/\/media(\?|$)/.test(url) || method.toUpperCase() === "PATCH" ? "profile" : "replies");
+export const writeKindForCall = (method: string, url: string): GoogleWriteKind => (/\/media(\/|\?|$)/.test(url) || method.toUpperCase() === "PATCH" ? "profile" : "replies");
 
 // The last wall before Google: a test site never changes anything on live Google
 // (reads are fine), and nor does a restaurant whose writes of that kind are dry run.
@@ -103,7 +103,9 @@ export function dryRunNote(input: { kind: string; content: string; profile?: str
       ? `posted this reply ${where}: ${quote(input.content)}`
       : input.kind === "google_post"
         ? `posted this ${where} as a post: ${quote(input.content)}`
-        : `updated your ${input.kind === "menu_update" ? "menu" : "hours"} ${where}`;
+        : input.kind === "profile_fix"
+          ? `filled in your profile ${where}: ${quote(input.content)}`
+          : `updated your ${input.kind === "menu_update" ? "menu" : "hours"} ${where}`;
   return input.simulatedReview
     ? `🧪 Simulated review, so never replied to on Google. Would have ${what}`
     : `🧪 Dry run: nothing changed on Google. Would have ${what}`;
@@ -114,7 +116,7 @@ export function dryRunNote(input: { kind: string; content: string; profile?: str
 export const redirectEmails = (switchOn: boolean, restaurant: { is_test?: boolean | null }) => switchOn || restaurant.is_test === true;
 
 export function channelFor(kind: string): SendChannel {
-  if (kind === "review_reply" || kind === "google_post" || kind === "hours_update" || kind === "menu_update") return "google";
+  if (kind === "review_reply" || kind === "google_post" || kind === "hours_update" || kind === "menu_update" || kind === "profile_fix") return "google";
   if (kind === "email_campaign") return "email";
   return "whatsapp";
 }

@@ -38,7 +38,7 @@ export type GLocation = {
   metadata?: { placeId?: string; mapsUri?: string; newReviewUri?: string };
 };
 
-export type GMedia = { name: string; googleUrl?: string; thumbnailUrl?: string; mediaFormat?: string; locationAssociation?: { category?: string } };
+export type GMedia = { name: string; googleUrl?: string; thumbnailUrl?: string; mediaFormat?: string; locationAssociation?: { category?: string }; createTime?: string };
 
 // ---------- Reviews ----------
 

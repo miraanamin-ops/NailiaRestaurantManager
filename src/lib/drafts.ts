@@ -5,7 +5,7 @@ import { queueDraftCheck } from "@/lib/agents/enqueue";
 import { currentProfileVersion } from "@/lib/profile/versions";
 import { getSupabase } from "@/lib/supabase";
 
-export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question", "profile_change", "agent_question", "special_idea", "choice", "rota"] as const;
+export const DRAFT_KINDS = ["review_reply", "promotion", "other", "email_campaign", "google_post", "review_question", "hours_update", "menu_update", "hours_question", "profile_change", "agent_question", "special_idea", "choice", "rota", "profile_fix"] as const;
 // Questions for the owner: answered with their own buttons (or words), never approved or sent.
 export const QUESTION_KINDS: ReadonlySet<string> = new Set(["review_question", "hours_question", "agent_question", "choice"]);
 // Cards for the owner only (GM, 024): approved or skipped, but never sent to anyone.
@@ -91,6 +91,7 @@ export const KIND_LABELS: Record<DraftKind, string> = {
   special_idea: "Special idea",
   choice: "Which did you mean?",
   rota: "Weekly rota",
+  profile_fix: "Google profile fixes",
 };
 
 export function check<T>(res: { data: T; error: { message: string } | null }): T {

@@ -2,7 +2,11 @@ import "server-only";
 import { dryRunContext, googleDryRunReason } from "@/lib/gate-rules";
 import { draftMessage } from "@/lib/format";
 import { googleModeFor } from "@/lib/google";
+import { check, approveDraft, type Draft } from "@/lib/drafts";
+import { attemptSend } from "@/lib/send";
+import { getSupabase } from "@/lib/supabase";
 import { clip } from "@/lib/text";
+import type { PartResults } from "./types";
 import type { FlowStep } from "./flow";
 import type { FlowCtx, StepHandler, StepOutcome } from "./flow-run";
 
@@ -94,7 +98,74 @@ const negativeReplies: StepHandler = {
   afterDecision: (ctx, draft) => nextInQueue(ctx, draft.id),
 };
 
+// ---------- The Google profile ----------
+
+async function partResult<P extends keyof PartResults>(ctx: FlowCtx, part: P) {
+  const row = check(await getSupabase().from("business_review_parts").select("result, status").eq("review_id", ctx.review.id).eq("part", part).maybeSingle<{ result: PartResults[P] | null; status: string }>());
+  return row?.status === "done" ? row.result : null;
+}
+
+async function fixDraft(ctx: FlowCtx) {
+  const r = await partResult(ctx, "profile");
+  if (!r?.draftId) return null;
+  return check(await getSupabase().from("drafts").select("*").eq("id", r.draftId).eq("restaurant_id", ctx.restaurant.id).maybeSingle<Draft>());
+}
+
+async function stepsAndAsks(ctx: FlowCtx) {
+  const r = await partResult(ctx, "profile");
+  const steps = r?.steps ?? [];
+  if (steps.length) {
+    const head = `✍️ *${steps.length === 1 ? "One thing" : `${steps.length} things`} Google only lets you change yourself*`;
+    await ctx.say([head, ...steps.map((s) => `• *${s.label}*: ${s.text}`)].join("\n\n"));
+  }
+  if (r?.asks.length) await ctx.say(`❓ To finish the rest, I just need ${r.asks.length === 1 ? r.asks[0] : `${r.asks.slice(0, -1).join(", ")} and ${r.asks.at(-1)}`}. Reply here any time.`);
+}
+
+const profile: StepHandler = {
+  available: async (ctx) => {
+    if (!ctx.review.google_connected) return false;
+    const r = await partResult(ctx, "profile");
+    const d = await fixDraft(ctx);
+    return Boolean((d && d.status === "pending") || r?.steps?.length || r?.asks.length);
+  },
+  show: async (ctx) => {
+    const r = await partResult(ctx, "profile");
+    if (!r) return "done";
+    const d = await fixDraft(ctx);
+    if (d?.status === "pending") {
+      await ctx.say(`📋 *Your Google profile: ${r.score}/100*
+
+${clip(d.content, 820)}`, [ctx.button("profile", "approve", "Approve fixes"), ctx.button("profile", "skip", "Skip")]);
+      return "stay";
+    }
+    await ctx.say(`📋 *Your Google profile: ${r.score}/100*`);
+    await stepsAndAsks(ctx);
+    return "done";
+  },
+  choose: async (ctx, choice) => {
+    const d = await fixDraft(ctx);
+    if (choice === "approve" && d?.status === "pending") {
+      const before = (await partResult(ctx, "profile"))?.score ?? null;
+      const approved = await approveDraft(d);
+      const result = await attemptSend(approved.id, ctx.restaurant, new Date(), "approve");
+      if (result.outcome === "sent") {
+        await ctx.say(result.note ?? "📋 Done.");
+        const { rescore } = await import("./rescore");
+        const after = await rescore(ctx.restaurant, result.draft, result.note ?? "");
+        if (before !== null && after) await ctx.say(`📋 Before: ${before}/100. ${after.dryRun ? "With these, it would be" : "Now"}: ${after.score}/100.`);
+      } else {
+        await ctx.say(`Not done yet: ${result.detail}`);
+      }
+    } else if (choice === "skip") {
+      await ctx.say("👍 The fixes will wait for you in tomorrow morning's brief.");
+    }
+    await stepsAndAsks(ctx);
+    return "done";
+  },
+};
+
 export const FLOW_HANDLERS: Partial<Record<FlowStep, StepHandler>> = {
   replies,
   negative_replies: negativeReplies,
+  profile,
 };
