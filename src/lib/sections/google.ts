@@ -18,6 +18,10 @@ const average = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a
 
 async function themesFor(restaurant: Restaurant, p: Period, week: { id: string; rating: number; text: string | null }[]): Promise<Theme[]> {
   if (!week.some((r) => r.text)) return [];
+  // Reviews the business review tagged (review_tags): their counts, no AI call.
+  const { tagThemesFor } = await import("@/lib/review/tag-themes");
+  const tagged = await tagThemesFor(restaurant.id, week).catch(() => null);
+  if (tagged?.length) return tagged;
   if (reputationMode(restaurant) !== "off") {
     // The same saved themes as the built-in card (review_themes): no second AI call.
     const t = await weeklyThemesFor(restaurant.id, londonYmd(p.start), `the week starting ${londonYmd(p.start)}`, week.filter((r) => r.text)).catch(() => null);

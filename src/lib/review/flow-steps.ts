@@ -164,8 +164,35 @@ ${clip(d.content, 820)}`, [ctx.button("profile", "approve", "Approve fixes"), ct
   },
 };
 
+// ---------- What customers say ----------
+
+const joinList = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`);
+const lower = (x: string) => x.charAt(0).toLowerCase() + x.slice(1);
+
+const themes: StepHandler = {
+  available: async (ctx) => {
+    const r = await partResult(ctx, "themes");
+    return Boolean(r && !r.skipped && (r.praises.length || r.complaint));
+  },
+  show: async (ctx) => {
+    const r = await partResult(ctx, "themes");
+    if (!r || r.skipped) return "done";
+    const lines = ["💬 *What customers say*", ""];
+    if (r.summary) lines.push(r.summary, "");
+    if (r.praises.length) lines.push(`👍 They love ${joinList(r.praises.map(lower))}.`);
+    for (const c of r.complaints ?? (r.complaint ? [{ ...r.complaint, example: null }] : [])) {
+      lines.push(`👎 ${c.label} (${c.count} ${c.count === 1 ? "review" : "reviews"})${c.example ? `: "${c.example}"` : ""}`);
+    }
+    if (r.action) lines.push("", `💡 ${r.action}`);
+    await ctx.say(clip(lines.join("\n"), 1000), [ctx.button("themes", "ok", "Got it")]);
+    return "stay";
+  },
+  choose: async () => "done",
+};
+
 export const FLOW_HANDLERS: Partial<Record<FlowStep, StepHandler>> = {
   replies,
   negative_replies: negativeReplies,
   profile,
+  themes,
 };

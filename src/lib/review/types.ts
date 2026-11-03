@@ -5,7 +5,15 @@ import type { Part } from "./config";
 export type PartResults = {
   reviews_sync: { connected: boolean; rating: number | null; total: number | null; synced: number; unanswered: number };
   backlog: { unanswered: number; drafted: number; positiveReady: number; negative: number };
-  themes: { reviewCount: number; praises: string[]; complaint: { label: string; count: number } | null; skipped?: "few_reviews" };
+  themes: {
+    reviewCount: number;
+    praises: string[];
+    complaint: { label: string; count: number } | null;
+    skipped?: "few_reviews";
+    complaints?: { label: string; count: number; example: string | null }[];
+    summary?: string | null;
+    action?: string | null;
+  };
   // steps: the copy-paste instructions (things Google only lets the owner change).
   profile: { score: number; fixes: number; examples: string[]; asks: string[]; copyPaste: number; steps?: { label: string; text: string }[]; draftId?: string | null };
   // Aggregates only: rivals' own details are fetched fresh (Places terms).

@@ -1,0 +1,17 @@
+{
+  "name": "a mixed batch: dishes only when named, speed for waiting, nothing from the stars alone",
+  "source": "written for the business review (3 Nov 2026)",
+  "reviews": [
+    { "id": "r1", "rating": 5, "text": "The lamb chops were amazing and the staff were so friendly." },
+    { "id": "r2", "rating": 2, "text": "Waited 40 minutes for our food. Too slow." },
+    { "id": "r3", "rating": 4, "text": "Great!" }
+  ],
+  "good": [
+    { "review_id": "r1", "sentiment": "positive", "themes": [{ "theme": "dish", "sentiment": "positive", "dish": "lamb chops" }, { "theme": "service", "sentiment": "positive" }] },
+    { "review_id": "r2", "sentiment": "negative", "themes": [{ "theme": "speed", "sentiment": "negative" }] },
+    { "review_id": "r3", "sentiment": "positive", "themes": [] }
+  ],
+  "bad": [
+    { "why": "a dish the review doesn't name", "replace": { "review_id": "r3", "sentiment": "positive", "themes": [{ "theme": "dish", "sentiment": "positive", "dish": "mixed grill" }] } }
+  ]
+}

@@ -3,7 +3,7 @@
 // system prompt (house rules first, then the agent's own file).
 // No imports, so every rule is unit-tested (tests/agents/loader.test.ts).
 
-export const AGENT_NAMES = ["gm", "reputation", "growth", "visibility", "insights", "checker", "profile-keeper", "business-review"] as const;
+export const AGENT_NAMES = ["gm", "reputation", "growth", "visibility", "insights", "checker", "profile-keeper", "business-review", "tagger"] as const;
 export type AgentName = (typeof AGENT_NAMES)[number];
 
 export const MODEL_TIERS = ["sonnet", "haiku"] as const;
