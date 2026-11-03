@@ -15,7 +15,7 @@ export type PartResults = {
     action?: string | null;
   };
   // steps: the copy-paste instructions (things Google only lets the owner change).
-  profile: { score: number; fixes: number; examples: string[]; asks: string[]; copyPaste: number; steps?: { label: string; text: string }[]; draftId?: string | null };
+  profile: { score: number; fixes: number; examples: string[]; asks: string[]; copyPaste: number; steps?: { label: string; text: string }[]; draftId?: string | null; items?: { key: string; label: string; points: number; max: number }[] };
   // Aggregates only: rivals' own details are fetched fresh (Places terms).
   rivals: { ours: { rating: number; count: number } | null; nearby: { average: number; n: number } | null };
   events: { names: string[]; drafted: number; emailsHeld: boolean };

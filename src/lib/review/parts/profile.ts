@@ -86,7 +86,7 @@ export async function profilePart(ctx: PartContext): Promise<PartResults["profil
   for (const a of plan.apply) await logTimeSaved(r.id, "profile_fix", `${draftId}:${a.field}`);
   if (description && draftId) await logTimeSaved(r.id, "profile_fix", `${draftId}:description`);
   for (const c of plan.copyPaste) await logTimeSaved(r.id, "profile_fix", `${ctx.review.id}:${c.label}`);
-  return { score: before.score, fixes: readyFixes(plan), examples: topExamples(plan), asks: plan.asks, copyPaste: plan.copyPaste.length, steps: plan.copyPaste, draftId };
+  return { score: before.score, fixes: readyFixes(plan), examples: topExamples(plan), asks: plan.asks, copyPaste: plan.copyPaste.length, steps: plan.copyPaste, draftId, items: before.items };
 }
 
 async function saveFixDraft(r: Restaurant, reviewId: string, plan: FixPlan, description: string | null, scoreBefore: number) {
