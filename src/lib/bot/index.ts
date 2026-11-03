@@ -16,6 +16,7 @@ import { salesFromMedia, salesReply, typedSales } from "@/lib/sales/whatsapp";
 import { ownerSender } from "./sales-commands";
 import { updateRestaurant, type Turn } from "./turn";
 import { OwnerToldError, SORRY } from "@/lib/sorry";
+import { REVIEW_OPEN_ID } from "@/lib/review/config";
 
 // One WhatsApp message from the owner, start to finish. The webhook
 // (app/api/whatsapp) has already checked it's from Twilio and from the owner.
@@ -57,6 +58,11 @@ export async function handleMessage(input: {
       await deliverWaitingBrief(ctx.restaurant, channel, ctx.now);
       ctx = await loadRestaurantContext(restaurantId);
     }
+
+    // The business review waited for the owner's next message (WhatsApp's 24-hour
+    // rule): it goes now. A tap on the template's "See my review" needs nothing more.
+    const { deliverWaitingReview } = await import("@/lib/review/deliver");
+    if ((await deliverWaitingReview(ctx.restaurant, channel, new Date()).catch(() => false)) && (input.buttonPayload === REVIEW_OPEN_ID || /^\s*see my review\s*$/i.test(body))) return;
 
     const turn: Turn = { ctx, channel, owner, send };
     let staffCommand: StaffCommand | null = null;

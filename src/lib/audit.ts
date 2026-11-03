@@ -37,6 +37,7 @@ export type AuditAction =
   | "profile_reverted" // Revert on one profile change
   | "job_retried" // the builder retried a dead job from /log
   | "builder_command" // a BUILDER ... WhatsApp command from BUILDER_WHATSAPP
+  | "business_review" // the business review after onboarding: started (by setup or the builder), sent, its guided flow
   | "demo_phone" // the builder sent a message as a demo restaurant's owner (/onboarding/admin/phone)
   | "closure" // closing a restaurant's account: requested, confirmed, cancelled (/onboarding/admin/close)
   | "sales_removed" // the builder removed imported sales from the Pilot Zero restaurant (/onboarding/admin/pilot-zero)

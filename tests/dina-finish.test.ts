@@ -11,6 +11,8 @@ const R = "dddddddd-0000-4000-8000-0000000000b8";
 const REAL = "dddddddd-0000-4000-8000-0000000000b9";
 let db: ReturnType<typeof memoryDb>;
 const callDina = vi.fn();
+// The business review (lib/review/job.ts): started once setup finishes.
+const startReview = vi.fn(async (_id: string) => false);
 const usage = { purpose: "turn", model: "claude-sonnet-5-5", tokens: { input: 1000, output: 100, cacheRead: 0, cacheWrite: 0, cost: 0.003 } };
 const answer = (text: string, component: unknown = null) => ({ reply: { messages: [{ text, component }] }, calls: [usage], toolCalls: [], attempts: 1 });
 const ALL = ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs"];
@@ -61,10 +63,13 @@ beforeEach(() => {
   }));
   vi.doMock("@/lib/onboarding/dina/call", async (orig) => ({ ...(await orig<object>()), callDina, routeStep: async () => ({ step: null, call: usage }) }));
   vi.doMock("@/lib/feeds/backfill", () => ({ enqueueBackfill: async () => null }));
+  startReview.mockReset();
+  startReview.mockResolvedValue(false);
+  vi.doMock("@/lib/review/job", () => ({ startAfterOnboarding: startReview }));
   vi.doMock("@/lib/whatsapp", () => ({ sendText: async (_f: string, _t: string, body: string) => ({ sid: "SM", body }) }));
 });
 afterEach(() => {
-  for (const m of ["@/lib/supabase", "@/lib/builder-alerts", "@/lib/ops/menu", "@/lib/onboarding/dina/call", "@/lib/feeds/backfill", "@/lib/whatsapp"]) vi.doUnmock(m);
+  for (const m of ["@/lib/supabase", "@/lib/builder-alerts", "@/lib/ops/menu", "@/lib/onboarding/dina/call", "@/lib/feeds/backfill", "@/lib/whatsapp", "@/lib/review/job"]) vi.doUnmock(m);
   delete process.env.BUILDER_WHATSAPP;
 });
 
@@ -108,13 +113,32 @@ describe("finishing setup", () => {
     finishLastStep();
     Object.assign(r(), { owner_whatsapp: "whatsapp:+447700900111", billing_exempt: false });
     const { finishIfDone } = await import("@/lib/onboarding/dina/finish");
-    expect(await finishIfDone(R)).toEqual({ finished: true, active: false, allSet: expect.stringMatching(/^You're all set up\./) });
+    expect(await finishIfDone(R)).toEqual({ finished: true, active: false, allSet: expect.stringMatching(/^You're all set up\./), reviewStarted: false });
     expect(r().active).toBe(false);
   });
 
   test("not finished while a step is still open", async () => {
     const { finishIfDone } = await import("@/lib/onboarding/dina/finish");
     expect(await finishIfDone(R)).toBeNull();
+    expect(startReview).not.toHaveBeenCalled();
+  });
+
+  test("the business review starts once, when setup finishes, and Dina says it's coming (here on WhatsApp, on WhatsApp from the web)", async () => {
+    finishLastStep();
+    r().owner_whatsapp = "whatsapp:+447700900111";
+    startReview.mockResolvedValue(true);
+    callDina.mockResolvedValue(answer("All done!", { type: "summary" }));
+    const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "ok", externalId: "rv" });
+    expect(out.duplicate === false && out.messages[1].text).toBe(
+      "You're all set up. You'll next hear from me tomorrow morning at 9am with your first brief. Give me about 5 minutes to review your business. I'll message you on WhatsApp.",
+    );
+    expect(startReview).toHaveBeenCalledTimes(1);
+    expect(startReview).toHaveBeenCalledWith(R);
+    const { finishIfDone, reviewLine } = await import("@/lib/onboarding/dina/finish");
+    expect(await finishIfDone(R)).toBeNull();
+    expect(startReview).toHaveBeenCalledTimes(1);
+    expect(reviewLine("whatsapp")).toBe("Give me about 5 minutes to review your business. I'll message you here.");
   });
 });
 

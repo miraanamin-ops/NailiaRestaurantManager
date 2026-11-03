@@ -11,6 +11,17 @@
 
 begin;
 
+-- 0g. 058 (the business review): its owner read policies use ops_owns_restaurant.
+--     Only the policies go: the review data stays, readable by the app's server
+--     only. See business_review_rollback.sql to undo 058 itself.
+do $$
+declare t text;
+begin
+  foreach t in array array['business_reviews', 'business_review_parts', 'review_tags', 'rival_places', 'time_saved_log'] loop
+    if to_regclass(t) is not null then execute format('drop policy if exists ops_read on %I', t); end if;
+  end loop;
+end $$;
+
 -- 0f. 055 (the saved daily forecast) is built on the forecast: it goes first
 --     (its policy uses ops_owns_restaurant). See also forecast_snapshots_rollback.sql.
 drop table if exists forecast_snapshots cascade;

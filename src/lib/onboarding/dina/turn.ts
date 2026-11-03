@@ -10,7 +10,7 @@ import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from ".
 import { mightBeAnotherStep, turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
 import { dinaReplyProblems, fallbackReply, type DinaReply } from "./reply";
 import { applyFaqNotes, applyHoursNotes } from "./facts-step";
-import { finishIfDone } from "./finish";
+import { finishIfDone, reviewLine } from "./finish";
 import { applyGoogleNotes } from "./google-step";
 import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
@@ -238,8 +238,9 @@ async function endOfSetup(id: string, messages: DinaReply["messages"], channel: 
   const summary = has("summary") ? [] : [{ text: outcome.finished ? "Here's everything we've set up together." : "Here's where setup stands.", component: { type: "summary" as const } }];
   if (outcome.finished) {
     // Finished on the web: the same closing line on WhatsApp, where they'll hear from us next.
-    if (channel === "web") await whatsAppLine(id, outcome.allSet).catch((err) => console.error("Couldn't send the all-set line on WhatsApp", err));
-    return [...summary, { text: outcome.allSet, component: null }];
+    const withReview = (c: "web" | "whatsapp") => (outcome.reviewStarted ? `${outcome.allSet} ${reviewLine(c)}` : outcome.allSet);
+    if (channel === "web") await whatsAppLine(id, withReview("whatsapp")).catch((err) => console.error("Couldn't send the all-set line on WhatsApp", err));
+    return [...summary, { text: withReview(channel === "web" ? "web" : "whatsapp"), component: null }];
   }
   const { data: recent } = await getSupabase().from("onboarding_messages").select("parts").eq("restaurant_id", id).eq("role", "dina").order("created_at", { ascending: false }).limit(6);
   const askedRecently = (recent ?? []).some((r) => ((r.parts as { type?: string }[] | null) ?? []).some((p) => p?.type === "whatsapp_link"));

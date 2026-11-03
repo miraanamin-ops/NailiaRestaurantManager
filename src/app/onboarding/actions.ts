@@ -136,7 +136,7 @@ export async function finishSetup(form: FormData) {
   const r = await rid(form);
   const result = await engine.finish(r);
   if (result.ok) {
-    await engine.sendFinishSummary(result.restaurant, result.summary, result.qrPack, ourWhatsAppNumber()).catch((err) => console.error("Couldn't send the summary", err));
+    await engine.sendFinishSummary(result.restaurant, result.summary, result.qrPack, ourWhatsAppNumber(), result.reviewStarted).catch((err) => console.error("Couldn't send the summary", err));
     redirect(`/onboarding?r=${r}`);
   }
   back(r);

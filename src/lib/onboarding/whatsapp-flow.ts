@@ -289,7 +289,7 @@ async function finishHere(ctx: Ctx) {
   if (!result.ok) {
     return ctx.send(`Not quite done yet: ${result.missing.join(", ")} still to do. Send *HELP* to carry on.`);
   }
-  await engine.sendFinishSummary(result.restaurant, result.summary, result.qrPack, ctx.ourNumber);
+  await engine.sendFinishSummary(result.restaurant, result.summary, result.qrPack, ctx.ourNumber, result.reviewStarted);
 }
 
 // ---------- 1. Google ----------

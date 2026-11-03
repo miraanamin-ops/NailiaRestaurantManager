@@ -374,7 +374,10 @@ export async function finish(restaurantId: string) {
   } catch (err) {
     console.error("Couldn't queue the outside data backfill", err);
   }
-  return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant), needsTrial: !active };
+  // The business review (lib/review): once per restaurant, never in the way of finishing.
+  const { startAfterOnboarding } = await import("@/lib/review/job");
+  const reviewStarted = await startAfterOnboarding(restaurantId);
+  return { ok: true as const, restaurant, onboarding, summary: summaryLines(restaurant, onboarding), qrPack: qrPackUrl(restaurant), needsTrial: !active, reviewStarted };
 }
 
 export function menuSummaryText(menu: MenuCategory[], maxChars = 1200) {
@@ -389,7 +392,7 @@ export function menuSummaryText(menu: MenuCategory[], maxChars = 1200) {
 }
 
 // The finished summary, as one WhatsApp message.
-export function finishMessage(r: Restaurant, summary: string[], qrPack: string) {
+export function finishMessage(r: Restaurant, summary: string[], qrPack: string, reviewStarted = false) {
   return [
     `🎉 *${r.name} is set up!*`,
     "",
@@ -399,14 +402,15 @@ export function finishMessage(r: Restaurant, summary: string[], qrPack: string) 
     "",
     ...(r.active ? [] : [`One last step before I start: your free trial. ${appUrl()}/onboarding?r=${r.id}`, ""]),
     "From now on, just message me like you would a person. You can change anything any time, e.g. _change Friday hours to 11pm_ or _add lamb chops, £14_. Send *HELP* for the commands.",
+    ...(reviewStarted ? ["", "Give me about 5 minutes to review your business. I'll message you here."] : []),
   ].join("\n");
 }
 
 // Sends the summary to the owner's WhatsApp (finishing on the web, or on WhatsApp).
-export async function sendFinishSummary(r: Restaurant, summary: string[], qrPack: string, from: string) {
+export async function sendFinishSummary(r: Restaurant, summary: string[], qrPack: string, from: string, reviewStarted = false) {
   if (!r.owner_whatsapp) return;
   const { messageOwner } = await import("@/lib/notify");
-  await messageOwner({ restaurantId: r.id, from: r.whatsapp_from ?? from, to: r.owner_whatsapp }, finishMessage(r, summary, qrPack));
+  await messageOwner({ restaurantId: r.id, from: r.whatsapp_from ?? from, to: r.owner_whatsapp }, finishMessage(r, summary, qrPack, reviewStarted));
 }
 
 // TEST_TOOLS only, demo restaurants only: back to a just-signed-up restaurant so

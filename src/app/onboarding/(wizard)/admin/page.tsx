@@ -112,6 +112,12 @@ async function Admin({ searchParams }: Pick<PageProps<"/onboarding/admin">, "sea
         <span className="text-stone-500">: your own pilot restaurant and its Google dry run.</span>
       </p>
       <p className="mt-1 text-sm">
+        <Link href="/onboarding/admin/business-review" className="underline">
+          Run business review
+        </Link>
+        <span className="text-stone-500">: Dina&apos;s review after setup, for any restaurant (asks you to confirm).</span>
+      </p>
+      <p className="mt-1 text-sm">
         <Link href="/onboarding/admin/close" className="underline">
           Close an account
         </Link>

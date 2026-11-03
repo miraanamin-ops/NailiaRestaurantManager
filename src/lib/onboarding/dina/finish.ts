@@ -3,6 +3,7 @@ import { logAction } from "@/lib/audit";
 import { shouldBeActive } from "@/lib/billing/access";
 import { check } from "@/lib/drafts";
 import { enqueueBackfill } from "@/lib/feeds/backfill";
+import { startAfterOnboarding } from "@/lib/review/job";
 import { londonYmd } from "@/lib/clock";
 import { getSupabase } from "@/lib/supabase";
 import { currentStep } from "../flow";
@@ -22,11 +23,15 @@ import { getRestaurant, updateRestaurantFields } from "../store";
 // Safe to call again: it does nothing once finished.
 
 // allSet: the closing line ("You're all set up..."), for the chat and WhatsApp.
-export type FinishOutcome = { finished: true; active: boolean; allSet: string } | { finished: false; needsWhatsapp: boolean };
+// reviewStarted: the business review (lib/review) is on its way; Dina says so (reviewLine).
+export type FinishOutcome = { finished: true; active: boolean; allSet: string; reviewStarted: boolean } | { finished: false; needsWhatsapp: boolean };
 
 const hourText = (h: number) => (h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`);
 // The first brief is the morning after setup finishes (the summary says so too).
 export const allSetLine = (briefHour: number) => `You're all set up. You'll next hear from me tomorrow morning at ${hourText(briefHour)} with your first brief.`;
+// Added when the business review has started: "here" on WhatsApp, where it arrives.
+export const reviewLine = (channel: "web" | "whatsapp") =>
+  `Give me about 5 minutes to review your business. I'll message you ${channel === "whatsapp" ? "here" : "on WhatsApp"}.`;
 
 export async function finishIfDone(restaurantId: string): Promise<FinishOutcome | null> {
   const session = await getSession(restaurantId);
@@ -58,5 +63,7 @@ export async function finishIfDone(restaurantId: string): Promise<FinishOutcome 
   } catch (err) {
     console.error("Couldn't queue the outside data backfill", err);
   }
-  return { finished: true, active, allSet: allSetLine(r.brief_hour ?? 9) };
+  // The business review: once per restaurant, never in the way of finishing.
+  const reviewStarted = await startAfterOnboarding(restaurantId);
+  return { finished: true, active, allSet: allSetLine(r.brief_hour ?? 9), reviewStarted };
 }

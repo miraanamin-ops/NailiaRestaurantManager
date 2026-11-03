@@ -1,6 +1,7 @@
 import "server-only";
 import twilio from "twilio";
 import { BUTTON_IDS, HOURS_IDS, QUESTION_IDS } from "@/lib/bot/parse";
+import { REVIEW_OPEN_ID } from "@/lib/review/config";
 import { clip } from "@/lib/text";
 import { isPlaceholderNumber, whatsAppSendAllowed } from "@/lib/switches";
 
@@ -224,6 +225,26 @@ export async function sendDinaChoices(from: string, to: string, msg: DinaChoices
     console.error(`Dina's ${msg.kind} failed, sending the numbered text instead`, err);
     return { ...(await sendText(from, to, msg.body)), usedButtons: false };
   }
+}
+
+// ---------- Templates for outside the 24-hour window ----------
+// These need Meta's approval (submitted from the Twilio console once we have a
+// real WhatsApp sender); until then they're only used off the sandbox.
+//   dinerai_business_review_ready_v1  "Your DinerAI business review is ready",
+//                                     button "See my review" (lib/review/deliver.ts)
+export const REVIEW_READY_TEMPLATE = "dinerai_business_review_ready_v1";
+export const OUTSIDE_WINDOW_TEMPLATES = [REVIEW_READY_TEMPLATE] as const;
+
+export async function sendReviewReadyTemplate(from: string, to: string, firstName: string) {
+  const sid = await contentSid(REVIEW_READY_TEMPLATE, () => ({
+    variables: { 1: "there" },
+    types: {
+      "twilio/quick-reply": { body: "Your DinerAI business review is ready, {{1}}. Tap below and I'll send it to you here.", actions: [{ title: "See my review", id: REVIEW_OPEN_ID }] },
+      "twilio/text": { body: "Your DinerAI business review is ready, {{1}}. Reply to see it." },
+    },
+  }));
+  const msg = await createMessage({ from, to, contentSid: sid, contentVariables: JSON.stringify({ 1: firstName }) });
+  return { sid: msg.sid, body: `Your DinerAI business review is ready, ${firstName}. [See my review]` };
 }
 
 // A picture (e.g. the email preview), with an optional caption. Twilio fetches it from mediaUrl, which must be public.

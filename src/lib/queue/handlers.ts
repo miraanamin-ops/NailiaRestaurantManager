@@ -14,6 +14,7 @@ import { messageOwner } from "@/lib/notify";
 import { backfillJob } from "@/lib/feeds/backfill";
 import { clearFeedCache, FEED_JOB_HANDLERS } from "@/lib/feeds/jobs";
 import { checkFeedHealth } from "@/lib/feeds/status";
+import { REVIEW_HANDLERS } from "@/lib/review/job";
 import { processQueue } from "@/lib/send";
 import { OwnerToldError, SORRY } from "@/lib/sorry";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -243,4 +244,5 @@ export const HANDLERS: Record<string, JobHandler> = {
   account_close: accountClose,
   ...FEED_JOB_HANDLERS,
   feed_backfill: backfillJob,
+  ...REVIEW_HANDLERS,
 };

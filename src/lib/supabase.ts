@@ -154,6 +154,11 @@ export type Restaurant = {
   // Phase 3c (023): the kinds of offer the owner is happy to run (lib/offers.ts), and the birthday offer.
   approved_offer_types: string[] | null;
   birthday_offer: string | null;
+  // The business review (058): the Google profile dummy and simulated Google use,
+  // and the community dates the owner said to plan for (null = not asked yet:
+  // only dates for everyone).
+  dummy_google_profile?: Record<string, unknown> | null;
+  event_audiences?: string[] | null;
 };
 
 // The most emojis allowed per kind of customer message.

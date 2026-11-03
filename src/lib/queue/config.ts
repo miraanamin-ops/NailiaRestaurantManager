@@ -28,6 +28,10 @@ export const JOB_TYPES = [
   "feed_disruption",
   "feed_terms_check",
   "feed_backfill",
+  // The business review after onboarding (lib/review, supabase/058_business_review.sql)
+  "business_review",
+  "business_review_part",
+  "business_review_send",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
