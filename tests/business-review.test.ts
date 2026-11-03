@@ -3,6 +3,7 @@
 // side by side and a failed one drops its section without blocking the rest;
 // it goes when every part is in or at the 10-minute deadline, once; the 24-hour
 // window decides session message, template, or waiting (with the link emailed).
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { memoryDb } from "./support/memory-db";
 import {
@@ -169,6 +170,8 @@ beforeEach(() => {
   emails.length = 0;
   windowOpen = true;
   sandbox = true;
+  // No Claude in the job tests: the message is code's own (the wording has its own tests below).
+  process.env.AGENTS_LIVE_ALLOWED = "false";
   db = memoryDb(
     {
       restaurants: [
@@ -338,5 +341,76 @@ describe("WhatsApp's 24-hour window", () => {
     expect(sent.map((s) => s.kind)).toEqual(["template"]);
     expect(review()).toMatchObject({ status: "waiting_window", sent_via: "template" });
     expect(emails).toHaveLength(0);
+  });
+});
+
+// ---------- Step 2: Dina's wording, checked by code ----------
+
+describe("the message's wording", () => {
+  const saved = JSON.parse(readFileSync(new URL("../agents/tests/business-review/01-full-review.json", import.meta.url), "utf8")) as {
+    facts: ReviewFacts;
+    good: string;
+    bad: { why: string; text_replace: [string, string] }[];
+  };
+
+  test("the saved case: Dina's good wording passes; each bad one is refused", () => {
+    expect(messageProblems(saved.good, saved.facts)).toEqual([]);
+    for (const b of saved.bad) {
+      const text = saved.good.replace(b.text_replace[0], b.text_replace[1]);
+      expect(text, b.why).not.toBe(saved.good);
+      expect(messageProblems(text, saved.facts).length, b.why).toBeGreaterThan(0);
+    }
+  });
+
+  async function writerWith(answers: (string | null)[]) {
+    vi.doMock("@/lib/claude", () => ({
+      MODELS: { sonnet: "claude-sonnet-5-5", haiku: "claude-haiku-5-5" },
+      MODEL: "claude-sonnet-5-5",
+      MAX_TOKENS: 4000,
+      WITH_FALLBACK: {},
+      fallbackFor: () => ({}),
+      claude: () => ({
+        beta: {
+          messages: {
+            parse: async () => {
+              const next = answers.shift() ?? null;
+              return { stop_reason: "end_turn", content: [], parsed_output: next === null ? null : { message: next }, usage: { input_tokens: 10, output_tokens: 10 }, model: "claude-sonnet-5-5" };
+            },
+          },
+        },
+      }),
+    }));
+    const { writeReviewMessage } = await import("@/lib/review/message");
+    return (f: ReviewFacts) => writeReviewMessage(f, { name: "Ember & Spice" } as never);
+  }
+  beforeEach(() => void delete process.env.AGENTS_LIVE_ALLOWED);
+  afterEach(() => vi.doUnmock("@/lib/claude"));
+
+  test("her wording is used when every number matches", async () => {
+    const write = await writerWith([saved.good]);
+    expect(await write(saved.facts)).toBe(saved.good);
+  });
+
+  test("a wrong number twice: code's own message goes instead, and the builder is told", async () => {
+    const bad = saved.good.replace("22 reviews are still", "25 reviews are still");
+    const write = await writerWith([bad, bad]);
+    expect(await write(saved.facts)).toBe(fallbackMessage(saved.facts));
+    expect(alerts.join(" ")).toMatch(/business-review/);
+  });
+
+  test("a wrong number, then fixed on the retry: the fixed one goes", async () => {
+    const bad = saved.good.replace("from 132 Google", "from 133 Google");
+    const write = await writerWith([bad, saved.good]);
+    expect(await write(saved.facts)).toBe(saved.good);
+  });
+
+  test("the kill switch (AGENTS_LIVE_ALLOWED=false): code's own message, no AI", async () => {
+    process.env.AGENTS_LIVE_ALLOWED = "false";
+    try {
+      const write = await writerWith([saved.good]);
+      expect(await write(saved.facts)).toBe(fallbackMessage(saved.facts));
+    } finally {
+      delete process.env.AGENTS_LIVE_ALLOWED;
+    }
   });
 });

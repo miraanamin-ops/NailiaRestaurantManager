@@ -1,0 +1,23 @@
+{
+  "name": "a full review: Dina's wording keeps every number; a changed or added number is refused",
+  "source": "written for the business review (3 Nov 2026) from the Ember & Spice fixture",
+  "facts": {
+    "firstName": "Sam",
+    "restaurant": "Ember & Spice",
+    "link": "https://app.dinerai.co.uk/review/ember-spice",
+    "connected": true,
+    "rating": { "rating": 4.4, "count": 132, "nearby": { "average": 4.2, "n": 5 } },
+    "backlog": { "unanswered": 22, "drafted": 22 },
+    "profile": { "score": 64, "fixes": 5, "examples": ["A longer description", "Your menu link"] },
+    "themes": { "praises": ["The lamb chops", "Friendly staff", "Big portions"], "complaint": { "label": "Waiting times", "count": 7 } },
+    "events": { "names": ["Bonfire Night", "Black Friday"], "drafted": 2, "emailsHeld": true },
+    "poster": true,
+    "minutesSaved": 215
+  },
+  "good": "Thanks for finishing setup, Sam! I've had a good look at Ember & Spice and here's what I found:\n\n⭐ You're on 4.4 from 132 Google reviews. Nearby, the average is 4.2 across 5 local rivals.\n💬 22 reviews are still waiting for a reply. I've drafted replies to all of them.\n📋 Your Google profile scores 64/100. I've got 5 fixes ready, like a longer description and your menu link.\n👍 Customers love the lamb chops, your friendly staff and the big portions.\n👎 The most common complaint is waiting times (7 reviews).\n📅 Coming up: Bonfire Night and Black Friday. Campaigns are drafted, and the emails wait until you have subscribers.\n🪧 Your table QR poster is ready to print.\n\nThat's about 3.5 hours of work done. Tap Let's go or reply GO and I'll take you through it, one thing at a time. Full review: https://app.dinerai.co.uk/review/ember-spice",
+  "bad": [
+    { "why": "a number that isn't in the data", "text_replace": ["Nearby, the average is 4.2", "That's better than 80% nearby; the average is 4.2"] },
+    { "why": "a changed number", "text_replace": ["22 reviews are still", "25 reviews are still"] },
+    { "why": "a section dropped", "text_replace": ["🪧 Your table QR poster is ready to print.\n", ""] }
+  ]
+}
