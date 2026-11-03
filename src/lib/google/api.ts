@@ -146,8 +146,9 @@ export async function listReviews(link: GoogleLink, max = 50) {
   const out: GReview[] = [];
   let pageToken = "";
   let total = 0;
+  let average: number | null = null;
   do {
-    const res = await gbp<{ reviews?: GReview[]; nextPageToken?: string; totalReviewCount?: number }>(
+    const res = await gbp<{ reviews?: GReview[]; nextPageToken?: string; totalReviewCount?: number; averageRating?: number }>(
       link.connection,
       "GET",
       `${v4Location(link)}/reviews?pageSize=${Math.min(50, max)}&orderBy=updateTime%20desc${pageToken ? `&pageToken=${pageToken}` : ""}`,
@@ -156,9 +157,10 @@ export async function listReviews(link: GoogleLink, max = 50) {
     );
     out.push(...(res.reviews ?? []));
     total = res.totalReviewCount ?? total;
+    average = typeof res.averageRating === "number" ? res.averageRating : average;
     pageToken = res.nextPageToken ?? "";
   } while (pageToken && out.length < max);
-  return { reviews: out.slice(0, max), total };
+  return { reviews: out.slice(0, max), total, average };
 }
 
 export const putReply = (link: GoogleLink, reviewId: string, comment: string) =>

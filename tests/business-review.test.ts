@@ -144,7 +144,8 @@ describe("rules", () => {
     const f = factsFromParts(parts, base);
     expect(f.rating).toEqual({ rating: 4.4, count: 132, nearby: { average: 4.2, n: 5 } });
     expect(f.backlog).toBeUndefined();
-    expect(f.poster).toBeUndefined();
+    // Still going, with a result so far: that counts (the reply backlog in batches).
+    expect(f.poster).toBe(true);
     const off = factsFromParts([{ part: "backlog", status: "done", result: { unanswered: 3, drafted: 3, positiveReady: 3, negative: 0 } }, ...parts], { ...base, connected: false });
     expect(off.backlog).toBeUndefined();
     // Not connected: our rating from Places.
@@ -210,6 +211,8 @@ afterEach(() => {
 
 async function load() {
   const parts = await import("@/lib/review/parts");
+  // Only these two parts here (each part has its own tests).
+  for (const p of ["reviews_sync", "backlog", "themes", "profile", "events"] as const) parts.setRunnerForTests(p, undefined);
   parts.setRunnerForTests("rivals", async () => ({ ours: { rating: 4.3, count: 120 }, nearby: { average: 4.1, n: 5 } }));
   parts.setRunnerForTests("poster", async () => ({ ready: true }));
   const job = await import("@/lib/review/job");

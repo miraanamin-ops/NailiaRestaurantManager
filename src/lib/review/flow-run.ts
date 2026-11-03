@@ -21,6 +21,9 @@ export type FlowCtx = {
   // A message with up to 3 buttons (or none), logged like any other; mediaUrl: a file first (the poster).
   say: (text: string, buttons?: FlowButton[], mediaUrl?: string | null) => Promise<void>;
   button: (step: FlowStep, choice: string, title: string) => FlowButton;
+  // The flow's saved state (e.g. the replies still to show one by one).
+  state: () => FlowState;
+  setState: (patch: Partial<FlowState>) => Promise<void>;
 };
 // "done": the step is finished (Next? follows). "stay": the step is still going
 // (e.g. the next reply in one-by-one is showing).
@@ -67,7 +70,11 @@ function ctxFor(turn: Turn, review: BusinessReview): FlowCtx {
     await save(review, { flow_state: review.flow_state });
     await sendAndLog(turn.channel, () => sendDinaChoices(turn.channel.from, turn.channel.to, { kind: "buttons", body: text, options: buttons.slice(0, 3).map((b) => ({ id: b.id, title: b.title, description: "" })) }), text);
   };
-  return { turn, review, restaurant: turn.ctx.restaurant, say, button: (step, choice, title) => ({ id: flowId(review.id, `${step}:${choice}`), title }) };
+  const setState = async (patch: Partial<FlowState>) => {
+    review.flow_state = { ...review.flow_state, ...patch };
+    await save(review, { flow_state: review.flow_state });
+  };
+  return { turn, review, restaurant: turn.ctx.restaurant, say, button: (step, choice, title) => ({ id: flowId(review.id, `${step}:${choice}`), title }), state: () => stateOf(review), setState };
 }
 
 const stateOf = (review: BusinessReview) => (review.flow_state ?? {}) as FlowState & { buttons?: string[] };

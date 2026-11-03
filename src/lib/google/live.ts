@@ -33,7 +33,7 @@ export const LIVE_SOURCE = "google_live";
 export async function syncReviews(link: GoogleLink, opts: { max?: number; firstTime?: boolean } = {}) {
   const supabase = getSupabase();
   const restaurantId = link.restaurant.id;
-  const { reviews, total } = await api.listReviews(link, opts.max ?? 50);
+  const { reviews, total, average } = await api.listReviews(link, opts.max ?? 50);
   const rows = reviews.map((r) => reviewRow(restaurantId, r)).filter((r): r is NonNullable<typeof r> => Boolean(r));
   if (rows.length) check(await supabase.from("reviews").upsert(rows, { onConflict: "restaurant_id,google_review_id" }));
 
@@ -47,7 +47,7 @@ export async function syncReviews(link: GoogleLink, opts: { max?: number; firstT
     if (seen.length) check(await supabase.from("reviews").update({ handled_at: now }).eq("restaurant_id", restaurantId).in("google_review_id", seen).is("handled_at", null));
     queued = keep.size;
   }
-  return { count: rows.length, total, queued };
+  return { count: rows.length, total, queued, average, reviewIds: rows.map((r) => r.google_review_id) };
 }
 
 async function reviewRowFor(restaurantId: string, reviewId: string) {

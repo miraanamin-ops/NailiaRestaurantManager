@@ -8,8 +8,9 @@ import { PermanentJobError, type JobHandler } from "@/lib/queue/registry";
 import { enqueue, type QueueJob } from "@/lib/queue/store";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 import { SEND_CLAIM_STALE_MINUTES, type Part } from "./config";
-import { registeredParts, runnerFor } from "./parts";
+import { isContinue, registeredParts, runnerFor } from "./parts";
 import { autoReviewAllowed, canClaimSend, deadlineFrom, factsFromParts, firstNameOf, firstParts, hasContent, partsAfter, readyToSend, type ReviewFacts } from "./rules";
+import { releaseReplyHandler } from "./replies";
 import type { BusinessReview, PartRecord } from "./types";
 
 // The business review (supabase/058_business_review.sql):
@@ -149,7 +150,16 @@ async function runPart(job: QueueJob) {
   if (!runner) throw new PermanentJobError(`No runner for part ${part}`);
   const r = await loadRestaurant(review.restaurant_id);
   if (!r) throw new PermanentJobError("The restaurant is gone");
-  const result = await runner({ review, restaurant: r, now: new Date(), connected: review.google_connected ?? false });
+  const round = Number(job.payload.round ?? 0);
+  const out = await runner({ review, restaurant: r, now: new Date(), connected: review.google_connected ?? false, round });
+  if (isContinue(out)) {
+    // More to do: what it has so far is saved (the message can use it at the
+    // deadline), and the same part runs again as a new job.
+    check(await db().from("business_review_parts").update({ result: out.result }).eq("review_id", review.id).eq("part", part).eq("status", "queued"));
+    await enqueue({ type: "business_review_part", restaurantId: review.restaurant_id, key: `${partKey(review.id, part)}:${round + 1}`, payload: { reviewId: review.id, part, round: round + 1 } });
+    return { part, round, more: true };
+  }
+  const result = out;
   await finishPart(review, part, "done", { result });
   await sendIfReady(review.id, new Date()).catch((err) => console.error("Couldn't send the business review yet", err));
   return { part, result: result as Record<string, unknown> };
@@ -227,4 +237,5 @@ export const REVIEW_HANDLERS: Record<string, JobHandler> = {
   business_review: { run: async (job) => beginReview(String(job.payload.reviewId ?? ""), new Date()) },
   business_review_part: { run: runPart, onDead: partDied },
   business_review_send: { run: async (job) => ({ outcome: await sendIfReady(String(job.payload.reviewId ?? ""), new Date()) }) },
+  review_reply_release: releaseReplyHandler,
 };

@@ -145,8 +145,9 @@ export function factsFromParts(
   parts: { part: Part; status: PartStatus; result: Record<string, unknown> | null }[],
   base: Pick<ReviewFacts, "firstName" | "restaurant" | "link" | "connected"> & { minutesSaved?: number },
 ): ReviewFacts {
+  // Finished, or still going with what it has so far (the reply backlog in batches).
   const done = <P extends Part>(p: P) => {
-    const row = parts.find((x) => x.part === p && x.status === "done");
+    const row = parts.find((x) => x.part === p && (x.status === "done" || x.status === "queued"));
     return (row?.result ?? null) as PartResults[P] | null;
   };
   const f: ReviewFacts = { ...base };
@@ -205,4 +206,29 @@ function countOf(items: string[]) {
   const m = new Map<string, number>();
   for (const i of items) m.set(i, (m.get(i) ?? 0) + 1);
   return m;
+}
+
+// ---------- Review replies ----------
+
+type CheckedDraft = {
+  kind: string;
+  status: string;
+  checks?: object | null;
+  agent_check?: { verdict: string } | null;
+};
+const PASSING = new Set(["pass", "fixed"]);
+
+// Passed every check it had: each of the four checks that ran passed (or fixed
+// something), at least one ran, and the checker agent (if it looked) passed it.
+export function passedEveryCheck(d: CheckedDraft) {
+  const checks = (d.checks ?? {}) as Record<string, { status?: string } | undefined>;
+  const results = ["tone", "facts", "compliance", "money"].map((n) => checks[n]).filter(Boolean) as { status: string }[];
+  if (!results.length || !results.every((r) => PASSING.has(r.status))) return false;
+  return !d.agent_check || d.agent_check.verdict === "pass";
+}
+
+// Approve all: only 4 to 5 star replies still waiting that passed every check.
+// 1 to 3 star replies, questions, and anything a check flagged go one by one.
+export function approveAllSet<D extends CheckedDraft & { rating: number | null }>(drafts: D[]) {
+  return drafts.filter((d) => d.kind === "review_reply" && d.status === "pending" && (d.rating ?? 0) >= 4 && passedEveryCheck(d));
 }

@@ -44,44 +44,7 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
     const urgent = review.rating <= 3;
     let draft: Draft;
     try {
-      if (live) {
-        const result = await liveReputation(
-          ctx.restaurant,
-          { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
-          { source: "review_check", draftMode: urgent ? "urgent" : "hold" },
-        );
-        draft = result.draft!;
-        // Its reply (or question) draft is saved, so the review counts as handled.
-        await google().markReviewHandled(review.id);
-      } else {
-        const content = await writeReviewReply(ctx, learning, review);
-        const checked = await checkDraft(ctx, {
-          kind: "review_reply",
-          audience: `Google review by ${review.author_name}`,
-          content,
-          context: `Replying to this ${review.rating}-star review: "${review.text}"`,
-        });
-        draft = await createDraft({
-          restaurantId: ctx.restaurantId,
-          kind: "review_reply",
-          content: checked.content,
-          audience: `Google review by ${review.author_name}`,
-          request: urgent ? "Review check: low rating alert" : "Review check",
-          reviewId: review.id,
-          checks: checked.checks,
-          mode: urgent ? "urgent" : "hold",
-        });
-        // Only now, with its reply draft saved, does the review count as handled.
-        await google().markReviewHandled(review.id);
-        // Shadow mode: the Reputation agent writes its own reply in the background,
-        // for the /log comparison. The owner only ever sees the draft above.
-        await queueReputationShadow(ctx.restaurant, {
-          source: "review_check",
-          review: { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
-          legacy_draft_id: draft.id,
-          legacy_text: draft.content,
-        });
-      }
+      draft = await draftReviewReply(ctx, learning, review, { mode: urgent ? "urgent" : "hold", request: urgent ? "Review check: low rating alert" : "Review check", live });
     } catch (err) {
       // Put it back so the next check tries again, then carry on with the rest.
       // (If even this fails, the claim simply expires and the review is retried.)
@@ -111,6 +74,56 @@ export async function runReviewCheck(ctx: RestaurantContext, send: Send) {
     }
   }
   return { found: reviews.length, alerts, held, failed };
+}
+
+// One review's reply draft (or, Reputation live, a question for the owner),
+// written and checked, then the review counts as handled. Used by the hourly
+// check and the business review's backlog (lib/review/parts/reviews.ts).
+export async function draftReviewReply(
+  ctx: RestaurantContext,
+  learning: Awaited<ReturnType<typeof getLearningContext>>,
+  review: Pick<GoogleReview, "id" | "author_name" | "rating" | "text">,
+  opts: { mode: "hold" | "urgent" | "present"; request: string; live?: boolean },
+): Promise<Draft> {
+  const live = opts.live ?? reputationMode(ctx.restaurant) === "live";
+  if (live) {
+    const result = await liveReputation(
+      ctx.restaurant,
+      { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
+      { source: "review_check", draftMode: opts.mode },
+    );
+    // Its reply (or question) draft is saved, so the review counts as handled.
+    await google().markReviewHandled(review.id);
+    return result.draft!;
+  }
+  const content = await writeReviewReply(ctx, learning, review as GoogleReview);
+  const checked = await checkDraft(ctx, {
+    kind: "review_reply",
+    audience: `Google review by ${review.author_name}`,
+    content,
+    context: `Replying to this ${review.rating}-star review: "${review.text}"`,
+  });
+  const draft = await createDraft({
+    restaurantId: ctx.restaurantId,
+    kind: "review_reply",
+    content: checked.content,
+    audience: `Google review by ${review.author_name}`,
+    request: opts.request,
+    reviewId: review.id,
+    checks: checked.checks,
+    mode: opts.mode,
+  });
+  // Only now, with its reply draft saved, does the review count as handled.
+  await google().markReviewHandled(review.id);
+  // Shadow mode: the Reputation agent writes its own reply in the background,
+  // for the /log comparison. The owner only ever sees the draft above.
+  await queueReputationShadow(ctx.restaurant, {
+    source: "review_check",
+    review: { id: review.id, author_name: review.author_name, rating: review.rating, text: review.text },
+    legacy_draft_id: draft.id,
+    legacy_text: draft.content,
+  });
+  return draft;
 }
 
 // Drafts one Google post and holds it for the morning brief. Runs Mondays and Thursdays.
