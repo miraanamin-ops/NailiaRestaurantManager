@@ -4,6 +4,7 @@ import type { Period } from "@/lib/report/build";
 import type { Restaurant } from "@/lib/supabase";
 import { calendarBriefSection, financeBriefSection, lastWeekReportSection, nextWeekReportSection } from "./finance";
 import { googleReportSection } from "./google";
+import { reviewBriefSection, timeSavedReportSection } from "@/lib/review/receipt";
 import { runBriefSections, runReportSections, type BriefOffer, type BriefSectionDef, type ReportSectionDef } from "./types";
 
 // The registry (./types.ts says how it works). To add a feature's block or section,
@@ -11,11 +12,13 @@ import { runBriefSections, runReportSections, type BriefOffer, type BriefSection
 export const BRIEF_SECTIONS: BriefSectionDef[] = [
   financeBriefSection, // Mondays: this week's sales forecast and labour % (lib/finance)
   calendarBriefSection, // the local calendar's lines, and one campaign idea (lib/calendar-lines)
+  reviewBriefSection, // the business review's receipt if it didn't go the evening before, else time saved so far (lib/review)
 ];
 export const REPORT_SECTIONS: ReportSectionDef[] = [
   lastWeekReportSection, // sales vs forecast, labour %, best and worst day
   googleReportSection, // rating, reviews, replies, calls, directions, views, 3 themes
   nextWeekReportSection, // forecast range, rota cost, key calendar dates
+  timeSavedReportSection, // about how much time DinerAI saved, last week and so far (lib/review)
 ];
 
 const reportFailure = (where: string, restaurant: Restaurant) => (id: string, err: unknown) => {

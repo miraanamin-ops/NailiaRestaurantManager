@@ -10,6 +10,7 @@ import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 import { SEND_CLAIM_STALE_MINUTES, type Part } from "./config";
 import { isContinue, registeredParts, runnerFor } from "./parts";
 import { autoReviewAllowed, canClaimSend, deadlineFrom, factsFromParts, firstNameOf, firstParts, hasContent, partsAfter, readyToSend, type ReviewFacts } from "./rules";
+import { receiptHandler, scheduleReceipt } from "./receipt";
 import { releaseReplyHandler } from "./replies";
 import type { BusinessReview, PartRecord } from "./types";
 
@@ -224,6 +225,7 @@ export async function sendIfReady(reviewId: string, now: Date): Promise<string> 
         .update({ status: via === "session" ? "sent" : "waiting_window", sent_via: via, sent_at: via === "session" ? now.toISOString() : null, facts, message, updated_at: now.toISOString() })
         .eq("id", review.id),
     );
+    if (via === "session") await scheduleReceipt(review.id, r, now).catch((err) => console.error("Couldn't schedule the review receipt", err));
     await logAction({ restaurantId: r.id, actor: "system", action: "business_review", detail: via === "session" ? "Business review sent on WhatsApp" : via === "template" ? "Business review ready: template sent, waiting for the owner's reply" : "Business review ready: waiting for the owner's next message (emailed the link)" });
     return via;
   } catch (err) {
@@ -238,4 +240,5 @@ export const REVIEW_HANDLERS: Record<string, JobHandler> = {
   business_review_part: { run: runPart, onDead: partDied },
   business_review_send: { run: async (job) => ({ outcome: await sendIfReady(String(job.payload.reviewId ?? ""), new Date()) }) },
   review_reply_release: releaseReplyHandler,
+  business_review_receipt: receiptHandler,
 };

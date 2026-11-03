@@ -1,7 +1,8 @@
 // The business review's rules, as pure functions (no database, no AI), so
 // tests can prove them: who gets it, when it's ready, what the message says,
 // and that every number in the message matches the data.
-import { DEADLINE_MINUTES, EVENTS_IN_MESSAGE, GREAT_SCORE, MESSAGE_MAX, OPEN_TO_REAL_SITES, PART_AFTER, SEND_CLAIM_STALE_MINUTES, type Part } from "./config";
+import { londonParts, londonTime } from "@/lib/clock";
+import { DEADLINE_MINUTES, EVENTS_IN_MESSAGE, GREAT_SCORE, MESSAGE_MAX, OPEN_TO_REAL_SITES, PART_AFTER, RECEIPT, SEND_CLAIM_STALE_MINUTES, type Part } from "./config";
 import type { PartResults } from "./types";
 
 const MINUTE = 60_000;
@@ -231,4 +232,46 @@ export function passedEveryCheck(d: CheckedDraft) {
 // 1 to 3 star replies, questions, and anything a check flagged go one by one.
 export function approveAllSet<D extends CheckedDraft & { rating: number | null }>(drafts: D[]) {
   return drafts.filter((d) => d.kind === "review_reply" && d.status === "pending" && (d.rating ?? 0) >= 4 && passedEveryCheck(d));
+}
+
+// ---------- The evening receipt ----------
+
+// 8pm, or 2 hours after the review if that's later; never after 9pm (UK time).
+// null: too late today, so it goes in the next morning brief instead.
+export function receiptTime(sentAt: Date): Date | null {
+  const p = londonParts(sentAt);
+  const evening = londonTime(p.year, p.month, p.day, RECEIPT.hour, 0);
+  const latest = londonTime(p.year, p.month, p.day, RECEIPT.latestHour, 0);
+  const at = new Date(Math.max(evening.getTime(), sentAt.getTime() + RECEIPT.minHoursAfter * 3_600_000));
+  return at.getTime() <= latest.getTime() ? at : null;
+}
+
+export type ReceiptCounts = {
+  posted: { replies: number; profile: boolean; posts: number; campaigns: number };
+  waiting: { replies: number; profile: number; posts: number; campaigns: number };
+  minutes: number;
+};
+
+const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+
+export function receiptText(c: ReceiptCounts): string {
+  const done = [
+    ...(c.posted.replies ? [n(c.posted.replies, "review reply", "review replies")] : []),
+    ...(c.posted.profile ? ["your Google profile fixes"] : []),
+    ...(c.posted.posts ? [n(c.posted.posts, "Google post", "Google posts")] : []),
+    ...(c.posted.campaigns ? [n(c.posted.campaigns, "email campaign", "email campaigns")] : []),
+  ];
+  const left = [
+    ...(c.waiting.replies ? [n(c.waiting.replies, "review reply", "review replies")] : []),
+    ...(c.waiting.profile ? ["your profile fixes"] : []),
+    ...(c.waiting.posts ? [n(c.waiting.posts, "Google post", "Google posts")] : []),
+    ...(c.waiting.campaigns ? [n(c.waiting.campaigns, "campaign", "campaigns")] : []),
+  ];
+  return [
+    "🧾 *Your business review, so far*",
+    "",
+    done.length ? `✅ Approved and on their way: ${list(done)}.` : "✅ Nothing approved yet.",
+    left.length ? `⏳ Still waiting for you: ${list(left)}. They're in tomorrow morning's brief.` : "⏳ Nothing left waiting. 🎉",
+    ...(c.minutes > 0 ? [`⏱️ That's ${aboutTime(c.minutes)} of work saved.`] : []),
+  ].join("\n");
 }

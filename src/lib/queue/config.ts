@@ -32,6 +32,8 @@ export const JOB_TYPES = [
   "business_review",
   "business_review_part",
   "business_review_send",
+  "review_reply_release",
+  "business_review_receipt",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

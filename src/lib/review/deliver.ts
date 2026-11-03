@@ -86,5 +86,7 @@ export async function deliverWaitingReview(restaurant: Restaurant, channel: Owne
     .select("id");
   if (error || !(data as unknown[] | null)?.length) return false;
   await sendReviewMessage(channel, review.id, review.message);
+  const { scheduleReceipt } = await import("./receipt");
+  await scheduleReceipt(review.id, restaurant, now).catch((err) => console.error("Couldn't schedule the review receipt", err));
   return true;
 }
