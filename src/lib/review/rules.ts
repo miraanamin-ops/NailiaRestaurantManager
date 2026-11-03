@@ -275,3 +275,12 @@ export function receiptText(c: ReceiptCounts): string {
     ...(c.minutes > 0 ? [`⏱️ That's ${aboutTime(c.minutes)} of work saved.`] : []),
   ].join("\n");
 }
+
+// ---------- Rivals ----------
+
+// The nearby average rating, across the rivals that have one (one decimal).
+export function nearbyAverage(rivals: { rating: number | null }[]): { average: number; n: number } | null {
+  const rated = rivals.map((r) => r.rating).filter((x): x is number => typeof x === "number");
+  if (!rated.length) return null;
+  return { average: Math.round((rated.reduce((a, b) => a + b, 0) / rated.length) * 10) / 10, n: rated.length };
+}

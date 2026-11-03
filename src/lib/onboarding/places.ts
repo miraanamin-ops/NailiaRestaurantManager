@@ -31,7 +31,8 @@ async function withinDailyCap(now = new Date()) {
   return !insertError;
 }
 
-async function places<T>(path: string, init: RequestInit & { fieldMask: string }): Promise<T> {
+// Every Places call, through the daily cap (also used by the business review's rivals, lib/review/rivals.ts).
+export async function places<T>(path: string, init: RequestInit & { fieldMask: string }): Promise<T> {
   if (!(await withinDailyCap())) throw new PlacesCapReached("Google Places: today's cap is used up (PLACES_DAILY_MAX)");
   const res = await fetch(`${BASE}${path}`, {
     ...init,
