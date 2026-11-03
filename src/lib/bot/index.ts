@@ -65,6 +65,9 @@ export async function handleMessage(input: {
     if ((await deliverWaitingReview(ctx.restaurant, channel, new Date()).catch(() => false)) && (input.buttonPayload === REVIEW_OPEN_ID || /^\s*see my review\s*$/i.test(body))) return;
 
     const turn: Turn = { ctx, channel, owner, send };
+    // The business review's guided flow: Let's go / GO, Next, Stop, and each step's buttons.
+    const { handleReviewFlow } = await import("@/lib/review/flow-run");
+    if (!input.media && (await handleReviewFlow(turn, body, input.buttonPayload))) return;
     let staffCommand: StaffCommand | null = null;
     if (input.media) {
       // A till report photo or sales file is saved as sales; any other photo becomes a Google post.

@@ -9,6 +9,7 @@ import { gmMode } from "@/lib/agents/gm";
 import { approveFact, decideIdea, offerSkipReasons } from "@/lib/agents/gm-live";
 import { getSupabase } from "@/lib/supabase";
 import type { Action, TargetedAction } from "./parse";
+import { afterReviewDecision } from "@/lib/review/flow-run";
 import type { Turn } from "./turn";
 
 // Approve, Edit and Skip. Approving only records the decision; attemptSend
@@ -64,6 +65,7 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
     const result = sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve"));
     await send(`${draft.brief_number ? `*${draft.brief_number}.* ` : ""}${result}${draft.briefed_at ? remainingNote(await remainingInBrief(r)) : ""}`);
     if (wasOnScreen) await presentNext(ctx, send);
+    await afterReviewDecision(turn, draft);
     return;
   }
   if (t.action === "edit") {
@@ -71,8 +73,9 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
     return send(draft.kind === "rota" ? ROTA_EDIT_HINT : `✏️ What would you like me to change in ${label}?`);
   }
   await skipDraft(draft);
-  if ((await gmMode(r)) === "live") return offerSkipReasons(send, draft.id);
-  return send(`👍 Skipped ${label}. Quick question so I can learn: why didn't this one work? A few words is fine.`);
+  if ((await gmMode(r)) === "live") await offerSkipReasons(send, draft.id);
+  else await send(`👍 Skipped ${label}. Quick question so I can learn: why didn't this one work? A few words is fine.`);
+  await afterReviewDecision(turn, draft);
 }
 
 // Approve / Edit / Skip on the draft on screen (an untargeted button, or a typed 1/2/3).
@@ -105,6 +108,7 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
       const approved = await approveDraft(decisionDraft);
       await send(sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve")));
       await presentNext(ctx, send);
+      await afterReviewDecision(turn, decisionDraft);
       return true;
     }
     // A second tap on an already-approved draft: the rules decide (and log) it.
@@ -126,6 +130,7 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     await skipDraft(decisionDraft);
     if ((await gmMode(r)) === "live") await offerSkipReasons(send, decisionDraft.id);
     else await send("👍 Skipped. Quick question so I can learn: why didn't this one work? A few words is fine.");
+    await afterReviewDecision(turn, decisionDraft);
     return true;
   }
   if (fromButton) {

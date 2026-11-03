@@ -46,6 +46,8 @@ export type Draft = {
   agent_check?: AgentCheck | null;
   // What an agent needs to pick it up again (e.g. the review a question is about).
   agent_input?: Record<string, unknown> | null;
+  // The business review that drafted it (058), if one did (lib/review).
+  business_review_id?: string | null;
 };
 
 // What the checker agent found, kept next to the four checks (drafts.agent_check).
