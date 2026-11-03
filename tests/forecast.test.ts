@@ -478,6 +478,9 @@ describe("the brief's forecast, from the database", () => {
   let db: ReturnType<typeof memoryDb>;
   const alertBuilder = vi.fn(async () => "ok");
   const recipientsFor = vi.fn(async () => ({ eligible: [{ id: "c1" }], excluded: [], limited: 0 }));
+  // The sales-history forecast (the brief's fallback): off unless a test turns it on.
+  const notEnough = async () => ({ status: "not_enough_history", days: [] as unknown[] });
+  const weekAhead = vi.fn<(r: string, weekStart: string) => Promise<{ status: string; days: unknown[] }>>(notEnough);
 
   async function load(s: Seed) {
     vi.resetModules();
@@ -486,10 +489,13 @@ describe("the brief's forecast, from the database", () => {
     vi.doMock("@/lib/builder-alerts", () => ({ alertBuilder }));
     vi.doMock("@/lib/campaigns", () => ({ recipientsFor }));
     vi.doMock("@/lib/audit", () => ({ logAction: vi.fn(async () => {}) }));
+    vi.doMock("@/lib/forecast/week-ahead", () => ({ getWeekAhead: weekAhead }));
     return import("@/lib/forecast");
   }
 
   beforeEach(() => {
+    weekAhead.mockReset();
+    weekAhead.mockImplementation(notEnough);
     alertBuilder.mockClear();
     recipientsFor.mockClear();
     recipientsFor.mockImplementation(async () => ({ eligible: [{ id: "c1" }], excluded: [], limited: 0 }));
@@ -529,6 +535,35 @@ describe("the brief's forecast, from the database", () => {
     expect(await briefForecast(restaurantRow(db), NOW)).toEqual({ block: null, offer: null });
     expect(db.tables.forecast_briefs.find((r) => r.day === TODAY)).toMatchObject({ status: "none" });
     expect(alertBuilder).not.toHaveBeenCalled();
+  });
+
+  test("no nightly forecast: the sales-history forecast fills in, once its back-test passed", async () => {
+    const day = (date: string, orders: number) => ({ date, orders, orders_low: orders - 10, orders_high: orders + 10, sales_low: (orders - 10) * 1500, sales_mid: orders * 1500, sales_high: (orders + 10) * 1500 });
+    const week = (monday: string) => Array.from({ length: 7 }, (_, i) => day(new Date(Date.parse(`${monday}T12:00:00Z`) + i * 864e5).toISOString().slice(0, 10), 100));
+    weekAhead.mockImplementation(async (_r, weekStart) => ({ status: "ok", days: week(weekStart) }));
+    const { briefForecast } = await load(seed({ passed: false }));
+    const out = await briefForecast(restaurantRow(db), NOW);
+    expect(out.block?.split("\n")[0]).toBe("📈 *Today, Tue 20 Oct:* likely 100 orders (90 to 110), about £1,500 before VAT");
+    expect(weekAhead.mock.calls.map((c) => c[1])).toEqual(["2026-10-19", "2026-10-26"]);
+    expect(db.tables.forecast_briefs.find((r) => r.day === TODAY)).toMatchObject({ status: "shown", run_id: null, run_name: "sales_history", orders_low: 90, orders_high: 110 });
+    expect(alertBuilder).not.toHaveBeenCalled();
+  });
+
+  test("the sales-history forecast is held back (its back-test failed): no forecast, as before", async () => {
+    weekAhead.mockImplementation(async () => ({ status: "held_back", days: [] }));
+    const { briefForecast } = await load(seed({ passed: false }));
+    expect(await briefForecast(restaurantRow(db), NOW)).toEqual({ block: null, offer: null });
+    expect(db.tables.forecast_briefs.find((r) => r.day === TODAY)).toMatchObject({ status: "none" });
+  });
+
+  test("a row saved with no forecast is made again at the next brief (e.g. RUN BRIEF after a fix)", async () => {
+    const { briefForecast } = await load(seed({ passed: false }));
+    expect((await briefForecast(restaurantRow(db), NOW)).block).toBeNull();
+    weekAhead.mockImplementation(async (_r, weekStart) => ({
+      status: "ok",
+      days: Array.from({ length: 7 }, (_, i) => ({ date: new Date(Date.parse(`${weekStart}T12:00:00Z`) + i * 864e5).toISOString().slice(0, 10), orders: null, orders_low: null, orders_high: null, sales_low: 120000, sales_mid: 150000, sales_high: 180000 })),
+    }));
+    expect((await briefForecast(restaurantRow(db), NOW)).block?.split("\n")[0]).toBe("📈 *Today, Tue 20 Oct:* about £1,500 before VAT (£1,200 to £1,800)");
   });
 
   test("a passed run recently but today's failed: one line for the owner, the reason for the builder", async () => {

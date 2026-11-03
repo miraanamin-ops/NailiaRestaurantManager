@@ -234,13 +234,13 @@ export async function answerZReport(sender: SalesSender, row: ZRow, reply: Sales
 
 // ---------- Morning brief ----------
 
-// "No till report for yesterday yet": only for restaurants that send till
-// reports, when they were open yesterday and have no sales figures for it.
+// "How did yesterday go?": for restaurants that send till reports or have recent
+// sales with us, when they were open yesterday and have no sales figures for it.
 export async function zNudgeFor(r: Pick<Restaurant, "id" | "opening_hours">, now: Date) {
   const today = londonYmd(now);
   const yesterday = addDays(today, -1);
   const supabase = getSupabase();
-  const [last, yesterdays] = await Promise.all([
+  const [last, lastSales, yesterdays] = await Promise.all([
     supabase
       .from("z_reports")
       .select("business_date")
@@ -250,10 +250,20 @@ export async function zNudgeFor(r: Pick<Restaurant, "id" | "opening_hours">, now
       .order("business_date", { ascending: false })
       .limit(1)
       .maybeSingle<{ business_date: string }>(),
+    supabase
+      .from("sales_days")
+      .select("day")
+      .eq("restaurant_id", r.id)
+      .eq("is_dummy", false)
+      .lt("day", today)
+      .order("day", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ day: string }>(),
     supabase.from("sales_days").select("id", { count: "exact", head: true }).eq("restaurant_id", r.id).eq("day", yesterday).eq("is_dummy", false),
   ]);
   const lastZDay = check(last)?.business_date ?? null;
+  const lastSalesDay = check(lastSales)?.day ?? null;
   if (yesterdays.error) throw new Error(yesterdays.error.message);
-  const nudge = needsZNudge({ lastZDay, yesterdayHasSales: (yesterdays.count ?? 0) > 0, closedYesterday: closedOn(r.opening_hours, yesterday), today });
-  return nudge ? nudgeLine(today) : null;
+  const nudge = needsZNudge({ lastZDay, lastSalesDay, yesterdayHasSales: (yesterdays.count ?? 0) > 0, closedYesterday: closedOn(r.opening_hours, yesterday), today });
+  return nudge ? nudgeLine(today, { firstTime: !lastZDay }) : null;
 }

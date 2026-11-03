@@ -226,13 +226,19 @@ export function closedOn(openingHours: Record<string, string> | null | undefined
   return typeof hours === "string" && /closed/i.test(hours);
 }
 
-// Nudge only restaurants that use till reports (one saved in the last 14 days),
-// when yesterday has no sales at all and they were open.
-export function needsZNudge(input: { lastZDay: string | null; yesterdayHasSales: boolean; closedYesterday: boolean; today: string }) {
-  if (!input.lastZDay || input.yesterdayHasSales || input.closedYesterday) return false;
-  return daysBetween(input.lastZDay, input.today) <= 14;
+// Ask for yesterday's sales when the restaurant keeps its sales with us: a till
+// report saved in the last 14 days, or any sales in the last 14 days (e.g. a till
+// export imported at setup, before the first till report). Only when yesterday has
+// no sales and they were open; after 2 weeks with nothing it stops asking.
+export function needsZNudge(input: { lastZDay: string | null; lastSalesDay?: string | null; yesterdayHasSales: boolean; closedYesterday: boolean; today: string }) {
+  if (input.yesterdayHasSales || input.closedYesterday) return false;
+  const recent = (day: string | null | undefined) => !!day && daysBetween(day, input.today) <= 14;
+  return recent(input.lastZDay) || recent(input.lastSalesDay);
 }
 
-export function nudgeLine(today: string) {
-  return `🧾 No till report for yesterday (${dayLabel(addDays(today, -1))}) yet. Send a photo of it when you can.`;
+// firstTime: they've never sent a till report, so say how.
+export function nudgeLine(today: string, { firstTime = false }: { firstTime?: boolean } = {}) {
+  const day = dayLabel(addDays(today, -1));
+  if (firstTime) return `🧾 How did yesterday (${day}) go? Send a photo of the till report (Z-report) and I'll add it to your sales and forecast.`;
+  return `🧾 No till report for yesterday (${day}) yet. Send a photo of it when you can.`;
 }

@@ -28,6 +28,7 @@ import {
   closedOn,
   confirmQuestion,
   needsZNudge,
+  nudgeLine,
   parseSalesReply,
   replaceQuestion,
   sameFigures,
@@ -157,6 +158,16 @@ describe("the morning brief nudge", () => {
     expect(needsZNudge({ ...base, closedYesterday: true })).toBe(false);
     expect(closedOn({ Sunday: "Closed", Monday: "07:30 – 17:00" }, "2026-10-04")).toBe(true);
     expect(closedOn({ Sunday: "Closed", Monday: "07:30 – 17:00" }, "2026-10-05")).toBe(false);
+  });
+
+  test("also for restaurants with recent sales but no till report yet (e.g. a till export imported at setup)", () => {
+    const base = { lastZDay: null, lastSalesDay: "2026-10-07", yesterdayHasSales: false, closedYesterday: false, today: TODAY };
+    expect(needsZNudge(base)).toBe(true);
+    expect(needsZNudge({ ...base, lastSalesDay: "2026-09-20" })).toBe(false); // nothing for over 2 weeks: stop asking
+    expect(needsZNudge({ ...base, lastSalesDay: null })).toBe(false); // no sales with us at all
+    expect(needsZNudge({ ...base, closedYesterday: true })).toBe(false);
+    expect(nudgeLine(TODAY, { firstTime: true })).toBe("🧾 How did yesterday (Fri 9 Oct) go? Send a photo of the till report (Z-report) and I'll add it to your sales and forecast.");
+    expect(nudgeLine(TODAY)).toBe("🧾 No till report for yesterday (Fri 9 Oct) yet. Send a photo of it when you can.");
   });
 });
 

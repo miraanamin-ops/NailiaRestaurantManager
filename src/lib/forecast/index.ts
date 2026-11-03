@@ -277,9 +277,9 @@ export async function briefForecast(restaurant: Restaurant, now: Date): Promise<
   try {
     const today = londonYmd(now);
     // Made once a day; made again only if a newer forecast run has started since (e.g.
-    // RUN BRIEF before the 07:00 refresh). An answered offer is kept.
+    // RUN BRIEF before the 07:00 refresh), or if none was shown. An answered offer is kept.
     const saved = await briefRow(restaurant.id, today);
-    const stale = saved ? (await forecastRunsSince(restaurant.id, saved.updated_at)).length > 0 : true;
+    const stale = saved ? saved.status !== "shown" || (await forecastRunsSince(restaurant.id, saved.updated_at)).length > 0 : true;
     const row = saved && !stale ? saved : await buildBriefRow(restaurant, today, now, saved);
     if (!row) return { block: null, offer: null };
     const offer = row.offer?.status === "offered" && row.offer.question ? { id: row.id, question: row.offer.question } : null;
@@ -297,16 +297,23 @@ async function buildBriefRow(restaurant: Restaurant, today: string, now: Date, p
   const loaded = await loadForecast(rid, today, toDay);
   const base = { restaurant_id: rid, day: today, flags: [] as Flag[], offer: null as OfferRecord | null };
 
-  if (loaded.kind === "none") {
+  // No nightly forecast (e.g. under 8 weeks of order counts): the app's own forecast
+  // from the sales history, the one the rota and report use, if its back-test passed.
+  const fromHistory = loaded.kind === "none" ? await historyForecastDays(rid, today, toDay, now) : null;
+  if (loaded.kind === "none" && !fromHistory) {
     const status = forecastStatus({ haveToday: false, hadRecently: loaded.hadRecently });
     // Had a forecast recently: the owner sees one line, the builder hears why (never the owner).
     if (status === "no_forecast") await alertBuilder(`forecast-missing:${rid}:${today}`, `Forecast: no forecast in ${restaurant.name}'s brief today (${today}): ${loaded.reason}.`);
     return saveRow({ ...base, status, reason: loaded.reason, block: composeForecastBlock({ ...emptyBlock(today), status }) });
   }
+  const use =
+    loaded.kind === "forecast"
+      ? { days: loaded.days, metrics: loaded.metrics, unvalidated: loaded.unvalidated, runId: loaded.run.id as string | null, runName: loaded.run.model_name }
+      : { days: fromHistory!, metrics: null, unvalidated: false, runId: null, runName: HISTORY_SOURCE };
 
-  const todayData = loaded.days.get(today)!;
-  const dayList = [...loaded.days.keys()].filter((d) => d > today).sort();
-  const allDrivers = [...loaded.days.values()].flatMap((d) => d.drivers);
+  const todayData = use.days.get(today)!;
+  const dayList = [...use.days.keys()].filter((d) => d > today).sort();
+  const allDrivers = [...use.days.values()].flatMap((d) => d.drivers);
   const [names, { history, normals }, yesterday, before] = await Promise.all([
     dealNames(rid, allDrivers),
     normalsFor(rid, today, dayList),
@@ -315,14 +322,14 @@ async function buildBriefRow(restaurant: Restaurant, today: string, now: Date, p
   ]);
   const orders = todayData.orders ? roundCount(todayData.orders) : null;
   const sales = todayData.sales ? roundSales(todayData.sales) : null;
-  const shownChannels = channelsToShow(loaded.metrics)
+  const shownChannels = channelsToShow(use.metrics)
     .filter((c) => todayData.channels.has(c))
     .map((channel) => ({ channel, range: roundCount(todayData.channels.get(channel)!) }));
   const covers = todayData.covers && coversRecorded(history, today) ? roundCount(todayData.covers) : null;
   const reasons = reasonsFor(todayData.drivers, { today: true, dealNames: names });
   const flags = daysAheadFlags(
     today,
-    dayList.filter((d) => loaded.days.get(d)?.orders).map((d) => ({ day: d, likely: loaded.days.get(d)!.orders!.likely, reasons: reasonsFor(loaded.days.get(d)!.drivers, { today: false, dealNames: names }) })),
+    dayList.filter((d) => use.days.get(d)?.orders).map((d) => ({ day: d, likely: use.days.get(d)!.orders!.likely, reasons: reasonsFor(use.days.get(d)!.drivers, { today: false, dealNames: names }) })),
     normals,
   );
 
@@ -345,7 +352,7 @@ async function buildBriefRow(restaurant: Restaurant, today: string, now: Date, p
   const block = composeForecastBlock({
     status: "shown",
     today,
-    unvalidated: loaded.unvalidated,
+    unvalidated: use.unvalidated,
     orders,
     sales,
     channels: shownChannels,
@@ -360,9 +367,9 @@ async function buildBriefRow(restaurant: Restaurant, today: string, now: Date, p
     ...base,
     status: "shown",
     reason: null,
-    run_id: loaded.run.id,
-    run_name: loaded.run.model_name,
-    unvalidated: loaded.unvalidated,
+    run_id: use.runId,
+    run_name: use.runName,
+    unvalidated: use.unvalidated,
     orders_low: orders?.low ?? null,
     orders_likely: orders?.likely ?? null,
     orders_high: orders?.high ?? null,
@@ -371,6 +378,32 @@ async function buildBriefRow(restaurant: Restaurant, today: string, now: Date, p
     flags,
     offer,
   });
+}
+
+// The brief row's run_name when the forecast came from the sales history.
+export const HISTORY_SOURCE = "sales_history";
+
+// Today to toDay from the week-ahead forecast (lib/forecast/week-ahead.ts), in the
+// nightly model's shape. null unless it may be shown (status ok) and has today's sales.
+async function historyForecastDays(restaurantId: string, today: string, toDay: string, now: Date) {
+  try {
+    const { getWeekAhead } = await import("./week-ahead"); // it imports this file
+    const monday = (d: string) => addDays(d, -((new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7));
+    const weeks = [...new Set([monday(today), monday(toDay)])];
+    const ahead = await Promise.all(weeks.map((w) => getWeekAhead(restaurantId, w, now)));
+    if (ahead[0].status !== "ok") return null;
+    const days = new Map<string, DayData>();
+    for (const d of ahead.filter((w) => w.status === "ok").flatMap((w) => w.days)) {
+      if (d.date < today || d.date > toDay || d.sales_mid === null) continue;
+      const orders = d.orders !== null && d.orders_low !== null && d.orders_high !== null ? { low: d.orders_low, likely: d.orders, high: d.orders_high } : null;
+      const sales = { low: d.sales_low ?? d.sales_mid, likely: d.sales_mid, high: d.sales_high ?? d.sales_mid };
+      days.set(d.date, { orders, sales, covers: null, channels: new Map(), drivers: [] });
+    }
+    return days.has(today) ? days : null;
+  } catch (err) {
+    console.error("The sales-history forecast for the brief failed", err);
+    return null;
+  }
 }
 
 function emptyBlock(today: string) {
