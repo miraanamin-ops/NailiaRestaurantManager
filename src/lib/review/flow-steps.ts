@@ -6,6 +6,7 @@ import { check, approveDraft, type Draft } from "@/lib/drafts";
 import { attemptSend } from "@/lib/send";
 import { getSupabase } from "@/lib/supabase";
 import { clip } from "@/lib/text";
+import { audiences, campaigns } from "./flow-events";
 import type { PartResults } from "./types";
 import type { FlowStep } from "./flow";
 import type { FlowCtx, StepHandler, StepOutcome } from "./flow-run";
@@ -218,5 +219,7 @@ export const FLOW_HANDLERS: Partial<Record<FlowStep, StepHandler>> = {
   negative_replies: negativeReplies,
   profile,
   themes,
+  audiences,
+  campaigns,
   poster,
 };

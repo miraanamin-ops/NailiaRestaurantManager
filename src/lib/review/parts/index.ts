@@ -24,6 +24,7 @@ const RUNNERS: Runners = {
   themes: async (ctx) => (await import("./themes")).themesPart(ctx),
   rivals: async (ctx) => (await import("./rivals")).rivalsPart(ctx),
   poster: async (ctx) => (await import("./poster")).posterPart(ctx),
+  events: async (ctx) => (await import("./events")).eventsPart(ctx),
 };
 
 export const registeredParts = (): Part[] => (Object.keys(RUNNERS) as Part[]).filter((p) => RUNNERS[p]);

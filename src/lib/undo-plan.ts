@@ -54,6 +54,8 @@ const SETTINGS = [
   "name",
   "cuisine",
   "owner_name",
+  // The business review: which community dates to plan for
+  "event_audiences",
 ];
 
 export const GOOGLE_KINDS = ["review_reply", "google_post", "hours_update", "menu_update", "profile_fix"];

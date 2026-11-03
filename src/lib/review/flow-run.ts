@@ -68,7 +68,13 @@ function ctxFor(turn: Turn, review: BusinessReview): FlowCtx {
     // Remember the buttons on screen, so a typed 1, 2 or 3 means the same.
     review.flow_state = { ...review.flow_state, buttons: buttons.map((b) => b.id) };
     await save(review, { flow_state: review.flow_state });
-    await sendAndLog(turn.channel, () => sendDinaChoices(turn.channel.from, turn.channel.to, { kind: "buttons", body: text, options: buttons.slice(0, 3).map((b) => ({ id: b.id, title: b.title, description: "" })) }), text);
+    // Up to 3 choices are buttons; more are a list.
+    const list = buttons.length > 3;
+    await sendAndLog(
+      turn.channel,
+      () => sendDinaChoices(turn.channel.from, turn.channel.to, { kind: list ? "list" : "buttons", body: text, button: "See the options", options: buttons.slice(0, 10).map((b) => ({ id: b.id, title: b.title, description: list ? "Tap to choose" : "" })) }),
+      text,
+    );
   };
   const setState = async (patch: Partial<FlowState>) => {
     review.flow_state = { ...review.flow_state, ...patch };

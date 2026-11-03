@@ -757,6 +757,11 @@ async function writePostFields(ctx: RestaurantContext, learning: Learning, conte
   return { topic: out.topic, text: clip(out.text.trim(), DRAFT_MAX_CHARS + 200) };
 }
 
+// A Google post for a date coming up (the business review's next 30 days).
+export function writeEventPost(ctx: RestaurantContext, learning: Learning, request: string) {
+  return writePostFields(ctx, learning, `Write a Google post for this: ${request} Use only dishes, prices and offers from the data.`);
+}
+
 // The twice-weekly post. `avoid` lists recent posts so they don't repeat.
 export function writeGooglePost(ctx: RestaurantContext, learning: Learning, avoid: string[]) {
   return writePostFields(

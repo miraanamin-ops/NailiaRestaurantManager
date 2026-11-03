@@ -20,7 +20,7 @@ export const STEP_TITLES: Record<FlowStep, string> = {
 };
 
 // done: steps finished; queue: drafts still to show one by one (queueTotal of them at the start).
-export type FlowState = { done?: FlowStep[]; queue?: string[]; queueTotal?: number; asked?: string[] };
+export type FlowState = { done?: FlowStep[]; queue?: string[]; queueTotal?: number; asked?: string[]; audiences?: string[] };
 
 // The next step to show: the first in order not done yet that has something in it.
 export function nextStep(done: readonly FlowStep[], available: readonly FlowStep[]): FlowStep | null {
