@@ -12,7 +12,7 @@ import { staffCommand as runStaffCommand } from "./rota-commands";
 import { parseStaffCommand, type StaffCommand } from "@/lib/rota/staff-input";
 import { handleTeamMessage } from "@/lib/rota/understand";
 import { parseCommand } from "./parse";
-import { salesFromMedia, salesReply } from "@/lib/sales/whatsapp";
+import { salesFromMedia, salesReply, typedSales } from "@/lib/sales/whatsapp";
 import { ownerSender } from "./sales-commands";
 import { updateRestaurant, type Turn } from "./turn";
 import { OwnerToldError, SORRY } from "@/lib/sorry";
@@ -74,6 +74,10 @@ export async function handleMessage(input: {
     // YES / REPLACE / a date, answering a till report or sales file question.
     else if (!input.buttonPayload && (await salesReply(ownerSender(turn), body, ctx.now))) {
       // answered
+    }
+    // A day's sales typed instead of a till report photo: "we took £2,340, 180 orders".
+    else if (!input.buttonPayload && (await typedSales(ownerSender(turn), body, ctx.now))) {
+      // shown back for a YES
     }
     else await handleConversation(turn, body, input.buttonPayload);
 

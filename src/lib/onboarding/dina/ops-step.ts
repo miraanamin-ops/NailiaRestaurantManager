@@ -134,7 +134,7 @@ async function finishSales(restaurantId: string, channel: Channel) {
     ? " There's no number of orders for most days, which is fine: forecasts work from the takings. In one line, say that order counts (transactions or receipts) make forecasts more accurate, whenever they can send them: a low-priority reminder, not something to do now."
     : itemsToo
       ? ""
-      : " These are daily totals. In one short line, mention that an item sales export (sales by product) can also unlock dish-level insights later, whenever suits: a low-priority reminder, not something to do now.";
+      : " These are daily totals. In one short line, mention that a sales-by-item export is the most useful (it shows which dishes make the most), then sales by the hour, whenever suits: a low-priority reminder, not something to do now.";
   const column = ` Then say in one line which column the takings came from: ${columnUsed(rows)}.`;
   if (cover.enough) return `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${column}${reminder} Then move on.`;
   return `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${column}${reminder} Then move on.`;

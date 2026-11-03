@@ -6,6 +6,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { readZReport, type ZImage } from "./ai";
 import { addDays, dayLabel } from "./format";
 import { saveDayFromZ, saveSalesFile } from "./store";
+import { TYPED_DISCARDED, typedConfirmQuestion, typedRead, typedSavedLine, type BestSalesData, type TypedTakings } from "./typed";
 import {
   alreadySavedLine,
   checkZReport,
@@ -130,6 +131,54 @@ export async function receiveZReport(sender: SalesSender, file: { bytes: Buffer;
   return true;
 }
 
+// A day's sales typed instead of a photo ("we took £2,340, 180 orders"): the same
+// checks and saving as a till report, always shown back for a YES first.
+export async function receiveTypedTakings(sender: SalesSender, typed: TypedTakings, now: Date) {
+  const today = londonYmd(now);
+  const read = typedRead(typed);
+  const result = checkZReport(read, today);
+  if (result.status === "not_report" || result.status === "unreadable" || result.status === "needs_date") return false;
+  const supabase = getSupabase();
+  check(await supabase.from("z_reports").update({ status: "discarded" }).eq("restaurant_id", sender.restaurantId).eq("sent_by", sender.number).in("status", PENDING));
+  const problems = result.status === "needs_confirm" ? result.problems : [];
+  checkRow(
+    await supabase
+      .from("z_reports")
+      .insert({
+        restaurant_id: sender.restaurantId,
+        ...figureColumns(result.figures),
+        photo_path: null,
+        media_type: null,
+        read,
+        problems,
+        status: "needs_confirm",
+        sent_by: sender.number,
+        sender_role: sender.role,
+        is_dummy: false,
+      })
+      .select("*")
+      .single<ZRow>(),
+  );
+  await sender.reply(typedConfirmQuestion(result.figures, problems, today, await bestSalesData(sender.restaurantId, today)));
+  return true;
+}
+
+// Typed, not a photo: there's no picture behind it.
+const isTyped = (row: ZRow) => !row.photo_path;
+
+// The best sales data sent in the last 30 days: item by item, by the hour, or day totals.
+export async function bestSalesData(restaurantId: string, today: string): Promise<BestSalesData> {
+  const since = addDays(today, -30);
+  const supabase = getSupabase();
+  const count = async (table: "sales_items" | "sales_hours" | "sales_days") => {
+    const res = await supabase.from(table).select("day", { count: "exact", head: true }).eq("restaurant_id", restaurantId).eq("is_dummy", false).gte("day", since);
+    if (res.error) throw new Error(res.error.message);
+    return res.count ?? 0;
+  };
+  const [items, hours, days] = await Promise.all([count("sales_items"), count("sales_hours"), count("sales_days")]);
+  return items ? "items" : hours ? "hours" : days ? "daily" : "none";
+}
+
 // The numbers are fine (or confirmed): save, unless that day already has a report.
 async function finish(sender: SalesSender, row: ZRow, today: string) {
   const f = figuresOf(row);
@@ -165,7 +214,7 @@ async function save(sender: SalesSender, row: ZRow, today: string) {
     detail: `Till report saved: ${dayLabel(f.business_date!)}, ${summary(f)}${sender.role === "staff" ? ` (sent by staff)` : ""}`,
     data: { z_report_id: row.id, day: f.business_date },
   });
-  return sender.reply(savedLine(f, today));
+  return sender.reply(isTyped(row) ? typedSavedLine(f, today) : savedLine(f, today));
 }
 
 // The latest till report still waiting for this sender's answer (from the last day).
@@ -192,7 +241,17 @@ export async function answerZReport(sender: SalesSender, row: ZRow, reply: Sales
     if (reply.kind === "yes") return finish(sender, row, today).then(() => true);
     if (reply.kind === "no") {
       await update(row, { status: "discarded" });
-      return sender.reply("OK, I didn't save it. Send a clearer photo whenever you're ready. 🧾").then(() => true);
+      return sender.reply(isTyped(row) ? TYPED_DISCARDED : "OK, I didn't save it. Send a clearer photo whenever you're ready. 🧾").then(() => true);
+    }
+    // Typed for another day: "Monday".
+    if (reply.kind === "date" && isTyped(row)) {
+      const read: ZRead = { ...(row.read as ZRead), business_date: reply.ymd };
+      const result = checkZReport(read, today);
+      if (result.status !== "ok" && result.status !== "needs_confirm") return false;
+      const problems = result.status === "needs_confirm" ? result.problems : [];
+      await update(row, { business_date: reply.ymd, read, problems });
+      await sender.reply(typedConfirmQuestion(result.figures, problems, today, await bestSalesData(row.restaurant_id, today)));
+      return true;
     }
     return false;
   }
@@ -265,5 +324,5 @@ export async function zNudgeFor(r: Pick<Restaurant, "id" | "opening_hours">, now
   const lastSalesDay = check(lastSales)?.day ?? null;
   if (yesterdays.error) throw new Error(yesterdays.error.message);
   const nudge = needsZNudge({ lastZDay, lastSalesDay, yesterdayHasSales: (yesterdays.count ?? 0) > 0, closedYesterday: closedOn(r.opening_hours, yesterday), today });
-  return nudge ? nudgeLine(today, { firstTime: !lastZDay }) : null;
+  return nudge ? nudgeLine(today, { firstTime: !lastZDay, best: await bestSalesData(r.id, today) }) : null;
 }

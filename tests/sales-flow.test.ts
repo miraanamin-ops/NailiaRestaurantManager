@@ -171,7 +171,9 @@ describe("till report photos", () => {
     const r = db.tables.restaurants[0] as never;
     expect(await zNudgeFor(r, NOW)).toBeNull(); // never sent one: no nudge
     await sendPhoto(owner()); // Thursday's
-    expect(await zNudgeFor(r, NOW)).toBe("🧾 No till report for yesterday (Fri 9 Oct) yet. Send a photo of it when you can.");
+    expect(await zNudgeFor(r, NOW)).toBe(
+      "🧾 Yesterday's sales (Fri 9 Oct) aren't in yet. They keep your forecast and profit tips accurate. Best: your till's sales-by-item file; else sales by the hour; else the day's total (a photo of the till report, or type it, e.g. *£2,340, 180 orders*).",
+    );
     readZReport.mockResolvedValue(read({ business_date: "2026-10-09" }));
     await sendPhoto(owner());
     expect(await zNudgeFor(r, NOW)).toBeNull();
@@ -196,7 +198,7 @@ describe("staff numbers", () => {
   test("can't do anything else: commands just get the help line", async () => {
     await staffSays("PAUSE");
     await staffSays("Draft an offer for Thursday");
-    expect(sent.map((m) => m.text)).toEqual([expect.stringMatching(/can send \*till report photos\*/), expect.stringMatching(/can send \*till report photos\*/)]);
+    expect(sent.map((m) => m.text)).toEqual([expect.stringMatching(/can send the day's sales/), expect.stringMatching(/can send the day's sales/)]);
     expect(db.tables.restaurants[0].paused).toBe(false);
     expect(db.tables.drafts ?? []).toEqual([]);
   });
@@ -277,5 +279,52 @@ describe("POS files", () => {
     suggestMapping.mockResolvedValueOnce({ mapping: null as never, posName: null, problem: "It's a customer list." });
     const list = await receivePosFile({ restaurantId: A, bytes: Buffer.from("Name,Email,Phone\nA,a@b.c,1\nB,b@c.d,2\n"), contentType: "text/csv", channel: "web", sentBy: null, actor: "owner" });
     expect(list.message).toBe("I couldn't use that file: It's a customer list.");
+  });
+});
+
+describe("a day's sales typed on WhatsApp", () => {
+  async function type(sender: ReturnType<typeof owner>, body: string) {
+    const { typedSales } = await import("@/lib/sales/whatsapp");
+    return typedSales(sender, body, NOW);
+  }
+
+  test("shown back first; YES saves it like a till report (net worked out at 20%)", async () => {
+    const sender = owner();
+    expect(await type(sender, "we took £2,340 yesterday, 180 orders")).toBe(true);
+    expect(replies[0]).toMatch(/^🧾 \*Fri 9 Oct\*: £2,340.00 including VAT \(about £1,950.00 before VAT\), 180 orders. Save it\?/);
+    expect(replies[0]).toContain("sales-by-item export"); // nothing better sent yet: the tip
+    expect(day("2026-10-09")).toBeUndefined();
+    expect(await answer(sender, "yes")).toBe(true);
+    expect(replies[1]).toBe("Fri 9 Oct: £2,340.00 including VAT (about £1,950.00 before VAT), 180 orders. Saved. 👍");
+    expect(day("2026-10-09")).toMatchObject({ net_sales: 1950, transactions: 180, is_dummy: false });
+    expect(zRows()[0]).toMatchObject({ status: "saved", photo_path: null, sent_by: OWNER_A });
+    expect(db.tables.audit_log.at(-1)).toMatchObject({ action: "sales_saved", actor: "owner" });
+  });
+
+  test("another day by replying with it; NO saves nothing", async () => {
+    const sender = owner();
+    await type(sender, "£1,800 net");
+    expect(await answer(sender, "Thursday")).toBe(true);
+    expect(replies[1]).toMatch(/^🧾 \*Thu 8 Oct\*: £1,800.00 before VAT. Save it\?/);
+    expect(await answer(sender, "yes")).toBe(true);
+    expect(day("2026-10-08")?.net_sales).toBe(1800);
+    await type(sender, "takings 900");
+    expect(await answer(sender, "no")).toBe(true);
+    expect(replies.at(-1)).toBe("OK, I didn't save it. Type it again whenever you're ready, e.g. *£2,340, 180 orders*.");
+    expect(day("2026-10-09")).toBeUndefined();
+  });
+
+  test("chat isn't taken for sales", async () => {
+    expect(await type(owner(), "how much did we take on Friday?")).toBe(false);
+    expect(await type(owner(), "send a £5 off offer for Thursday")).toBe(false);
+    expect(zRows()).toEqual([]);
+  });
+
+  test("a staff number can type it too", async () => {
+    const { handleStaffMessage } = await import("@/lib/sales/whatsapp");
+    await handleStaffMessage({ restaurantId: A, staffNumber: STAFF_A, sandbox: SANDBOX, body: "£2,100, 150 orders", media: null });
+    expect(sent.at(-1)?.text).toMatch(/^🧾 \*\w{3} \d{1,2} \w{3}\*: £2,100.00 including VAT/); // staff messages use the real clock
+    await handleStaffMessage({ restaurantId: A, staffNumber: STAFF_A, sandbox: SANDBOX, body: "yes", media: null });
+    expect(db.tables.sales_days.find((d) => d.transactions === 150)).toBeTruthy();
   });
 });

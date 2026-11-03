@@ -1,6 +1,6 @@
 import "server-only";
 import { staffPhotoReceived } from "@/lib/agents/visibility";
-import { londonYmd } from "@/lib/clock";
+import { londonParts, londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { ownerChannel } from "@/lib/followups";
 import { messageOwner } from "@/lib/notify";
@@ -10,8 +10,9 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import type { ZImage } from "./ai";
 import { isSpreadsheetType } from "./pos-file";
 import { cancelImport, confirmImport, pendingImport, receivePosFile } from "./pos-import";
+import { parseTypedTakings } from "./typed";
 import { parseSalesReply } from "./z-check";
-import { answerZReport, pendingZReport, receiveZReport, type SalesSender } from "./z-reports";
+import { answerZReport, pendingZReport, receiveTypedTakings, receiveZReport, type SalesSender } from "./z-reports";
 
 // Sales on WhatsApp: till report photos and POS files from the owner or a
 // staff number, and their answers (YES, REPLACE, a date...).
@@ -91,8 +92,14 @@ export async function salesReply(sender: SalesSender, body: string, now: Date) {
   return false;
 }
 
+// A day's sales typed instead of a photo ("we took £2,340, 180 orders"). false: not one, carry on as chat.
+export async function typedSales(sender: SalesSender, body: string, now: Date) {
+  const typed = parseTypedTakings(body, londonYmd(now), londonParts(now).hour);
+  return typed ? receiveTypedTakings(sender, typed, now) : false;
+}
+
 const staffHelp = (name: string) =>
-  `👋 This number can send *till report photos* and *sales files* (CSV or Excel) for ${name}. Just send the photo or file here.`;
+  `👋 This number can send the day's sales for ${name}. Best is the till's *sales-by-item file* (CSV or Excel); else sales by the hour; else a *photo of the till report*, or type the total, e.g. *£2,340, 180 orders*.`;
 
 // Everything a staff number sends. They can send data and answer questions about it, nothing else.
 export async function handleStaffMessage(input: {
@@ -125,6 +132,7 @@ export async function handleStaffMessage(input: {
       return;
     }
     if (await salesReply(sender, input.body, now)) return;
+    if (await typedSales(sender, input.body, now)) return;
     await reply(staffHelp(r.name));
   } catch (err) {
     console.error("Failed to handle a staff message", err);

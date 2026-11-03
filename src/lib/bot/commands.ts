@@ -45,8 +45,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - *MONTHLY REPORT*: last month's report as a PDF (*MONTHLY REPORT SEPTEMBER* for another month). It comes on its own early each month
 - *EMAIL PREVIEWS*: see the automatic emails (confirm, welcome, "how was your visit?")
 - *EXPORT CUSTOMERS*: a download link for your customer list
-- Send a *photo of your till report* (Z-report) at the end of the day and I'll save the sales
-- Send a *sales file* from your till (CSV or Excel), or upload it on the sales page
+- Send the day's sales and I'll forecast your days and find you more profit. Best is your till's *sales-by-item file* (CSV or Excel, or upload it on the sales page); else sales by the hour; else a *photo of your till report* (Z-report), or type the total, e.g. *we took £2,340, 180 orders*
 - *SALES*: last 7 days' sales and the sales page link
 - Ask *how busy will Saturday be?* or *why is Friday quiet?*: the forecast, with its reasons (once your forecast is ready)
 - *ADD STAFF +447700900123*: let a staff phone send till reports and sales files (nothing else) · *REMOVE STAFF* · *STAFF* to list them

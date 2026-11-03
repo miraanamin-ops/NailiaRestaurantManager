@@ -166,8 +166,17 @@ describe("the morning brief nudge", () => {
     expect(needsZNudge({ ...base, lastSalesDay: "2026-09-20" })).toBe(false); // nothing for over 2 weeks: stop asking
     expect(needsZNudge({ ...base, lastSalesDay: null })).toBe(false); // no sales with us at all
     expect(needsZNudge({ ...base, closedYesterday: true })).toBe(false);
-    expect(nudgeLine(TODAY, { firstTime: true })).toBe("🧾 How did yesterday (Fri 9 Oct) go? Send a photo of the till report (Z-report) and I'll add it to your sales and forecast.");
-    expect(nudgeLine(TODAY)).toBe("🧾 No till report for yesterday (Fri 9 Oct) yet. Send a photo of it when you can.");
+    // Every ask says why, and asks for item sales first, then by the hour, then the day's total.
+    expect(nudgeLine(TODAY, { firstTime: true })).toBe(
+      [
+        "🧾 How did yesterday (Fri 9 Oct) go? Your daily sales let me forecast your days and find where you can make more profit.",
+        "The more detail the better: best is your till's sales-by-item export (CSV or Excel); if it can't do that, sales by the hour; if not, just the day's total (a photo of the till report, or type it, e.g. *£2,340, 180 orders*).",
+      ].join("\n"),
+    );
+    const why = "🧾 Yesterday's sales (Fri 9 Oct) aren't in yet. They keep your forecast and profit tips accurate.";
+    expect(nudgeLine(TODAY)).toBe(`${why} Best: your till's sales-by-item file; else sales by the hour; else the day's total (a photo of the till report, or type it, e.g. *£2,340, 180 orders*).`);
+    expect(nudgeLine(TODAY, { best: "hours" })).toBe(`${why} Best: your till's sales-by-item file; else your sales by the hour, as usual.`);
+    expect(nudgeLine(TODAY, { best: "items" })).toBe(`${why} Send your sales-by-item file as usual.`);
   });
 });
 

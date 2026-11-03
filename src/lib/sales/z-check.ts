@@ -236,9 +236,20 @@ export function needsZNudge(input: { lastZDay: string | null; lastSalesDay?: str
   return recent(input.lastZDay) || recent(input.lastSalesDay);
 }
 
-// firstTime: they've never sent a till report, so say how.
-export function nudgeLine(today: string, { firstTime = false }: { firstTime?: boolean } = {}) {
+// Every ask for sales says why, and asks for the most detail the till allows: item
+// by item, else by the hour, else the day's total. firstTime: they've never sent a
+// day's sales on WhatsApp, so it says how. best: the best they've sent lately.
+export function nudgeLine(today: string, { firstTime = false, best = "none" }: { firstTime?: boolean; best?: "items" | "hours" | "daily" | "none" } = {}) {
   const day = dayLabel(addDays(today, -1));
-  if (firstTime) return `🧾 How did yesterday (${day}) go? Send a photo of the till report (Z-report) and I'll add it to your sales and forecast.`;
-  return `🧾 No till report for yesterday (${day}) yet. Send a photo of it when you can.`;
+  const total = "the day's total (a photo of the till report, or type it, e.g. *£2,340, 180 orders*)";
+  if (firstTime) {
+    return [
+      `🧾 How did yesterday (${day}) go? Your daily sales let me forecast your days and find where you can make more profit.`,
+      `The more detail the better: best is your till's sales-by-item export (CSV or Excel); if it can't do that, sales by the hour; if not, just ${total}.`,
+    ].join("\n");
+  }
+  const why = `🧾 Yesterday's sales (${day}) aren't in yet. They keep your forecast and profit tips accurate.`;
+  if (best === "items") return `${why} Send your sales-by-item file as usual.`;
+  if (best === "hours") return `${why} Best: your till's sales-by-item file; else your sales by the hour, as usual.`;
+  return `${why} Best: your till's sales-by-item file; else sales by the hour; else ${total}.`;
 }

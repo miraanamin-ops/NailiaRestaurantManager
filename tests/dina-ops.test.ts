@@ -147,7 +147,7 @@ describe("step 7, sales history", () => {
     receivePosFile.mockImplementation(async () => (imported("imp-o", "2025-11-01", "2026-10-30", null, false), { status: "imported", importId: "imp-o", message: "ok" }));
     const note = await filesNote("sales");
     expect(note).toMatch(/Got it: 12 months of sales[\s\S]*order counts \(transactions or receipts\) make forecasts more accurate[\s\S]*low-priority/);
-    expect(note).not.toMatch(/item sales export/); // one reminder at a time
+    expect(note).not.toMatch(/sales-by-item export/); // one reminder at a time
     expect(step("sales")).toMatchObject({ status: "done", data: { days_with_orders: 0, extra_gaps: ["sales_items", "order_counts"] } });
     expect(gap("sales")).toBeUndefined();
     expect(gap("order_counts")?.unlock_text).toBe("Send your sales with the number of orders each day (transactions or receipts) and I'll make your forecasts more accurate.");
@@ -173,7 +173,7 @@ describe("step 7, sales history", () => {
 
   test("daily takings with orders: done (forecasts need nothing more), plus a low-priority gap for item sales that never blocks", async () => {
     receivePosFile.mockImplementation(async () => (imported("imp-3", "2025-11-01", "2026-10-30", null), { status: "imported", importId: "imp-3", message: "ok" }));
-    expect(await filesNote("sales")).toMatch(/Got it: 12 months of sales[\s\S]*daily totals[\s\S]*item sales export[\s\S]*low-priority/);
+    expect(await filesNote("sales")).toMatch(/Got it: 12 months of sales[\s\S]*daily totals[\s\S]*sales-by-item export[\s\S]*low-priority/);
     expect(step("sales")).toMatchObject({ status: "done", data: { daily_only: true, extra_gaps: ["sales_items"] } });
     expect(gap("sales")).toBeUndefined();
     expect(gap("sales_items")?.unlock_text).toMatch(/item sales export too and I'll unlock dish-level insights/);

@@ -42,8 +42,9 @@ export const POS_TIPS: Record<string, string> = {
   "Epos Now": "Back Office > Reporting > Sales Report. Report type \"Time Period\", set the date range, Show by Time Interval: daily, Apply, then export as CSV or Excel.",
 };
 
-// Daily figures, wherever the till allows it: one total per day, not one for the whole period.
-export const DAILY_FIGURES_HINT = "Ask for figures by day wherever the report offers it (a daily or by-day option): one total for the whole year can't be used.";
+// The detail to ask for, best first (the owner's rule, 3 Nov): item by item, else by the hour, else by day; never one total for the whole period.
+export const SALES_DETAIL_HINT =
+  "Best: sales item by item, with dates (shows which dishes make the most). If the till can't, sales by the hour or one row per payment (helps staffing). If not, one total per day. One total for the whole year can't be used.";
 
 // ---------- 8. Team and labour ----------
 
