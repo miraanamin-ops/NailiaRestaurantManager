@@ -12,7 +12,7 @@ export const AUDIENCE_LABELS: Record<Exclude<Audience, "all">, string> = {
   muslim: "Ramadan and Eid",
   hindu_sikh: "Diwali",
   chinese_east_asian: "Lunar New Year",
-  football: "big football matches",
+  football: "Big football matches",
 };
 
 export type CalendarEvent = {
@@ -100,7 +100,7 @@ export function inRamadan(events: CalendarEvent[], day: string) {
 export function campaignRequest(e: CalendarEvent, audiences: readonly string[] | null | undefined) {
   const ramadan = (audiences ?? []).includes("muslim") && inRamadan(CALENDAR_EVENTS, e.starts_on);
   return [
-    `An email campaign for ${e.name} (${e.starts_on}${e.ends_on ? ` to ${e.ends_on}` : ""}).`,
+    `An email campaign for ${e.name} (${e.starts_on}${e.ends_on ? ` to ${e.ends_on}` : ""}). Any offer within the discount cap, and only from the approved kinds of offer.`,
     e.notes ? `Note: ${e.notes}` : "",
     ramadan ? "It falls during Ramadan: offer an iftar meal after sunset, not lunch. Never mention lunch." : "",
   ]

@@ -96,7 +96,7 @@ export function planFixes(p: ProfileSnapshot, f: KnownFacts, now: Date): FixPlan
   if (empty(p.website)) {
     if (!empty(f.website)) apply.push({ field: "website", label: "Your website", value: f.website!.trim() });
   }
-  if (empty(p.menuLink)) asks.push("a link to your menu online, if you have one");
+  if (empty(p.menuLink)) asks.push("a link to your menu online (if you have one)");
 
   const known = knownAttributes(f);
   const fill: Partial<Record<AttributeKey, boolean>> = {};

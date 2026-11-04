@@ -102,7 +102,7 @@ describe("the fixes", () => {
     expect(plan.description).toBe("longer");
     expect(plan.copyPaste.map((c) => c.label)).toEqual(["Secondary categories", "More recent photos", "A cover photo"]);
     // Christmas hours we don't have, a menu link, vegetarian: asked, never guessed.
-    expect(plan.asks).toEqual(["your Christmas and New Year hours", "a link to your menu online, if you have one", "whether you have vegetarian options"]);
+    expect(plan.asks).toEqual(["your Christmas and New Year hours", "a link to your menu online (if you have one)", "whether you have vegetarian options"]);
     expect(readyFixes(plan)).toBe(8);
     expect(topExamples(plan)).toEqual(["A longer description", "Your phone number"]);
   });

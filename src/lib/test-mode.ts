@@ -15,6 +15,7 @@ export function testToolsOn(restaurant: { is_demo?: boolean | null; owner_whatsa
 
 // The commands that only exist for testing (names from lib/bot/parse.ts).
 export const TEST_COMMANDS = new Set([
+  "run_business_review",
   "time",
   "time_off",
   "test_send",

@@ -71,6 +71,7 @@ export async function planFor(r: Restaurant, snapshot: ProfileSnapshot, now: Dat
     plan.description = null;
   } else if (plan.description === "longer" && description) {
     plan.copyPaste.unshift({ label: "A longer description", text: `Your description on Google is short. Here's a longer one to paste in (Edit profile, then Description):\n\n${description}` });
+    plan.description = null;
   }
   return { plan, description: plan.description === "fill" ? description : null };
 }

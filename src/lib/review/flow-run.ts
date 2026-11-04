@@ -2,7 +2,7 @@ import "server-only";
 import { logAction } from "@/lib/audit";
 import type { Turn } from "@/lib/bot/turn";
 import { check, getActiveDraft, type Draft } from "@/lib/drafts";
-import { sendAndLog } from "@/lib/notify";
+import { messageOwner, sendAndLog } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { sendDinaChoices } from "@/lib/whatsapp";
 import { ALL_DONE, flowId, FLOW_STEPS, NEXT_BUTTONS, nextPrompt, nextStep, NOTHING_TO_DO, parseFlowButton, parseFlowWords, STOPPED, type FlowInput, type FlowState, type FlowStep } from "./flow";
@@ -63,7 +63,8 @@ async function save(review: BusinessReview, fields: Partial<BusinessReview>) {
 
 function ctxFor(turn: Turn, review: BusinessReview): FlowCtx {
   const say = async (text: string, buttons: FlowButton[] = [], mediaUrl: string | null = null) => {
-    if (mediaUrl) await turn.send("", false, mediaUrl);
+    // A file first (the poster), with its own caption.
+    if (mediaUrl) await messageOwner(turn.channel, "", false, { mediaUrl, mediaCaption: "🪧 Your QR poster" });
     if (!buttons.length) return turn.send(text);
     // Remember the buttons on screen, so a typed 1, 2 or 3 means the same.
     review.flow_state = { ...review.flow_state, buttons: buttons.map((b) => b.id) };

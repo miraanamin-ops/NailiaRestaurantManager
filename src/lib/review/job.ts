@@ -46,10 +46,12 @@ async function partRows(reviewId: string) {
 }
 
 // Google counts as connected when the restaurant has linked its location, or (on
-// dummy Google) when it has a dummy profile to work on.
+// dummy Google) when it has a dummy profile to work on that isn't marked
+// { connected: false } (a test site with only public Places data).
 export async function reviewGoogleConnected(r: Restaurant) {
   if (isLinked(r)) return true;
-  return (await googleModeFor(r.id)) === "dummy" && Boolean(r.dummy_google_profile);
+  const p = r.dummy_google_profile as { connected?: boolean } | null | undefined;
+  return (await googleModeFor(r.id)) === "dummy" && Boolean(p) && p!.connected !== false;
 }
 
 // Starts the review once per restaurant. From onboarding: only where it's open

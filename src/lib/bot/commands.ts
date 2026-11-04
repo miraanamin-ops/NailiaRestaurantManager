@@ -64,6 +64,7 @@ const TEST_HELP_TEXT = `🧪 *Test commands* (test tools are on)
 - *TEST CHECKER*: run a draft full of mistakes through the four checks
 - *RESET ONBOARDING*: (test restaurants only) clear the set-up and go through onboarding again
 - *RUN FEEDBACK*: send "How was your visit?" emails now, without waiting 3 hours after a redemption
+- *RUN BUSINESS REVIEW*: run Dina's business review again now (the one after setup), from the start
 - *SAMPLE ZREPORT 1* (or 2, 3, BAD): sends you a sample till report photo to forward back · *TEST ZREPORT 2*: pretends you just sent it
 - *RUN WEATHER*: store the weather now (the first time, the last 12 months too)
 - *TEST FORECAST ON*: show forecasts from runs that didn't pass their back-test, labelled TEST (*TEST FORECAST OFF* to hide them); then *RUN BRIEF*
@@ -200,6 +201,12 @@ export async function runCommand(command: Command, turn: Turn) {
       return emailPreviewsCommand(turn);
     case "run_feedback":
       return runFeedbackCommand(turn);
+    case "run_business_review": {
+      // The business review again, from the start (it replaces the last one; its drafts stay).
+      const { startBusinessReview } = await import("@/lib/review/job");
+      const out = await startBusinessReview(r.id, "test", { force: true });
+      return send(out.started ? "🧪 Reviewing your business again. Give me about 5 minutes: I'll message you here." : "🧪 Couldn't start the business review.");
+    }
     case "add_staff":
       return send(await addStaff(r, command.number));
     case "remove_staff":

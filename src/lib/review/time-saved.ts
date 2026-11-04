@@ -10,7 +10,7 @@ import { MINUTES_SAVED, type SavedAction } from "./config";
 export async function logTimeSaved(restaurantId: string, action: SavedAction, ref: string, status: "drafted" | "done" = "drafted") {
   const { error } = await getSupabase()
     .from("time_saved_log")
-    .upsert({ restaurant_id: restaurantId, action, ref, minutes: MINUTES_SAVED[action], status }, { onConflict: "restaurant_id,action,ref", ignoreDuplicates: status === "drafted" });
+    .upsert({ restaurant_id: restaurantId, action, ref, minutes: MINUTES_SAVED[action], status, logged_at: new Date().toISOString() }, { onConflict: "restaurant_id,action,ref", ignoreDuplicates: status === "drafted" });
   if (error) console.error("Couldn't log the time saved", error.message);
 }
 

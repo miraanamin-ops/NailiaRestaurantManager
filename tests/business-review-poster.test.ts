@@ -48,6 +48,7 @@ describe("the poster part and its step", () => {
     expect(db.tables.time_saved_log.map((x) => x.action)).toEqual(["poster"]);
     db.tables.business_review_parts.push({ review_id: RV, restaurant_id: R, part: "poster", status: "done", result: { ready: true } });
     const sent: { text: string; media: string | null }[] = [];
+    vi.doMock("@/lib/notify", () => ({ messageOwner: async (_c: unknown, _t: string, _b: unknown, o: { mediaUrl: string; mediaCaption: string }) => void sent.push({ text: o.mediaCaption, media: o.mediaUrl }) }));
     const flow = await import("@/lib/review/flow-run");
     const turn = {
       ctx: { restaurantId: R, restaurant: db.tables.restaurants[0], now: new Date() },
@@ -56,9 +57,10 @@ describe("the poster part and its step", () => {
       send: async (text: string, _b?: unknown, media: string | null = null) => void sent.push({ text, media }),
     } as never;
     await flow.handleReviewFlow(turn, "GO", undefined);
-    expect(sent[0]).toEqual({ text: "", media: "https://app.test/r/ember-spice/poster?size=A4" });
+    expect(sent[0]).toEqual({ text: "🪧 Your QR poster", media: "https://app.test/r/ember-spice/poster?size=A4" });
     expect(sent[1].text).toMatch(/^🪧 \*Your QR poster\*/);
     expect(sent[1].text).toContain("A5 for the tables: https://app.test/r/ember-spice/poster?size=A5");
     expect(sent.at(-1)!.text).toMatch(/^That's everything from your review/);
+    vi.doUnmock("@/lib/notify");
   }, 30_000);
 });
