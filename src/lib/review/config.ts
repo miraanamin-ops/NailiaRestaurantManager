@@ -2,10 +2,10 @@
 // (supabase/058_business_review.sql, lib/review/). Plain values, no imports, so
 // tests and pages read the same numbers.
 
-// Real restaurants get the review automatically once this is true. Until then
-// only test and demo sites do (the builder can still run it for any site from
-// the admin console). Switched on only with the builder's OK.
-export const OPEN_TO_REAL_SITES = false;
+// Real restaurants get the review automatically when this is true (switched on
+// with the builder's OK, 4 Nov 2026); false = only test and demo sites. The
+// builder can run it for any site from the admin console either way.
+export const OPEN_TO_REAL_SITES = true;
 
 // The pieces of the review, each its own job. after: runs once that part is
 // done (or has failed: `needs` says whether it can still run without it).

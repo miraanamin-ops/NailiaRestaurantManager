@@ -13,7 +13,7 @@ See `docs/business-review-transcript.md` for every message, from a real run on t
 
 ## Who gets it
 
-- Automatically: test and demo sites now. Real sites once `OPEN_TO_REAL_SITES` in `src/lib/review/config.ts` is `true`, and only with the builder's OK.
+- Automatically: every restaurant that finishes setup (`OPEN_TO_REAL_SITES` in `src/lib/review/config.ts`, switched on 4 Nov 2026). Set it to false to go back to test and demo sites only.
 - By hand: the admin console, `/onboarding/admin/business-review`, for any restaurant with WhatsApp linked. You type the name to confirm. Google dry run still applies, because every write goes through the release gate.
 - Never twice for a restaurant (one row in `business_reviews`). "Run again" on the admin page or `RUN BUSINESS REVIEW` (test tools) replaces it. What it drafted stays in the queue.
 
@@ -21,7 +21,7 @@ See `docs/business-review-transcript.md` for every message, from a real run on t
 
 | What | Where | Status |
 |---|---|---|
-| Migration 058 | Supabase > SQL Editor, on live and on dev | To run |
+| Migration 058 | Supabase > SQL Editor, on live and on dev | Given to the builder 4 Nov 2026 |
 | `GOOGLE_PLACES_API_KEY` | Vercel env (already set for onboarding) | Rivals need it on real sites; test and demo sites use fixtures |
 | `PLACES_DAILY_MAX` | Vercel env (default 100) | A review uses 2 to 3 calls; the review page 1 per rival per view |
 | Template `dinerai_business_review_ready_v1` | Twilio Content, needs Meta's approval | Waits for the real WhatsApp sender. On the sandbox the review waits for the owner's next message and the link is emailed |

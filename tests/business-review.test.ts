@@ -233,14 +233,13 @@ describe("starting", () => {
     expect(queued.filter((q) => q.type === "business_review")).toHaveLength(1);
   });
 
-  test("a real site isn't reviewed automatically yet; the builder can run it, and run it again", async () => {
+  test("real sites get it when setup finishes (it's open); the builder can run it again", async () => {
     const { job } = await load();
-    expect(await job.startBusinessReview(REAL, "onboarding")).toEqual({ started: false, reason: "not_open" });
-    expect(await job.startBusinessReview(REAL, "builder")).toMatchObject({ started: true });
+    expect(await job.startBusinessReview(REAL, "onboarding")).toMatchObject({ started: true });
     expect(await job.startBusinessReview(REAL, "builder")).toEqual({ started: false, reason: "already" });
     expect(await job.startBusinessReview(REAL, "builder", { force: true })).toMatchObject({ started: true });
     expect(db.tables.business_reviews.filter((x) => x.restaurant_id === REAL)).toHaveLength(1);
-    expect(db.tables.audit_log.filter((a) => a.action === "business_review" && a.actor === "builder")).toHaveLength(2);
+    expect(db.tables.audit_log.filter((a) => a.action === "business_review" && a.actor === "builder")).toHaveLength(1);
   });
 
   test("a problem starting it never stops setup finishing: the builder is told", async () => {

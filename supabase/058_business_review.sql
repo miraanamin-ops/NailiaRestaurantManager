@@ -13,7 +13,7 @@
 --   rival_places            the nearby rivals' Google place ids, nothing else
 --                           (Places terms: other details are fetched fresh)
 --   calendar_events         UK and community dates, written only from code
---                           (src/lib/review/calendar.ts), never by AI
+--                           (src/lib/review/calendar-events.ts), never by AI
 --   time_saved_log          estimated minutes per drafted or finished action,
 --                           once per action (unique), so a retry never counts twice
 --   restaurants.dummy_google_profile  the Google profile the dummy and simulated
