@@ -487,6 +487,6 @@ describe("the answer shape Claude is asked for", () => {
         { field: "faq.parking", value: " " },
       ],
     });
-    expect(r).toEqual({ messages: [{ text: "Hi", component: null }], hello_notes: { address: "1 High St" }, google_notes: null, hours_notes: { Monday: "12-10pm" }, faq_notes: null });
+    expect(r).toEqual({ messages: [{ text: "Hi", component: null }], hello_notes: { address: "1 High St" }, google_notes: null, hours_notes: { Monday: "12-10pm" }, faq_notes: null, details_notes: null, brand_notes: null });
   });
 });

@@ -57,7 +57,7 @@ describe("the registry", () => {
   test("the pilot's blocks and sections are registered, in order", async () => {
     vi.resetModules();
     const { BRIEF_SECTIONS, REPORT_SECTIONS } = await import("@/lib/sections");
-    expect(BRIEF_SECTIONS.map((d) => d.id)).toEqual(["finance", "calendar", "business_review"]);
+    expect(BRIEF_SECTIONS.map((d) => d.id)).toEqual(["finance", "calendar", "business_review", "photo_ask"]);
     expect(REPORT_SECTIONS.map((d) => d.id)).toEqual(["last_week", "google_week", "next_week", "time_saved"]);
     expect(REPORT_SECTIONS.find((d) => d.id === "google_week")!.replaces).toEqual(["reputation", "themes", "google"]);
     expect(REPORT_SECTIONS.find((d) => d.id === "last_week")!.replaces).toEqual(["forecast"]);

@@ -122,6 +122,19 @@ export async function saveProfileFields(
   return keys.map((k) => FIELD_NAMES[k]);
 }
 
+// Saves what changed, and records the rest as confirmed as they are (a profile
+// version with the same value), so a default the owner accepted at setup (the
+// colours, the emoji setting) counts for the agents' go-live checklists.
+export async function saveAndConfirmFields(restaurant: Restaurant, fields: Partial<EditableFields>, detail: string) {
+  const changed = await saveProfileFields(restaurant, fields, detail);
+  const { recordColumnChange } = await import("@/lib/profile/versions");
+  for (const k of Object.keys(fields) as (keyof EditableFields)[]) {
+    if (JSON.stringify(fields[k]) !== JSON.stringify(restaurant[k])) continue;
+    await recordColumnChange({ restaurantId: restaurant.id, column: k, before: restaurant[k] ?? null, after: fields[k] ?? null, by: "owner", evidence: { confirmed: detail }, confirm: true });
+  }
+  return changed;
+}
+
 // A WhatsApp message like "change Friday hours to 11pm": what was changed, or what's unclear.
 export async function applyProfileChanges(restaurant: Restaurant, changes: ProfileChange[]) {
   const plan = planProfileChanges(restaurant, changes);

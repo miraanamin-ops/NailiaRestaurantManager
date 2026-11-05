@@ -304,7 +304,14 @@ describe("step 10, the QR codes", () => {
     expect(await tool("send_qr_kit", {})).toMatchObject({ ok: true, text: expect.stringMatching(/sent their QR codes by email and WhatsApp\. Show qr_kit/) });
     expect(sendOwnerEmail.mock.calls[0][1]).toMatchObject({ subject: "Your QR codes for Ember Grill", text: expect.stringContaining("https://app.test/r/ember-grill/qr-pack") });
     expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", OWNER, expect.stringContaining("https://app.test/r/ember-grill/qr-pack"));
-    expect(step("customers_qr")).toMatchObject({ status: "done", data: { qr_via: ["email", "WhatsApp"] } });
+    // No logo confirmed yet: half done, with the logo as the setup gap (4 Nov).
+    expect(step("customers_qr")).toMatchObject({ status: "partial", data: { qr_via: ["email", "WhatsApp"], gap_unlock: expect.stringMatching(/^Send your logo/) } });
+  });
+
+  test("with their logo and colours confirmed, the step is done", async () => {
+    db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "customers_qr", status: "in_progress", data: { brand_confirmed: true } });
+    await tool("send_qr_kit", {});
+    expect(step("customers_qr")).toMatchObject({ status: "done" });
   });
 
   test("outside WhatsApp's window, email only", async () => {

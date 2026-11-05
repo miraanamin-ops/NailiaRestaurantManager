@@ -3,6 +3,7 @@ import { availableSteps, currentStep, gapsFor, gapTitle, progress, STEP_DEFS, st
 import { forwardMessage, managerSteps, REASSURANCE, SIGN_IN_HINT, VIDEO_SLOT } from "./google-content";
 import { defaultOptions, toneCards, type ToneConfig, type ToneOptions, type Voice } from "./tones";
 import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content";
+import { brandCard, type BrandDraft } from "./details-content";
 import { DEFAULT_DISCOUNT_CAP, hourWords, ROLE_WORDS, teamCard, type CoverRule, type TeamDraft } from "./ops-content";
 import type { Hours, MenuCategory } from "../profile-data";
 
@@ -19,7 +20,7 @@ export type AnswerPart = { type: "answer"; to: string; choice: string };
 const isAnswer = (p: unknown): p is AnswerPart => typeof p === "object" && p !== null && (p as AnswerPart).type === "answer" && typeof (p as AnswerPart).to === "string";
 
 export type CardSources = {
-  restaurant: { id?: string; slug?: string | null; brief_hour?: number | null; signup_reward?: string | null; discount_cap_percent?: number | null; labour_target_pct?: number | string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null };
+  restaurant: { id?: string; slug?: string | null; brief_hour?: number | null; signup_reward?: string | null; discount_cap_percent?: number | null; labour_target_pct?: number | string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null; logo_url?: string | null; brand_color?: string | null };
   state: FlowState;
   // For the Google and tone cards (chat.ts fills these in): our manager email,
   // where "Connect Google" goes (null while Path A is off), the tone config.
@@ -74,6 +75,8 @@ export function cardFor(card: string, sources: CardSources): ConfirmationData | 
     const draft = stepState(sources.state, "team").data.team_draft as TeamDraft | undefined;
     return draft ? teamCard(draft) : null;
   }
+  // "Your look": the logo and colour picked up (or sent), over what's saved.
+  if (card === "brand") return brandCard(stepState(sources.state, "customers_qr").data.brand_draft as BrandDraft | undefined, sources.restaurant);
   return null;
 }
 
@@ -142,8 +145,11 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
   },
   rewards: ({ restaurant }) => `Sign-up reward: ${restaurant.signup_reward ?? "not set"}; offers never over ${restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP}% off`,
   customers_qr: (s) => {
-    const via = (data(s, "customers_qr").qr_via as string[] | undefined) ?? [];
-    return via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready";
+    const d = data(s, "customers_qr") as { qr_via?: string[]; brand_confirmed?: boolean; photos_added?: number };
+    const via = d.qr_via ?? [];
+    const look = d.brand_confirmed ? "Logo and colours set" : "Logo still to add";
+    const photos = d.photos_added ? `${d.photos_added} dish photo${d.photos_added === 1 ? "" : "s"}` : null;
+    return [look, photos, via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready"].filter(Boolean).join("; ");
   },
   approvals_timing: (s) => {
     const d = data(s, "approvals_timing") as { brief_hour?: number; quiet_start?: string; quiet_end?: string };

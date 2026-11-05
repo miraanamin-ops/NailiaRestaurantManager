@@ -23,7 +23,7 @@ export const Component = z.discriminatedUnion("type", [
     cards: z.array(z.object({ id: z.string().min(1).max(40), title: z.string().min(1), body: z.string().min(1) })).min(2).max(6),
   }),
   z.object({ type: z.literal("upload"), accept: z.enum(["photo", "document", "spreadsheet", "any"]), multiple: z.boolean(), label: z.string().min(1) }),
-  z.object({ type: z.literal("editable_card"), card: z.enum(["basics", "menu", "hours", "faqs", "team"]) }),
+  z.object({ type: z.literal("editable_card"), card: z.enum(["basics", "menu", "hours", "faqs", "team", "brand"]) }),
   z.object({ type: z.literal("summary") }),
   // Step 2 (Google): code fills these from google-content.ts.
   z.object({ type: z.literal("google_steps"), device: z.enum(["phone", "laptop"]) }),
@@ -67,6 +67,13 @@ const hoursShape = { Monday: z.string(), Tuesday: z.string(), Wednesday: z.strin
 export const HoursNotes = z.object(hoursShape).partial();
 const faqShape = { halal: z.string(), parking: z.string(), delivery: z.string(), bookings: z.string(), accessibility: z.string(), kids: z.string(), private_hire: z.string() };
 export const FaqNotes = z.object(faqShape).partial();
+// The details every agent needs (4 Nov; details-content.ts checks the values): the
+// sign-off and emoji (tone step), the allergen statement (menu), the kinds of
+// offer (rewards), and a colour for the "Your look" card (customers and QR codes).
+const detailsShape = { sign_off_name: z.string(), emoji: z.string(), allergen_statement: z.string(), offer_types: z.string() };
+export const DetailsNotes = z.object(detailsShape).partial();
+const brandShape = { colour: z.string() };
+export const BrandNotes = z.object(brandShape).partial();
 
 export const DinaReply = z.object({
   messages: z.array(DinaMessage).min(1).max(3),
@@ -74,6 +81,8 @@ export const DinaReply = z.object({
   google_notes: GoogleNotes.nullable().optional(),
   hours_notes: HoursNotes.nullable().optional(),
   faq_notes: FaqNotes.nullable().optional(),
+  details_notes: DetailsNotes.nullable().optional(),
+  brand_notes: BrandNotes.nullable().optional(),
 });
 export type DinaReply = z.infer<typeof DinaReply>;
 
@@ -89,6 +98,8 @@ const NOTE_FIELDS = [
   ...Object.keys(googleShape).map((k) => `google.${k}`),
   ...Object.keys(hoursShape).map((k) => `hours.${k}`),
   ...Object.keys(faqShape).map((k) => `faq.${k}`),
+  ...Object.keys(detailsShape).map((k) => `details.${k}`),
+  ...Object.keys(brandShape).map((k) => `brand.${k}`),
 ] as [string, ...string[]];
 
 const WireComponent = z.discriminatedUnion("type", [
@@ -101,10 +112,10 @@ export const DinaReplyWire = z.object({
   notes: z.array(z.object({ field: z.enum(NOTE_FIELDS), value: z.string() })).max(30),
 });
 
-const GROUPS = { hello: HelloNotes, google: GoogleNotes, hours: HoursNotes, faq: FaqNotes } as const;
+const GROUPS = { hello: HelloNotes, google: GoogleNotes, hours: HoursNotes, faq: FaqNotes, details: DetailsNotes, brand: BrandNotes } as const;
 
 export function fromWire(w: { messages: unknown[]; notes?: { field: string; value: string }[] | null }): DinaReply {
-  const grouped: Record<keyof typeof GROUPS, Record<string, string>> = { hello: {}, google: {}, hours: {}, faq: {} };
+  const grouped: Record<keyof typeof GROUPS, Record<string, string>> = { hello: {}, google: {}, hours: {}, faq: {}, details: {}, brand: {} };
   for (const n of w.notes ?? []) {
     const [group, key] = n.field.split(".") as [keyof typeof GROUPS, string];
     const value = n.value?.trim();
@@ -122,6 +133,8 @@ export function fromWire(w: { messages: unknown[]; notes?: { field: string; valu
     google_notes: keep("google") as DinaReply["google_notes"],
     hours_notes: keep("hours") as DinaReply["hours_notes"],
     faq_notes: keep("faq") as DinaReply["faq_notes"],
+    details_notes: keep("details") as DinaReply["details_notes"],
+    brand_notes: keep("brand") as DinaReply["brand_notes"],
   };
 }
 
@@ -189,7 +202,7 @@ const SAVED_CLAIM = /\b(that'?s saved|(i'?ve|i have) (saved|noted|recorded|updat
 
 export function unsavedClaim(reply: DinaReply, saved: { toolSaved: boolean; codeActed: boolean }) {
   if (saved.toolSaved || saved.codeActed) return null;
-  const notes = [reply.hello_notes, reply.google_notes, reply.hours_notes, reply.faq_notes].some((n) => n && Object.values(n).some(Boolean));
+  const notes = [reply.hello_notes, reply.google_notes, reply.hours_notes, reply.faq_notes, reply.details_notes, reply.brand_notes].some((n) => n && Object.values(n).some(Boolean));
   if (notes) return null;
   const said = reply.messages.map((m) => m.text).join(" ").match(SAVED_CLAIM);
   return said ? `It says "${said[0]}", but nothing was saved this turn. Call the step's tool with what the owner told you, or don't say it's saved.` : null;

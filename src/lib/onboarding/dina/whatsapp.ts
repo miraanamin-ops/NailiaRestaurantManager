@@ -120,6 +120,8 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
       const hint = c.hint ? `\n\n${c.hint}` : "";
       out.push({ kind: "text", body: clip(`${m.text}${hint}\n\n${c.label}: ${abs(c.href)}`, WA.text) });
     } else if (c?.type === "confirmation") {
+      // A card with a picture (the logo): the picture first, on its own.
+      if (c.card.image) out.push({ kind: "text", body: `*${c.card.title}*`, mediaUrl: abs(c.card.image) });
       const rows = c.card.fields.map((f) => `${f.label}: ${f.value?.trim() ? f.value : "not given yet"}`);
       const all = `${m.text}\n\n*${c.card.title}*\n${rows.join("\n")}`;
       if (all.length <= WA.interactiveBody - 40) out.push(withChoices(all, m.id, choices));

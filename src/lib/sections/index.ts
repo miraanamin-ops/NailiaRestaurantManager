@@ -4,6 +4,7 @@ import type { Period } from "@/lib/report/build";
 import type { Restaurant } from "@/lib/supabase";
 import { calendarBriefSection, financeBriefSection, lastWeekReportSection, nextWeekReportSection } from "./finance";
 import { googleReportSection } from "./google";
+import { photoAskBriefSection } from "@/lib/agents/photo-ask";
 import { reviewBriefSection, timeSavedReportSection } from "@/lib/review/receipt";
 import { runBriefSections, runReportSections, type BriefOffer, type BriefSectionDef, type ReportSectionDef } from "./types";
 
@@ -13,6 +14,7 @@ export const BRIEF_SECTIONS: BriefSectionDef[] = [
   financeBriefSection, // Mondays: this week's sales forecast and labour % (lib/finance)
   calendarBriefSection, // the local calendar's lines, and one campaign idea (lib/calendar-lines)
   reviewBriefSection, // the business review's receipt if it didn't go the evening before, else time saved so far (lib/review)
+  photoAskBriefSection, // Tuesdays: one dish photo for Thursday's Google post (lib/agents/photo-ask)
 ];
 export const REPORT_SECTIONS: ReportSectionDef[] = [
   lastWeekReportSection, // sales vs forecast, labour %, best and worst day

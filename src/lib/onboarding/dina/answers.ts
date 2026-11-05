@@ -59,6 +59,10 @@ export async function handleAnswer(input: { restaurantId: string; messageId: str
         const { confirmTeam } = await import("./ops-step");
         return confirmTeam(input.restaurantId, input.channel);
       }
+      if (part.card === "brand") {
+        const { confirmBrand } = await import("./details-step");
+        return confirmBrand(input.restaurantId, input.channel);
+      }
       return null;
     case "allergen_check": {
       if (!part.dish) return null;

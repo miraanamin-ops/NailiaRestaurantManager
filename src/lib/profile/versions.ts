@@ -63,9 +63,11 @@ export async function recordColumnChange(input: {
   by: string;
   evidence?: Record<string, unknown>;
   reverts?: string | null;
+  // The owner confirmed a value as it is (e.g. the default colours at setup): recorded even though nothing changed.
+  confirm?: boolean;
 }) {
   const field = fieldForColumn(input.column);
-  if (!field || same(input.before, input.after)) return null;
+  if (!field || (!input.confirm && same(input.before, input.after))) return null;
   try {
     const multi = PROFILE_FIELDS[field].columns.length > 1;
     const version = await nextVersion(input.restaurantId);
