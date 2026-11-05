@@ -128,9 +128,9 @@ describe("the go-live checklist", () => {
     logo_url: "https://x.test/logo.png", brand_color: "#123456", brand_dark: "#000000", opening_hours: { Monday: "12:00 – 23:00" },
     emoji_allowed: { review_replies: 1, posts: 2, campaigns: 2 }, photo_library: [1, 2, 3, 4, 5].map((i) => ({ id: `p${i}` })), ...extra,
   });
-  test("logo, colours, hours, emoji setting and at least 5 photos", () => {
+  test("logo, colours, hours and emoji setting; no photos needed (4 Nov)", () => {
     expect(missingForGoLive(row(), "visibility")).toEqual([]);
-    expect(missingForGoLive(row({ logo_url: null, photo_library: [] }), "visibility")).toEqual(["logo", "photo_library"]);
+    expect(missingForGoLive(row({ logo_url: null, photo_library: [] }), "visibility")).toEqual(["logo"]);
   });
   test("the app's default colours and emoji setting only count once the owner has saved them", () => {
     const defaults = row({ brand_color: "#c2410c", brand_dark: "#1c1917", emoji_allowed: { review_replies: 0, posts: 2, campaigns: 2 } });

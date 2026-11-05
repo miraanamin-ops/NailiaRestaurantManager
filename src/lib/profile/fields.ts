@@ -129,7 +129,9 @@ export function columnsFor(field: ProfileFieldName, value: unknown): Record<stri
 // Decision 14: an agent can't leave shadow mode until the fields it needs are filled.
 export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
   reputation: ["sign_off_name", "complaint_contact", "recovery_offers", "halal_statement", "allergen_statement"],
-  visibility: ["logo", "colours", "hours", "emoji_allowed", "photo_library"],
+  // No photos needed to go live (4 Nov): setup suggests 3, and the GM asks for
+  // one for a specific post each week (lib/agents/photo-ask.ts).
+  visibility: ["logo", "colours", "hours", "emoji_allowed"],
   growth: ["discount_cap", "approved_offer_types", "signup_offer", "logo", "colours"],
   // The GM also needs at least one specialist live (lib/agents/gm.ts gmChecklist).
   gm: ["owner_name", "language", "quiet_hours"],
@@ -138,7 +140,8 @@ export const GO_LIVE_FIELDS: Partial<Record<AgentName, ProfileFieldName[]>> = {
 // The app's starting values: colours and the emoji setting always have one, so
 // they only count as set once the owner changed them or confirmed them (a profile version).
 export const DEFAULT_COLOURS = { brand_color: "#c2410c", brand_dark: "#1c1917" };
-export const MIN_LIBRARY_PHOTOS = 5;
+// How many dish photos setup suggests (not needed to go live).
+export const MIN_LIBRARY_PHOTOS = 3;
 
 // confirmed: fields the owner has saved at least once (from profile_versions).
 export function missingForGoLive(row: Record<string, unknown>, agent: AgentName, confirmed: ReadonlySet<string> = new Set()): ProfileFieldName[] {
