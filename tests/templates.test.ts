@@ -54,15 +54,13 @@ describe("the files themselves", () => {
 });
 
 describe("menu and costs", () => {
-  test("pre-filled with their dishes; costs in £ or %, exact or estimate, sellers and 'all other dishes' come back", async () => {
+  test("pre-filled with their dishes; costs in £ or %, exact or estimate and 'all other dishes' come back; no sellers column", async () => {
     const spec = menuCostsSpec(restaurant);
     expect(spec.rows.map((r) => r[1])).toEqual(["Lamb Chops", "Mixed Grill", "Chicken Wings", "Mango Lassi", ALL_OTHER_DISHES]);
     const filled = await fill(await buildWorkbook(spec), "Your menu", (ws) => {
       ws.getCell("D2").value = "4.20";
       ws.getCell("E2").value = "Exact";
-      ws.getCell("F2").value = "Best seller";
       ws.getCell("D3").value = 7.5; // typed as a number
-      ws.getCell("F4").value = "Slow seller";
       ws.getCell("D6").value = "30%";
     });
     const table = await readTemplateTable(filled, "Your menu");
@@ -73,23 +71,23 @@ describe("menu and costs", () => {
         { dish: "Mixed Grill", cost: "7.5", estimated: true },
       ],
       rest_percent: 30,
-      top: ["Lamb Chops"],
-      slow: ["Chicken Wings"],
+      top: [],
+      slow: [],
       problems: [],
     });
     const costed = applyCosts(menu, read).menu.flatMap((c) => c.items);
-    expect(costed.map((i) => [i.name, i.cost, i.cost_estimated, i.seller ?? null])).toEqual([
-      ["Lamb Chops", 4.2, false, "top"],
-      ["Mixed Grill", 7.5, true, null],
-      ["Chicken Wings", 1.8, true, "slow"],
-      ["Mango Lassi", 1.08, true, null],
+    expect(costed.map((i) => [i.name, i.cost, i.cost_estimated])).toEqual([
+      ["Lamb Chops", 4.2, false],
+      ["Mixed Grill", 7.5, true],
+      ["Chicken Wings", 1.8, true],
+      ["Mango Lassi", 1.08, true],
     ]);
+    expect(table!.headers).toEqual(["Section", "Dish", "Price (£)", "Cost to make (£)", "Exact or estimate"]);
   });
 
   test("costs already saved are filled in; an untouched sheet or someone else's file is a problem, not a guess", async () => {
     const saved = applyCosts(menu, { costs: [{ dish: "Lamb Chops", cost: "4.2", estimated: false }], top: ["Mixed Grill"] }).menu;
-    expect(menuCostsSpec({ ...restaurant, menu: saved }).rows[0]).toEqual(["Grills", "Lamb Chops", 14.4, 4.2, "Exact", null]);
-    expect(menuCostsSpec({ ...restaurant, menu: saved }).rows[1][5]).toBe("Best seller");
+    expect(menuCostsSpec({ ...restaurant, menu: saved }).rows[0]).toEqual(["Grills", "Lamb Chops", 14.4, 4.2, "Exact"]);
     const blank = await readTemplateTable(await buildWorkbook(menuCostsSpec(restaurant)), "Your menu");
     expect(readMenuCosts(blank!).problems).toEqual(["nothing was filled in yet"]);
     expect(readMenuCosts({ headers: ["Item", "Price"], rows: [] }).problems[0]).toMatch(/^this isn't the menu costs sheet/);

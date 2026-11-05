@@ -5,7 +5,7 @@
 import type { CostInput } from "@/lib/menu-engineering";
 import { STAFF_ROLES, type StaffInputRow, type StaffRole } from "@/lib/onboarding/dina/ops-content";
 import { parseDate, parseMoney, type Cell, type Table } from "@/lib/sales/pos-table";
-import { ALL_OTHER_DISHES, DAILY_TAKINGS_MAPPING, EXACTNESS, EXAMPLE_MARK, MENU_COLUMNS, SELLS, STAFF_COLUMNS, TAKINGS_COLUMNS } from "./specs";
+import { ALL_OTHER_DISHES, DAILY_TAKINGS_MAPPING, EXACTNESS, EXAMPLE_MARK, MENU_COLUMNS, STAFF_COLUMNS, TAKINGS_COLUMNS } from "./specs";
 
 const norm = (s: unknown) => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 const text = (c: Cell | undefined) => (c instanceof Date ? c.toISOString().slice(0, 10) : String(c ?? "").replace(/\s+/g, " ").trim());
@@ -49,11 +49,8 @@ export function readMenuCosts(table: Table | null): MenuCostsRead {
       continue;
     }
     if (cost) out.costs.push({ dish, cost, estimated: at.exact < 0 || norm(row[at.exact]) !== norm(EXACTNESS.exact) });
-    const sells = at.sells < 0 ? "" : norm(row[at.sells]);
-    if (sells === norm(SELLS.best)) out.top.push(dish);
-    else if (sells === norm(SELLS.slow)) out.slow.push(dish);
   }
-  if (!out.costs.length && out.rest_percent === null && !out.top.length && !out.slow.length) out.problems.push("nothing was filled in yet");
+  if (!out.costs.length && out.rest_percent === null) out.problems.push("nothing was filled in yet");
   return out;
 }
 

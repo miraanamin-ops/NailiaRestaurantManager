@@ -4,7 +4,7 @@
 // filled-in ones back with plain code (no AI). No imports beyond types and plain
 // rules, so it's unit-tested (tests/templates.test.ts).
 //   menu_costs     pre-filled with the restaurant's own dishes and prices: the owner
-//                  fills in what each costs to make and which sell best and least
+//                  fills in what each costs to make (no sellers column: user, 5 Nov)
 //   staff          blank, with two example rows: the team for the rota
 //   sales_example  an example of the ideal till export (sales item by item), to show
 //                  whoever runs their till; nothing to fill in
@@ -55,9 +55,7 @@ export const MENU_COLUMNS = {
   price: "Price (£)",
   cost: "Cost to make (£)",
   exact: "Exact or estimate",
-  sells: "Sells",
 } as const;
-export const SELLS = { best: "Best seller", slow: "Slow seller" } as const;
 export const EXACTNESS = { estimate: "Estimate", exact: "Exact" } as const;
 // The last row: one share of the price for every dish left without a cost.
 export const ALL_OTHER_DISHES = "All other dishes";
@@ -66,8 +64,8 @@ export function menuCostsSpec(r: { name: string; brand_color?: string | null; me
   const rows: Row[] = [];
   for (const c of r.menu ?? [])
     for (const i of c.items)
-      rows.push([c.category, i.name, i.price, typeof i.cost === "number" ? i.cost : null, typeof i.cost === "number" ? (i.cost_estimated === false ? EXACTNESS.exact : EXACTNESS.estimate) : null, i.seller === "top" ? SELLS.best : i.seller === "slow" ? SELLS.slow : null]);
-  rows.push(["", ALL_OTHER_DISHES, null, null, null, null]);
+      rows.push([c.category, i.name, i.price, typeof i.cost === "number" ? i.cost : null, typeof i.cost === "number" ? (i.cost_estimated === false ? EXACTNESS.exact : EXACTNESS.estimate) : null]);
+  rows.push(["", ALL_OTHER_DISHES, null, null, null]);
   return {
     kind: "menu_costs",
     fileName: `${safeName(r.name)}-menu-costs.xlsx`,
@@ -80,7 +78,6 @@ export function menuCostsSpec(r: { name: string; brand_color?: string | null; me
       // Text, so "30%" stays as typed (Excel would turn it into 0.3). read.ts reads £ and %.
       { header: MENU_COLUMNS.cost, width: 17, format: "text", note: "Roughly what the ingredients for one plate cost you. An estimate is fine. You can also write a % of the price, e.g. 30%." },
       { header: MENU_COLUMNS.exact, width: 17, choices: Object.values(EXACTNESS), note: "Leave it as Estimate unless you've worked the cost out properly." },
-      { header: MENU_COLUMNS.sells, width: 15, choices: Object.values(SELLS), note: "Pick your 3 to 5 best sellers and the ones that sell least. Leave the rest blank." },
     ],
     rows,
     blankRows: 0,
@@ -90,7 +87,6 @@ export function menuCostsSpec(r: { name: string; brand_color?: string | null; me
       "Cost to make: roughly what the ingredients for one plate cost you. An estimate is fine. You can write £ (4.20) or a share of the price (30%).",
       `Short of time? Fill in your main dishes, then on the last row ("${ALL_OTHER_DISHES}") put one share of the price for the rest, e.g. 30%.`,
       "Exact or estimate: leave it as Estimate unless you've worked the cost out properly.",
-      "Sells: mark your 3 to 5 best sellers and the ones that sell least. Once your till's sales by dish come in, they're used instead.",
       "Don't change the dish names or prices here: change those in your settings.",
       "When you're done, send this file back to me on WhatsApp or in the chat.",
       "Your costs are private: they're never shown to customers. They show which dishes make you the most money, so posts and offers push those and never the thin ones.",
