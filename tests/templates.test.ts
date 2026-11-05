@@ -131,8 +131,11 @@ describe("sales", () => {
       ],
       problems: [],
     });
-    // The sales importer's own mapping drops a daily row with no order count (why this sheet has its own reader).
-    expect(applyMapping(table, DAILY_TAKINGS_MAPPING).lines.map((l) => l.day)).toEqual(["2026-11-04"]);
+    // The sales importer keeps a day with takings but no order count, its orders unknown (fixed 5 Nov).
+    expect(applyMapping(table, DAILY_TAKINGS_MAPPING).lines.map((l) => [l.day, l.amount, l.orders_unknown ?? false])).toEqual([
+      ["2026-11-04", 1840.5, false],
+      ["2026-11-03", 1210, true],
+    ]);
     const untouched = await readTemplateTable(await buildWorkbook(spec), "Daily takings");
     expect(readDailyTakings(untouched).problems).toEqual(["no takings were filled in yet"]);
   });

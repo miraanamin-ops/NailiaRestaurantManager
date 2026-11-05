@@ -122,6 +122,19 @@ describe("importing daily takings", () => {
     });
   }
 
+  test("a day with takings but a blank orders cell is kept, its orders unknown (5 Nov: such days were dropped)", async () => {
+    const mapping = daily("Date", "Net Sales", "dmy", "net", "Orders");
+    const csv = "Date,Net Sales,Orders\n03/11/2026,1210.00,\n04/11/2026,1840.50,96\n05/11/2026,990.00,0\n";
+    suggestMapping.mockResolvedValue({ mapping, posName: null, problem: null });
+    const { receivePosFile, confirmImport } = await import("@/lib/sales/pos-import");
+    const first = await receivePosFile({ restaurantId: R, bytes: Buffer.from(csv), contentType: "text/csv", fileName: "daily.csv", channel: "web", sentBy: null, actor: "owner" });
+    expect(await confirmImport(R, first.importId!, mapping)).toMatchObject({ status: "imported" });
+    const day = (d: string) => db.tables.sales_days.find((x) => x.day === d);
+    expect(day("2026-11-03")).toMatchObject({ net_sales: 1210, transactions: null });
+    expect(day("2026-11-04")).toMatchObject({ net_sales: 1840.5, transactions: 96 });
+    expect(day("2026-11-05")).toMatchObject({ net_sales: 990, transactions: null });
+  });
+
   test("Square's Transactions export (one row per payment): each day's net sales and its number of orders", async () => {
     // Hand-made in the export's usual layout (not a real export: check one). Refund rows lower the takings but aren't orders.
     const mapping: PosMapping = { ...daily("Date", "Net Sales", "dmy", "net"), receipt: "Transaction ID" };

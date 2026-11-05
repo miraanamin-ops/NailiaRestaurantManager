@@ -339,8 +339,10 @@ async function runDailyImport(row: PosImport, table: Table, mapping: PosMapping,
   // export), the number of different transaction ids that day (receipt), counting
   // payments only: a refund row lowers the takings but isn't an order.
   const orders = new Map<string, number>();
-  if (mapping.quantity) for (const l of lines) orders.set(l.day, (orders.get(l.day) ?? 0) + l.quantity);
-  else if (mapping.receipt) {
+  // (A day whose orders cell was blank has unknown orders, not none.)
+  if (mapping.quantity) {
+    for (const l of lines) if (!l.orders_unknown) orders.set(l.day, (orders.get(l.day) ?? 0) + l.quantity);
+  } else if (mapping.receipt) {
     const ids = new Map<string, Set<string>>();
     for (const l of lines) if (l.receipt && l.amount > 0) ids.set(l.day, (ids.get(l.day) ?? new Set()).add(l.receipt));
     for (const [day, set] of ids) orders.set(day, set.size);

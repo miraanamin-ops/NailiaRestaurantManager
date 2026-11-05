@@ -33,7 +33,8 @@ export const amountBasis = (m: Pick<PosMapping, "amount_basis">): "gross" | "net
 // "net sales, excluding VAT" / "including VAT", for the owner and for Dina.
 export const basisWords = (m: Pick<PosMapping, "amount_basis">) => (amountBasis(m) === "net" ? "net sales: excluding VAT, tips and service charge" : "including VAT");
 
-export type SaleLine = { day: string; hour: number | null; item: string; quantity: number; amount: number; receipt: string | null };
+// orders_unknown: a daily summary row whose orders cell was blank (its takings still count; 5 Nov).
+export type SaleLine = { day: string; hour: number | null; item: string; quantity: number; amount: number; receipt: string | null; orders_unknown?: boolean };
 
 export const MAX_ROWS = 50_000;
 
@@ -237,7 +238,11 @@ export function applyMapping(table: Table, m: PosMapping) {
     const date = parseDate(r[iDate] ?? null, m.date_order);
     const item = iItem >= 0 ? String(r[iItem] ?? "").trim() : DAILY_ITEM;
     const price = parseMoney(r[iPrice] ?? null);
-    const qty = iQty >= 0 ? parseMoney(r[iQty] ?? null) : 1;
+    const rawQty = iQty >= 0 ? parseMoney(r[iQty] ?? null) : 1;
+    // A daily summary's quantity is the number of orders that day: a blank one means
+    // "not known", never "no sales", so the day's takings are kept (5 Nov: such days were dropped).
+    const ordersUnknown = iItem < 0 && iQty >= 0 && (rawQty === null || rawQty === 0);
+    const qty = ordersUnknown ? 1 : rawQty;
     // Totals rows, blank lines and anything we can't read are skipped (and counted).
     if (!date || !item || price === null || qty === null || qty === 0 || /^(sub ?)?totals?$/i.test(item)) {
       skipped++;
@@ -246,7 +251,7 @@ export function applyMapping(table: Table, m: PosMapping) {
     const hour = iTime >= 0 && iTime !== iDate ? parseHour(r[iTime] ?? null) : date.hour;
     const amount = m.price_is === "unit_price" ? price * qty : price;
     const receipt = iReceipt >= 0 && r[iReceipt] !== null && String(r[iReceipt]).trim() ? String(r[iReceipt]).trim() : null;
-    lines.push({ day: date.day, hour, item: item.slice(0, 120), quantity: round2(qty), amount: round2(amount), receipt });
+    lines.push({ day: date.day, hour, item: item.slice(0, 120), quantity: ordersUnknown ? 0 : round2(qty), amount: round2(amount), receipt, ...(ordersUnknown ? { orders_unknown: true } : {}) });
   }
   return { lines, skipped };
 }
