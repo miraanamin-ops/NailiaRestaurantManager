@@ -18,6 +18,12 @@ export type MenuItem = {
   allergens?: string[];
   // Allergens are only ever shown to customers (or used in their messages) once confirmed.
   allergens_confirmed?: boolean;
+  // Menu engineering (lib/menu-engineering.ts): what the dish costs to make (£, an
+  // estimate unless the owner said it's exact), and the owner's say on whether it's
+  // a top or slow seller. Never shown to customers (customerSafeMenu).
+  cost?: number | null;
+  cost_estimated?: boolean;
+  seller?: "top" | "slow" | null;
   // The dish's id, only while the settings page edits the menu (never in restaurants.menu).
   id?: string;
 };
@@ -108,7 +114,9 @@ export function menuItemCount(menu: MenuCategory[]) {
 export function customerSafeMenu(menu: MenuCategory[]): MenuCategory[] {
   return menu.map((c) => ({
     category: c.category,
-    items: c.items.map(({ allergens, allergens_confirmed, ...rest }) => (allergens_confirmed && allergens?.length ? { ...rest, allergens } : rest)),
+    // (Costs and the owner's top/slow say are the restaurant's own business: never shown.)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    items: c.items.map(({ allergens, allergens_confirmed, cost, cost_estimated, seller, ...rest }) => (allergens_confirmed && allergens?.length ? { ...rest, allergens } : rest)),
   }));
 }
 

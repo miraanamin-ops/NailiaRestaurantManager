@@ -20,7 +20,7 @@ export const EMOJI_NO = { review_replies: 0, posts: 0, campaigns: 0 };
 // How many dish photos setup suggests (Visibility doesn't need them to go live).
 export const SUGGESTED_PHOTOS = 3;
 
-export const DETAIL_NOTES = ["sign_off_name", "emoji", "allergen_statement", "offer_types"] as const;
+export const DETAIL_NOTES = ["sign_off_name", "emoji", "allergen_statement", "offer_types", "min_margin"] as const;
 export type DetailNote = (typeof DETAIL_NOTES)[number];
 
 export type DetailFields = {
@@ -28,6 +28,7 @@ export type DetailFields = {
   emoji_allowed?: typeof EMOJI_YES;
   allergen_statement?: string;
   approved_offer_types?: OfferType[];
+  min_margin_pct?: number;
 };
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9%£]+/g, " ").trim();
@@ -78,6 +79,14 @@ export function detailFields(notes: Partial<Record<DetailNote, string>>): { fiel
     const types = offerTypesFrom(notes.offer_types);
     if (types.length) fields.approved_offer_types = types;
     else problems.push(`no kind of offer was recognised; they are: ${OFFER_TYPES.map((t) => OFFER_TYPE_LABELS[t]).join(", ")}`);
+  }
+  if (notes.min_margin !== undefined) {
+    // "50%", "50", "the recommended" (50), "not sure" (50).
+    const v = norm(notes.min_margin);
+    const digits = v.match(/\d+/);
+    const n = digits ? Number(digits[0]) : /recommend|default|not sure|fine|ok|yes/.test(v) ? 50 : NaN;
+    if (Number.isInteger(n) && n >= 0 && n <= 90) fields.min_margin_pct = n;
+    else problems.push("the minimum profit should be a whole number from 0 to 90 (50% is recommended)");
   }
   return { fields, problems };
 }

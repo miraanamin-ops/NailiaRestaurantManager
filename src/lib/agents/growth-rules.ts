@@ -7,6 +7,7 @@
 // wording rules), so it's unit-tested (tests/agents/growth.test.ts).
 import { z } from "zod";
 import { findDish, OFFER_TYPES, offerCap } from "@/lib/offers";
+import { offerMarginProblem } from "@/lib/menu-engineering";
 import { quotedNumbers } from "./insights-rules";
 import { priceProblems } from "@/lib/prices";
 import { draftProblems, type Problems } from "./schema";
@@ -74,6 +75,8 @@ export type GrowthContext = {
   history: { id: string; name: string; emailed: number; simulated: number; opened: number; clicked: number; redeemed: number }[];
   photoIds: string[];
   sendWindow: { start: string; end: string };
+  // The menu with its costs and the owner's minimum profit (menu engineering's offer rule).
+  margin?: { menu: unknown; min: number | null } | null;
 };
 
 const FAKE_URGENCY = /\b(only \d+ (?:left|spaces?|tables?|places?)|last chance|hurry|selling fast|while stocks? lasts?|limited (?:spaces|tables|places)|don'?t miss out|ends (?:tonight|soon)|act now|before it'?s gone|almost gone)\b/i;
@@ -177,6 +180,9 @@ ${offerText}`, { menu: p.menu, values: [d.offer?.discount_value_gbp], ownerTexts
     // The owner's own birthday offer or sign-up reward isn't capped (their decision in settings).
     const cap = offerCap(o, p.menu, Number(p.discount_cap ?? 0), { birthday_offer: p.birthday_offer, signup_reward: p.signup_offer });
     if (!cap.ok) problems.push(cap.reason === "over_cap" ? `${cap.detail}: set needs_owner_input instead of drafting it` : cap.detail);
+    // Never under the owner's minimum profit on a dish (dishes without a cost aren't checked).
+    const thin = ctx.margin && !(cap.ok && cap.ownerSet) ? offerMarginProblem(o, ctx.margin.menu as Parameters<typeof offerMarginProblem>[1], ctx.margin.min) : null;
+    if (thin) problems.push(`${thin}: offer less, or put it on a higher-profit dish`);
     if (!isDate(o.valid_from) || !isDate(o.valid_to)) problems.push("offer dates as YYYY-MM-DD (or YYYY-MM-DDTHH:MM)");
     else {
       if (datePart(o.valid_from) < ctx.today) problems.push("the offer can't start in the past");

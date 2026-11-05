@@ -70,7 +70,7 @@ export const FaqNotes = z.object(faqShape).partial();
 // The details every agent needs (4 Nov; details-content.ts checks the values): the
 // sign-off and emoji (tone step), the allergen statement (menu), the kinds of
 // offer (rewards), and a colour for the "Your look" card (customers and QR codes).
-const detailsShape = { sign_off_name: z.string(), emoji: z.string(), allergen_statement: z.string(), offer_types: z.string() };
+const detailsShape = { sign_off_name: z.string(), emoji: z.string(), allergen_statement: z.string(), offer_types: z.string(), min_margin: z.string() };
 export const DetailsNotes = z.object(detailsShape).partial();
 const brandShape = { colour: z.string() };
 export const BrandNotes = z.object(brandShape).partial();

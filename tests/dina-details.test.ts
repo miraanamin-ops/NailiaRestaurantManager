@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { brandCard, colourFrom, DEFAULT_ALLERGEN_STATEMENT, detailFields, EMOJI_NO, EMOJI_YES, offerTypesFrom } from "@/lib/onboarding/dina/details-content";
 import { DinaReplyWire, fromWire } from "@/lib/onboarding/dina/reply";
 import { GO_LIVE_FIELDS, missingForGoLive } from "@/lib/profile/fields";
+import type { MenuCategory } from "@/lib/onboarding/profile-data";
 import { memoryDb } from "./support/memory-db";
 
 describe("the rules", () => {
@@ -137,6 +138,29 @@ describe("saving", () => {
     expect(await applyBrandNotes(R, { colour: "navy" })).toBe(true);
     expect(db.tables.onboarding_steps[0].data).toMatchObject({ brand_draft: { brand_color: "#1a237e" } });
     expect(await applyBrandNotes(R, { colour: "the sign" })).toBe(false);
+  });
+});
+
+describe("menu engineering at setup", () => {
+  test("save_menu_costs puts the costs and sellers on the menu, says what it couldn't use; the minimum profit is a note", async () => {
+    r().menu = [{ category: "Grills", items: [{ name: "Lamb Chops", price: 14.4, description: null }, { name: "Mixed Grill", price: 18, description: null }] }];
+    const { runTool, TOOLS } = await import("@/lib/onboarding/dina/tools");
+    const out = await runTool({ restaurantId: R, channel: "web" }, TOOLS, "save_menu_costs", {
+      costs: [{ dish: "Lamb Chops", cost: "£3", estimated: true }, { dish: "Pizza", cost: "2", estimated: true }],
+      rest_percent: 40,
+      top_sellers: ["Mixed Grill"],
+      slow_sellers: [],
+    });
+    expect(out).toEqual({
+      ok: true,
+      text: 'Saved: costs for 2 of 2 dishes. The most profitable is Lamb Chops, at about 75% profit. Not used: "Pizza" isn\'t on the menu. Ask about those, one at a time. Costs are private: they\'re never shown to customers.',
+    });
+    expect((r().menu as MenuCategory[])[0].items).toMatchObject([{ cost: 3 }, { cost: 7.2, seller: "top" }]);
+    const { applyDetailNotes } = await import("@/lib/onboarding/dina/details-step");
+    await applyDetailNotes(R, { min_margin: "50% (recommended)" });
+    expect(r().min_margin_pct).toBe(50);
+    expect(detailFields({ min_margin: "Not sure" }).fields).toEqual({ min_margin_pct: 50 });
+    expect(detailFields({ min_margin: "95" }).problems).toHaveLength(1);
   });
 });
 

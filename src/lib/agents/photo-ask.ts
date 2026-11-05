@@ -3,7 +3,8 @@
 // to go live, so the library grows a photo at a time instead). The dish rotates
 // week by week, favouring dishes the library has no photo of yet, and the
 // dishes the menu's numbers say to push (menu engineering), when there are any.
-// Plain code with no imports beyond types, so it's unit-tested (tests/photo-ask.test.ts).
+// Plain code (only menu engineering's plain rules), so it's unit-tested (tests/photo-ask.test.ts).
+import { dishesToPush, menuProfit } from "@/lib/menu-engineering";
 import type { BriefSectionDef } from "@/lib/sections/types";
 
 export const PHOTO_ASK_WEEKDAY = 2; // Tuesday (0 = Sunday), two days before Thursday's post
@@ -54,7 +55,9 @@ export const photoAskBriefSection: BriefSectionDef = {
     const { ymd, weekday } = london(now);
     if (weekday !== PHOTO_ASK_WEEKDAY) return null;
     const r = restaurant as unknown as { menu?: Menu; photo_library?: Library };
-    const dish = photoAskDish({ menu: r.menu, library: r.photo_library, today: ymd });
+    // The high-profit dishes first, once the owner has given dish costs.
+    const prefer = dishesToPush(menuProfit(r.menu as Parameters<typeof menuProfit>[0]));
+    const dish = photoAskDish({ menu: r.menu, library: r.photo_library, today: ymd, prefer });
     return dish ? photoAskLine(dish) : null;
   },
 };

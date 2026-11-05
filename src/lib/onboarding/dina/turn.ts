@@ -65,12 +65,20 @@ const STEP_FIELDS: Partial<Record<FlowStepKey, readonly string[]>> = {
   tone: ["sign_off_name"],
   menu: ["allergen_statement"],
   team: ["labour_target_pct"],
-  rewards: ["signup_reward", "discount_cap_percent", "recovery_offers", "approved_offer_types"],
+  rewards: ["signup_reward", "discount_cap_percent", "recovery_offers", "approved_offer_types", "min_margin_pct"],
   customers_qr: ["logo_url", "brand_color"],
   approvals_timing: ["brief_hour", "send_window_start", "send_window_end"],
 };
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
+
+// The menu's dishes for the costs question: name, price, and whether it has a cost yet.
+export function menuDishesLine(menu: { category: string; items: { name: string; price: number; cost?: number | null }[] }[] | null | undefined) {
+  const items = (menu ?? []).flatMap((c) => c.items);
+  if (!items.length) return null;
+  const shown = items.slice(0, 60).map((i) => `${i.name} £${Number(i.price).toFixed(2)}${typeof i.cost === "number" ? ` (cost £${i.cost.toFixed(2)})` : ""}`);
+  return `${shown.join("; ")}${items.length > 60 ? `; and ${items.length - 60} more` : ""}`;
+}
 
 // What she's told about "Your look" on the customers and QR codes step.
 export function lookLine(data: Record<string, unknown>, photos: number) {
@@ -180,7 +188,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ...(near.includes("rewards") ? { discount_cap_percent: restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP } : {}),
     ...(near.includes("sales") ? { pos_tips: POS_TIPS, sales_detail: SALES_DETAIL_HINT } : {}),
     ...(near.includes("team") ? { labour_hint: LABOUR_HINT } : {}),
-    ...(near.includes("menu") ? { allergen_wording: DEFAULT_ALLERGEN_STATEMENT } : {}),
+    ...(near.includes("menu") ? { allergen_wording: DEFAULT_ALLERGEN_STATEMENT, menu_dishes: menuDishesLine(restaurant.menu) } : {}),
     ...(near.includes("rewards") ? { offer_types: OFFER_TYPE_HINT } : {}),
     ...(step === "customers_qr" ? { your_look: lookLine(stepState(state, "customers_qr").data, restaurant.photo_library?.length ?? 0) } : {}),
   };

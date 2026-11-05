@@ -46,6 +46,7 @@ export type EditableFields = ProfileFields &
     | "quiet_hours_end"
     // Offers (settings page)
     | "approved_offer_types"
+    | "min_margin_pct"
     | "birthday_offer"
     // Dina's steps 8 and 12 (labour target; sending hours and brief hour, 054)
     | "labour_target_pct"
@@ -85,6 +86,7 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   quiet_hours_start: "quiet hours start",
   quiet_hours_end: "quiet hours end",
   approved_offer_types: "kinds of offer",
+  min_margin_pct: "minimum profit after an offer",
   birthday_offer: "birthday offer",
   labour_target_pct: "labour target",
   send_window_start: "sending hours start",

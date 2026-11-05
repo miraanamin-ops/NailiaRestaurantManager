@@ -58,7 +58,7 @@ describe("the registry", () => {
     vi.resetModules();
     const { BRIEF_SECTIONS, REPORT_SECTIONS } = await import("@/lib/sections");
     expect(BRIEF_SECTIONS.map((d) => d.id)).toEqual(["finance", "calendar", "business_review", "photo_ask"]);
-    expect(REPORT_SECTIONS.map((d) => d.id)).toEqual(["last_week", "google_week", "next_week", "time_saved"]);
+    expect(REPORT_SECTIONS.map((d) => d.id)).toEqual(["last_week", "google_week", "next_week", "menu", "time_saved"]);
     expect(REPORT_SECTIONS.find((d) => d.id === "google_week")!.replaces).toEqual(["reputation", "themes", "google"]);
     expect(REPORT_SECTIONS.find((d) => d.id === "last_week")!.replaces).toEqual(["forecast"]);
   });

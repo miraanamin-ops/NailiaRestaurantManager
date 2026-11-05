@@ -3,6 +3,7 @@
 // right before anything goes out, and records the result.
 import { formatLondon, formatWindow, isInSendWindow, nextWindowStart } from "@/lib/clock";
 import { overCap } from "@/lib/discounts";
+import { offerMarginProblem } from "@/lib/menu-engineering";
 import { offerCap, type OwnerOffers, type StructuredOffer } from "@/lib/offers";
 import { gateApproval, tapOnlyForGoogle, type GateDraft } from "@/lib/trust";
 
@@ -35,6 +36,8 @@ export type RuleRestaurant = {
   // The owner's own offers (settings): not capped when an offer is exactly one of them.
   birthday_offer?: string | null;
   signup_reward?: string | null;
+  // Menu engineering: no offer may leave a costed dish under this profit (null = the recommended 50%).
+  min_margin_pct?: number | null;
 };
 // approve: the owner tapped Approve. queue: a held draft being retried. test: TEST SEND.
 export type SendSource = "approve" | "queue" | "test";
@@ -83,6 +86,10 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
   if (draft.offer_details) {
     const cap = offerCap(draft.offer_details, restaurant.menu, restaurant.discount_cap_percent, { birthday_offer: restaurant.birthday_offer, signup_reward: restaurant.signup_reward });
     if (!cap.ok) return { outcome: "blocked", reason: "discount_cap", detail: `${cap.detail[0].toUpperCase()}${cap.detail.slice(1)}.` };
+    // Never under the owner's minimum profit on a dish (the owner's own offers aside).
+    // Recorded under the discount cap's reason: both are "too much off".
+    const thin = cap.ownerSet ? null : offerMarginProblem(draft.offer_details, restaurant.menu as Parameters<typeof offerMarginProblem>[1], restaurant.min_margin_pct);
+    if (thin) return { outcome: "blocked", reason: "discount_cap", detail: `${thin[0].toUpperCase()}${thin.slice(1)}.` };
   }
   const over = overCap(draft.content, restaurant.discount_cap_percent);
   if (over) {
@@ -118,11 +125,13 @@ export function moneyAndRisk(draft: RuleDraft, restaurant: RuleRestaurant, now: 
 }
 
 // At draft time, only the discount cap can be checked (the rest depends on when it's sent).
-export function moneyAtDraft(content: string, capPercent: number, offer?: { details: StructuredOffer; menu: unknown; owner?: OwnerOffers } | null) {
+export function moneyAtDraft(content: string, capPercent: number, offer?: { details: StructuredOffer; menu: unknown; owner?: OwnerOffers; minMargin?: number | null } | null) {
   const problems: string[] = [];
   if (offer) {
     const cap = offerCap(offer.details, offer.menu, capPercent, offer.owner);
     if (!cap.ok) problems.push(`${cap.detail}, so it will be blocked if you approve it`);
+    const thin = cap.ok && cap.ownerSet ? null : offerMarginProblem(offer.details, offer.menu as Parameters<typeof offerMarginProblem>[1], offer.minMargin);
+    if (thin) problems.push(`${thin}, so it will be blocked if you approve it`);
   }
   const over = overCap(content, capPercent);
   if (over) problems.push(`${over.percent}% off is above your ${capPercent}% cap, so it will be blocked if you approve it`);

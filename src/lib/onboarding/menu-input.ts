@@ -22,6 +22,8 @@ const MenuInput = z
             price: z.number().min(0).max(1000),
             description: z.string().trim().max(300).nullable().optional(),
             allergens: z.array(z.enum(UK_ALLERGENS)).optional(),
+            // Menu engineering: what the dish costs to make (null = no cost). Missing = keep what's saved.
+            cost: z.number().min(0).max(1000).nullable().optional(),
           }),
         )
         .max(200),
@@ -43,7 +45,12 @@ export function cleanMenu(menu: unknown, keepConfirmedFrom: MenuCategory[] = [])
         .map((i) => {
           const before = (i.id ? byId.get(i.id) : undefined) ?? byName.get(i.name.toLowerCase());
           const allergens = i.allergens ?? before?.allergens ?? [];
+          // The dish's cost (a cost typed here counts as exact) and the owner's top/slow say carry over.
+          const cost = i.cost !== undefined ? (i.cost && i.cost > 0 ? Math.round(i.cost * 100) / 100 : null) : (before?.cost ?? null);
+          const costs = cost != null ? { cost, cost_estimated: i.cost !== undefined && i.cost !== before?.cost ? false : (before?.cost_estimated ?? true) } : {};
           return {
+            ...costs,
+            ...(before?.seller ? { seller: before.seller } : {}),
             ...(i.id ? { id: i.id } : {}),
             name: i.name,
             price: Math.round(i.price * 100) / 100,

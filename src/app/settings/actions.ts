@@ -52,6 +52,11 @@ export async function saveDetails(form: FormData) {
   if (!(cap >= 0 && cap <= 100)) back(r.id, `error=${encodeURIComponent("The discount cap needs to be between 0 and 100.")}`);
   const website = get("website");
   const offerTypes = OFFER_TYPES.filter((t) => form.get(`offer_${t}`) === "yes");
+  // Least profit after an offer (059): only written when it changes, so the page still saves before 059 is run.
+  const marginText = get("min_margin");
+  const margin = marginText === "" ? null : Math.round(Number(marginText));
+  if (margin !== null && !(margin >= 0 && margin <= 90)) back(r.id, `error=${encodeURIComponent("The least profit after an offer needs to be between 0 and 90.")}`);
+  const marginChange = margin !== (r.min_margin_pct ?? null) ? { min_margin_pct: margin } : {};
   await saveProfileFields(
     r,
     {
@@ -63,6 +68,7 @@ export async function saveDetails(form: FormData) {
       discount_cap_percent: Math.round(cap),
       approved_offer_types: offerTypes,
       birthday_offer: get("birthday_offer").slice(0, 100) || null,
+      ...marginChange,
     },
     "Changed in settings",
   );
@@ -239,7 +245,8 @@ export async function saveSettingsMenu(restaurantId: string, menu: unknown) {
 
 export async function saveSettingsAllergens(restaurantId: string, menu: unknown) {
   const r = await own(restaurantId);
-  const confirmed = cleanMenu(menu).map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, allergens_confirmed: true })) }));
+  // (With the saved menu, so dish costs and sellers carry over unchanged.)
+  const confirmed = cleanMenu(menu, await menuWithIds(r.id)).map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, allergens_confirmed: true })) }));
   await saveProfileFields(r, { menu: confirmed }, "Confirmed allergens in settings");
   back(r.id, "saved=allergens");
 }
