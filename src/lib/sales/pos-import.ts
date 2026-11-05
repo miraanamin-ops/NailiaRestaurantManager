@@ -99,12 +99,22 @@ export async function receivePosFile(input: {
   if (kind === "xls") return { status: "failed", importId: null, message: "That's an old Excel file (.xls). Please export it as CSV or .xlsx from your till and send it again." };
   if (kind === "unknown") return { status: "failed", importId: null, message: "I can read sales files as CSV or Excel (.xlsx). That file is neither." };
 
+  // One of our own sheets (lib/templates): the daily takings sheet imports straight
+  // away with its known columns; the menu costs and team sheets aren't sales files.
+  const { readOwnSheet } = await import("@/lib/templates/read-file");
+  const own = await readOwnSheet(bytes);
+  if (own && own.kind !== "daily_takings") {
+    const what = own.kind === "menu_costs" ? "menu costs sheet" : "team sheet";
+    return { status: "failed", importId: null, message: `That's your ${what}, not a sales file. Send it to me on WhatsApp, or upload it on your settings page under Spreadsheets.` };
+  }
+
   let table: Table | null = null;
   try {
-    table = await readTable(bytes, kind);
+    table = own ? (await import("@/lib/templates/read")).takingsRows(own.table) : await readTable(bytes, kind);
   } catch (err) {
     console.error("Couldn't read the POS file", err);
   }
+  if (own && !table?.rows.length) return { status: "failed", importId: null, message: "That daily takings sheet has no takings filled in yet." };
   if (!table || !table.rows.length) return { status: "failed", importId: null, message: "I couldn't find a table of sales in that file. Is it the right export?" };
 
   const signature = layoutSignature(table.headers);
@@ -127,6 +137,13 @@ export async function receivePosFile(input: {
       .select("*")
       .single<PosImport>(),
   );
+
+  // Our daily takings sheet: its columns are known, so it imports straight away.
+  if (own) {
+    const { DAILY_TAKINGS_MAPPING } = await import("@/lib/templates/specs");
+    await setImport(row, { mapping: DAILY_TAKINGS_MAPPING });
+    return runImport({ ...row, mapping: DAILY_TAKINGS_MAPPING }, table, DAILY_TAKINGS_MAPPING, input.actor);
+  }
 
   // Seen this layout before (and the owner confirmed it): import straight away.
   const layout = check(

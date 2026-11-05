@@ -33,5 +33,14 @@ export const googleConnectOn = () => process.env.ONBOARDING_GOOGLE_CONNECT?.trim
 export const googleConnectHref = (restaurantId: string) => (googleConnectOn() ? `/settings/google?r=${restaurantId}&back=onboarding` : null);
 
 export async function setupExtras(restaurantId: string) {
-  return { managerEmail: await managerEmail(), googleConnectHref: googleConnectHref(restaurantId), tones: toneConfig() };
+  // The spreadsheets' signed download links (lib/templates/links.ts), for the template_download card.
+  // Never in the way of the chat: without the signing secret the card just isn't shown.
+  const { templateUrls } = await import("@/lib/templates/links");
+  let templateLinks: Record<string, string> | undefined;
+  try {
+    templateLinks = templateUrls(restaurantId);
+  } catch (err) {
+    console.error("Couldn't make the spreadsheet links", err instanceof Error ? err.message : err);
+  }
+  return { managerEmail: await managerEmail(), googleConnectHref: googleConnectHref(restaurantId), tones: toneConfig(), templateLinks };
 }

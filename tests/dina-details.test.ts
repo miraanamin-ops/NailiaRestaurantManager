@@ -183,3 +183,23 @@ describe("a full setup leaves nothing missing for any agent", () => {
     }
   });
 });
+
+describe("the spreadsheets sent back (5 Nov)", () => {
+  test("the menu costs sheet saves costs by code; the team sheet goes into the rota's team", async () => {
+    r().menu = [{ category: "Grills", items: [{ name: "Lamb Chops", price: 14.4, description: null }, { name: "Mixed Grill", price: 18, description: null }] }];
+    const { saveCostsSheet, saveTeamSheet } = await import("@/lib/templates/import");
+    const costs = { headers: ["Section", "Dish", "Price (£)", "Cost to make (£)", "Exact or estimate"], rows: [["Grills", "Lamb Chops", 14.4, "3", "Exact"], ["", "All other dishes", null, "40%", null]] };
+    expect(await saveCostsSheet(r() as never, costs)).toEqual({ ok: true, message: "✅ Saved costs for 2 of 2 dishes. Your most profitable is Lamb Chops, at about 75% profit." });
+    expect((r().menu as MenuCategory[])[0].items).toMatchObject([{ cost: 3, cost_estimated: false }, { cost: 7.2, cost_estimated: true }]);
+    expect(await saveCostsSheet(r() as never, null)).toMatchObject({ ok: false, message: "I couldn't use that sheet: nothing was filled in yet." });
+
+    const saved: unknown[] = [];
+    vi.doMock("@/lib/onboarding/dina/ops-step", () => ({ saveTeamMembers: async (_id: string, staff: unknown[]) => void saved.push(...staff) }));
+    const { saveTeamSheet: fresh } = await import("@/lib/templates/import");
+    const team = { headers: ["Name", "Role", "Hourly rate (£)"], rows: [["Aisha (example)", "Kitchen", 12.5], ["Bilal", "chef", 13], ["Omar", "boss", 15]] };
+    expect(await fresh(R, team)).toEqual({ ok: true, message: '✅ Saved 1 person to your team: Bilal. Not saved: Omar\'s role ("boss") isn\'t Kitchen, Front of house, Delivery or Manager.' });
+    expect(saved).toMatchObject([{ name: "Bilal", role: "kitchen", hourly_rate: 13 }]);
+    vi.doUnmock("@/lib/onboarding/dina/ops-step");
+    void saveTeamSheet;
+  });
+});

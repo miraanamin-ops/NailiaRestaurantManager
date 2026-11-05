@@ -109,7 +109,7 @@ export type Command =
   | { name: "reward" | "qr" | "birthday_campaign" | "campaign_results" | "which_report" }
   | { name: "my_email"; email: string }
   | { name: "reset_onboarding" }
-  | { name: "export_customers" | "email_previews" | "run_feedback" | "run_business_review" }
+  | { name: "export_customers" | "email_previews" | "run_feedback" | "run_business_review" | "spreadsheets" }
   | { name: "add_staff" | "remove_staff"; number: string }
   | { name: "staff" | "sales" | "run_weather" }
   | { name: "test_forecast"; on: boolean }
@@ -172,6 +172,7 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (/^EXPORT( MY)? (CUSTOMERS|CUSTOMER LIST|LIST)$/.test(t)) return { name: "export_customers" };
   if (t === "EMAIL PREVIEWS" || t === "EMAIL PREVIEW" || t === "PREVIEW EMAILS") return { name: "email_previews" };
   if (t === "RUN FEEDBACK") return { name: "run_feedback" };
+  if (/^(SPREADSHEETS?|SHEETS|TEMPLATES?)$/.test(t)) return { name: "spreadsheets" };
   if (t === "RUN BUSINESS REVIEW") return { name: "run_business_review" };
   // Staff numbers: "ADD STAFF +447700900123", "REMOVE STAFF 07700 900123", "STAFF"
   const staff = t.match(/^(ADD|REMOVE|DELETE) STAFF(?: NUMBER)?:? ([+\d][\d ()-]{6,})$/);

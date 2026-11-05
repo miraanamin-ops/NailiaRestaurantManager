@@ -317,3 +317,28 @@ export async function saveBenchmark(form: FormData) {
   await logSetting(r.id, "benchmark_opt_out", !!r.benchmark_opt_out, optOut, optOut ? "Left nearby comparisons" : "Joined nearby comparisons");
   back(r.id, "saved=benchmark");
 }
+
+// A filled-in spreadsheet sent back (lib/templates): menu costs and the team are
+// saved by code; daily takings go through the sales importer (which knows the sheet).
+// Anything else isn't one of ours: a till's own export goes on the sales page.
+export async function uploadSheet(form: FormData) {
+  const r = await own(String(form.get("r") ?? ""));
+  const file = form.get("sheet");
+  if (!(file instanceof File) || !file.size) back(r.id, `error=${encodeURIComponent("Choose the filled-in spreadsheet first.")}`);
+  const sheet = file as File;
+  if (sheet.size > 4 * 1024 * 1024) back(r.id, `error=${encodeURIComponent("That file is over 4 MB. Is it the right spreadsheet?")}`);
+  const bytes = Buffer.from(await sheet.arrayBuffer());
+  const { readOwnSheet } = await import("@/lib/templates/read-file");
+  const own2 = await readOwnSheet(bytes);
+  if (!own2) back(r.id, `error=${encodeURIComponent("That isn't one of the DinerAI spreadsheets (download one above). Your till's own sales export goes on the sales page.")}`);
+  let result: { ok: boolean; message: string };
+  if (own2!.kind === "daily_takings") {
+    const { receivePosFile } = await import("@/lib/sales/pos-import");
+    const out = await receivePosFile({ restaurantId: r.id, bytes, contentType: sheet.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName: sheet.name, channel: "web", sentBy: null, actor: "owner" });
+    result = { ok: out.status === "imported", message: out.message };
+  } else {
+    const { saveCostsSheet, saveTeamSheet } = await import("@/lib/templates/import");
+    result = own2!.kind === "menu_costs" ? await saveCostsSheet(r, own2!.table) : await saveTeamSheet(r.id, own2!.table);
+  }
+  back(r.id, result.ok ? `saved=${encodeURIComponent(result.message.replace(/^✅\s*/, ""))}` : `error=${encodeURIComponent(result.message)}`);
+}

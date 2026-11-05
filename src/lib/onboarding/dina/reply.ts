@@ -40,6 +40,9 @@ export const Component = z.discriminatedUnion("type", [
   z.object({ type: z.literal("allergen_check"), dish: z.string().optional() }),
   // Step 10: the link to their printable QR codes (code fills it).
   z.object({ type: z.literal("qr_kit") }),
+  // A spreadsheet to download and fill in (lib/templates; code makes the signed link):
+  // menu costs (menu step), team (team step), daily takings and the example export (sales step).
+  z.object({ type: z.literal("template_download"), kind: z.enum(["menu_costs", "staff", "daily_takings", "sales_example"]) }),
 ]);
 export type Component = z.infer<typeof Component>;
 

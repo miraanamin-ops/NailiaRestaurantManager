@@ -147,3 +147,42 @@ describe("sales", () => {
     expect(applyMapping(table, mapping).lines).toHaveLength(12);
   });
 });
+
+describe("wiring (5 Nov: live)", () => {
+  test("which of our sheets a file is, from its headings", async () => {
+    const { templateKindOf } = await import("@/lib/templates/read");
+    expect(templateKindOf(["Section", "Dish", "Price (£)", "Cost to make (£)", "Exact or estimate"])).toBe("menu_costs");
+    expect(templateKindOf(["Name", "Role", "Hourly rate (£)"])).toBe("staff");
+    expect(templateKindOf(["Date", "Takings, without VAT (£)", "Orders"])).toBe("daily_takings");
+    expect(templateKindOf(["Date", "Item", "Net Sales"])).toBeNull();
+  });
+
+  test("SPREADSHEETS on WhatsApp", async () => {
+    const { parseCommand } = await import("@/lib/bot/parse");
+    for (const t of ["SPREADSHEETS", "spreadsheet", "Templates", "sheets"]) expect(parseCommand(t)).toEqual({ name: "spreadsheets" });
+  });
+
+  test("Dina's download card: a link from setup's signed links; on WhatsApp the link in the text", async () => {
+    const { chatMessage } = await import("@/lib/onboarding/dina/view");
+    const sources = { restaurant: { id: "r1" }, state: {}, setup: { managerEmail: null, googleConnectHref: null, tones: { tones: [], default_tone: "warm", defaults: {} } as never, templateLinks: { menu_costs: "https://app.test/templates/menu_costs?r=r1&t=x" } } };
+    const m = chatMessage({ id: "m1", role: "dina", body: "Easier at a laptop?", parts: [{ type: "template_download", kind: "menu_costs" }] }, sources);
+    expect(m.component).toEqual({ type: "link", label: "Download your menu costs sheet", href: "https://app.test/templates/menu_costs?r=r1&t=x", hint: expect.stringMatching(/^Your dishes and prices are filled in/) });
+    const { renderForWhatsApp } = await import("@/lib/onboarding/dina/whatsapp");
+    const outs = renderForWhatsApp([m], { skippable: false, chatUrl: "https://app.test/c", appUrl: "https://app.test" });
+    expect(JSON.stringify(outs)).toContain("https://app.test/templates/menu_costs?r=r1&t=x");
+    const { DinaReplyWire } = await import("@/lib/onboarding/dina/reply");
+    expect(DinaReplyWire.safeParse({ messages: [{ text: "x", component: { type: "template_download", kind: "staff" } }], notes: [] }).success).toBe(true);
+  });
+
+  test("download links are signed per restaurant and sheet", async () => {
+    process.env.LINK_SECRET = "test-secret";
+    const { templateUrl, templatePurpose } = await import("@/lib/templates/links");
+    const { verifyLink } = await import("@/lib/signed-links");
+    const url = new URL(templateUrl("menu_costs", "r1"));
+    const t = url.searchParams.get("t");
+    expect(url.pathname).toBe("/templates/menu_costs");
+    expect(verifyLink(templatePurpose("menu_costs"), "r1", t)).toBe(true);
+    expect(verifyLink(templatePurpose("menu_costs"), "r2", t)).toBe(false);
+    expect(verifyLink(templatePurpose("staff"), "r1", t)).toBe(false);
+  });
+});

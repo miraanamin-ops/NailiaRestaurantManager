@@ -168,3 +168,44 @@ describe("importing daily takings", () => {
     expect((await upload("square-sales-summary.csv")).message).toBe("I couldn't use that file: It has one total for the whole period, not one per day.");
   });
 });
+
+describe("our daily takings sheet (lib/templates)", () => {
+  const sheet = async (fill: (ws: import("exceljs").Worksheet) => void) => {
+    const ExcelJS = (await import("exceljs")).default;
+    const { buildWorkbook } = await import("@/lib/templates/workbook");
+    const { dailyTakingsSpec, menuCostsSpec } = await import("@/lib/templates/specs");
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load((await buildWorkbook(dailyTakingsSpec({ name: "Ember Grill" }, "2026-11-05"))) as unknown as ArrayBuffer);
+    fill(wb.getWorksheet("Daily takings")!);
+    const menuSheet = await buildWorkbook(menuCostsSpec({ name: "Ember Grill", menu: [{ category: "Grills", items: [{ name: "Lamb Chops", price: 14, description: null }] }] }));
+    return { takings: Buffer.from(await wb.xlsx.writeBuffer()), menuSheet };
+  };
+  const send = async (bytes: Buffer) => {
+    const { receivePosFile } = await import("@/lib/sales/pos-import");
+    return receivePosFile({ restaurantId: R, bytes, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName: "takings.xlsx", channel: "whatsapp", sentBy: null, actor: "owner" });
+  };
+
+  test("imports straight away with its known columns (no AI), only the days filled in", async () => {
+    const { takings } = await sheet((ws) => {
+      ws.getCell("B2").value = 1840.5;
+      ws.getCell("C2").value = 96;
+      ws.getCell("B3").value = 1210;
+    });
+    expect(await send(takings)).toMatchObject({ status: "imported" });
+    expect(suggestMapping).not.toHaveBeenCalled();
+    expect(db.tables.sales_days.map((d) => [d.day, d.net_sales, d.transactions])).toEqual(
+      expect.arrayContaining([
+        ["2026-11-04", 1840.5, 96],
+        ["2026-11-03", 1210, null],
+      ]),
+    );
+    expect(db.tables.sales_days).toHaveLength(2);
+  });
+
+  test("nothing filled in, or the menu costs sheet sent as sales: a plain answer, nothing imported", async () => {
+    const { takings, menuSheet } = await sheet(() => {});
+    expect(await send(takings)).toMatchObject({ status: "failed" });
+    expect(await send(menuSheet)).toMatchObject({ status: "failed", message: expect.stringMatching(/^That's your menu costs sheet, not a sales file/) });
+    expect(db.tables.sales_days).toHaveLength(0);
+  });
+});

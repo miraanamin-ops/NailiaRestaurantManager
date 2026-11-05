@@ -128,3 +128,22 @@ export function readDailyTakings(table: Table | null): TakingsRead {
   out.days.sort((a, b) => a.day.localeCompare(b.day));
   return out;
 }
+
+// ---------- Which of our sheets is it? ----------
+
+// From the headings: our menu costs, team or daily takings sheet, or null (anything
+// else, e.g. a till's own export, goes the usual way).
+export function templateKindOf(headers: string[]): "menu_costs" | "staff" | "daily_takings" | null {
+  const has = (h: string) => headers.some((x) => norm(x) === norm(h));
+  if (has(MENU_COLUMNS.dish) && has(MENU_COLUMNS.cost)) return "menu_costs";
+  if (has(STAFF_COLUMNS.name) && has(STAFF_COLUMNS.role) && has(STAFF_COLUMNS.rate)) return "staff";
+  if (has(TAKINGS_COLUMNS.date) && has(TAKINGS_COLUMNS.takings)) return "daily_takings";
+  return null;
+}
+
+// Our daily takings sheet as a sales table: only the days with takings (the
+// sheet comes with a year of dates, most of them left blank).
+export function takingsRows(table: Table): Table {
+  const at = table.headers.findIndex((h) => norm(h) === norm(TAKINGS_COLUMNS.takings));
+  return { headers: table.headers, rows: table.rows.filter((r) => at >= 0 && r[at] !== null && r[at] !== undefined && text(r[at]) !== "") };
+}

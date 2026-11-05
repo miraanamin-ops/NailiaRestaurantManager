@@ -24,7 +24,15 @@ export type CardSources = {
   state: FlowState;
   // For the Google and tone cards (chat.ts fills these in): our manager email,
   // where "Connect Google" goes (null while Path A is off), the tone config.
-  setup?: { managerEmail: string | null; googleConnectHref: string | null; tones: ToneConfig };
+  setup?: { managerEmail: string | null; googleConnectHref: string | null; tones: ToneConfig; templateLinks?: Partial<Record<string, string>> };
+};
+
+// The spreadsheet cards: the button and the line under it.
+export const TEMPLATE_CARDS: Record<string, { label: string; hint: string }> = {
+  menu_costs: { label: "Download your menu costs sheet", hint: "Your dishes and prices are filled in: add roughly what each costs to make, then send it back here." },
+  staff: { label: "Download the team sheet", hint: "One row per person: role, rate, hours and when they can work. Send it back here when it's done." },
+  daily_takings: { label: "Download the daily takings sheet", hint: "Only if your till can't export: the dates are filled in, just add what you took each day." },
+  sales_example: { label: "See an example till export", hint: "What a good export looks like, to show whoever runs your till." },
 };
 
 export const GOOGLE_ACTIONS = { invited: "invited", emailSteps: "email_steps" } as const;
@@ -225,6 +233,13 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     return { type: "choice_cards", quote: { ...options.review, real: options.real }, cards: toneCards(setup.tones, options) };
   }
   if (p.type === "allergen_check") return dishCheck((part as { dish?: string }).dish, sources);
+  // A spreadsheet to download (lib/templates): its signed link, from setup.
+  if (p.type === "template_download") {
+    const kind = (part as { kind?: string }).kind ?? "";
+    const href = setup?.templateLinks?.[kind];
+    const t = TEMPLATE_CARDS[kind];
+    return href && t ? { type: "link", label: t.label, href, hint: t.hint } : null;
+  }
   if (p.type === "qr_kit") return sources.restaurant.slug ? { type: "link", label: "Open your QR codes", href: `/r/${sources.restaurant.slug}/qr-pack`, hint: "Four table cards and a counter sign, ready to print.", continueLabel: "I've opened my QR codes" } : null;
   if (p.type === "whatsapp_link") return { type: "link", label: "Link my WhatsApp", href: `/onboarding/in?r=${sources.restaurant.id ?? ""}`, hint: null };
   if (p.type === "queue_replies")

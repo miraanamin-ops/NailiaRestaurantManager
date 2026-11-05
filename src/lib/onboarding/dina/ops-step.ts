@@ -175,16 +175,12 @@ export async function saveTeam(restaurantId: string, input: TeamInput, channel: 
   };
 }
 
-// "Looks right" on the team card: into the rota's team (availability included),
-// its cover rules and the labour target. Returns what Dina is told.
-export async function confirmTeam(restaurantId: string, channel: Channel) {
-  const input = (await teamData(restaurantId)).team_draft;
-  if (!input) return "There's no team to save yet. Ask for their staff list first.";
-  const problems = teamProblems(input);
-  if (problems.length) return `Not saved: ${problems.join(" ")}`;
+// Each person into the rota's team (availability and contracted hours included).
+// Also used for the team spreadsheet (lib/templates/import.ts).
+export async function saveTeamMembers(restaurantId: string, staff: StaffInputRow[], manager: string | null) {
   const day = today();
-  for (const s of input.staff) {
-    const isManager = input.manager?.trim().toLowerCase() === s.name.trim().toLowerCase();
+  for (const s of staff) {
+    const isManager = manager?.trim().toLowerCase() === s.name.trim().toLowerCase();
     const roles = [...new Set([roleKey(s.role), ...(isManager ? ["manager"] : [])])];
     const a = availabilityOf(s);
     const { member } = await saveStaff(
@@ -194,6 +190,16 @@ export async function confirmTeam(restaurantId: string, channel: Channel) {
     );
     if (s.contracted_hours !== null) check(await getSupabase().from("staff").update({ contracted_hours: s.contracted_hours }).eq("restaurant_id", restaurantId).eq("id", member.id));
   }
+}
+
+// "Looks right" on the team card: into the rota's team (availability included),
+// its cover rules and the labour target. Returns what Dina is told.
+export async function confirmTeam(restaurantId: string, channel: Channel) {
+  const input = (await teamData(restaurantId)).team_draft;
+  if (!input) return "There's no team to save yet. Ask for their staff list first.";
+  const problems = teamProblems(input);
+  if (problems.length) return `Not saved: ${problems.join(" ")}`;
+  await saveTeamMembers(restaurantId, input.staff, input.manager);
   for (const rule of input.cover_rules) {
     check(
       await getSupabase()
@@ -222,7 +228,17 @@ export async function confirmTeam(restaurantId: string, channel: Channel) {
 export async function staffFileAsData(restaurantId: string, files: FilePart[]) {
   const sheet = files.find((f) => f.kind === "csv" || f.kind === "excel");
   if (!sheet) return null;
-  const table = await readTable(await readSavedFile(restaurantId, sheet.path), sheet.kind === "csv" ? "csv" : "xlsx").catch(() => null);
+  const bytes = await readSavedFile(restaurantId, sheet.path);
+  // Our team sheet (lib/templates): read by code, so she gets clean rows (the grey examples left out).
+  const { readOwnSheet } = await import("@/lib/templates/read-file");
+  const own = await readOwnSheet(bytes).catch(() => null);
+  if (own?.kind === "staff") {
+    const { readStaff } = await import("@/lib/templates/read");
+    const read = readStaff(own.table);
+    const lines = read.staff.map((s) => `Name: ${s.name} | Role: ${s.role} | Hourly rate: ${s.hourly_rate ?? "not given"} | Contracted hours: ${s.contracted_hours ?? "not given"} | Days: ${s.days ?? "any"} | Times: ${s.times ?? "any"} | Most hours a week: ${s.max_hours ?? "no limit"}`);
+    return { source: "upload", label: "the team sheet they filled in (read by code)", text: [...lines, ...read.problems.map((p) => `Problem: ${p}`)].join("\n") || "The sheet has nobody filled in yet." };
+  }
+  const table = await readTable(bytes, sheet.kind === "csv" ? "csv" : "xlsx").catch(() => null);
   if (!table?.rows.length) return null;
   const rows = table.rows.slice(0, 60).map((row) => table.headers.map((h, i) => `${h}: ${String(row[i] ?? "").slice(0, 60)}`).join(" | "));
   return { source: "upload", label: "the staff list they sent", text: rows.join("\n") };

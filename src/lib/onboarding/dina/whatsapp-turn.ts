@@ -156,6 +156,14 @@ async function files(channel: OwnerChannel, input: DinaWhatsAppInput, step: Flow
 // other steps they're kept for later.
 export async function noteForFiles(restaurantId: string, step: FlowStepKey | null, files: FilePart[], via: string, channel: "web" | "whatsapp" = via === "on WhatsApp" ? "whatsapp" : "web") {
   const sent = `The owner has just sent ${describeFiles(files)} ${via}.`;
+  // Our menu costs sheet, filled in (lib/templates), on any step: costs saved by code.
+  const own = await ownSheetIn(restaurantId, files);
+  if (own?.kind === "menu_costs") {
+    const { saveCostsSheet } = await import("@/lib/templates/import");
+    const { getRestaurant } = await import("../store");
+    const result = await saveCostsSheet(await getRestaurant(restaurantId), own.table).catch((err) => (console.error("Saving the menu costs sheet failed", err), { ok: false, message: "the sheet couldn't be read" }));
+    return `${sent} It's their menu costs sheet. ${result.ok ? `Code saved it: ${result.message.replace(/^✅\s*/, "")} Say it in a line, then carry on.` : `Code couldn't use it: ${result.message} Ask about that.`}`;
+  }
   if (step === "menu") {
     const { readMenuFiles } = await import("./menu-step");
     const read = await readMenuFiles(restaurantId, files).catch((err) => (console.error("Reading the menu failed", err), "The menu couldn't be read this time. Ask them to send it again, flat and in good light, or as a PDF."));
@@ -184,6 +192,18 @@ export async function noteForFiles(restaurantId: string, step: FlowStepKey | nul
   }
   const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
   return `${sent} They're saved safely for ${stepName}. Reading files for this step comes in a later version: say in a few words that you've got them, then carry on with the step you're on.`;
+}
+
+// The first of our own spreadsheets among the files (by its headings), if any.
+async function ownSheetIn(restaurantId: string, files: FilePart[]) {
+  const sheets = files.filter((f) => f.kind === "csv" || f.kind === "excel");
+  if (!sheets.length) return null;
+  const [{ readOwnSheet }, { readSavedFile }] = await Promise.all([import("@/lib/templates/read-file"), import("./uploads-store")]);
+  for (const f of sheets) {
+    const own = await readOwnSheet(await readSavedFile(restaurantId, f.path)).catch(() => null);
+    if (own) return own;
+  }
+  return null;
 }
 
 // Files given to Dina as data for this turn: a staff spreadsheet on the team step.

@@ -11,7 +11,8 @@ import { button, Card, Frame, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { dryRunContext, googleDryRun } from "@/lib/gate-rules";
-import { saveBenchmark, saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu } from "./actions";
+import { saveBenchmark, saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu, uploadSheet } from "./actions";
+import { safeTemplateUrls, TEMPLATE_KINDS, TEMPLATE_LABELS, TEMPLATE_LINK_DAYS } from "@/lib/templates/links";
 import { BillingBanner, BillingCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 import { OutsideDataCard, TeamsCard } from "./outside-cards";
@@ -233,6 +234,30 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
             showCost
           />
           <p className="mt-2 text-xs text-stone-500">Cost: roughly what each dish costs you to make (ingredients per plate). An estimate is fine. It shows which dishes make the most money, so offers push those. Never shown to customers.</p>
+        </Card>
+
+        <Card>
+          <h2 className="text-lg font-bold">Spreadsheets</h2>
+          <p className="text-sm text-stone-600">Easier at a laptop: download a sheet, fill it in, then upload it here (or send it to me on WhatsApp). Text SPREADSHEETS on WhatsApp for these links on your phone.</p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {TEMPLATE_KINDS.map((k) => (
+              <li key={k}>
+                <a href={safeTemplateUrls(r.id)?.[k] ?? "#"} className="font-medium text-emerald-700 underline">
+                  ⬇️ {TEMPLATE_LABELS[k]}
+                </a>
+                <span className="text-stone-500">
+                  {" "}
+                  {k === "menu_costs" ? "(your dishes filled in: add what each costs to make)" : k === "staff" ? "(one row per person, for your rotas)" : k === "daily_takings" ? "(only if your till can't export your sales)" : "(what to ask your till for; nothing to fill in)"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <form action={uploadSheet} className="mt-4 space-y-2">
+            <input type="hidden" name="r" value={r.id} />
+            <input name="sheet" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" className="block w-full text-sm" />
+            <button className={button}>Upload a filled-in sheet</button>
+          </form>
+          <p className="mt-2 text-xs text-stone-500">Download links work for {TEMPLATE_LINK_DAYS} days. Your costs are private: never shown to customers.</p>
         </Card>
 
         {(r.menu ?? []).length > 0 && (

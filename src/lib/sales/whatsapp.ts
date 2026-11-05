@@ -40,6 +40,21 @@ export async function salesFromMedia(sender: SalesSender, file: IncomingFile, no
   }
   if (!type.startsWith("image/") && isSpreadsheetType(type)) {
     const bytes = await bytesOf(file);
+    // Our menu costs or team sheet, filled in (lib/templates): saved by code. Owner only.
+    const { readOwnSheet } = await import("@/lib/templates/read-file");
+    const own = await readOwnSheet(bytes);
+    if (own && own.kind !== "daily_takings") {
+      if (sender.role === "staff") {
+        await sender.reply("Thanks! Only the owner can send this sheet: please ask them to send it.");
+        return "handled";
+      }
+      const r = await restaurantFor(sender.restaurantId);
+      if (!r) return "unsupported";
+      const { saveCostsSheet, saveTeamSheet } = await import("@/lib/templates/import");
+      const result = own.kind === "menu_costs" ? await saveCostsSheet(r, own.table) : await saveTeamSheet(r.id, own.table);
+      await sender.reply(result.message);
+      return "handled";
+    }
     const outcome = await receivePosFile({
       restaurantId: sender.restaurantId,
       bytes,
