@@ -52,6 +52,8 @@ import {
 //  12. timing: save_timing, the brief hour and the customer sending hours.
 
 const today = () => londonYmd(new Date());
+// The setup gap when the QR codes went out without a confirmed logo.
+export const LOGO_GAP = "Send your logo and I'll put it on your emails, QR codes and Google posts.";
 const dataOf = async (restaurantId: string, key: FlowStepKey) => stepState((await loadFlow(restaurantId)).state, key).data as Record<string, unknown>;
 
 // ---------- 7. Sales history ----------
@@ -274,10 +276,20 @@ export async function sendQrKit(restaurantId: string, channel: Channel) {
     whatsapp = true;
   }
   const via = [email.delivery === "email" ? "email" : null, whatsapp ? "WhatsApp" : null].filter(Boolean);
-  await completeStep(restaurantId, "customers_qr", "done", { qr_sent_at: new Date().toISOString(), qr_via: via }, { channel });
+  // Without a confirmed logo the step is only half done: the logo is a setup gap
+  // (Visibility and Growth need it to go live).
+  const look = (await dataOf(restaurantId, "customers_qr")) as { brand_confirmed?: boolean };
+  const logoSet = Boolean(look.brand_confirmed);
+  await completeStep(
+    restaurantId,
+    "customers_qr",
+    logoSet ? "done" : "partial",
+    { qr_sent_at: new Date().toISOString(), qr_via: via, ...(logoSet ? {} : { gap_unlock: LOGO_GAP }) },
+    { channel },
+  );
   return {
     ok: true as const,
-    text: `Code ${via.length ? `sent their QR codes by ${via.join(" and ")}` : "made their QR codes (there was nowhere to send them, so show them in the chat)"}. Show qr_kit so they can open them now. Customers and QR codes is done.`,
+    text: `Code ${via.length ? `sent their QR codes by ${via.join(" and ")}` : "made their QR codes (there was nowhere to send them, so show them in the chat)"}. Show qr_kit so they can open them now. Customers and QR codes is ${logoSet ? "done" : "saved; their logo is still to add, so it stays a setup gap for later"}.`,
   };
 }
 

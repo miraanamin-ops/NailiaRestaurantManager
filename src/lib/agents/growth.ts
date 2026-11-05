@@ -11,6 +11,7 @@ import { draftMessage } from "@/lib/format";
 import { entriesToDraft } from "@/lib/local-calendar-rules";
 import { syncBankHolidays } from "@/lib/local-calendar";
 import { ownerChannel } from "@/lib/followups";
+import { menuProfit, menuProfitLines, RECOMMENDED_MIN_MARGIN } from "@/lib/menu-engineering";
 import { messageOwner } from "@/lib/notify";
 import { addDays } from "@/lib/sales/format";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -61,6 +62,17 @@ export type GrowthJob = {
   legacy_text?: string | null;
 };
 
+// Menu engineering for Growth: the last 8 weeks of the till's sales by item (if
+// any), the owner's dish costs, and their minimum profit after an offer.
+export function menuProfitFor(restaurant: Pick<Restaurant, "menu" | "min_margin_pct">, items: { day: string; item: string; quantity: number }[], today: string) {
+  const since = addDays(today, -56);
+  const sales: Record<string, number> = {};
+  for (const i of items) if (i.day >= since) sales[i.item] = (sales[i.item] ?? 0) + (Number(i.quantity) || 0);
+  const profit = menuProfit(restaurant.menu, { sales });
+  const min = restaurant.min_margin_pct ?? RECOMMENDED_MIN_MARGIN;
+  return { menu_profit: menuProfitLines(profit, min), margin: profit.dishes.length ? { menu: restaurant.menu, min } : null };
+}
+
 export async function growthInput(restaurant: Restaurant, job: GrowthJob): Promise<GrowthInput> {
   const now = new Date(`${job.today}T12:00:00Z`);
   const [profile, segments, history, calendar, metrics] = await Promise.all([
@@ -78,6 +90,7 @@ export async function growthInput(restaurant: Restaurant, job: GrowthJob): Promi
     history,
     calendar: job.task === "calendar" && job.entry ? [job.entry] : calendar.map(({ day, name, type, date_uncertain }) => ({ day, name, type, date_uncertain })),
     quiet_times: metrics ? quietTimes(metrics) : null,
+    ...menuProfitFor(restaurant, metrics?.sales_items ?? [], job.today),
     today: job.today,
     today_words: londonToday(now),
     send_window: { start: restaurant.send_window_start, end: restaurant.send_window_end },
@@ -217,14 +230,14 @@ export async function birthdayGrowth(restaurant: Restaurant, today: string, lega
 
 // The draft's checks for the approval card: the checker's minor fixes, and the code
 // checks (misleading claims; the cap from the offer's fields and the wording).
-export function growthChecks(d: GrowthDraftOutput, verdict: CheckerVerdictOutput, restaurant: Pick<Restaurant, "discount_cap_percent" | "menu" | "birthday_offer" | "signup_reward">): DraftChecks {
+export function growthChecks(d: GrowthDraftOutput, verdict: CheckerVerdictOutput, restaurant: Pick<Restaurant, "discount_cap_percent" | "menu" | "birthday_offer" | "signup_reward" | "min_margin_pct">): DraftChecks {
   const fixesFor = (prefix: string) => verdict.minor_fixes.filter((f) => f.check.startsWith(prefix)).map((f) => `"${f.find}" → "${f.replace}"`);
   const text = growthText(d);
   return {
     tone: checkResult(fixesFor("T"), []),
     facts: checkResult(fixesFor("F"), []),
     compliance: checkResult([], misleadingClaims(text)),
-    money: checkResult([], moneyAtDraft(text, restaurant.discount_cap_percent, d.offer ? { details: d.offer, menu: restaurant.menu, owner: { birthday_offer: restaurant.birthday_offer, signup_reward: restaurant.signup_reward } } : null)),
+    money: checkResult([], moneyAtDraft(text, restaurant.discount_cap_percent, d.offer ? { details: d.offer, menu: restaurant.menu, owner: { birthday_offer: restaurant.birthday_offer, signup_reward: restaurant.signup_reward }, minMargin: restaurant.min_margin_pct } : null)),
   };
 }
 

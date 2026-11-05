@@ -176,6 +176,12 @@ export async function noteForFiles(restaurantId: string, step: FlowStepKey | nul
     }
     return `${sent} ${sheet ? "Their staff list is in the data below: read the names, roles, rates, contracted hours and, where it has them, each person's days, times and max hours a week; check anything unclear with them, then call save_team and show editable_card team." : "Ask for the staff list as a CSV or Excel file, or to type it (name, role, hourly rate, contracted hours, and when each person can work)."}`;
   }
+  if (step === "customers_qr") {
+    // The logo (until "Your look" is confirmed), then photos of their dishes.
+    const { lookFiles } = await import("./details-step");
+    const read = await lookFiles(restaurantId, files).catch((err) => (console.error("Saving the photos failed", err), "Those photos couldn't be saved this time. Ask them to send them again."));
+    return `${sent} ${read}`;
+  }
   const stepName = step ? STEP_DEFS[step].title.toLowerCase() : "setup";
   return `${sent} They're saved safely for ${stepName}. Reading files for this step comes in a later version: say in a few words that you've got them, then carry on with the step you're on.`;
 }

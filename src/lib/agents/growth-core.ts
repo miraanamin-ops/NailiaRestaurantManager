@@ -27,6 +27,11 @@ export type GrowthInput = {
   calendar: { day: string; name: string; type: string; date_uncertain: boolean }[];
   // Worked out from the last 8 weeks of sales (null if there aren't enough).
   quiet_times: string | null;
+  // Menu engineering (lib/menu-engineering.ts), from the owner's dish costs: which
+  // dishes to push and which never to discount, in words (null: no costs yet).
+  menu_profit?: string | null;
+  // For code's offer rule only (never in the prompt): the menu with its costs, and the owner's minimum profit.
+  margin?: { menu: unknown; min: number | null } | null;
   today: string; // YYYY-MM-DD
   today_words: string; // "Monday 12 October 2026"
   send_window: { start: string; end: string };
@@ -69,6 +74,8 @@ function content(input: GrowthInput, revision: Revision<GrowthDraftOutput> | nul
     `Segments and how many customers each can email now (with consent, and not already sent an offer this week):\n${Object.entries(input.segments).map(([s, n]) => `- ${s} (${SEGMENT_WORDS[s] ?? s}): ${n}`).join("\n")}`,
     `Campaign history (newest first; results so far):\n${input.history.length ? input.history.map((h) => `- history:${h.id}: ${h.name}. Emailed ${h.emailed}${h.simulated ? ` (+${h.simulated} test sends)` : ""}, opened ${h.opened}, clicked ${h.clicked}, redeemed ${h.redeemed}.`).join("\n") : "(none yet)"}`,
     `Busy and quiet times (worked out from sales): ${input.quiet_times ?? "not enough sales data yet"}`,
+    input.menu_profit ? `Profit by dish (worked out from the owner's costs):
+${input.menu_profit}` : "",
     input.task !== "calendar" ? `Local calendar, coming up:\n${input.calendar.length ? input.calendar.map((c) => `- ${c.day}: ${c.name} (${c.type}${c.date_uncertain ? ", date uncertain" : ""})`).join("\n") : "(nothing in the next few weeks)"}` : "",
     `Restaurant profile (version ${input.profile.version}):\n${JSON.stringify(input.profile.fields, null, 2)}`,
   ];
@@ -82,7 +89,7 @@ function content(input: GrowthInput, revision: Revision<GrowthDraftOutput> | nul
 
 export function contextFor(input: GrowthInput, task: GrowthTask = input.task): GrowthContext {
   const library = (input.profile.fields.photo_library ?? []) as { id: string }[];
-  return { task, today: input.today, profile: input.profile.fields as GrowthContext["profile"], segments: input.segments, history: input.history, photoIds: library.map((p) => p.id), sendWindow: input.send_window };
+  return { task, today: input.today, profile: input.profile.fields as GrowthContext["profile"], segments: input.segments, history: input.history, photoIds: library.map((p) => p.id), sendWindow: input.send_window, margin: input.margin ?? null };
 }
 
 export function runGrowth(input: GrowthInput, label: string, revision: Revision<GrowthDraftOutput> | null = null) {

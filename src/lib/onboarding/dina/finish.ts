@@ -1,4 +1,5 @@
 import "server-only";
+import { ASSISTANT_AGENTS } from "@/lib/agents/assistant-mode";
 import { logAction } from "@/lib/audit";
 import { shouldBeActive } from "@/lib/billing/access";
 import { check } from "@/lib/drafts";
@@ -20,11 +21,28 @@ import { getRestaurant, updateRestaurantFields } from "../store";
 //     a pilot invite code, an exemption, a trial or a subscription), so the
 //     scheduled jobs start; nothing runs for a restaurant before this
 //   - queues the outside data history for its forecasts
+//   - sets every agent to live (agentsLiveAtFinish). Each one still only runs
+//     live once its own checklist passes (lib/agents/go-live.ts), so anything
+//     the owner skipped keeps that agent in shadow until it's filled in; then
+//     it switches on by itself. A full setup leaves everything on (4 Nov).
 // Safe to call again: it does nothing once finished.
 
 // allSet: the closing line ("You're all set up..."), for the chat and WhatsApp.
 // reviewStarted: the business review (lib/review) is on its way; Dina says so (reviewLine).
 export type FinishOutcome = { finished: true; active: boolean; allSet: string; reviewStarted: boolean } | { finished: false; needsWhatsapp: boolean };
+
+// The agents' modes once setup finishes: every agent live, apart from any the
+// builder had already set (kept as they are). Plain code, unit-tested.
+export function agentsLiveAtFinish(current: Record<string, string> | null | undefined) {
+  const modes: Record<string, string> = { ...(current ?? {}) };
+  const switched: string[] = [];
+  for (const a of ASSISTANT_AGENTS) {
+    if (modes[a]) continue;
+    modes[a] = "live";
+    switched.push(a);
+  }
+  return { modes, switched };
+}
 
 const hourText = (h: number) => (h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`);
 // The first brief is the morning after setup finishes (the summary says so too).
@@ -56,8 +74,17 @@ export async function finishIfDone(restaurantId: string): Promise<FinishOutcome 
   const active = shouldBeActive(true, r);
   // Today's brief counts as done: the first one is tomorrow morning (no brief, and no
   // "brief is late" alert, on the evening it finishes; Pilot Zero, 2 Nov).
-  await updateRestaurantFields(restaurantId, { ...(active !== r.active ? { active } : {}), last_brief_on: londonYmd(new Date()) });
+  const agents = agentsLiveAtFinish(r.agent_modes);
+  await updateRestaurantFields(restaurantId, { ...(active !== r.active ? { active } : {}), last_brief_on: londonYmd(new Date()), ...(agents.switched.length ? { agent_modes: agents.modes } : {}) });
   await logAction({ restaurantId, actor: "owner", action: "setting", detail: `Setup with Dina finished${active ? ": switched on" : " (not switched on: no trial, subscription, pilot code or exemption)"}` });
+  if (agents.switched.length)
+    await logAction({
+      restaurantId,
+      actor: "system",
+      action: "setting",
+      detail: `Set ${agents.switched.join(", ")} to live at the end of setup (each runs live once its details are filled in)`,
+      data: { field: "agent_modes", before: r.agent_modes ?? {}, after: agents.modes },
+    });
   try {
     await enqueueBackfill(restaurantId, "created");
   } catch (err) {

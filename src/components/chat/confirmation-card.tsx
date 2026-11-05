@@ -61,11 +61,20 @@ export function ConfirmationCard({
         </form>
       ) : (
         <>
+          {data.image ? (
+            <div className="flex justify-center border-b border-ink-700 bg-white p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the owner's logo from storage */}
+              <img src={data.image} alt="Your logo" className="max-h-24 max-w-[60%] object-contain" />
+            </div>
+          ) : null}
           <dl className="divide-y divide-ink-700">
             {data.fields.map((f) => (
               <div key={f.key} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 px-4 py-3">
                 <dt className="text-[14px] text-fog">{f.label}</dt>
-                <dd className={`break-words text-[15px] ${f.value ? "text-mist" : "italic text-ember"}`}>{f.value || "Not given yet"}</dd>
+                <dd className={`flex items-center gap-2 break-words text-[15px] ${f.value ? "text-mist" : "italic text-ember"}`}>
+                  {f.colour ? <span aria-hidden className="inline-block h-5 w-5 shrink-0 rounded-full border border-ink-700" style={{ backgroundColor: f.colour }} /> : null}
+                  {f.value || "Not given yet"}
+                </dd>
               </div>
             ))}
           </dl>

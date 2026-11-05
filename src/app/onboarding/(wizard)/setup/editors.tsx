@@ -77,7 +77,8 @@ export function MenuPhotos({ restaurantId, initialCount }: { restaurantId: strin
 }
 
 // The menu Claude read, as an editable table: fix names and prices, remove or add dishes.
-export function MenuEditor({ initial, save, label = "This is right, save my menu" }: { initial: MenuCategory[]; save: (menu: MenuCategory[]) => Promise<void>; label?: string }) {
+// showCost: a "Cost to make" box per dish (settings: menu engineering; never shown to customers).
+export function MenuEditor({ initial, save, label = "This is right, save my menu", showCost = false }: { initial: MenuCategory[]; save: (menu: MenuCategory[]) => Promise<void>; label?: string; showCost?: boolean }) {
   const [menu, setMenu] = useState(initial);
   const [pending, start] = useTransition();
   const edit = (fn: (m: MenuCategory[]) => void) =>
@@ -116,6 +117,19 @@ export function MenuEditor({ initial, save, label = "This is right, save my menu
                   aria-label="Price"
                 />
               </div>
+              {showCost ? (
+                <div className="relative w-24 shrink-0">
+                  <span className="pointer-events-none absolute left-2.5 top-2.5 text-stone-500">£</span>
+                  <input
+                    value={item.cost ? String(item.cost) : ""}
+                    onChange={(e) => edit((m) => (m[ci].items[ii].cost = Number(e.target.value.replace(/[^\d.]/g, "")) || null))}
+                    inputMode="decimal"
+                    placeholder="Cost"
+                    className={`${field} w-full pl-6`}
+                    aria-label={`Cost to make ${item.name}`}
+                  />
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={() => edit((m) => m[ci].items.splice(ii, 1))}

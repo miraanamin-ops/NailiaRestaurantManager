@@ -131,6 +131,22 @@ export const TOOLS: DinaTool[] = [
     },
   }),
   tool({
+    name: "save_menu_costs",
+    status: "Saving your dish costs…",
+    description:
+      "Menu step, after allergens: save what dishes cost to make, as the owner told you (an estimate is fine; estimated false only if they said it's exact). costs: each dish as on the menu, with the cost in their words ('£4.20', 'about 3 quid', or '30%' of its price). rest_percent: if they gave one share of the price for every other dish ('about 30% for the rest'), else null. top_sellers and slow_sellers: dishes they named as selling best and least (empty if not asked or not sure). Code checks each cost and says what it couldn't use. Costs are never shown to customers.",
+    schema: z.object({
+      costs: z.array(z.object({ dish: words(120), cost: words(40), estimated: z.boolean() })).max(80),
+      rest_percent: z.number().nullable(),
+      top_sellers: z.array(words(120)).max(10),
+      slow_sellers: z.array(words(120)).max(10),
+    }),
+    async run(ctx, input) {
+      const { saveMenuCosts } = await import("./costs-step");
+      return saveMenuCosts(ctx.restaurantId, input);
+    },
+  }),
+  tool({
     name: "confirm_sales_columns",
     status: "Importing your sales…",
     description:

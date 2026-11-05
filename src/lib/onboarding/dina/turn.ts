@@ -16,6 +16,8 @@ import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
 import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
+import { DEFAULT_ALLERGEN_STATEMENT, OFFER_TYPE_HINT, SUGGESTED_PHOTOS, type BrandDraft } from "./details-content";
+import { applyBrandNotes, applyDetailNotes, prepareBrand } from "./details-step";
 import { DEFAULT_DISCOUNT_CAP, LABOUR_HINT, POS_TIPS, SALES_DETAIL_HINT } from "./ops-content";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
 import type { FilePart } from "./uploads-store";
@@ -56,13 +58,36 @@ export type TurnResult =
 // (opening_hours too: the full run of 31 Oct showed an empty hours card because she couldn't tell there were none.)
 // Steps 7 to 12 add the settings they change (what is set now, so she proposes it rather than asks).
 const KNOWN_FIELDS = ["owner_name", "name", "address", "cuisine", "phone", "website", "google_rating", "google_rating_count", "opening_hours"] as const;
+// (4 Nov: the details every agent needs: sign-off and emoji on the tone step, the
+// allergen statement on the menu step, offer types on rewards, the logo and
+// colour on customers and QR codes.)
 const STEP_FIELDS: Partial<Record<FlowStepKey, readonly string[]>> = {
+  tone: ["sign_off_name"],
+  menu: ["allergen_statement"],
   team: ["labour_target_pct"],
-  rewards: ["signup_reward", "discount_cap_percent", "recovery_offers"],
+  rewards: ["signup_reward", "discount_cap_percent", "recovery_offers", "approved_offer_types", "min_margin_pct"],
+  customers_qr: ["logo_url", "brand_color"],
   approvals_timing: ["brief_hour", "send_window_start", "send_window_end"],
 };
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
+
+// The menu's dishes for the costs question: name, price, and whether it has a cost yet.
+export function menuDishesLine(menu: { category: string; items: { name: string; price: number; cost?: number | null }[] }[] | null | undefined) {
+  const items = (menu ?? []).flatMap((c) => c.items);
+  if (!items.length) return null;
+  const shown = items.slice(0, 60).map((i) => `${i.name} £${Number(i.price).toFixed(2)}${typeof i.cost === "number" ? ` (cost £${i.cost.toFixed(2)})` : ""}`);
+  return `${shown.join("; ")}${items.length > 60 ? `; and ${items.length - 60} more` : ""}`;
+}
+
+// What she's told about "Your look" on the customers and QR codes step.
+export function lookLine(data: Record<string, unknown>, photos: number) {
+  const draft = (data.brand_draft ?? {}) as BrandDraft;
+  const library = `${photos} dish photo${photos === 1 ? "" : "s"} in their library (${SUGGESTED_PHOTOS} suggested)`;
+  if (data.brand_confirmed) return `logo and colours confirmed; ${library}`;
+  const found = draft.logo_url ? (draft.from_website ? "a logo from their website" : "the logo they sent") : null;
+  return `${found ? `${found} is ready: show editable_card brand` : "no logo found yet: ask them to send it as a photo"}; ${library}`;
+}
 
 // Team: the staff sheet the owner sent earlier in this step (whatsapp-turn.ts
 // noteForFiles keeps it on the step), in front of her every turn until the team is
@@ -76,7 +101,7 @@ async function staffSheetData(restaurantId: string, state: Awaited<ReturnType<ty
   return (await staffFileAsData(restaurantId, files).catch(() => null)) as DataBlock | null;
 }
 // Code's note says it saved something this turn (so "that's saved" can be true without her tool).
-const CODE_SAVED = /Code (saved|sent|made|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
+const CODE_SAVED = /Code (saved|sent|made|kept|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
 
 export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const supabase = getSupabase();
@@ -138,6 +163,12 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
   // (On the turn it arrives the sheet is already in input.data.)
   const sheet = step === "team" && !input.data?.length ? await staffSheetData(id, state) : null;
+  // Customers and QR codes: the logo and colour from their website, once, before she
+  // decides whether to show the "Your look" card or ask for a logo.
+  if (step === "customers_qr") {
+    await prepareBrand(id).catch((err) => console.error("Couldn't prepare the brand card", err));
+    state = (await loadFlow(id)).state;
+  }
   const asked = availableSteps();
   const near: FlowStepKey[] = step ? [step, ...(asked.includes(step) ? asked.slice(asked.indexOf(step) + 1, asked.indexOf(step) + 2) : [])] : [];
   const known = {
@@ -157,6 +188,9 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ...(near.includes("rewards") ? { discount_cap_percent: restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP } : {}),
     ...(near.includes("sales") ? { pos_tips: POS_TIPS, sales_detail: SALES_DETAIL_HINT } : {}),
     ...(near.includes("team") ? { labour_hint: LABOUR_HINT } : {}),
+    ...(near.includes("menu") ? { allergen_wording: DEFAULT_ALLERGEN_STATEMENT, menu_dishes: menuDishesLine(restaurant.menu) } : {}),
+    ...(near.includes("rewards") ? { offer_types: OFFER_TYPE_HINT } : {}),
+    ...(step === "customers_qr" ? { your_look: lookLine(stepState(state, "customers_qr").data, restaurant.photo_library?.length ?? 0) } : {}),
   };
   const content = turnText({
     restaurant: known,
@@ -203,6 +237,15 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     }
     if (reply.faq_notes && Object.values(reply.faq_notes).some(Boolean) && (await stillOpen("hours_faqs"))) {
       await applyFaqNotes(id, reply.faq_notes as Record<string, string>, input.channel).catch((err) => console.warn("Dina's FAQ notes weren't kept", err));
+    }
+    // The details every agent needs (sign-off, emoji, allergen statement, offer types):
+    // profile fields, so saved whichever step she hears them on.
+    if (reply.details_notes && Object.values(reply.details_notes).some(Boolean)) {
+      await applyDetailNotes(id, reply.details_notes).catch((err) => console.warn("Dina's details notes weren't kept", err));
+    }
+    // A colour for the "Your look" card (shown again for them to check).
+    if (reply.brand_notes?.colour && step === "customers_qr") {
+      await applyBrandNotes(id, reply.brand_notes).catch((err) => console.warn("Dina's brand notes weren't kept", err));
     }
   } catch (err) {
     // 4. Never leave the owner without an answer, or show an unchecked one.

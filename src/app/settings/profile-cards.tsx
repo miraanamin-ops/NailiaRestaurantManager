@@ -239,7 +239,7 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
                     {fields.map((f, i) => (
                       <span key={f}>
                         {i > 0 && " · "}
-                        {missing.has(f) ? "❌" : "✅"} {f === "photo_library" ? `5+ photos (${(r.photo_library ?? []).length})` : f === "emoji_allowed" ? "emoji setting" : PROFILE_FIELDS[f].label}
+                        {missing.has(f) ? "❌" : "✅"} {f === "photo_library" ? `photos (${(r.photo_library ?? []).length})` : f === "emoji_allowed" ? "emoji setting" : PROFILE_FIELDS[f].label}
                       </span>
                     ))}
                     {missing.size > 0 && " (stays in shadow until all are filled)"}

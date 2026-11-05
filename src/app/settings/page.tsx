@@ -108,6 +108,11 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
               <input name="cap" type="number" min={0} max={100} defaultValue={r.discount_cap_percent} className={`mt-1 ${input}`} />
               <span className="mt-1 block text-xs text-stone-500">A free item or £ off counts as a % of the dish it comes with (a free £3.50 drink with an £18.50 platter is 19%).</span>
             </label>
+            <label className="block">
+              <span className={label}>Least profit on a dish after an offer (%)</span>
+              <input name="min_margin" type="number" min={0} max={90} placeholder="50" defaultValue={r.min_margin_pct ?? ""} className={`mt-1 ${input}`} />
+              <span className="mt-1 block text-xs text-stone-500">50% is recommended. Offers that would take a dish (with a cost in the menu below) under this are stopped. Empty means 50%.</span>
+            </label>
             <fieldset>
               <legend className={label}>Kinds of offer you&apos;re happy to run</legend>
               <div className="mt-1 grid grid-cols-2 gap-2">
@@ -225,7 +230,9 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
             initial={menu.length ? menu : [{ category: "Menu", items: [{ name: "", price: 0, description: null }] }]}
             save={saveSettingsMenu.bind(null, restaurantId)}
             label="Save menu"
+            showCost
           />
+          <p className="mt-2 text-xs text-stone-500">Cost: roughly what each dish costs you to make (ingredients per plate). An estimate is fine. It shows which dishes make the most money, so offers push those. Never shown to customers.</p>
         </Card>
 
         {(r.menu ?? []).length > 0 && (

@@ -42,8 +42,10 @@ export type ProgressStep = { key: string; title: string; status: StepStatus };
 export type ProgressData = { steps: ProgressStep[]; position: number; total: number };
 
 // A card the owner checks and corrects ("Is this right?"): label and value rows.
-export type ConfirmationField = { key: string; label: string; value: string | null; multiline?: boolean };
-export type ConfirmationData = { title: string; fields: ConfirmationField[] };
+// colour: a colour code, drawn as a swatch next to the value.
+export type ConfirmationField = { key: string; label: string; value: string | null; multiline?: boolean; colour?: string };
+// image: a picture shown above the rows (the logo on the "Your look" card).
+export type ConfirmationData = { title: string; fields: ConfirmationField[]; image?: string | null };
 
 export type SummaryItem = { key: string; title: string; status: StepStatus; detail: string; editHref?: string };
 export type SummaryData = {

@@ -105,8 +105,20 @@ describe("finishing setup", () => {
     expect(r().last_brief_on).toBe(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()));
     expect(db.tables.onboarding.find((o) => o.restaurant_id === R)?.completed_at).toEqual(expect.any(String));
     expect(r().active).toBe(true);
+    // Every agent set live (each still waits for its own checklist), and logged (4 Nov).
+    expect(r().agent_modes).toEqual({ reputation: "live", visibility: "live", insights: "live", growth: "live", gm: "live", checker: "live" });
+    expect(db.tables.audit_log.some((e) => (e.data as { field?: string } | null)?.field === "agent_modes")).toBe(true);
     const { finishIfDone } = await import("@/lib/onboarding/dina/finish");
     expect(await finishIfDone(R)).toBeNull();
+  });
+
+  test("finishing keeps any agent mode the builder already set", async () => {
+    const { agentsLiveAtFinish } = await import("@/lib/onboarding/dina/finish");
+    expect(agentsLiveAtFinish({ growth: "off", checker: "shadow" })).toEqual({
+      modes: { growth: "off", checker: "shadow", reputation: "live", visibility: "live", insights: "live", gm: "live" },
+      switched: ["reputation", "visibility", "insights", "gm"],
+    });
+    expect(agentsLiveAtFinish(null).switched).toHaveLength(6);
   });
 
   test("a restaurant with no access (no exemption, pilot code or subscription) finishes but stays off", async () => {

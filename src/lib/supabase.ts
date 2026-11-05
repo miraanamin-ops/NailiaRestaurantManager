@@ -36,6 +36,8 @@ export type Restaurant = {
   brand_voice: string | null;
   // Safety-rule settings (added in step 4)
   discount_cap_percent: number;
+  // Menu engineering: the least profit a dish may make after an offer (%; null = the recommended 50). Migration 059.
+  min_margin_pct?: number | null;
   send_window_start: string; // "09:00:00"
   send_window_end: string; // "21:00:00"
   paused: boolean;

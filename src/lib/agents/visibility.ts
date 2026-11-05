@@ -30,7 +30,7 @@ function ok<T>(res: { data: T; error: { message: string } | null }): T {
 }
 
 // Live only when AGENTS_LIVE_ALLOWED lets it (lib/switches.ts) and the go-live
-// checklist passes (logo, colours, hours, emoji setting, 5+ photos): Visibility's
+// checklist passes (logo, colours, hours, emoji setting; no photos needed): Visibility's
 // new messages (staff tips, questions, hours updates) reach real people and Google.
 export async function visibilityMode(restaurant: Restaurant) {
   const mode = agentMode(restaurant, "visibility");
