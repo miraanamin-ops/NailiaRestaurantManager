@@ -227,7 +227,25 @@ const simDay: JobHandler = {
   },
 };
 
+// Hourly (and straight after connecting): new sales from the restaurant's till
+// (lib/tills/sync.ts). While it's still reading the history (90 days, a month
+// a run), the next part is queued straight away.
+const tillSync: JobHandler = {
+  run: async (job) => {
+    const r = await restaurantFor(job);
+    if (!r) return { skipped: "no restaurant" };
+    const { syncTill } = await import("@/lib/tills/sync");
+    const out = await syncTill(r, new Date());
+    if (out.status === "synced" && !out.caughtUp) {
+      const { enqueue } = await import("./store");
+      await enqueue({ type: "till_sync", restaurantId: r.id, key: `till_sync:${r.id}:${out.through}` });
+    }
+    return out;
+  },
+};
+
 export const HANDLERS: Record<string, JobHandler> = {
+  till_sync: tillSync,
   owner_message: ownerMessage,
   rota_week: rotaWeekJob,
   morning,

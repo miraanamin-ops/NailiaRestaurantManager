@@ -46,6 +46,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - *EMAIL PREVIEWS*: see the automatic emails (confirm, welcome, "how was your visit?")
 - *EXPORT CUSTOMERS*: a download link for your customer list
 - *SPREADSHEETS*: your menu costs, team and daily takings sheets to fill in (send them back here), and an example till export
+- *TILL*: is your till (Square, Epos Now, Lightspeed, Toast) connected, and when it last synced · *SYNC TILL*: read new sales from it now
 - Send the day's sales and I'll forecast your days and find you more profit. Best is your till's *sales-by-item file* (CSV or Excel, or upload it on the sales page); else sales by the hour; else a *photo of your till report* (Z-report), or type the total, e.g. *we took £2,340, 180 orders*
 - *SALES*: last 7 days' sales and the sales page link
 - Ask *how busy will Saturday be?* or *why is Friday quiet?*: the forecast, with its reasons (once your forecast is ready)
@@ -201,6 +202,11 @@ export async function runCommand(command: Command, turn: Turn) {
     case "spreadsheets": {
       const { spreadsheetsText } = await import("@/lib/templates/message");
       return send(spreadsheetsText(r.id));
+    }
+    case "till":
+    case "till_sync": {
+      const { tillCommandText } = await import("@/lib/tills/message");
+      return send(await tillCommandText(r, command.name === "till_sync"));
     }
     case "email_previews":
       return emailPreviewsCommand(turn);

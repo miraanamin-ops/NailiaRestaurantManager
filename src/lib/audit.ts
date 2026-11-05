@@ -46,6 +46,7 @@ export type AuditAction =
   | "google" // Google connected, location linked, imported, disconnected, a login needing reconnecting, or an UNDO Google could not do
   | "rota_staff" // someone added to, changed on or removed from the rota team (WhatsApp or /staff)
   | "rota_settings" // the rota rules or settings changed (/staff)
+  | "till" // a till (Square, Epos Now, Lightspeed, Toast) connected, linked or disconnected (lib/tills)
   | "billing"; // a Stripe event (trial, subscription, payment), or billing switching the restaurant on or off
 
 export type AuditEntry = {

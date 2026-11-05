@@ -94,7 +94,8 @@ export function briefCheckTime(now: Date) {
 export type PlannedJob = { type: string; key: string; priority: number; concurrencyKey?: string; payload?: Record<string, unknown>; runAt?: Date };
 
 export function plannedJobs(
-  r: { id: string; hasOwnerChannel: boolean },
+  // hasTill: a till (Square, Epos Now, Lightspeed, Toast) is connected (lib/tills).
+  r: { id: string; hasOwnerChannel: boolean; hasTill?: boolean },
   job: "hourly" | "daily",
   now: Date,
   morningGateResult: string | null,
@@ -110,6 +111,8 @@ export function plannedJobs(
     }
     add("feedback", keys.hourly("feedback", r.id, now));
     add("release_sends", keys.hourly("release_sends", r.id, now));
+    // New sales from the connected till (quiet: nothing is sent to anyone).
+    if (r.hasTill) add("till_sync", keys.hourly("till_sync", r.id, now));
   }
   // From 9am, once a day: the morning job's first step (the rest follow in order).
   if (morningGateResult === null) {

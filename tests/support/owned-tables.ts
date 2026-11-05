@@ -17,4 +17,6 @@ export const OWNED_TABLES = [
   "onboarding_sessions", "onboarding_steps", "onboarding_messages", "setup_gaps", "signup_sessions", "onboarding_ai_usage",
   // The business review after onboarding (supabase/058)
   "business_reviews", "business_review_parts", "review_tags", "rival_places", "time_saved_log",
+  // Till connections (supabase/060)
+  "till_connections",
 ];

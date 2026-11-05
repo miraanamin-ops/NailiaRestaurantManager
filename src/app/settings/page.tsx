@@ -16,6 +16,8 @@ import { safeTemplateUrls, TEMPLATE_KINDS, TEMPLATE_LABELS, TEMPLATE_LINK_DAYS }
 import { BillingBanner, BillingCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 import { OutsideDataCard, TeamsCard } from "./outside-cards";
+import { PROVIDERS } from "@/lib/tills/providers";
+import { tillFor } from "@/lib/tills/store";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
 
@@ -46,6 +48,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
     .select("id", { count: "exact", head: true })
     .eq("restaurant_id", restaurantId)
     .is("deleted_at", null);
+  // (Before supabase/060 has run there's no till table: the card just says "not connected".)
+  const till = await tillFor(restaurantId).catch(() => null);
   const label = "text-sm font-medium";
 
   return (
@@ -73,6 +77,13 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           )}
           <Link href={`/settings/google?r=${restaurantId}`} className="text-sm font-medium text-emerald-700 underline">
             {r.google_location_id ? "Manage Google" : "Connect Google"}
+          </Link>
+        </Card>
+        <Card>
+          <h2 className="text-lg font-bold">Till</h2>
+          <p className="text-stone-700">{till ? `Connected: ${PROVIDERS[till.provider].name}${till.location_name ? ` (${till.location_name})` : ""}. Sales come in every hour.` : "Not connected yet. Connect Square, Epos Now, Lightspeed or Toast and your sales come in by themselves, every hour."}</p>
+          <Link href={`/settings/till?r=${restaurantId}`} className="text-sm font-medium text-emerald-700 underline">
+            {till ? "Manage till" : "Connect your till"}
           </Link>
         </Card>
         <Card>

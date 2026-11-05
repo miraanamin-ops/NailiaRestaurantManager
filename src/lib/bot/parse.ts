@@ -110,6 +110,7 @@ export type Command =
   | { name: "my_email"; email: string }
   | { name: "reset_onboarding" }
   | { name: "export_customers" | "email_previews" | "run_feedback" | "run_business_review" | "spreadsheets" }
+  | { name: "till" | "till_sync" }
   | { name: "add_staff" | "remove_staff"; number: string }
   | { name: "staff" | "sales" | "run_weather" }
   | { name: "test_forecast"; on: boolean }
@@ -173,6 +174,9 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (t === "EMAIL PREVIEWS" || t === "EMAIL PREVIEW" || t === "PREVIEW EMAILS") return { name: "email_previews" };
   if (t === "RUN FEEDBACK") return { name: "run_feedback" };
   if (/^(SPREADSHEETS?|SHEETS|TEMPLATES?)$/.test(t)) return { name: "spreadsheets" };
+  // TILL: is the till connected, and when did it last sync. RUN TILL SYNC / SYNC TILL: read new sales now.
+  if (t === "TILL" || t === "MY TILL" || t === "EPOS") return { name: "till" };
+  if (t === "RUN TILL SYNC" || t === "SYNC TILL" || t === "TILL SYNC") return { name: "till_sync" };
   if (t === "RUN BUSINESS REVIEW") return { name: "run_business_review" };
   // Staff numbers: "ADD STAFF +447700900123", "REMOVE STAFF 07700 900123", "STAFF"
   const staff = t.match(/^(ADD|REMOVE|DELETE) STAFF(?: NUMBER)?:? ([+\d][\d ()-]{6,})$/);
