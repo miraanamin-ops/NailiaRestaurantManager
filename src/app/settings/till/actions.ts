@@ -6,6 +6,7 @@ import { queueTillSync } from "@/lib/tills/actions";
 import { eposNowCheck, lightspeedLocations, squareLocations, toastRestaurants } from "@/lib/tills/clients";
 import { isProvider, liveReady, PROVIDERS } from "@/lib/tills/providers";
 import { credentialsOf, disconnectTill, saveTill, tillFor, updateTill } from "@/lib/tills/store";
+import { tillPlaceName } from "@/lib/tills/rules";
 import { dummyTillAllowed } from "@/lib/tills/sync";
 import { TillAuthError } from "@/lib/tills/types";
 
@@ -52,7 +53,7 @@ export async function chooseTillLocation(form: FormData) {
   const list = await (c.provider === "square" ? squareLocations(creds.access_token) : lightspeedLocations(creds.access_token)).catch(() => []);
   const chosen = list.find((l) => l.id === String(form.get("location") ?? ""));
   if (!chosen) err(rid, "That location isn't on this till account.");
-  await updateTill(rid, c!.id, { external_location: chosen!.id, location_name: [c!.location_name, chosen!.name].filter(Boolean).join(", ") });
+  await updateTill(rid, c!.id, { external_location: chosen!.id, location_name: tillPlaceName(c!.location_name, chosen!.name) });
   await queueTillSync(rid, c!.id);
   back(rid, "saved=connected");
 }

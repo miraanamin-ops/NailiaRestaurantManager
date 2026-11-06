@@ -77,6 +77,14 @@ export function coversByDay(orders: TillOrder[], window: Pick<SyncWindow, "from"
   return out;
 }
 
+// The name shown for a connected till: e.g. "Ember & Spice, Whitechapel". A part
+// that repeats (Square names a one-shop account after its only location) shows once.
+export function tillPlaceName(...parts: (string | null | undefined)[]) {
+  const out: string[] = [];
+  for (const p of parts.map((x) => x?.trim()).filter((x): x is string => !!x)) if (!out.some((o) => o.toLowerCase() === p.toLowerCase())) out.push(p);
+  return out.join(", ") || null;
+}
+
 // What the settings page says about the last sync.
 export function syncStatusLine(c: { status: string; last_synced_at: string | null; last_error: string | null; synced_through: string | null }, now: Date) {
   if (c.status === "needs_reconnect") return "⚠️ The till stopped accepting our login. Please connect it again.";

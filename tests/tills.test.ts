@@ -4,7 +4,7 @@ import { plannedJobs } from "@/lib/queue/rules";
 import { dummyOrders } from "@/lib/tills/dummy";
 import { mapEposNowTransactions, mapLightspeedSales, mapSquareOrders, mapToastOrders, ukLocalTime } from "@/lib/tills/map";
 import { lightspeedBase, liveReady, missingSettings, squareBase } from "@/lib/tills/providers";
-import { BACKFILL_DAYS, coversByDay, MAX_DAYS_PER_RUN, syncStatusLine, syncWindow, tillRows } from "@/lib/tills/rules";
+import { BACKFILL_DAYS, coversByDay, MAX_DAYS_PER_RUN, syncStatusLine, syncWindow, tillPlaceName, tillRows } from "@/lib/tills/rules";
 import { londonYmd } from "@/lib/clock";
 
 // Till connections (lib/tills): each provider's answer read into orders, the
@@ -225,5 +225,14 @@ describe("commands and the hourly job", () => {
     expect(types(true)).toContain("till_sync");
     expect(types(false)).not.toContain("till_sync");
     expect(plannedJobs({ id: "r1", hasOwnerChannel: true, hasTill: true }, "daily", now, "done").map((p) => p.type)).not.toContain("till_sync");
+  });
+});
+
+describe("till place names", () => {
+  it("a repeated part shows once (Square names a one-shop account after its location)", () => {
+    expect(tillPlaceName("Default Test Account", "Default Test Account")).toBe("Default Test Account");
+    expect(tillPlaceName("Ember & Spice", "default test account", "Ember & Spice")).toBe("Ember & Spice, default test account");
+    expect(tillPlaceName("Ember & Spice", "Whitechapel")).toBe("Ember & Spice, Whitechapel");
+    expect(tillPlaceName(null, " ", undefined)).toBeNull();
   });
 });

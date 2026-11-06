@@ -2,6 +2,7 @@ import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { pickRestaurantId, requireOwner } from "@/lib/auth";
 import { getRestaurant } from "@/lib/onboarding/store";
 import { lightspeedLocations, squareLocations, toastRestaurants } from "@/lib/tills/clients";
@@ -35,6 +36,7 @@ export default function TillPage({ searchParams }: PageProps<"/settings/till">) 
 }
 
 async function TillSettings({ searchParams }: Pick<PageProps<"/settings/till">, "searchParams">) {
+  await connection(); // the page shows "last synced N minutes ago": always rendered fresh
   const q = await searchParams;
   const one = (k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]);
   const owner = await requireOwner(`/settings/till${one("r") ? `?r=${one("r")}` : ""}`);

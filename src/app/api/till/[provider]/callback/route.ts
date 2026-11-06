@@ -3,6 +3,7 @@ import { currentOwner } from "@/lib/auth";
 import { readState } from "@/lib/google/oauth";
 import { lightspeedExchange, lightspeedLocations, squareExchange, squareLocations, squareMerchantName } from "@/lib/tills/clients";
 import { queueTillSync } from "@/lib/tills/actions";
+import { tillPlaceName } from "@/lib/tills/rules";
 import { saveTill } from "@/lib/tills/store";
 
 // Square or Lightspeed sends the owner back here after they sign in (the
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/till/[provid
       credentials: { kind: "oauth", access_token: tokens.access_token, refresh_token: tokens.refresh_token, expires_at: tokens.expires_at },
       account,
       location: only?.id ?? null,
-      locationName: only ? [merchant, only.name].filter(Boolean).join(", ") : merchant,
+      locationName: only ? tillPlaceName(merchant, only.name) : merchant,
       connectedBy: owner.email,
       actor: owner.isBuilder ? "builder" : "owner",
     });
