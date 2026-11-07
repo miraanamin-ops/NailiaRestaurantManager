@@ -1,5 +1,35 @@
 # Pilot Zero: the run sheet
 
+## Rerun from a fresh start (November 2026)
+
+The first run (from 2 Nov) is being replaced by a fresh one, to try everything added
+since: Dina's newer questions (sign-off name, emoji, allergen statement, kinds of offer,
+minimum profit, logo and colours, dish costs), the owner spreadsheets, the business
+review, the monthly report and the new dashboard. What's different from the table below:
+
+- **Day 0 is no longer merge day.** Everything is live. Instead:
+  1. Make sure there's Claude credit, and that the test setup run has passed (Claude does it).
+  2. Close the old restaurant: **/onboarding/admin > Close an account** > "Maison Noor" >
+     confirm > tick **skip the cooling-off**. When the closing email says to remove our
+     manager account from Google, **don't**: dina@dinerai.co.uk stays a Manager on
+     Maison Noor's profile and is reused.
+- **Day 1 sign-up:** app.dinerai.co.uk/start?invite=**PILOT-ZERO-RERUN** with
+  +447463775130 and miraan.amin+pilot0@gmail.com (allows 2 sign-ups).
+  - **Straight after signing up**, in your builder browser: **/onboarding/admin >
+    Pilot Zero > Mark** the new restaurant and check both switches say **Dry run**.
+    Do this before the Google step, so nothing can ever write to the real profile.
+  - **Menu step:** also try the menu costs sheet (Dina offers it) or give costs as "30%".
+  - **Sales step:** send `square-item-sales-6-weeks.csv` too, after the other two
+    files, for the dish insights.
+  - **Rewards and look steps:** new questions; answer them as Maison Noor would.
+  - **Google step:** we're already a Manager, so there is no new invitation to accept.
+    Tap "Done, I've invited you" (with no new invitation to accept, you may get a
+    builder alert; that's expected). Then link the location yourself on **/settings/google** (builder login).
+- **After setup:** the business review starts on its own (up to 10 minutes). Go
+  through it on WhatsApp; with dry run on, nothing changes on Google.
+- **Days 2 to 7** are as in the table. Also look at the new dashboard on your phone.
+
+
 One week, one row per day. You go through DinerAI on live as its first real customer.
 Background and controls: `docs/pilot-zero.md`. Admin pages (builder login):
 **app.dinerai.co.uk/onboarding/admin** > **Pilot Zero** (your restaurant, Google dry run,
