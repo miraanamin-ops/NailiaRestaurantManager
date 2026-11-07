@@ -51,8 +51,7 @@ export function CtaButton({ children, className = "" }: { children: React.ReactN
   );
 }
 
-// Company name, number and registered office. Placeholders until the company
-// details are filled in (src/content/site.ts, footer).
+// Company name, number and registered office (src/content/site.ts, footer).
 export function CompanyDetails({ className = "" }: { className?: string }) {
   const f = site.footer;
   return (

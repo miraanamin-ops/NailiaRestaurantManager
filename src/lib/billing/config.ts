@@ -22,9 +22,9 @@ export function trialDays() {
 
 // The terms an owner ticks at sign-up (the "Last updated" date on /terms), and the
 // privacy notice and data processing agreement ticked with them (/privacy, /dpa).
-export const TERMS_VERSION = "10 October 2026";
-export const PRIVACY_VERSION = "10 October 2026";
-export const DPA_VERSION = "28 October 2026";
+export const TERMS_VERSION = "7 November 2026";
+export const PRIVACY_VERSION = "7 November 2026";
+export const DPA_VERSION = "7 November 2026";
 
 // Does onboarding wait for payment? Off (the default) while the whole flow is
 // being tested: every sign-up needs an invite code, Stripe is never opened, and

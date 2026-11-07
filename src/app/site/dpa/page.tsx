@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DPA_VERSION } from "@/lib/billing/config";
-import { COMPANY, CONTACT_EMAIL, SiteFrame } from "../frame";
+import { COMPANY, CONTACT_EMAIL, LEGAL_ENTITY, SiteFrame } from "../frame";
 
 export const metadata: Metadata = { title: "Data processing agreement · DinerAI" };
 
@@ -18,7 +18,7 @@ export default function SiteDpa() {
         <p className="mt-2 text-sm text-stone-500">Version {DPA_VERSION} (draft)</p>
 
         <p className={p}>
-          This agreement is between you (the restaurant, the &ldquo;controller&rdquo;) and {COMPANY} (the &ldquo;processor&rdquo;). It covers the
+          This agreement is between you (the restaurant, the &ldquo;controller&rdquo;) and {LEGAL_ENTITY}, which provides {COMPANY} (the &ldquo;processor&rdquo;). It covers the
           personal information about your customers and staff that {COMPANY} handles for you, and forms part of our Terms of use.
         </p>
 

@@ -299,10 +299,9 @@ export const site = {
   },
 
   footer: {
-    // PLACEHOLDERS: replace with the real company details before launch.
-    company: "[COMPANY NAME LTD]",
-    companyNumber: "Company number [00000000]",
-    office: "Registered office: [ADDRESS]",
+    company: "DinerAI Limited",
+    companyNumber: "Registered in England and Wales, company number 17558608",
+    office: "Registered office: 27 Lea Valley House, Stoneybridge Drive, EN9 3LY",
     privacy: "Privacy",
     terms: "Terms",
     contact: "Contact",

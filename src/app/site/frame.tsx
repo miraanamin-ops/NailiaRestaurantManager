@@ -10,6 +10,8 @@ import { Wordmark } from "./_components/wordmark";
 
 export const CONTACT_EMAIL = process.env.CONTACT_EMAIL || "hello@dinerai.co.uk";
 export const COMPANY = "DinerAI";
+// The legal company behind DinerAI (also in the footer, src/content/site.ts).
+export const LEGAL_ENTITY = "DinerAI Limited, a company registered in England and Wales (company number 17558608), registered office 27 Lea Valley House, Stoneybridge Drive, EN9 3LY";
 export const SITE_URL = "https://dinerai.co.uk";
 
 // "/", "/privacy" and "/terms" work on dinerai.co.uk; "/privacy" and "/terms" also

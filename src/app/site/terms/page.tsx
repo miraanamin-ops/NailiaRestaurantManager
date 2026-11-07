@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { COMPANY, CONTACT_EMAIL, SiteFrame } from "../frame";
+import { COMPANY, CONTACT_EMAIL, LEGAL_ENTITY, SiteFrame } from "../frame";
 
 export const metadata: Metadata = { title: "Terms · DinerAI" };
 
-const UPDATED = "10 October 2026";
+const UPDATED = "7 November 2026";
 
 // Plain-English terms of use for restaurant owners.
 export default function SiteTerms() {
@@ -18,7 +18,7 @@ export default function SiteTerms() {
         <h2 className={h2}>The service</h2>
         <p className={p}>
           {COMPANY} drafts marketing for your restaurant (review replies, Google posts and customer emails) and sends you each draft on WhatsApp. Nothing
-          is sent until you approve it. {COMPANY} is in early access, so features may change and we may occasionally need to pause the service.
+          is sent until you approve it. {COMPANY} is provided by {LEGAL_ENTITY} (&ldquo;we&rdquo;, &ldquo;us&rdquo;). {COMPANY} is in early access, so features may change and we may occasionally need to pause the service.
         </p>
 
         <h2 className={h2}>Your responsibilities</h2>

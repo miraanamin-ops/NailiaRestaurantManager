@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { COMPANY, CONTACT_EMAIL, SiteFrame } from "../frame";
+import { COMPANY, CONTACT_EMAIL, LEGAL_ENTITY, SiteFrame } from "../frame";
 
 export const metadata: Metadata = { title: "Privacy notice · DinerAI" };
 
-const UPDATED = "10 October 2026";
+const UPDATED = "7 November 2026";
 
 // DinerAI's own privacy notice (for restaurant owners, and how we handle their
 // customers' details on their behalf). Each restaurant also has its own short
@@ -19,7 +19,7 @@ export default function SitePrivacy() {
 
         <h2 className={h2}>Who we are</h2>
         <p className={p}>
-          {COMPANY} provides an AI marketing assistant for restaurants. If you have a question about your information, email{" "}
+          {COMPANY} provides an AI marketing assistant for restaurants. {COMPANY} is run by {LEGAL_ENTITY}. If you have a question about your information, email{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="underline">
             {CONTACT_EMAIL}
           </a>
