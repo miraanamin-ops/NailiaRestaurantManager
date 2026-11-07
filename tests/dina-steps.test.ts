@@ -274,14 +274,14 @@ describe("the Google step, whole turns", () => {
     await turn("No we don't have one");
     expect(step("google")).toMatchObject({ status: "skipped", data: { answers: { has_profile: "no" } } });
     expect(db.tables.setup_gaps).toEqual([expect.objectContaining({ step_key: "google" })]);
-    expect(db.tables.onboarding_sessions[0].current_step).toBe("tone");
+    expect(db.tables.onboarding_sessions[0].current_step).toBe("look");
   });
 
   test("not an owner on it: waiting on whoever is (Dina moves on); a device answer records when the steps were shown", async () => {
     callDina.mockResolvedValueOnce(answer([{ text: "Only owners can add people. Here's a message to forward.", component: { type: "google_forward" } }], { google_notes: { has_profile: "yes", is_owner: "no" } }));
     await turn("I'm not the owner on it");
     expect(step("google")).toMatchObject({ status: "in_progress", waiting_on: "profile_owner" });
-    expect(db.tables.onboarding_sessions[0].current_step).toBe("tone");
+    expect(db.tables.onboarding_sessions[0].current_step).toBe("look");
 
     db.tables.onboarding_steps = db.tables.onboarding_steps.filter((s) => s.step_key !== "google");
     db.tables.onboarding_sessions[0].current_step = "google";
@@ -386,7 +386,10 @@ describe("the tone step, whole turns", () => {
     const r = db.tables.restaurants[0];
     expect(r.profile_examples).toMatchObject({ review_replies: { positive: { style: "Warm and personal", own: false }, negative: { style: "Short and simple", reply: expect.stringMatching(/^Sorry James, that wait/) } } });
     expect(r.brand_voice).toMatch(/^Warm and personal:/);
-    expect(step("tone")?.status).toBe("done");
+    // Both voices saved: the step's own part is done, but it stays open for its
+    // other questions (sign-off, emoji) and the chapter's recap (7 Nov 2026).
+    expect(step("tone")?.data?._outcome).toBe("done");
+    expect(step("tone")?.status).toBe("in_progress");
     // Changing their mind later on the same (still open) card: saved over, and Dina is told.
     expect(await handleAnswer({ restaurantId: R, messageId: praise, choiceId: "short", channel: "web" })).toMatch(/^The owner changed their mind: code saved the good review voice as Short and simple \(it was Warm and personal\)/);
     expect(r.profile_examples).toMatchObject({ review_replies: { positive: { style: "Short and simple" } } });
@@ -457,7 +460,7 @@ describe("notes only count on their own open step", () => {
     db.tables.onboarding_sessions[0].current_step = "tone";
     callDina.mockResolvedValueOnce(answer([{ text: "Next, your tone.", component: { type: "tone_choices", voice: "praise" } }], { google_notes: { device: "laptop" } }));
     await turn("ok");
-    expect(db.tables.onboarding_sessions[0].current_step).toBe("tone");
+    expect(db.tables.onboarding_sessions[0].current_step).toBe("look");
     expect(step("google")?.data).not.toHaveProperty("answers");
   });
 
@@ -470,7 +473,9 @@ describe("notes only count on their own open step", () => {
       return answer([{ text: "Saved. Next, Google." }], { hello_notes: { cuisine: "Halal grill" } });
     });
     await turn("Looks right");
-    expect(step("hello")?.status).toBe("done");
-    expect(db.tables.onboarding_sessions[0].current_step).toBe("google");
+    // Saved and not reopened by the notes; the chapter's recap comes next (code's card).
+    expect(step("hello")?.data?._outcome).toBe("done");
+    expect(db.tables.onboarding_sessions[0].current_step).toBe("hello");
+    expect(db.tables.onboarding_messages.at(-1)).toMatchObject({ role: "dina", parts: [{ type: "recap", chapter: "restaurant" }] });
   });
 });

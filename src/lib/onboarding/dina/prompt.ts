@@ -56,6 +56,8 @@ export function turnText(input: {
   ownerText: string | null;
   data: DataBlock[];
   note?: string | null;
+  // What setup asks next, decided by code (guide/questions.ts).
+  guide?: string | null;
 }) {
   const p = progress(input.state);
   const steps = availableSteps().map((k) => {
@@ -85,5 +87,6 @@ export function turnText(input: {
         : `# Now\nThe owner wrote:\n<owner_message>\n${neutralise(input.ownerText ?? "")}\n</owner_message>`,
     // What code did alongside (e.g. linked their WhatsApp, saved the files they sent).
     ...(input.note && input.event !== "action" ? [`# Also\n${input.note}`] : []),
+    ...(input.guide ? [`# What happens next\n${input.guide}`] : []),
   ].join("\n\n");
 }

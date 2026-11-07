@@ -17,9 +17,12 @@ import { helloPlacesData } from "./hello-step";
 import { googleConnectOn } from "./setup-config";
 import { prepareToneOptions } from "./tone-step";
 import { DEFAULT_ALLERGEN_STATEMENT, OFFER_TYPE_HINT, SUGGESTED_PHOTOS, type BrandDraft } from "./details-content";
-import { applyBrandNotes, applyDetailNotes, prepareBrand } from "./details-step";
+import { applyBrandNotes, applyDetailNotes } from "./details-step";
 import { DEFAULT_DISCOUNT_CAP, LABOUR_HINT, POS_TIPS, SALES_DETAIL_HINT } from "./ops-content";
 import { OFFERED_TOOLS, runTool, TOOLS } from "./tools";
+import { factsFor } from "../sessions";
+import { nextAction, type NextAction } from "../guide/questions";
+import { alreadyAsking, codeAsksNext, guideNext } from "../guide/next";
 import type { FilePart } from "./uploads-store";
 
 // One turn of the setup conversation, whichever channel it came from (the web
@@ -45,6 +48,8 @@ export type TurnInput = {
   ownerParts?: unknown[];
   // A short line while a tool runs ("Saving your basics…"), for the web chat to stream.
   onStatus?: (text: string) => void;
+  // Set on the follow-up turn code starts itself (guide), so it never starts another.
+  followUp?: boolean;
 };
 
 export type SavedMessage = { id: string; text: string; component: DinaReply["messages"][number]["component"] };
@@ -121,6 +126,8 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
       body: input.text ?? "",
       parts: input.ownerParts ?? [],
       external_id: input.externalId ?? null,
+      // The app's clock, like Dina's messages after it, so the order always holds.
+      created_at: new Date().toISOString(),
     });
     if (error?.code === "23505") return { duplicate: true };
     if (error) throw new Error(`Couldn't save the owner's message: ${error.message}`);
@@ -163,12 +170,9 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
   // (On the turn it arrives the sheet is already in input.data.)
   const sheet = step === "team" && !input.data?.length ? await staffSheetData(id, state) : null;
-  // Customers and QR codes: the logo and colour from their website, once, before she
-  // decides whether to show the "Your look" card or ask for a logo.
-  if (step === "customers_qr") {
-    await prepareBrand(id).catch((err) => console.error("Couldn't prepare the brand card", err));
-    state = (await loadFlow(id)).state;
-  }
+  // What setup asks next (code decides: guide/questions.ts). If it's one of code's
+  // own cards, she only answers the owner in a line: code asks right after her.
+  const before = nextAction(await factsFor(id, state));
   const asked = availableSteps();
   const near: FlowStepKey[] = step ? [step, ...(asked.includes(step) ? asked.slice(asked.indexOf(step) + 1, asked.indexOf(step) + 2) : [])] : [];
   const known = {
@@ -190,7 +194,6 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ...(near.includes("team") ? { labour_hint: LABOUR_HINT } : {}),
     ...(near.includes("menu") ? { allergen_wording: DEFAULT_ALLERGEN_STATEMENT, menu_dishes: menuDishesLine(restaurant.menu) } : {}),
     ...(near.includes("rewards") ? { offer_types: OFFER_TYPE_HINT } : {}),
-    ...(step === "customers_qr" ? { your_look: lookLine(stepState(state, "customers_qr").data, restaurant.photo_library?.length ?? 0) } : {}),
   };
   const content = turnText({
     restaurant: known,
@@ -202,6 +205,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     ownerText: input.text ?? null,
     data: [...(input.data ?? []), ...(places ? [places] : []), ...(sheet ? [sheet] : [])],
     note: input.note,
+    guide: guideLine(before),
   });
 
   // Step 3's choices, prepared alongside her answer (the first time only: the cards need them, she doesn't).
@@ -211,7 +215,15 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   let fallback = false;
   let toolCalls: ToolCall[] = [];
   try {
-    const answer = await callDina({ content, step, ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus }, tools: OFFERED_TOOLS, codeActed: CODE_SAVED.test(input.note ?? "") });
+    const answer = await callDina({
+      content,
+      step,
+      ctx: { restaurantId: id, channel: input.channel, onStatus: input.onStatus },
+      tools: OFFERED_TOOLS,
+      codeActed: CODE_SAVED.test(input.note ?? ""),
+      // Code asks next (before her turn, or once her tool finished a step): she mustn't ask too.
+      codeAsksNext: async () => codeAsksNext(nextAction(await factsFor(id, (await loadFlow(id)).state))),
+    });
     reply = answer.reply;
     calls.push(...answer.calls);
     toolCalls = answer.toolCalls;
@@ -244,7 +256,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
       await applyDetailNotes(id, reply.details_notes).catch((err) => console.warn("Dina's details notes weren't kept", err));
     }
     // A colour for the "Your look" card (shown again for them to check).
-    if (reply.brand_notes?.colour && step === "customers_qr") {
+    if (reply.brand_notes?.colour && step === "look") {
       await applyBrandNotes(id, reply.brand_notes).catch((err) => console.warn("Dina's brand notes weren't kept", err));
     }
   } catch (err) {
@@ -265,10 +277,54 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     await prepareToneOptions(id).catch((err) => console.error("Couldn't prepare the tone choices", err));
   }
 
-  // 5. Her messages (and, at the very end, the summary and the WhatsApp link), and what this turn cost.
-  const { saved, stepNow } = await saveDinaMessages(id, input.channel, [...reply.messages, ...(await endOfSetup(id, reply.messages, input.channel))]);
-  const costUsd = await logUsage(id, session.started_at, step, calls);
-  return { duplicate: false, reply, messages: saved, step: stepNow, costUsd, fallback, toolCalls };
+  // 5. Her messages, then what code asks next (guide), (and, at the very end, the
+  // summary and the WhatsApp link), and what this turn cost.
+  const follow = await guideFollowUp(id, before, input.event === "start" || input.event === "resume" ? "no owner message" : "owner spoke");
+  const shown = [...reply.messages, ...follow.messages];
+  const { saved, stepNow } = await saveDinaMessages(id, input.channel, [...shown, ...(follow.dinaNote ? [] : await endOfSetup(id, shown, input.channel))]);
+  let costUsd = await logUsage(id, session.started_at, step, calls);
+  let messages = saved;
+  let last = stepNow;
+  // Her step is done and the next one is hers too (a new chapter): she starts it in a turn of its own.
+  if (follow.dinaNote && !input.followUp) {
+    const more = await dinaTurn({ restaurantId: id, channel: input.channel, event: "action", note: follow.dinaNote, onStatus: input.onStatus, followUp: true });
+    if (!more.duplicate) {
+      messages = [...saved, ...more.messages];
+      costUsd += more.costUsd;
+      last = more.step;
+    }
+  }
+  return { duplicate: false, reply, messages, step: last, costUsd, fallback, toolCalls };
+}
+
+// What she's told about what comes next (prompt.ts puts it in her turn).
+function guideLine(action: NextAction) {
+  if (action.kind === "ask" || action.kind === "recap")
+    return "Right after your reply, code shows the owner the next question itself (a card with its own buttons). So don't ask anything and don't add a component: answer what the owner said, or say what was saved, in one short line.";
+  if (action.kind === "dina" && action.question?.brief) return `What to ask now: ${action.question.brief}. Stay on this; when it's done, code moves setup on (never start the next step yourself).`;
+  return null;
+}
+
+// After a turn: code's next question (or recap, or a new chapter's opening line),
+// unless it's already on screen; or, when the next thing is Dina's on another
+// step, what to tell her for the turn that starts it.
+// before: what setup expected when the turn started; Dina only gets a turn of her
+// own when what's hers to ask moved on during this one (a new step).
+async function guideFollowUp(id: string, before: NextAction | null, spoke: "owner spoke" | "no owner message") {
+  const g = await guideNext(id);
+  if (g.action.kind === "end") return { messages: [] as DinaReply["messages"], dinaNote: null as string | null };
+  if (codeAsksNext(g.action)) {
+    const { data } = await getSupabase().from("onboarding_messages").select("role, parts").eq("restaurant_id", id).order("created_at", { ascending: false }).limit(4);
+    const rows = (data ?? []) as { role: string; parts: unknown[] | null }[];
+    const lastDina = rows.find((r) => r.role === "dina");
+    const ownerIndex = rows.findIndex((r) => r.role === "owner");
+    const ownerSince = spoke === "owner spoke" || (ownerIndex !== -1 && ownerIndex < rows.findIndex((r) => r.role === "dina"));
+    if (alreadyAsking(lastDina?.parts, g.action, ownerSince)) return { messages: [], dinaNote: null };
+    return { messages: g.messages, dinaNote: null };
+  }
+  const step = g.action.step;
+  const moved = g.action.kind === "dina" && !(before?.kind === "dina" && before.step === step);
+  return moved ? { messages: g.messages, dinaNote: g.dinaNote ?? `Setup has moved on to ${STEP_DEFS[step].title}: start it.` } : { messages: [], dinaNote: null };
 }
 
 // Once every step is dealt with: setup finishes (with WhatsApp linked), and code
@@ -311,7 +367,8 @@ async function whatsAppLine(restaurantId: string, text: string) {
 // a tap on it later answers that dish; with no dish left to check, it's dropped.
 async function saveDinaMessages(id: string, channel: Channel, messages: DinaReply["messages"]) {
   const stepNow = (await getSession(id))?.current_step ?? null;
-  const base = Date.now();
+  // Strictly after the owner's message they answer (saved a moment before, same clock).
+  const base = Date.now() + 1;
   const saved: SavedMessage[] = [];
   for (const m of messages) {
     let component = m.component;
@@ -342,18 +399,41 @@ async function saveDinaMessages(id: string, channel: Channel, messages: DinaRepl
 
 // A turn code answers itself, with no Claude call (the next allergen card after a
 // tap): the owner's message once, then code's message, which passes Dina's checks.
-export async function codeTurn(input: { restaurantId: string; channel: Channel; text: string; externalId?: string | null; ownerParts?: unknown[]; messages: DinaReply["messages"] }): Promise<TurnResult> {
+// note: what code did, passed on to Dina if she takes over in the same turn.
+export async function codeTurn(input: { restaurantId: string; channel: Channel; text: string; externalId?: string | null; ownerParts?: unknown[]; messages: DinaReply["messages"]; note?: string | null }): Promise<TurnResult> {
   const problems = dinaReplyProblems({ messages: input.messages });
   if (problems.length) throw new Error(`Code's setup message failed its checks: ${problems.join("; ")}`);
   const session = (await getSession(input.restaurantId)) ?? (await startOnboarding(input.restaurantId, { channel: input.channel }));
   const { error } = await getSupabase()
     .from("onboarding_messages")
-    .insert({ id: randomUUID(), restaurant_id: input.restaurantId, role: "owner", channel: input.channel, step_key: session.current_step, body: input.text, parts: input.ownerParts ?? [], external_id: input.externalId ?? null });
+    .insert({ id: randomUUID(), restaurant_id: input.restaurantId, role: "owner", channel: input.channel, step_key: session.current_step, body: input.text, parts: input.ownerParts ?? [], external_id: input.externalId ?? null, created_at: new Date().toISOString() });
   if (error?.code === "23505") return { duplicate: true };
   if (error) throw new Error(`Couldn't save the owner's message: ${error.message}`);
-  const messages = [...input.messages, ...(await endOfSetup(input.restaurantId, input.messages, input.channel))];
+  // Code just answered; unless its own messages carry the next card (the allergen
+  // cards), what's next is asked now: code's card, or Dina's turn.
+  const codeCarriesOn = input.messages.some((m) => m.component);
+  const follow = codeCarriesOn ? { messages: [], dinaNote: null } : await guideFollowUp(input.restaurantId, null, "owner spoke");
+  const shown = [...input.messages, ...follow.messages];
+  const messages = [...shown, ...(follow.dinaNote ? [] : await endOfSetup(input.restaurantId, shown, input.channel))];
   const { saved, stepNow } = await saveDinaMessages(input.restaurantId, input.channel, messages);
+  // Code finished its questions and the next ones are Dina's: she starts them now.
+  const dinaNote = follow.dinaNote ?? (codeCarriesOn ? null : await dinaNoteIfHers(input.restaurantId, follow.messages.length > 0));
+  if (dinaNote) {
+    const more = await dinaTurn({ restaurantId: input.restaurantId, channel: input.channel, event: "action", note: `${input.note ? `${input.note} ` : ""}${dinaNote}`, followUp: true });
+    if (!more.duplicate) return { duplicate: false, reply: { messages }, messages: [...saved, ...more.messages], step: more.step, costUsd: more.costUsd, fallback: more.fallback, toolCalls: more.toolCalls };
+  }
   return { duplicate: false, reply: { messages }, messages: saved, step: stepNow, costUsd: 0, fallback: false, toolCalls: [] };
+}
+
+// After code's own turn when the next question is Dina's on the same step (e.g.
+// Change on the recap of one of her steps): she's told what to ask. Not when the
+// allergen cards carry on (code's own next card is already on its way).
+async function dinaNoteIfHers(id: string, codeShowedSomething: boolean) {
+  if (codeShowedSomething) return null;
+  const g = nextAction(await factsFor(id, (await loadFlow(id)).state));
+  if (g.kind !== "dina" || !g.question || g.question.id !== `${g.step}.base`) return null;
+  const { data } = await getSupabase().from("onboarding_steps").select("data").eq("restaurant_id", id).eq("step_key", g.step).maybeSingle<{ data: { q?: Record<string, { status: string }> } | null }>();
+  return data?.data?.q?.[g.question.id]?.status === "reask" ? `The owner wants to change ${g.question.label.toLowerCase()}. Ask what they'd like to change.` : null;
 }
 
 // The last messages before this one, oldest first (config: history_messages).

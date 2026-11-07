@@ -4,17 +4,21 @@
 // after a tool call that code has checked (never because the AI says so).
 // The web chat and WhatsApp both run on this, so they always agree.
 
+// In chapter order (guide/chapters.ts groups them, 7 Nov 2026): who you are,
+// Google, how you look and sound, your menu, offers, customers and complaints,
+// sales and team, your calendar, working together.
 export const FLOW_STEPS = [
   "hello",
   "google",
+  "look",
   "tone",
-  "make_it_right",
   "menu",
+  "rewards",
+  "make_it_right",
   "hours_faqs",
+  "customers_qr",
   "sales",
   "team",
-  "rewards",
-  "customers_qr",
   "languages_dates",
   "approvals_timing",
 ] as const;
@@ -48,14 +52,15 @@ const step = (key: FlowStepKey, title: string, unlock: string | null, opts: { ga
 export const STEP_DEFS: Record<FlowStepKey, StepDef> = {
   hello: step("hello", "Hello", null),
   google: step("google", "Google profile", "Connect Google and I'll reply to your reviews, post updates and track calls and directions for you.", { gapPriority: 1 }),
+  look: step("look", "Your look", "Send your logo and colours and every email, QR code and post will look like you."),
   tone: step("tone", "Your tone", "Pick a tone and every reply and post will sound like you."),
   make_it_right: step("make_it_right", "Making it right", "Tell me how you like to fix complaints and I'll offer it in replies to unhappy customers."),
   menu: step("menu", "Your menu", "Share your menu and I'll write captions, suggest offers and answer allergen questions using your real dishes.", { gapPriority: 3 }),
-  hours_faqs: step("hours_faqs", "Hours and FAQs", "Confirm your hours and FAQs and I'll keep Google accurate and answer common questions."),
+  hours_faqs: step("hours_faqs", "Hours and common questions", "Confirm your hours and FAQs and I'll keep Google accurate and answer common questions."),
   sales: step("sales", "Sales history", "Send your sales history and I'll forecast quiet nights and plan offers before they happen.", { gapPriority: 2 }),
   team: step("team", "Team and labour", "Share your team and labour target and I'll track labour % daily and suggest rotas."),
   rewards: step("rewards", "Rewards and limits", "Set your rewards and limits and I'll run offers without ever going over budget."),
-  customers_qr: step("customers_qr", "Customers and QR codes", "Import your customers and print your QR codes and I'll start growing your list."),
+  customers_qr: step("customers_qr", "Customer list and QR codes", "Import your customers and print your QR codes and I'll start growing your list."),
   languages_dates: step("languages_dates", "Languages and key dates", "Tell me your languages and key dates and I'll plan campaigns around them.", { available: false }),
   approvals_timing: step("approvals_timing", "Approvals and timing", "Tell me who approves and when to message you, and I’ll fit around your day."),
 };
@@ -132,12 +137,17 @@ export function enter(state: FlowState, key: FlowStepKey, now: string, defs = ST
 
 // Checked data saved for a step: everything it needs (done) or only some (partial).
 // Whether it's done or partial is the tool's checked verdict, never the AI's.
+// The verdict is kept as data._outcome: the step's questions (guide/questions.ts)
+// may still hold it open until each is answered (gateStep).
 export function complete(state: FlowState, key: FlowStepKey, outcome: "done" | "partial", data: Record<string, unknown>, now: string, defs = STEP_DEFS): FlowState {
   mustBeAvailable(key, defs);
   const s = stepState(state, key);
+  // The step's own tool finished it again: a "change this" on its recap is answered.
+  const q = { ...((s.data.q ?? {}) as Record<string, unknown>) };
+  delete q[`${key}.base`];
   return put(state, key, {
     status: outcome,
-    data: { ...s.data, ...data },
+    data: { ...s.data, ...data, q, _outcome: outcome },
     waitingOn: null,
     startedAt: s.startedAt ?? now,
     completedAt: now,

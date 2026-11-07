@@ -48,11 +48,15 @@ describe("starting", () => {
 
 describe("changing steps", () => {
   test("each change saves the step, moves the owner on and records the channel", async () => {
-    const { completeStep, loadFlow, startOnboarding } = await load();
+    const { completeStep, loadFlow, recordQuestion, startOnboarding } = await load();
     await startOnboarding(A);
-    const { session } = await completeStep(A, "hello", "done", { owner_name: "Amina" }, { channel: "whatsapp" });
+    // Hello's tool saved it; the chapter's recap (7 Nov 2026) keeps it open until confirmed.
+    let { session } = await completeStep(A, "hello", "done", { owner_name: "Amina" }, { channel: "whatsapp" });
+    expect(session).toMatchObject({ current_step: "hello", channel_last_used: "whatsapp" });
+    expect(db.tables.onboarding_steps).toEqual([expect.objectContaining({ restaurant_id: A, step_key: "hello", status: "in_progress", data: expect.objectContaining({ owner_name: "Amina", _outcome: "done" }) })]);
+    const { withRecord } = await import("@/lib/onboarding/guide/questions");
+    ({ session } = await recordQuestion(A, "hello", (d, now) => withRecord(d, "recap.restaurant", "answered", now), { channel: "whatsapp" }));
     expect(session).toMatchObject({ current_step: "google", channel_last_used: "whatsapp" });
-    expect(db.tables.onboarding_steps).toEqual([expect.objectContaining({ restaurant_id: A, step_key: "hello", status: "done", data: { owner_name: "Amina" } })]);
     const { state } = await loadFlow(A);
     expect(state.hello?.status).toBe("done");
   });
@@ -63,24 +67,27 @@ describe("changing steps", () => {
     await completeStep(A, "hello", "done", { owner_name: "Amina" });
     await completeStep(A, "hello", "done", { owner_name: "Amina Khan" });
     expect(db.tables.onboarding_steps).toHaveLength(1);
-    expect(db.tables.onboarding_steps[0].data).toEqual({ owner_name: "Amina Khan" });
+    expect(db.tables.onboarding_steps[0].data).toMatchObject({ owner_name: "Amina Khan" });
   });
 
   test("skips and partials become gaps; finishing the step later closes its gap", async () => {
-    const { completeStep, enterStep, skipStep, startOnboarding } = await load();
+    const { completeStep, enterStep, recordQuestion, skipStep, startOnboarding } = await load();
+    const { withRecord } = await import("@/lib/onboarding/guide/questions");
     await startOnboarding(A);
     await completeStep(A, "hello", "done", {});
+    await recordQuestion(A, "hello", (d, now) => withRecord(d, "recap.restaurant", "answered", now));
     await skipStep(A, "google");
-    await completeStep(A, "tone", "partial", { praise: "warm" });
+    // Making it right isn't its chapter's last step, so no recap holds it: half done is a gap at once.
+    await completeStep(A, "make_it_right", "partial", { offers: ["A free dessert"] });
     expect(db.tables.setup_gaps.map((g) => [g.step_key, g.resolved_at ?? null])).toEqual([
       ["google", null],
-      ["tone", null],
+      ["make_it_right", null],
     ]);
     await enterStep(A, "google");
     const { session } = await completeStep(A, "google", "done", { connected: true });
     expect(db.tables.setup_gaps.find((g) => g.step_key === "google")?.resolved_at).toBeTruthy();
     expect(db.tables.setup_gaps).toHaveLength(2);
-    expect(session.current_step).toBe("make_it_right");
+    expect(session.current_step).toBe("look");
   });
 
   test("Hello can't be skipped: nothing is saved", async () => {

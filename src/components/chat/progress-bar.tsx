@@ -35,23 +35,29 @@ export function ProgressBar({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const done = progress.steps.filter((s) => s.status === "done").length;
-  const pct = Math.round((done / Math.max(1, progress.total)) * 100);
-  const label = `Setup ${progress.position} of ${progress.total}`;
+  // Chapters when there are (the owner's plan, 7 Nov 2026), else the steps.
+  const items: (ProgressStep & { left?: string[] })[] = progress.chapters?.length ? progress.chapters : progress.steps;
+  const total = progress.chapters?.length ? progress.chapters.length : progress.total;
+  const done = items.filter((s) => s.status === "done").length;
+  const pct = Math.round((done / Math.max(1, total)) * 100);
+  const label = progress.chapter ? `Chapter ${progress.chapter.n} of ${progress.chapter.total}: ${progress.chapter.title}` : `Setup ${progress.position} of ${progress.total}`;
   const bar = (
-    <div role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={done} className="h-1.5 overflow-hidden rounded-full bg-ink-700">
+    <div role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} className="h-1.5 overflow-hidden rounded-full bg-ink-700">
       <div className="h-full rounded-full bg-signal transition-[width] duration-500" style={{ width: `${Math.max(4, pct)}%` }} />
     </div>
   );
   const list = (
     <ol className="space-y-1">
-      {progress.steps.map((s) => {
+      {items.map((s) => {
         const row = (
           <>
             <span aria-hidden className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] ${s.status === "done" ? "bg-signal text-ink-950" : s.status === "in_progress" ? "border border-signal text-signal" : "border border-ink-700 text-fog"}`}>
               {MARK[s.status]}
             </span>
-            <span className="flex-1 text-left text-[15px] text-mist">{s.title}</span>
+            <span className="flex-1 text-left">
+              <span className="block text-[15px] text-mist">{s.title}</span>
+              {s.status === "partial" && s.left?.length ? <span className="block text-[12px] text-fog">Still to do: {s.left.join(", ")}</span> : null}
+            </span>
             <span className={`text-[12px] ${canJump(s) ? "text-signal" : "text-fog"}`}>{canJump(s) && onJump ? "Do it now" : STATUS_WORDS[s.status]}</span>
           </>
         );

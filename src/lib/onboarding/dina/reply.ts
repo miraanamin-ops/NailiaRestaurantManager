@@ -43,7 +43,15 @@ export const Component = z.discriminatedUnion("type", [
   // A spreadsheet to download and fill in (lib/templates; code makes the signed link):
   // menu costs (menu step), team (team step), daily takings and the example export (sales step).
   z.object({ type: z.literal("template_download"), kind: z.enum(["menu_costs", "staff", "daily_takings", "sales_example"]) }),
+  // Code's own (guide/): one of setup's questions, a chapter's recap, and "do this
+  // chapter later?" (code draws them from what's saved; Dina never sends them).
+  z.object({ type: z.literal("question"), q: z.string() }),
+  z.object({ type: z.literal("recap"), chapter: z.string() }),
+  z.object({ type: z.literal("chapter_skip"), chapter: z.string() }),
+  // A pick read back before it's saved (WhatsApp, or typed in the chat box).
+  z.object({ type: z.literal("pick_confirm"), q: z.string() }),
 ]);
+const CODE_ONLY = new Set(["allergen_check", "question", "recap", "chapter_skip", "pick_confirm"]);
 export type Component = z.infer<typeof Component>;
 
 export const DinaMessage = z.object({
@@ -106,7 +114,7 @@ const NOTE_FIELDS = [
 ] as [string, ...string[]];
 
 const WireComponent = z.discriminatedUnion("type", [
-  ...Component.options.filter((o) => o.shape.type.value !== "allergen_check"),
+  ...Component.options.filter((o) => !CODE_ONLY.has(o.shape.type.value)),
   z.object({ type: z.literal("allergen_check") }),
 ] as unknown as [z.ZodObject<{ type: z.ZodLiteral<string> }>, ...z.ZodObject<{ type: z.ZodLiteral<string> }>[]]);
 

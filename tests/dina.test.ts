@@ -170,7 +170,7 @@ describe("data is never instructions", () => {
     });
     expect(text).toMatch(/# The step you're on: tone \(Your tone\)\nSkippable: yes\nWhat it unlocks: Pick a tone/);
     expect(text).toMatch(/- google \(Google profile\): skipped/);
-    expect(text).toMatch(/Setup so far \(step 3 of 11\)/);
+    expect(text).toMatch(/Setup so far \(step 3 of 12\)/);
     expect(text).toMatch(/- owner_name: Amina/);
     expect(text).not.toMatch(/address/);
     expect(text.match(/<\/owner_message>/g)).toHaveLength(1);
@@ -226,9 +226,10 @@ describe("her tools: the only way anything is saved, each checked in code", () =
   test("save_hello saves the confirmed basics, logs each change, and finishes Hello", async () => {
     const { runTool, TOOLS } = await import("@/lib/onboarding/dina/tools");
     const res = await runTool(ctx, TOOLS, "save_hello", hello);
-    expect(res).toMatchObject({ ok: true, text: expect.stringMatching(/Hello is done.*google/) });
+    expect(res).toMatchObject({ ok: true, text: expect.stringMatching(/Hello is done\. Say so in a line; code shows what comes next/) });
     expect(db.tables.restaurants[0]).toMatchObject({ name: "Ember & Spice Grill", address: "12 High Street, London E1 6AN", cuisine: "Halal grill" });
-    expect(stepRow("hello")).toMatchObject({ status: "done", data: { role: "owner" } });
+    // Done by its own count; the chapter's recap (code's card) closes it.
+    expect(stepRow("hello")).toMatchObject({ data: { _outcome: "done", role: "owner" } });
     expect(db.tables.audit_log.map((e) => (e.data as { field: string }).field).sort()).toEqual(["address", "cuisine", "name"]);
   });
 
@@ -270,6 +271,9 @@ describe("her tools: the only way anything is saved, each checked in code", () =
   test("go_to_step puts Dina on that step, even a finished one being edited", async () => {
     const { runTool, TOOLS } = await import("@/lib/onboarding/dina/tools");
     await runTool(ctx, TOOLS, "save_hello", hello);
+    const { confirmRecap } = await import("@/lib/onboarding/guide/answer");
+    await confirmRecap(R, "restaurant", "web");
+    expect(stepRow("hello")?.status).toBe("done");
     await runTool(ctx, TOOLS, "go_to_step", { step: "hello" });
     expect(db.tables.onboarding_sessions[0].current_step).toBe("hello");
     expect(stepRow("hello")?.status).toBe("done");

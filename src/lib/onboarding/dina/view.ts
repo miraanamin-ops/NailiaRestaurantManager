@@ -6,6 +6,9 @@ import { allergenProgress, dishKey, hoursCard, menuCard } from "./facts-content"
 import { brandCard, type BrandDraft } from "./details-content";
 import { DEFAULT_DISCOUNT_CAP, hourWords, ROLE_WORDS, teamCard, type CoverRule, type TeamDraft } from "./ops-content";
 import type { Hours, MenuCategory } from "../profile-data";
+import { askFor, inputsFrom, recapFor } from "../guide/cards";
+import { availableChapters, CHAPTERS, type ChapterKey } from "../guide/chapters";
+import { openQuestions, type Facts } from "../guide/questions";
 
 // What the web chat draws, made from what's saved: the conversation (with which
 // question each tap answered), the step list, and the cards. Plain code, so it's
@@ -20,8 +23,10 @@ export type AnswerPart = { type: "answer"; to: string; choice: string };
 const isAnswer = (p: unknown): p is AnswerPart => typeof p === "object" && p !== null && (p as AnswerPart).type === "answer" && typeof (p as AnswerPart).to === "string";
 
 export type CardSources = {
-  restaurant: { id?: string; slug?: string | null; brief_hour?: number | null; signup_reward?: string | null; discount_cap_percent?: number | null; labour_target_pct?: number | string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null; logo_url?: string | null; brand_color?: string | null };
+  restaurant: { id?: string; slug?: string | null; brief_hour?: number | null; signup_reward?: string | null; discount_cap_percent?: number | null; labour_target_pct?: number | string | null; owner_name?: string | null; name?: string | null; address?: string | null; cuisine?: string | null; opening_hours?: Record<string, string> | null; menu?: MenuCategory[] | null; logo_url?: string | null; brand_color?: string | null; brand_dark?: string | null; sign_off_name?: string | null; emoji_allowed?: unknown; photo_library?: unknown[] | null };
   state: FlowState;
+  // Profile fields the owner has confirmed (for the question cards and recaps).
+  confirmed?: string[];
   // For the Google and tone cards (chat.ts fills these in): our manager email,
   // where "Connect Google" goes (null while Path A is off), the tone config.
   setup?: { managerEmail: string | null; googleConnectHref: string | null; tones: ToneConfig; templateLinks?: Partial<Record<string, string>> };
@@ -36,6 +41,8 @@ export const TEMPLATE_CARDS: Record<string, { label: string; hint: string }> = {
 };
 
 export const GOOGLE_ACTIONS = { invited: "invited", emailSteps: "email_steps" } as const;
+export const CHAPTER_SKIP = { yes: "chapter_later", no: "chapter_carry_on" } as const;
+export const PICK_CONFIRM = { ok: "pick_ok", again: "pick_again" } as const;
 export const QUEUE_ACTIONS = { yes: "queue_yes", no: "queue_no" } as const;
 export const ALLERGEN_ACTIONS = { ok: "allergen_ok", change: "allergen_change", unsure: "allergen_unsure", later: "allergen_later" } as const;
 const NO_MANAGER_EMAIL = "our manager email (being set up: ask the DinerAI team)";
@@ -84,7 +91,7 @@ export function cardFor(card: string, sources: CardSources): ConfirmationData | 
     return draft ? teamCard(draft) : null;
   }
   // "Your look": the logo and colour picked up (or sent), over what's saved.
-  if (card === "brand") return brandCard(stepState(sources.state, "customers_qr").data.brand_draft as BrandDraft | undefined, sources.restaurant);
+  if (card === "brand") return brandCard(stepState(sources.state, "look").data.brand_draft as BrandDraft | undefined, sources.restaurant);
   return null;
 }
 
@@ -152,12 +159,13 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
     return [`${d.staff ?? 0} on the team`, d.manager ? `${d.manager} runs the site` : null, cover || null, `labour target ${d.labour_target_pct ?? 30}%${d.labour_defaulted ? " (the default)" : ""}`].filter(Boolean).join("; ");
   },
   rewards: ({ restaurant }) => `Sign-up reward: ${restaurant.signup_reward ?? "not set"}; offers never over ${restaurant.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP}% off`,
+  look: ({ restaurant }) => {
+    const photos = Array.isArray(restaurant.photo_library) ? restaurant.photo_library.length : 0;
+    return [restaurant.logo_url ? "Logo set" : "Logo still to add", "colours set", photos ? `${photos} dish photo${photos === 1 ? "" : "s"}` : null].filter(Boolean).join("; ");
+  },
   customers_qr: (s) => {
-    const d = data(s, "customers_qr") as { qr_via?: string[]; brand_confirmed?: boolean; photos_added?: number };
-    const via = d.qr_via ?? [];
-    const look = d.brand_confirmed ? "Logo and colours set" : "Logo still to add";
-    const photos = d.photos_added ? `${d.photos_added} dish photo${d.photos_added === 1 ? "" : "s"}` : null;
-    return [look, photos, via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready"].filter(Boolean).join("; ");
+    const via = (data(s, "customers_qr") as { qr_via?: string[] }).qr_via ?? [];
+    return via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready";
   },
   approvals_timing: (s) => {
     const d = data(s, "approvals_timing") as { brief_hour?: number; quiet_start?: string; quiet_end?: string };
@@ -200,9 +208,37 @@ export function summaryFrom(sources: CardSources): SummaryData {
   };
 }
 
+// What code's question cards and recaps are judged on, from the sources.
+export const factsFromSources = (sources: CardSources): Facts => ({ r: sources.restaurant as Record<string, unknown>, confirmed: new Set(sources.confirmed ?? []), state: sources.state });
+
+export const stepDetail = (sources: CardSources) => (k: FlowStepKey) => SUMMARY_DETAIL[k]?.(sources) || null;
+
 function component(part: unknown, sources: CardSources): ChatComponent | null {
   if (typeof part !== "object" || part === null) return null;
   const p = part as { type?: string; card?: string };
+  if (p.type === "question" && sources.setup) {
+    const facts = factsFromSources(sources);
+    const asked = askFor((part as { q?: string }).q ?? "", facts, inputsFrom({ restaurant: facts.r, state: sources.state, tones: sources.setup.tones }));
+    return asked ? { type: "question", card: asked.card } : null;
+  }
+  if (p.type === "recap" && sources.setup) {
+    const chapter = (part as { chapter?: string }).chapter as ChapterKey;
+    if (!CHAPTERS[chapter]) return null;
+    return { type: "recap", recap: recapFor(chapter, factsFromSources(sources), { tones: sources.setup.tones }, stepDetail(sources)) };
+  }
+  if (p.type === "pick_confirm")
+    return {
+      type: "quick_replies",
+      options: [
+        { id: PICK_CONFIRM.ok, label: "Yes, save it" },
+        { id: PICK_CONFIRM.again, label: "Pick again" },
+      ],
+    };
+  if (p.type === "chapter_skip") {
+    const chapter = CHAPTERS[(part as { chapter?: string }).chapter as ChapterKey];
+    if (!chapter) return null;
+    return { type: "quick_replies", options: [{ id: CHAPTER_SKIP.yes, label: "Yes, do it later", short: "Yes, later" }, { id: CHAPTER_SKIP.no, label: "No, carry on", short: "Carry on" }] };
+  }
   if (p.type === "quick_replies" || p.type === "choice_cards" || p.type === "upload") return part as ChatComponent;
   if (p.type === "editable_card") {
     const card = cardFor(p.card ?? "", sources);
@@ -273,18 +309,36 @@ export function chatFrom(rows: StoredMessage[], sources: CardSources) {
 
 const STATUS: Record<string, StepStatus> = { not_started: "not_started", in_progress: "in_progress", done: "done", partial: "partial", skipped: "skipped" };
 
-// The step list. focus: the step the owner is on (it may be a finished one being changed).
-export function progressFrom(state: FlowState, focus: FlowStepKey | null): ProgressData {
+// The step list, and the chapters the owner sees. focus: the step the owner is on
+// (it may be a finished one being changed). facts: for what's left in each chapter.
+export function progressFrom(state: FlowState, focus: FlowStepKey | null, facts?: Facts): ProgressData {
   const steps = availableSteps();
   const p = progress(state);
+  const stepStatus = (k: FlowStepKey): StepStatus => {
+    const s = stepState(state, k);
+    return s.status === "in_progress" && s.waitingOn ? "waiting" : k === focus && s.status !== "done" ? "in_progress" : STATUS[s.status];
+  };
+  const chapters = availableChapters();
+  const on = focus ? chapters.find((c) => c.steps.includes(focus)) : (chapters.find((c) => c.steps.some((k) => !["done", "partial", "skipped", "waiting"].includes(stepStatus(k)))) ?? null);
   return {
     total: p.total,
     position: focus && steps.includes(focus) ? steps.indexOf(focus) + 1 : p.position,
-    steps: steps.map((k) => {
-      const s = stepState(state, k);
-      const status: StepStatus = s.status === "in_progress" && s.waitingOn ? "waiting" : k === focus && s.status !== "done" ? "in_progress" : STATUS[s.status];
-      return { key: k, title: STEP_DEFS[k].title, status };
+    steps: steps.map((k) => ({ key: k, title: STEP_DEFS[k].title, status: stepStatus(k) })),
+    chapters: chapters.map((c) => {
+      const all = c.steps.map(stepStatus);
+      const status: StepStatus = all.every((x) => x === "not_started")
+        ? "not_started"
+        : all.every((x) => x === "skipped")
+          ? "skipped"
+          : all.every((x) => x === "done")
+            ? "done"
+            : all.every((x) => ["done", "partial", "skipped", "waiting"].includes(x))
+              ? all.includes("waiting") ? "waiting" : "partial"
+              : "in_progress";
+      const left = facts ? c.steps.flatMap((k) => openQuestions(k, { ...facts, state }).filter((q) => !q.id.startsWith("recap.")).map((q) => q.label)) : [];
+      return { key: c.key, title: c.title, status, left: status === "not_started" ? [] : left };
     }),
+    chapter: on ? { n: chapters.indexOf(on) + 1, total: chapters.length, title: on.title, key: on.key } : null,
   };
 }
 

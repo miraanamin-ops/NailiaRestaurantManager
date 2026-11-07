@@ -44,8 +44,20 @@ export function choicesOf(c: ChatComponent | null | undefined): Choice[] {
       { id: "confirm", label: "Looks right" },
       { id: "change", label: "Change something" },
     ];
+  // Code's question cards: each option (a reply in a tone keeps its text as the
+  // description), then "Skip this question".
+  if (c.type === "question")
+    return [
+      ...c.card.options.map((o) => ({ id: o.id, label: o.short ?? o.label, description: o.body ?? (o.swatches ? o.swatches.join(" and ") : undefined) })),
+      ...(c.card.skip ? [{ id: QUESTION_SKIP, label: "Skip this question", description: "Move on; we can come back to it" }] : []),
+    ];
+  // A recap: "Looks right", then Change for each line.
+  if (c.type === "recap") return [{ id: "recap_ok", label: "Looks right" }, ...c.recap.rows.map((r) => ({ id: `change:${r.q}`, label: `Change: ${r.label}`.slice(0, 40), description: r.value }))];
   return [];
 }
+
+// Matches guide/cards.ts SKIP_ID (kept apart: this file has no imports).
+export const QUESTION_SKIP = "skip_q";
 
 const numbers = (n: number) => (n === 1 ? "1" : `${Array.from({ length: n - 1 }, (_, i) => i + 1).join(", ")} or ${n}`);
 
@@ -89,7 +101,7 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
   messages.forEach((m, i) => {
     const c = m.component;
     let choices = choicesOf(c);
-    if (opts.skippable && i === lastAskingIndex && c?.type !== "confirmation" && !choices.some((x) => x.id === SKIP.id)) choices = [...choices, SKIP];
+    if (opts.skippable && i === lastAskingIndex && c?.type !== "confirmation" && c?.type !== "question" && c?.type !== "recap" && !choices.some((x) => x.id === SKIP.id)) choices = [...choices, SKIP];
     const isLast = i === messages.length - 1;
     // No choices to add it to: say it, but only under a question or a request for a file (not after every line).
     const asks = c?.type === "upload" || m.text.includes("?");
@@ -154,6 +166,22 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
         `Everything is here too: ${opts.chatUrl}`,
       ];
       out.push({ kind: "text", body: clip(lines.join("\n"), WA.text) });
+    } else if (c?.type === "question") {
+      const card = c.card;
+      // A picture first (the logo to check), then the review being answered, then each reply.
+      if (card.image) out.push({ kind: "text", body: "*Your logo*", mediaUrl: abs(card.image) });
+      if (card.quote) {
+        const stars = "★".repeat(card.quote.rating) + "☆".repeat(5 - card.quote.rating);
+        out.push({ kind: "text", body: clip(`*${card.quote.author}* ${stars}\n"${card.quote.text}"`, WA.text) });
+      }
+      if (card.layout === "cards") card.options.forEach((o, n) => o.body && out.push({ kind: "text", body: clip(`*${n + 1}. ${o.label}*\n${o.body}`, WA.text) }));
+      const upload = card.upload ? `\n\n${card.upload.multiple ? "Send the photos here." : "Send it here as a photo."}` : "";
+      if (choices.length) out.push(withChoices(`${m.text}${upload}`, m.id, choices));
+      else out.push({ kind: "text", body: clip(`${m.text}${upload}`, WA.text) });
+    } else if (c?.type === "recap") {
+      const rows = c.recap.rows.map((r) => `${r.status === "skipped" ? "⏭" : "✅"} ${r.label}: ${r.value}${r.swatches?.length ? ` (${r.swatches.join(", ")})` : ""}`);
+      out.push({ kind: "text", body: clip(`${m.text}\n\n*${c.recap.title}*\n${rows.join("\n")}`, WA.text) });
+      out.push(withChoices("All right, or anything to change?", m.id, choices));
     } else if (c?.type === "upload") {
       out.push({ kind: "text", body: clip(`${m.text}\n\n${UPLOAD_HOW[c.accept]}`, WA.text - skipLine.length) + skipLine });
     } else if (choices.length) {
@@ -194,7 +222,8 @@ export function readWhatsAppReply(input: { body: string; buttonPayload?: string 
   if (!asking) return { kind: "text", text: body };
 
   const choices = choicesOf(asking.component);
-  const offered = skippable && asking.component?.type !== "confirmation" ? [...choices, SKIP] : choices;
+  const own = asking.component?.type === "question" || asking.component?.type === "recap";
+  const offered = skippable && asking.component?.type !== "confirmation" && !own ? [...choices, SKIP] : choices;
   const n = /^\d{1,2}$/.test(norm(body)) ? Number(norm(body)) : NaN;
   const picked = Number.isInteger(n) && n >= 1 && n <= offered.length ? offered[n - 1] : offered.find((c) => norm(c.label) === norm(body));
   if (picked) return choose(asking.messageId, picked.id, asking.component, picked.label);

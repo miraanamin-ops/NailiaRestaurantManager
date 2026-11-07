@@ -78,7 +78,7 @@ beforeAll(() => {
     currentOwner: async () => ({ email: "amina@grill.test", isBuilder: false, restaurantIds: [restaurantId], allowed: true }),
   }));
   vi.doMock("@/lib/builder-alerts", () => ({ alertBuilder: async (_k: string, m: string) => (stumbles.push(`builder alert: ${m.slice(0, 160)}`), "sent") }));
-  vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => false }));
+  vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => false, limitReached: async () => false, recordAttempt: async () => {} }));
   vi.doMock("@/lib/ops/menu", async (orig) => ({
     ...(await orig<object>()),
     updateRestaurantColumns: async (id: string, fields: Record<string, unknown>) => void Object.assign(db.tables.restaurants.find((r) => r.id === id)!, structuredClone(fields)),
@@ -155,6 +155,20 @@ async function ownerMove() {
     tapped.add(m.id);
     await chat({ kind: "answer", messageId: m.id, choiceId, label }, `taps "${label}"`);
   };
+  // Code's own cards (7 Nov 2026): a question confirmed on the card, a chapter's recap.
+  if (c?.type === "question") {
+    const card = c.card as { q: string; options: { id: string; label: string }[]; input?: { optionId: string } | null; image?: string | null; upload?: unknown };
+    if (card.q === "look.logo" && !card.image) {
+      const logo = await sharp({ create: { width: 200, height: 200, channels: 3, background: "#1b5e20" } }).png().toBuffer();
+      await db.client.storage.from("onboarding-uploads").upload(`${restaurantId}/incoming/logo.png`, logo, { contentType: "image/png" });
+      return chat({ kind: "files", paths: [`${restaurantId}/incoming/logo.png`] }, "sends the logo");
+    }
+    const preferred: Record<string, string> = { "tone.praise": "warm", "tone.complaint": "short", "tone.emoji": "yes" };
+    const opt = card.options.find((o) => o.id === preferred[card.q]) ?? card.options.find((o) => o.id !== card.input?.optionId);
+    if (opt) return chat({ kind: "pick", messageId: m.id, choiceIds: [opt.id], label: opt.label }, `confirms "${opt.label}"`);
+    return chat({ kind: "pick", messageId: m.id, choiceIds: ["skip_q"], label: "Skip this question" }, "skips the question");
+  }
+  if (c?.type === "recap") return chat({ kind: "pick", messageId: m.id, choiceIds: ["recap_ok"], label: "Looks right" }, "recap: Looks right");
   if (c?.type === "confirmation") return chat({ kind: "confirm", messageId: m.id, changes: {} }, 'taps "Looks right"');
   if (c?.type === "steps") return answerTap("invited", "Done, I've invited you");
   if (c?.type === "choice_cards") return tapped.size % 2 ? answerTap("short", "Short and simple") : answerTap("warm", "Warm and personal");
@@ -275,6 +289,10 @@ describe("a whole onboarding, for real", () => {
     console.log(`[Claude calls] ${db.tables.onboarding_ai_usage.length} logged (allergen suggestions aren't in the log)`);
     console.log(`[Total] $${total.toFixed(4)} over ${turns} turns`);
     console.log(`\n[Stumbles] ${stumbles.length ? stumbles.join("\n  ") : "none"}`);
+    // Every question code asks was answered (7 Nov 2026): the agents' go-live fields from chapter 3 are all set.
+    const versions = new Set(db.tables.profile_versions.map((v) => v.field));
+    console.log("[Confirmed fields]", [...versions].sort().join(", "));
+    for (const f of ["logo", "colours", "sign_off_name", "emoji_allowed"]) expect(versions.has(f), f).toBe(true);
 
     expect(session.completed_at).toEqual(expect.any(String));
     expect(db.tables.onboarding[0].completed_at).toEqual(expect.any(String));

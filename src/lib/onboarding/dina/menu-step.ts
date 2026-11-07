@@ -167,8 +167,8 @@ async function nextOrDone(restaurantId: string, menu: MenuCategory[], notSure: s
   await completeStep(restaurantId, "menu", p.unknown ? "partial" : "done", { allergens: p }, { channel });
   return {
     note: p.unknown
-      ? `Every dish is dealt with: ${p.confirmed} confirmed, ${p.unknown} left as unknown (never shown to customers; a setup gap to come back to). The menu step is half done. Say so in a line and move on.`
-      : `Every dish's allergens are confirmed (${p.confirmed}). The menu step is done. Say so in a line and move on.`,
+      ? `Every dish is dealt with: ${p.confirmed} confirmed, ${p.unknown} left as unknown (never shown to customers; a setup gap to come back to). The menu step is half done. Say so in a line.`
+      : `Every dish's allergens are confirmed (${p.confirmed}). Say so in a line.`,
   };
 }
 

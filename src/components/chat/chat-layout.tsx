@@ -6,7 +6,9 @@ import { ConfirmationCard } from "./confirmation-card";
 import { DishCheckCard, ForwardCard, LinkCard, StepsCard } from "./how-to-cards";
 import { DinaAvatar, MessageBubble } from "./message-bubble";
 import { ProgressBar } from "./progress-bar";
+import { QuestionCard } from "./question-card";
 import { QuickReplies } from "./quick-replies";
+import { RecapCard } from "./recap-card";
 import { SkipButton } from "./skip-button";
 import { SummaryCard } from "./summary-card";
 import { TypingIndicator } from "./typing-indicator";
@@ -26,6 +28,8 @@ export type ChatHandlers = {
   onConfirm: (messageId: string, changes: Record<string, string>) => void;
   onSkip: () => void;
   onJump: (stepKey: string) => void;
+  // One of code's question cards or a recap, answered (guide): what was picked, any words typed.
+  onAnswer?: (messageId: string, answer: { choiceIds: string[]; text?: string; label: string }) => void;
 };
 
 export function ChatLayout({
@@ -138,7 +142,7 @@ export function ChatLayout({
             )}
             {skippable && (
               <div className="flex justify-center">
-                <SkipButton onSkip={handlers.onSkip} disabled={typing} />
+                <SkipButton onSkip={handlers.onSkip} disabled={typing} label={progress.chapter ? "Do this chapter later" : undefined} />
               </div>
             )}
             <Composer onSend={handlers.onSend} disabled={typing} />
@@ -180,6 +184,18 @@ function Component({ message, chosen, uploadStatus, handlers }: { message: ChatM
       return <ForwardCard intro={c.intro} text={c.text} />;
     case "link":
       return <LinkCard label={c.label} href={c.href} hint={c.hint} onOpen={c.continueLabel && !done ? () => handlers.onPick(message.id, { id: "opened", label: c.continueLabel! }) : undefined} />;
+    case "question":
+      return (
+        <QuestionCard
+          data={c.card}
+          disabled={done}
+          uploadStatus={uploadStatus}
+          onAnswer={(a) => handlers.onAnswer?.(message.id, a)}
+          onFiles={(f) => handlers.onFiles(message.id, f)}
+        />
+      );
+    case "recap":
+      return <RecapCard recap={c.recap} disabled={done} onAnswer={(id, label) => handlers.onAnswer?.(message.id, { choiceIds: [id], label })} />;
     case "dish_check":
       return (
         <DishCheckCard

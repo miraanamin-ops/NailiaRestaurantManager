@@ -13,6 +13,7 @@ type Action =
   | { kind: "start" }
   | { kind: "message"; text: string }
   | { kind: "answer"; messageId: string; choiceId: string; label: string }
+  | { kind: "pick"; messageId: string; choiceIds: string[]; text?: string; label: string }
   | { kind: "confirm"; messageId: string; changes: Record<string, string> }
   | { kind: "skip" }
   | { kind: "jump"; step: string }
@@ -165,7 +166,11 @@ export function ChatClient(props: {
             setError(err instanceof Error ? err.message : "The upload stopped. Please try again.");
           }
         },
-        onSkip: () => void send({ kind: "skip" }, "Skip for now"),
+        onAnswer: (messageId, a) => {
+          setChosen((c) => ({ ...c, [messageId]: a.choiceIds.join(",") }));
+          void send({ kind: "pick", messageId, choiceIds: a.choiceIds, ...(a.text ? { text: a.text } : {}), label: a.label.slice(0, 200) }, a.label);
+        },
+        onSkip: () => void send({ kind: "skip" }, progress.chapter ? "Do this chapter later" : "Skip for now"),
         onJump: (step) => void send({ kind: "jump", step }, "Let's do that step now"),
       }}
     />

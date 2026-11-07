@@ -5,9 +5,11 @@ import { afterSkip, answeredPart, handleAnswer } from "@/lib/onboarding/dina/ans
 import { chatSources } from "@/lib/onboarding/dina/chat";
 import type { DinaReply } from "@/lib/onboarding/dina/reply";
 import { codeTurn, dinaTurn, type TurnInput } from "@/lib/onboarding/dina/turn";
-import { cardFor, chatMessage, confirmText, progressFrom, skippableNow } from "@/lib/onboarding/dina/view";
+import { cardFor, chatMessage, confirmText, factsFromSources, progressFrom, skippableNow } from "@/lib/onboarding/dina/view";
 import { enterStep, skipStep } from "@/lib/onboarding/sessions";
 import { limitKey, limitReached, MINUTE, recordAttempt } from "@/lib/rate-limit";
+import { guideFiles, guidePick, guideSkipAsk, guideTyped } from "@/lib/onboarding/guide/handle";
+import { getSupabase } from "@/lib/supabase";
 
 // The web chat with Dina: one owner action in, Dina's answer streamed back as
 // lines of JSON (one event per line):
@@ -29,6 +31,8 @@ const Action = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("start") }),
   z.object({ kind: z.literal("message"), text: z.string().trim().min(1).max(2000), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("answer"), messageId: z.string().uuid(), choiceId: z.string().min(1).max(40), label: z.string().min(1).max(60), clientId: z.string().uuid() }),
+  // One of code's question cards, confirmed on the card (guide/handle.ts): what was picked, and any words typed in it.
+  z.object({ kind: z.literal("pick"), messageId: z.string().uuid(), choiceIds: z.array(z.string().min(1).max(80)).min(1).max(20), text: z.string().trim().max(600).optional(), label: z.string().min(1).max(200), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("confirm"), messageId: z.string().uuid(), changes: z.record(z.string().max(40), z.string().max(300)), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("skip"), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("jump"), step: z.string(), clientId: z.string().uuid() }),
@@ -67,7 +71,7 @@ export async function POST(req: Request) {
         if (action.kind !== "start" && !input.codeReply) await recordAttempt(limits);
         // A tap code answers itself (the next allergen card): no Claude call.
         const result = input.codeReply
-          ? await codeTurn({ restaurantId: r, channel: "web", text: input.text ?? "", externalId: input.externalId, ownerParts: input.ownerParts, messages: input.codeReply })
+          ? await codeTurn({ restaurantId: r, channel: "web", text: input.text ?? "", externalId: input.externalId, ownerParts: input.ownerParts, messages: input.codeReply, note: input.note })
           : await dinaTurn({ ...input, restaurantId: r, channel: "web", onStatus: (text) => send({ type: "status", text }) });
         if (result.duplicate) {
           send({ type: "done" });
@@ -79,7 +83,7 @@ export async function POST(req: Request) {
           send({ type: "message", message: chatMessage({ id: m.id, role: "dina", body: m.text, parts: m.component ? [m.component] : [] }, sources) });
         }
         const focus = sources.focus?.current_step ?? null;
-        send({ type: "state", progress: progressFrom(sources.state, focus), skippable: skippableNow(focus) });
+        send({ type: "state", progress: progressFrom(sources.state, focus, factsFromSources(sources)), skippable: skippableNow(focus) });
         send({ type: "done" });
       } catch (err) {
         console.error("The web chat turn failed", err);
@@ -104,9 +108,21 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       const { count } = await getSupabase().from("onboarding_messages").select("id", { count: "exact", head: true }).eq("restaurant_id", r);
       return count ? null : { event: "start" };
     }
-    case "message":
+    case "message": {
+      // Typed while one of code's cards is on screen: maybe its answer (guide).
+      const typed = await guideTyped({ restaurantId: r, text: action.text, channel: "web", asking: await askingCard(r) });
+      if (typed) return { event: "message", text: action.text, externalId: action.clientId, codeReply: typed.messages, note: typed.note ?? null };
       return { event: "message", text: action.text, externalId: action.clientId };
+    }
+    case "pick": {
+      const g = await guidePick({ restaurantId: r, messageId: action.messageId, choiceIds: action.choiceIds, text: action.text ?? null, channel: "web", confirmed: true });
+      if (!g) return null;
+      return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceIds.join(",") }], codeReply: g.messages, note: g.note ?? null };
+    }
     case "answer": {
+      // Code's own cards drawn as buttons (do this chapter later?, a pick read back).
+      const g = await guidePick({ restaurantId: r, messageId: action.messageId, choiceIds: [action.choiceId], channel: "web", confirmed: false });
+      if (g) return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceId }], codeReply: g.messages, note: g.note ?? null };
       // Some taps are acted on by code first (Google's buttons, a tone): Dina is told what happened.
       const outcome = await handleAnswer({ restaurantId: r, messageId: action.messageId, choiceId: action.choiceId, channel: "web", externalId: action.clientId });
       const turn: Turn = { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceId }] };
@@ -131,6 +147,9 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       const { session } = await chatSources(r).then((s) => ({ session: s.focus }));
       const step = session?.current_step;
       if (!step) return null;
+      // "Do this chapter later": asked once first (guide).
+      const ask = await guideSkipAsk(r, step);
+      if (ask) return { event: "message", text: "Do this chapter later", externalId: action.clientId, codeReply: ask.messages };
       await skipStep(r, step, { channel: "web" });
       await afterSkip(r, step);
       return {
@@ -146,6 +165,9 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       const { dataForFiles, noteForFiles } = await import("@/lib/onboarding/dina/whatsapp-turn");
       const { saved, refused } = await checkUploadedFiles(r, action.paths);
       const step = (await chatSources(r)).focus?.current_step ?? null;
+      // The logo or dish photos for code's look questions (guide).
+      const looked = saved.length ? await guideFiles({ restaurantId: r, files: saved, channel: "web" }) : null;
+      if (looked) return { event: "message", text: `📎 ${describeFiles(saved)}`, externalId: action.clientId, ownerParts: saved, codeReply: looked.messages };
       const refusal = refusedText(refused);
       const note = [saved.length ? await noteForFiles(r, step, saved, "in the chat") : null, refusal ? `Some files couldn't be used; tell them in a line: "${refusal}"` : null]
         .filter(Boolean)
@@ -154,6 +176,14 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       return { event: "message", text: saved.length ? `📎 ${describeFiles(saved)}` : "📎 a file I couldn't use", externalId: action.clientId, ownerParts: saved, note, data };
     }
     case "jump": {
+      // A chapter from the chapter list: its first step left to do.
+      const { CHAPTERS } = await import("@/lib/onboarding/guide/chapters");
+      const chapter = CHAPTERS[action.step as keyof typeof CHAPTERS];
+      if (chapter) {
+        const { state } = await (await import("@/lib/onboarding/sessions")).loadFlow(r);
+        const { stepState } = await import("@/lib/onboarding/flow");
+        action = { ...action, step: chapter.steps.find((k) => stepState(state, k).status !== "done") ?? chapter.steps[0] };
+      }
       if (!isFlowStep(action.step)) throw new FlowError("That step doesn't exist", "unavailable");
       await enterStep(r, action.step, { channel: "web" });
       return {
@@ -164,4 +194,12 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       };
     }
   }
+}
+
+// The card the owner is looking at: Dina's last message, if they haven't written since.
+async function askingCard(restaurantId: string) {
+  const { data } = await getSupabase().from("onboarding_messages").select("id, role, parts").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(3);
+  const last = (data ?? [])[0] as { id: string; role: string; parts: unknown[] | null } | undefined;
+  if (!last || last.role !== "dina") return null;
+  return { messageId: last.id, part: (last.parts?.[0] ?? {}) as { type?: string; q?: string } };
 }

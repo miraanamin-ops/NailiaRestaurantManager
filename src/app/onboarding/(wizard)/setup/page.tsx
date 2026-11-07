@@ -30,6 +30,10 @@ export default function SetupPage({ searchParams }: PageProps<"/onboarding/setup
 
 async function Setup({ searchParams }: Pick<PageProps<"/onboarding/setup">, "searchParams">) {
   const { s, restaurantId, q } = await loadOnboarding(searchParams, "/onboarding/setup");
+  // Setting up with Dina: her chat is the one setup (7 Nov 2026).
+  const { getSession } = await import("@/lib/onboarding/sessions");
+  const dina = await getSession(restaurantId);
+  if (dina && !dina.completed_at) (await import("next/navigation")).redirect(`/onboarding/chat?r=${restaurantId}`);
   if (s.onboarding.completed_at || !s.step) redirect(`/onboarding?r=${restaurantId}`);
 
   return (

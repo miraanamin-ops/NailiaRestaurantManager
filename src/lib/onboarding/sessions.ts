@@ -2,6 +2,7 @@ import "server-only";
 import { check, checkRow } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 import * as flow from "./flow";
+import { gateStep, type Facts } from "./guide/questions";
 
 // Onboarding with Dina, saved: one session per restaurant, one row per step,
 // and the setup gaps. Every change goes through the pure rules in flow.ts, then
@@ -125,11 +126,41 @@ async function save(restaurantId: string, key: flow.FlowStepKey, state: flow.Flo
 
 type Opts = { channel?: Channel; now?: Date };
 
+// What the step's questions are judged on (guide/questions.ts): the restaurant's
+// row and the profile fields the owner has confirmed. A read that fails counts as
+// nothing confirmed, so a question is asked rather than wrongly skipped.
+export async function factsFor(restaurantId: string, state: flow.FlowState): Promise<Facts> {
+  const supabase = getSupabase();
+  const [r, versions] = await Promise.all([
+    supabase.from("restaurants").select("*").eq("id", restaurantId).maybeSingle<Record<string, unknown>>(),
+    supabase.from("profile_versions").select("field").eq("restaurant_id", restaurantId).returns<{ field: string }[]>(),
+  ]);
+  return { r: r.data ?? {}, confirmed: new Set(versions.error ? [] : (versions.data ?? []).map((v) => v.field)), state };
+}
+
 async function change(restaurantId: string, key: flow.FlowStepKey, opts: Opts, fn: (state: flow.FlowState, now: string) => flow.FlowState, focus?: flow.FlowStepKey) {
   const { state, gaps } = await loadFlow(restaurantId);
-  const next = fn(state, (opts.now ?? new Date()).toISOString());
+  const now = (opts.now ?? new Date()).toISOString();
+  const changed = fn(state, now);
+  // A step stays open while any of its questions is (a tap can't close it early).
+  const next = gateStep(changed, key, await factsFor(restaurantId, changed), now, state);
   return save(restaurantId, key, next, gaps, opts.channel, focus);
 }
+
+// After an answer saved somewhere else (a profile field, a question's record):
+// the step's status counted again from its questions.
+export const refreshStep = (restaurantId: string, key: flow.FlowStepKey, opts: Opts = {}) => change(restaurantId, key, opts, (s) => s);
+
+// Records a question as answered, skipped or to ask again (guide/questions.ts), then counts the step again.
+// reopen: an answer on a skipped step (Change on a recap) opens it again; a recap's
+// own record (a chapter skipped as a whole) doesn't.
+export const recordQuestion = (restaurantId: string, key: flow.FlowStepKey, data: (stepData: Record<string, unknown>, now: string) => Record<string, unknown>, opts: Opts & { reopen?: boolean } = {}) =>
+  change(restaurantId, key, opts, (s, now) => {
+    const st = flow.stepState(s, key);
+    const reopen = opts.reopen ?? true;
+    const status = st.status === "not_started" || (reopen && st.status === "skipped") ? "in_progress" : st.status;
+    return { ...s, [key]: { ...st, status, startedAt: st.startedAt ?? now, skippedAt: status === "in_progress" ? null : st.skippedAt, data: data(st.data, now) } };
+  });
 
 // Going to a step makes it the one Dina is on, even a finished one being edited.
 export const enterStep = (restaurantId: string, key: flow.FlowStepKey, opts: Opts = {}) => change(restaurantId, key, opts, (s, now) => flow.enter(s, key, now), key);

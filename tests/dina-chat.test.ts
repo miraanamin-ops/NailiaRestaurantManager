@@ -63,7 +63,7 @@ describe("what the chat draws", () => {
     // Every step dealt with: the summary links to the dashboard; part way through it doesn't.
     let state = complete({}, "hello", "done", {}, T);
     expect(summaryFrom({ restaurant: { ...restaurant, id: "r-1" }, state }).dashboardHref).toBeNull();
-    for (const k of ["google", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "approvals_timing"]) state = skip(state, k as never, T);
+    for (const k of ["google", "look", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "approvals_timing"]) state = skip(state, k as never, T);
     expect(summaryFrom({ restaurant: { ...restaurant, id: "r-1" }, state }).dashboardHref).toBe("/?r=r-1");
   });
 
@@ -81,8 +81,20 @@ describe("what the chat draws", () => {
     state = wait(state, "google", "google_acceptance", {}, T);
     state = skip(state, "tone", T);
     const p = progressFrom(state, "make_it_right");
-    expect(p).toMatchObject({ position: 4, total: 11 });
-    expect(p.steps.map((s) => s.status)).toEqual(["done", "waiting", "skipped", "in_progress", ...Array(7).fill("not_started")]);
+    // In chapter order (7 Nov 2026): hello, google, look, tone, menu, rewards, make_it_right, ...
+    expect(p).toMatchObject({ position: 7, total: 12, chapter: { n: 6, total: 8, title: "Customers and complaints" } });
+    expect(p.steps.map((s) => s.status)).toEqual(["done", "waiting", "not_started", "skipped", "not_started", "not_started", "in_progress", ...Array(5).fill("not_started")]);
+    // The chapters the owner sees: Google waits, the look and voice chapter is half there (the tone skipped).
+    expect(p.chapters?.map((c) => [c.key, c.status])).toEqual([
+      ["restaurant", "done"],
+      ["google", "waiting"],
+      ["look_voice", "in_progress"],
+      ["menu", "not_started"],
+      ["offers", "not_started"],
+      ["customers", "in_progress"],
+      ["sales_team", "not_started"],
+      ["working", "not_started"],
+    ]);
     // Editing a finished step: it stays done in the list.
     expect(progressFrom(state, "hello").steps[0].status).toBe("done");
   });
@@ -99,7 +111,7 @@ describe("what the chat draws", () => {
     state = skip(state, "google", T);
     state = complete(state, "tone", "partial", {}, T);
     const s = summaryFrom({ restaurant: { ...restaurant, cuisine: "Halal grill" }, state });
-    expect(s).toMatchObject({ done: 1, total: 11 });
+    expect(s).toMatchObject({ done: 1, total: 12 });
     expect(s.items.map((i) => [i.title, i.status, i.detail])).toEqual([
       ["Hello", "done", "Ember & Spice Grill, Halal grill, 12 High Street, London E1 6AN"],
       ["Your tone", "partial", "Half done"],
@@ -224,7 +236,7 @@ describe("the chat endpoint", () => {
     expect(status).toBe(200);
     expect(events.map((e) => e.type)).toEqual(["typing", "status", "message", "message", "state", "done"]);
     expect(events.filter((e) => e.type === "message").map((e) => (e as { message: { text: string } }).message.text)).toEqual(["Lovely, saved.", "Next, your tone."]);
-    expect(events.find((e) => e.type === "state")).toMatchObject({ skippable: true, progress: { position: 3, total: 11 } });
+    expect(events.find((e) => e.type === "state")).toMatchObject({ skippable: true, progress: { position: 4, total: 12, chapter: { n: 3, title: "Your look and voice" } } });
     expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ restaurantId: R, channel: "web", event: "message", text: "We're a halal grill", externalId: clientId }));
   });
 
@@ -235,12 +247,19 @@ describe("the chat endpoint", () => {
     expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ text: "Yes", ownerParts: [{ type: "answer", to: messageId, choice: "yes" }] }));
   });
 
-  test("'Skip for now' is done by code first, then Dina is told", async () => {
-    reply(["No problem, we can do this later."]);
+  test("'Do this chapter later' is asked once first; yes skips the rest of the chapter (each step a gap), and nothing is skipped on no", async () => {
+    codeTurn.mockResolvedValue({ duplicate: false, messages: [] });
     await call({ r: R, action: { kind: "skip", clientId: uuid() } });
-    expect(db.tables.onboarding_steps.find((s) => s.step_key === "tone")?.status).toBe("skipped");
-    expect(db.tables.setup_gaps.map((g) => g.step_key)).toEqual(["tone"]);
-    expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ event: "action", text: "Skip for now", note: expect.stringMatching(/Skip for now.*Your tone.*skipped/) }));
+    expect(codeTurn).toHaveBeenCalledWith(expect.objectContaining({ text: "Do this chapter later", messages: [expect.objectContaining({ component: { type: "chapter_skip", chapter: "look_voice" } })] }));
+    expect(db.tables.onboarding_steps.find((s) => s.step_key === "tone")?.status).not.toBe("skipped");
+    const ask = uuid();
+    db.tables.onboarding_messages.push({ id: ask, restaurant_id: R, role: "dina", body: "Do the rest later?", parts: [{ type: "chapter_skip", chapter: "look_voice" }], created_at: T });
+    await call({ r: R, action: { kind: "answer", messageId: ask, choiceId: "chapter_carry_on", label: "No, carry on", clientId: uuid() } });
+    expect(db.tables.onboarding_steps.find((s) => s.step_key === "tone")?.status).not.toBe("skipped");
+    await call({ r: R, action: { kind: "answer", messageId: ask, choiceId: "chapter_later", label: "Yes, do it later", clientId: uuid() } });
+    expect(["look", "tone"].map((k) => db.tables.onboarding_steps.find((s) => s.step_key === k)?.status)).toEqual(["skipped", "skipped"]);
+    expect(db.tables.setup_gaps.map((g) => g.step_key).sort()).toEqual(["look", "tone"]);
+    expect(dinaTurn).not.toHaveBeenCalled();
   });
 
   test("picking a step from the list moves there first; a step that isn't built is refused with a message", async () => {

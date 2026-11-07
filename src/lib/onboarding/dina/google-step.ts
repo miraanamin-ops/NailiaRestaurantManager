@@ -58,7 +58,7 @@ export async function googleInvited(restaurantId: string, channel: Channel) {
       console.error("Couldn't queue the invitation check", err),
     );
   }
-  return 'The owner tapped "Done, I\'ve invited you". The Google step now waits for Google to deliver the invitation; code accepts it as soon as it arrives (usually within minutes). Say you\'ll let them know when you\'re in, then carry on with the next step.';
+  return 'The owner tapped "Done, I\'ve invited you". The Google step now waits for Google to deliver the invitation; code accepts it as soon as it arrives (usually within minutes). Say you\'ll let them know when you\'re in.';
 }
 
 // "Email me these steps". Returns what Dina is told.

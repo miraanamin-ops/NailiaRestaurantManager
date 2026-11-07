@@ -59,8 +59,16 @@ export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
 
   if (input.media.length) return files(channel, input, step, switched);
 
-  const reply = readWhatsAppReply(input, askingNow(recent, sources), skippableNow(step));
+  const asking = askingNow(recent, sources);
+  const reply = readWhatsAppReply(input, asking, skippableNow(step));
   const externalId = input.messageSid ?? null;
+  // Code's own cards (a question, a recap, a pick to confirm) answer themselves (guide).
+  const guided = await guideReply(input.restaurantId, reply, step, recent);
+  if (guided) {
+    const result = await codeTurn({ restaurantId: input.restaurantId, channel: "whatsapp", text: guided.text, externalId, ownerParts: guided.ownerParts, messages: guided.reply.messages, note: guided.reply.note ?? null });
+    if (!result.duplicate) await sendTurn(channel, result.messages);
+    return;
+  }
   let turn: Omit<TurnInput, "restaurantId" | "channel">;
   if (reply.kind === "skip" && step) {
     await skipStep(input.restaurantId, step, { channel: "whatsapp" });
@@ -94,6 +102,27 @@ export async function handleDinaWhatsApp(input: DinaWhatsAppInput) {
   }
   const result = await dinaTurn({ ...turn, restaurantId: input.restaurantId, channel: "whatsapp" });
   if (!result.duplicate) await sendTurn(channel, result.messages);
+}
+
+// A WhatsApp reply that answers one of code's own cards, or SKIP (do this chapter
+// later, asked once first). null: Dina takes it.
+async function guideReply(restaurantId: string, reply: ReturnType<typeof readWhatsAppReply>, step: FlowStepKey | null, recent: Row[]) {
+  const { guidePick, guideSkipAsk, guideTyped } = await import("../guide/handle");
+  if (reply.kind === "skip") {
+    const ask = await guideSkipAsk(restaurantId, step);
+    return ask ? { reply: ask, text: "Skip for now", ownerParts: [] as unknown[] } : null;
+  }
+  if (reply.kind === "answer") {
+    const g = await guidePick({ restaurantId, messageId: reply.messageId, choiceIds: [reply.choiceId], channel: "whatsapp", confirmed: false });
+    return g ? { reply: g, text: reply.label, ownerParts: [{ type: "answer", to: reply.messageId, choice: reply.choiceId }] as unknown[] } : null;
+  }
+  if (reply.kind === "text") {
+    const last = recent.find((r) => r.role !== "system");
+    const asking = last?.role === "dina" ? { messageId: last.id, part: ((last.parts ?? [])[0] ?? {}) as { type?: string; q?: string } } : null;
+    const g = await guideTyped({ restaurantId, text: reply.text, channel: "whatsapp", asking });
+    return g ? { reply: g, text: reply.text, ownerParts: [] as unknown[] } : null;
+  }
+  return null;
 }
 
 // Straight after the owner's number is linked (by its first message, or by the
@@ -138,6 +167,14 @@ async function files(channel: OwnerChannel, input: DinaWhatsAppInput, step: Flow
 
   if (refusal) await say(channel, step, refusal);
   const all = [...(await filesSinceDina(input.restaurantId)), ...saved];
+  // The logo or dish photos for code's look questions (guide).
+  const { guideFiles } = await import("../guide/handle");
+  const looked = await guideFiles({ restaurantId: input.restaurantId, files: all, channel: "whatsapp" });
+  if (looked) {
+    const result = await codeTurn({ restaurantId: input.restaurantId, channel: "whatsapp", text, externalId: input.messageSid ?? null, ownerParts: parts, messages: looked.messages });
+    if (!result.duplicate) await sendTurn(channel, result.messages);
+    return;
+  }
   const note = [
     await noteForFiles(input.restaurantId, step, all, "on WhatsApp"),
     refusal ? "Some other files couldn't be used, and code has already told them why: don't repeat it." : "",
@@ -184,7 +221,7 @@ export async function noteForFiles(restaurantId: string, step: FlowStepKey | nul
     }
     return `${sent} ${sheet ? "Their staff list is in the data below: read the names, roles, rates, contracted hours and, where it has them, each person's days, times and max hours a week; check anything unclear with them, then call save_team and show editable_card team." : "Ask for the staff list as a CSV or Excel file, or to type it (name, role, hourly rate, contracted hours, and when each person can work)."}`;
   }
-  if (step === "customers_qr") {
+  if (step === "look") {
     // The logo (until "Your look" is confirmed), then photos of their dishes.
     const { lookFiles } = await import("./details-step");
     const read = await lookFiles(restaurantId, files).catch((err) => (console.error("Saving the photos failed", err), "Those photos couldn't be saved this time. Ask them to send them again."));

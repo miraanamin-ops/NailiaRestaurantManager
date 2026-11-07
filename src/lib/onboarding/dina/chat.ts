@@ -4,7 +4,7 @@ import { getSupabase } from "@/lib/supabase";
 import { getSession, loadFlow, startOnboarding } from "../sessions";
 import { getRestaurant } from "../store";
 import { setupExtras } from "./setup-config";
-import { chatFrom, progressFrom, skippableNow, type CardSources, type StoredMessage } from "./view";
+import { chatFrom, factsFromSources, progressFrom, skippableNow, type CardSources, type StoredMessage } from "./view";
 
 // The web chat's state for one restaurant, from what's saved: the conversation,
 // the choices made, the step list, and whether "Skip for now" shows.
@@ -13,8 +13,13 @@ import { chatFrom, progressFrom, skippableNow, type CardSources, type StoredMess
 const SHOWN = 200;
 
 export async function chatSources(restaurantId: string): Promise<CardSources & { focus: Awaited<ReturnType<typeof getSession>> }> {
-  const [restaurant, { state, session }, setup] = await Promise.all([getRestaurant(restaurantId), loadFlow(restaurantId), setupExtras(restaurantId)]);
-  return { restaurant, state, focus: session, setup };
+  const [restaurant, { state, session }, setup, versions] = await Promise.all([
+    getRestaurant(restaurantId),
+    loadFlow(restaurantId),
+    setupExtras(restaurantId),
+    getSupabase().from("profile_versions").select("field").eq("restaurant_id", restaurantId).returns<{ field: string }[]>(),
+  ]);
+  return { restaurant, state, focus: session, setup, confirmed: versions.error ? [] : [...new Set((versions.data ?? []).map((v) => v.field))] };
 }
 
 export async function loadChat(restaurantId: string) {
@@ -36,7 +41,7 @@ export async function loadChat(restaurantId: string) {
     restaurantName: sources.restaurant.name ?? "",
     messages,
     chosen,
-    progress: progressFrom(sources.state, focus),
+    progress: progressFrom(sources.state, focus, factsFromSources(sources)),
     skippable: skippableNow(focus),
     needsStart: saved.length === 0,
   };

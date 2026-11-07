@@ -302,15 +302,22 @@ describe("Dina on WhatsApp, whole turns", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("'skip' on a skippable step: code skips it (a setup gap), then Dina carries on", async () => {
+  test("'skip': code asks once whether to do the rest of the chapter later; yes skips it (a setup gap) and code asks the next chapter's first question", async () => {
     db.tables.onboarding_sessions[0].current_step = "google";
     db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "hello", status: "done", data: {}, completed_at: "2026-10-30T10:05:00.000Z" });
     db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "google", status: "in_progress", data: {}, started_at: "2026-10-30T10:05:00.000Z" });
-    callDina.mockResolvedValueOnce(answer({ text: "No problem, we can do this later. Next, your tone." }));
     await whatsapp("skip");
+    expect(db.tables.onboarding_steps.find((s) => s.step_key === "google")?.status).toBe("in_progress");
+    const ask = db.tables.onboarding_messages.filter((m) => m.role === "dina").at(-1);
+    expect(ask).toMatchObject({ body: expect.stringMatching(/^Do the rest of Google later\?/), parts: [{ type: "chapter_skip", chapter: "google" }] });
+    await whatsapp("1");
     expect(db.tables.onboarding_steps.find((s) => s.step_key === "google")?.status).toBe("skipped");
     expect(db.tables.setup_gaps).toEqual([expect.objectContaining({ step_key: "google" })]);
-    expect(callDina.mock.calls[0][0].content).toMatch(/chose "Skip for now" on Google profile/);
+    // The next chapter opens with its line, then code's own first question (no Claude call).
+    const after = db.tables.onboarding_messages.filter((m) => m.role === "dina").slice(-2);
+    expect(after.map((m) => m.body)[0]).toMatch(/^Chapter 3 of 8: Your look and voice/);
+    expect(after[1]).toMatchObject({ parts: [{ type: "question", q: "look.logo" }] });
+    expect(callDina).not.toHaveBeenCalled();
   });
 
   test("a menu photo: saved in the private bucket with the message, read into a menu, and Dina told what was read", async () => {

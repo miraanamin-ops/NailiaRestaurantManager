@@ -85,8 +85,8 @@ beforeEach(() => {
         emoji_allowed: { review_replies: 0, posts: 2, campaigns: 2 }, photo_library: [], menu: [], profile_version: 0,
       },
     ],
-    onboarding_sessions: [{ restaurant_id: R, flow_version: 2, current_step: "customers_qr", channel_last_used: "web", started_at: "2026-11-04T10:00:00.000Z", completed_at: null }],
-    onboarding_steps: [{ restaurant_id: R, step_key: "customers_qr", status: "in_progress", data: {} }],
+    onboarding_sessions: [{ restaurant_id: R, flow_version: 2, current_step: "look", channel_last_used: "web", started_at: "2026-11-04T10:00:00.000Z", completed_at: null }],
+    onboarding_steps: [{ restaurant_id: R, step_key: "look", status: "in_progress", data: {} }],
     onboarding_messages: [],
     setup_gaps: [],
     audit_log: [],
@@ -175,9 +175,13 @@ describe("a full setup leaves nothing missing for any agent", () => {
       signup_reward: "a free dessert", discount_cap_percent: 15, send_window_start: "09:00:00", send_window_end: "21:00:00",
       owner_language: "English", quiet_hours_start: "23:00:00", quiet_hours_end: "09:00:00",
     });
-    await applyDetailNotes(R, { sign_off_name: "Amina", emoji: "yes", allergen_statement: DEFAULT_ALLERGEN_STATEMENT, offer_types: "% off" });
-    await lookFiles(R, [photo(1)]);
-    await confirmBrand(R, "web");
+    // Chapter 3 is code's own questions now (guide/answer.ts), each confirmed.
+    const { answerQuestion } = await import("@/lib/onboarding/guide/answer");
+    await applyDetailNotes(R, { allergen_statement: DEFAULT_ALLERGEN_STATEMENT, offer_types: "% off" });
+    await lookFiles(R, [photo(1)], "logo");
+    for (const [q, picked] of [["look.logo", ["use"]], ["look.colours", ["default"]], ["tone.sign_off", ["s1"]], ["tone.emoji", ["yes"]]] as const)
+      expect(await answerQuestion({ restaurantId: R, q, picked: [...picked], channel: "web" })).toMatchObject({ ok: true });
+    void confirmBrand;
     for (const agent of Object.keys(GO_LIVE_FIELDS) as (keyof typeof GO_LIVE_FIELDS)[]) {
       expect({ agent, missing: missingForGoLive(r(), agent, confirmed()) }).toEqual({ agent, missing: [] });
     }

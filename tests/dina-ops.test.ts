@@ -80,7 +80,7 @@ beforeEach(() => {
       { id: R, name: "Ember Grill", slug: "ember-grill", owner_name: "Amina", active: false, is_demo: true, discount_cap_percent: 20, signup_reward: null, labour_target_pct: null, brief_hour: 9, send_window_start: "09:00:00", send_window_end: "21:00:00", recovery_offers: ["Invite them back for a free dessert"], owner_whatsapp: OWNER, whatsapp_from: "whatsapp:+14155238886", menu: [], profile_version: 0 },
     ],
     onboarding_sessions: [{ restaurant_id: R, flow_version: 2, current_step: "sales", channel_last_used: "web", started_at: "2026-10-31T10:00:00.000Z", completed_at: null }],
-    onboarding_steps: ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs"].map((k) => ({ restaurant_id: R, step_key: k, status: "done", data: {}, completed_at: "2026-10-31T10:05:00.000Z" })),
+    onboarding_steps: ["hello", "google", "look", "tone", "make_it_right", "menu", "hours_faqs"].map((k) => ({ restaurant_id: R, step_key: k, status: "done", data: {}, completed_at: "2026-10-31T10:05:00.000Z" })),
     onboarding_messages: [],
     setup_gaps: [],
     audit_log: [],
@@ -179,7 +179,7 @@ describe("step 7, sales history", () => {
     expect(gap("sales_items")?.unlock_text).toMatch(/item sales export too and I'll unlock dish-level insights/);
     const { currentStep, pickNudge, gapReply } = await import("@/lib/onboarding/flow");
     const { loadFlow } = await import("@/lib/onboarding/sessions");
-    expect(currentStep((await loadFlow(R)).state)).toBe("team"); // not a blocker
+    expect(currentStep((await loadFlow(R)).state)).not.toBe("sales"); // not a blocker
     const gaps = [gap("sales_items"), { id: "g-menu", step_key: "menu", unlock_text: "x" }].map((g) => ({ nudge_count: 0, last_nudged_at: null, snoozed_until: null, dismissed: false, dismissed_reason: null, resolved_at: null, ...g })) as never[];
     expect(pickNudge(gaps, new Date()).pick).toMatchObject({ step_key: "menu" }); // lowest priority
     expect(gapReply(gaps[0], "now", new Date()).resume).toBe("sales");
@@ -246,7 +246,8 @@ describe("step 8, team and labour", () => {
     expect(db.tables.staff[0]).toMatchObject({ contracted_hours: 30 });
     expect(db.tables.rota_rules).toEqual([expect.objectContaining({ restaurant_id: R, role: "kitchen", min_on_shift: 2 })]);
     expect(r().labour_target_pct).toBe(28);
-    expect(step("team")).toMatchObject({ status: "done", data: { labour_defaulted: false, with_availability: 1 } });
+    // Done by its own count; the chapter's recap (sales and team) closes it.
+    expect(step("team")).toMatchObject({ status: "in_progress", data: { _outcome: "done", labour_defaulted: false, with_availability: 1 } });
   });
 
   test("availability she couldn't read, a rate that looks weekly: sent back, nothing noted; no target: 30%, flagged", async () => {
@@ -293,7 +294,7 @@ describe("step 9, rewards and the cap", () => {
     expect(await tool("save_rewards", { signup_reward: "a free drink", discount_cap_percent: 10 })).toMatchObject({ ok: false, text: expect.stringMatching(/wouldn't fit a 10% cap/) });
     expect(await tool("save_rewards", { signup_reward: "a free dessert", discount_cap_percent: 15 })).toMatchObject({ ok: true, text: expect.stringMatching(/new sign-ups get a free dessert, and no offer will ever go over 15% off/) });
     expect(r()).toMatchObject({ signup_reward: "a free dessert", discount_cap_percent: 15 });
-    expect(step("rewards")?.status).toBe("done");
+    expect(step("rewards")?.data._outcome).toBe("done");
     expect(db.tables.audit_log.map((a) => a.detail)).toEqual(expect.arrayContaining([expect.stringMatching(/discount cap/), expect.stringMatching(/sign-up reward/)]));
   });
 });
@@ -304,14 +305,9 @@ describe("step 10, the QR codes", () => {
     expect(await tool("send_qr_kit", {})).toMatchObject({ ok: true, text: expect.stringMatching(/sent their QR codes by email and WhatsApp\. Show qr_kit/) });
     expect(sendOwnerEmail.mock.calls[0][1]).toMatchObject({ subject: "Your QR codes for Ember Grill", text: expect.stringContaining("https://app.test/r/ember-grill/qr-pack") });
     expect(sendText).toHaveBeenCalledWith("whatsapp:+14155238886", OWNER, expect.stringContaining("https://app.test/r/ember-grill/qr-pack"));
-    // No logo confirmed yet: half done, with the logo as the setup gap (4 Nov).
-    expect(step("customers_qr")).toMatchObject({ status: "partial", data: { qr_via: ["email", "WhatsApp"], gap_unlock: expect.stringMatching(/^Send your logo/) } });
-  });
-
-  test("with their logo and colours confirmed, the step is done", async () => {
-    db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "customers_qr", status: "in_progress", data: { brand_confirmed: true } });
-    await tool("send_qr_kit", {});
-    expect(step("customers_qr")).toMatchObject({ status: "done" });
+    // Done by its own count (the logo is chapter 3's question now); the chapter's recap closes it.
+    expect(step("customers_qr")).toMatchObject({ data: { _outcome: "done", qr_via: ["email", "WhatsApp"] } });
+    expect(step("customers_qr")?.data.gap_unlock).toBeUndefined();
   });
 
   test("outside WhatsApp's window, email only", async () => {
@@ -325,22 +321,23 @@ describe("step 12, approvals and timing", () => {
     expect(await tool("save_timing", { brief_hour: 6, quiet_start: "09:00", quiet_end: "21:00" })).toMatchObject({ ok: false });
     expect(await tool("save_timing", { brief_hour: 8, quiet_start: "10:00", quiet_end: "20:30" })).toMatchObject({ ok: true, text: expect.stringMatching(/brief comes at 8am, and customer messages only go out between 10:00 and 20:30/) });
     expect(r()).toMatchObject({ brief_hour: 8, send_window_start: "10:00:00", send_window_end: "20:30:00" });
-    expect(step("approvals_timing")).toMatchObject({ status: "done", data: { approver: "owner" } });
+    expect(step("approvals_timing")).toMatchObject({ data: { _outcome: "done", approver: "owner" } });
   });
 });
 
 describe("what Dina is told", () => {
-  test("on the team step she also gets the rewards step's settings, so moving on she never guesses the cap", async () => {
-    db.tables.onboarding_sessions[0].current_step = "team";
+  test("on the menu step she also gets the next step's settings (rewards), so she never guesses the cap", async () => {
+    db.tables.onboarding_sessions[0].current_step = "menu";
+    db.tables.onboarding_steps = db.tables.onboarding_steps.filter((s: { step_key: string }) => s.step_key !== "menu");
     Object.assign(db.tables, { onboarding_ai_usage: [] });
     const callDina = vi.fn(async () => ({ reply: { messages: [{ text: "Who runs the site day to day?", component: null }] }, calls: [], toolCalls: [], attempts: 1 }));
     vi.doMock("@/lib/onboarding/dina/call", async (orig) => ({ ...(await orig<object>()), callDina, routeStep: async () => ({ step: null, call: null }) }));
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
     await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "Bilal in the kitchen", externalId: "t-near" });
     const content = (callDina.mock.calls[0] as unknown as [{ content: string }])[0].content;
-    expect(content).toMatch(/labour_hint/);
+    expect(content).toMatch(/allergen_wording/);
     expect(content).toMatch(/discount_cap_percent: 20/);
-    expect(content).not.toMatch(/pos_tips|brief_hour/);
+    expect(content).not.toMatch(/pos_tips|brief_hour|labour_hint/);
     vi.doUnmock("@/lib/onboarding/dina/call");
   });
 

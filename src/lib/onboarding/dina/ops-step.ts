@@ -138,8 +138,8 @@ async function finishSales(restaurantId: string, channel: Channel) {
       ? ""
       : " These are daily totals. In one short line, mention that a sales-by-item export is the most useful (it shows which dishes make the most), then sales by the hour, whenever suits: a low-priority reminder, not something to do now.";
   const column = ` Then say in one line which column the takings came from: ${columnUsed(rows)}.`;
-  if (cover.enough) return `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${column}${reminder} Then move on.`;
-  return `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${column}${reminder} Then move on.`;
+  if (cover.enough) return `Code saved their sales: "Got it: ${cover.text}." Say that in those words.${column}${reminder}`;
+  return `Code saved their sales (${cover.text}), but forecasts need at least 8 weeks, so the step is half done and a setup gap for later. Say so kindly in a line (they can send more any time).${column}${reminder}`;
 }
 
 // The column the newest file's takings came from, in words for Dina: the net sales
@@ -292,20 +292,11 @@ export async function sendQrKit(restaurantId: string, channel: Channel) {
     whatsapp = true;
   }
   const via = [email.delivery === "email" ? "email" : null, whatsapp ? "WhatsApp" : null].filter(Boolean);
-  // Without a confirmed logo the step is only half done: the logo is a setup gap
-  // (Visibility and Growth need it to go live).
-  const look = (await dataOf(restaurantId, "customers_qr")) as { brand_confirmed?: boolean };
-  const logoSet = Boolean(look.brand_confirmed);
-  await completeStep(
-    restaurantId,
-    "customers_qr",
-    logoSet ? "done" : "partial",
-    { qr_sent_at: new Date().toISOString(), qr_via: via, ...(logoSet ? {} : { gap_unlock: LOGO_GAP }) },
-    { channel },
-  );
+  // The logo is the look step's question now (7 Nov 2026): a missing one is a gap there, not here.
+  await completeStep(restaurantId, "customers_qr", "done", { qr_sent_at: new Date().toISOString(), qr_via: via }, { channel });
   return {
     ok: true as const,
-    text: `Code ${via.length ? `sent their QR codes by ${via.join(" and ")}` : "made their QR codes (there was nowhere to send them, so show them in the chat)"}. Show qr_kit so they can open them now. Customers and QR codes is ${logoSet ? "done" : "saved; their logo is still to add, so it stays a setup gap for later"}.`,
+    text: `Code ${via.length ? `sent their QR codes by ${via.join(" and ")}` : "made their QR codes (there was nowhere to send them, so show them in the chat)"}. Show qr_kit so they can open them now.`,
   };
 }
 

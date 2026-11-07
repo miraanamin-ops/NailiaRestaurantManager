@@ -71,7 +71,9 @@ export const TOOLS: DinaTool[] = [
       const restaurant = await getRestaurant(ctx.restaurantId);
       await saveProfileFields(restaurant, { owner_name: input.owner_name, name: input.restaurant_name, address: input.address, cuisine: input.cuisine }, "Confirmed with Dina at setup");
       const { session } = await completeStep(ctx.restaurantId, "hello", "done", { role: input.role }, { channel: ctx.channel });
-      return { ok: true, text: `Saved. Hello is done. The next step is ${session.current_step ? `${session.current_step} (${STEP_DEFS[session.current_step].title})` : "none: setup is complete"}.` };
+      // Code moves setup on (the chapter's recap comes next): she only says it's saved.
+      void session;
+      return { ok: true, text: "Saved. Hello is done. Say so in a line; code shows what comes next." };
     },
   }),
   tool({
@@ -83,7 +85,8 @@ export const TOOLS: DinaTool[] = [
       const { session } = await skipStep(ctx.restaurantId, input.step, { channel: ctx.channel });
       const { afterSkip } = await import("./answers");
       await afterSkip(ctx.restaurantId, input.step);
-      return { ok: true, text: `Skipped ${STEP_DEFS[input.step].title}. The next step is ${session.current_step ?? "none: every step is dealt with"}.` };
+      void session;
+      return { ok: true, text: `Skipped ${STEP_DEFS[input.step].title}. Say "No problem, we can do this later." Code moves setup on.` };
     },
   }),
   tool({

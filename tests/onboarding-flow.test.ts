@@ -29,15 +29,15 @@ import {
 
 const T = "2026-10-28T10:00:00.000Z";
 const LATER = "2026-10-28T11:00:00.000Z";
-// Steps 1 to 10 and 12 (phase 9); languages and key dates (11) comes later.
-const ASKED: FlowStepKey[] = ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "approvals_timing"];
+// In chapter order (7 Nov 2026); languages and key dates comes later.
+const ASKED: FlowStepKey[] = ["hello", "google", "look", "tone", "menu", "rewards", "make_it_right", "hours_faqs", "customers_qr", "sales", "team", "approvals_timing"];
 
 const hello = (s: FlowState = {}) => complete(s, "hello", "done", { owner_name: "Amina", restaurant_name: "Ember & Spice Grill" }, T);
 const all = (fn: (s: FlowState, k: FlowStepKey) => FlowState, start: FlowState = hello()) => availableSteps().filter((k) => k !== "hello").reduce(fn, start);
 
 describe("the steps", () => {
-  test("twelve in the agreed order; only Hello can't be skipped and has no unlock line", () => {
-    expect(FLOW_STEPS).toEqual(["hello", "google", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "languages_dates", "approvals_timing"]);
+  test("thirteen in chapter order (7 Nov 2026); only Hello can't be skipped and has no unlock line", () => {
+    expect(FLOW_STEPS).toEqual(["hello", "google", "look", "tone", "menu", "rewards", "make_it_right", "hours_faqs", "customers_qr", "sales", "team", "languages_dates", "approvals_timing"]);
     for (const k of FLOW_STEPS) {
       expect(STEP_DEFS[k].skippable).toBe(k !== "hello");
       expect(Boolean(STEP_DEFS[k].unlock)).toBe(k !== "hello");
@@ -59,7 +59,7 @@ describe("the steps", () => {
 describe("where the owner is", () => {
   test("starts at Hello and goes in order", () => {
     expect(currentStep({})).toBe("hello");
-    expect(progress({})).toEqual({ total: 11, position: 1, done: 0, resolved: 0 });
+    expect(progress({})).toEqual({ total: 12, position: 1, done: 0, resolved: 0 });
     const s = hello();
     expect(currentStep(s)).toBe("google");
     expect(progress(s)).toMatchObject({ position: 2, done: 1 });
@@ -67,10 +67,10 @@ describe("where the owner is", () => {
 
   test("skipping, finishing in part and finishing all move Dina on", () => {
     let s = skip(hello(), "google", T);
+    expect(currentStep(s)).toBe("look");
+    s = complete(s, "look", "partial", { logo: true }, T);
     expect(currentStep(s)).toBe("tone");
-    s = complete(s, "tone", "partial", { praise: "warm" }, T);
-    expect(currentStep(s)).toBe("make_it_right");
-    s = complete(s, "make_it_right", "done", { offers: ["Free dessert"] }, T);
+    s = complete(s, "tone", "done", { praise: "warm" }, T);
     expect(currentStep(s)).toBe("menu");
     expect(progress(s)).toMatchObject({ position: 5, done: 2, resolved: 4 });
   });
@@ -78,7 +78,7 @@ describe("where the owner is", () => {
   test("a step waiting on someone else (Google accepting our invite) doesn't hold the owner up", () => {
     const s = wait(hello(), "google", "google_acceptance", { invited: true }, T);
     expect(statusOf(s, "google")).toBe("in_progress");
-    expect(currentStep(s)).toBe("tone");
+    expect(currentStep(s)).toBe("look");
     // Coming back to it keeps it waiting; finishing it later makes it done.
     expect(enter(s, "google", LATER)).toBe(s);
     const done = complete(s, "google", "done", { accepted: true }, LATER);
@@ -151,7 +151,7 @@ describe("activating and finishing", () => {
     expect(currentStep(s)).toBeNull();
     expect(canFinish(s, false)).toBe(false);
     expect(canFinish(s, true)).toBe(true);
-    expect(progress(s)).toEqual({ total: 11, position: 11, done: 1, resolved: 11 });
+    expect(progress(s)).toEqual({ total: 12, position: 12, done: 1, resolved: 12 });
   });
 
   test("a step still being worked on stops finishing", () => {

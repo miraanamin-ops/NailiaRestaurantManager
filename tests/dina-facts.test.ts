@@ -121,7 +121,7 @@ beforeEach(() => {
     {
       restaurants: [{ id: R, name: "Ember Grill", owner_name: "Amina", active: false, is_demo: true, discount_cap_percent: 15, opening_hours: { Monday: "12:00 – 22:00" }, menu: [], faqs: {}, profile_version: 0, recovery_offers: null, complaint_contact: null, halal_statement: null }],
       onboarding_sessions: [{ restaurant_id: R, flow_version: 2, current_step: "make_it_right", channel_last_used: "web", started_at: "2026-10-31T10:00:00.000Z", completed_at: null }],
-      onboarding_steps: ["hello", "google", "tone"].map((k) => ({ restaurant_id: R, step_key: k, status: "done", data: {}, completed_at: "2026-10-31T10:05:00.000Z" })),
+      onboarding_steps: ["hello", "google", "look", "tone"].map((k) => ({ restaurant_id: R, step_key: k, status: "done", data: {}, completed_at: "2026-10-31T10:05:00.000Z" })),
       onboarding_messages: [],
       setup_gaps: [],
       onboarding_ai_usage: [],
@@ -242,6 +242,11 @@ describe("step 5, the menu", () => {
     // "Change it": Dina asks, then saves exactly what they say; the last dish done, the step half done (one unknown).
     expect(await tap(second.id, "allergen_change")).toMatch(/change the allergens for this dish/);
     expect(await tool("set_allergens", { dish: "chips", allergens: [] })).toMatchObject({ ok: true, text: expect.stringMatching(/^Saved chips: none of the 14 \(confirmed\)\. Every dish is dealt with: 2 confirmed, 1 left as unknown/) });
+    // Half done by its own count; it closes (half done, a gap) once the chapter's recap is confirmed.
+    expect(step("menu")?.data._outcome).toBe("partial");
+    expect(step("menu")?.status).toBe("in_progress");
+    const { confirmRecap } = await import("@/lib/onboarding/guide/answer");
+    await confirmRecap(R, "menu", "web");
     expect(step("menu")?.status).toBe("partial");
     expect(db.tables.setup_gaps).toEqual(expect.arrayContaining([expect.objectContaining({ step_key: "menu" })]));
     expect(await tool("set_allergens", { dish: "Samosa", allergens: ["milk"] })).toMatchObject({ ok: false });

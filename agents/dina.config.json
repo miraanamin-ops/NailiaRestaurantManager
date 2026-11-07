@@ -18,6 +18,7 @@
     "team": 8000,
     "rewards": 6000,
     "customers_qr": 6000,
-    "approvals_timing": 6000
+    "approvals_timing": 6000,
+    "look": 6000
   }
 }

@@ -26,7 +26,35 @@ export type ChatComponent =
   | { type: "dish_check"; dish: string; section: string; suggested: string[]; position: number; total: number; actions: ChatOption[] }
   | { type: "upload"; accept: "photo" | "document" | "spreadsheet" | "any"; multiple: boolean; label: string }
   | { type: "confirmation"; card: ConfirmationData }
-  | { type: "summary"; summary: SummaryData };
+  | { type: "summary"; summary: SummaryData }
+  // One of setup's questions, drawn by code (lib/onboarding/guide/cards.ts).
+  | { type: "question"; card: QuestionCardData }
+  // The end of a chapter: everything it saved, each with Change, and "Looks right".
+  | { type: "recap"; recap: RecapData };
+
+// swatches: colour codes drawn as dots (a colour choice); body: the longer text under the label (a reply in a tone).
+export type QuestionOption = { id: string; label: string; short?: string; body?: string; swatches?: string[] };
+export type QuestionCardData = {
+  q: string;
+  options: QuestionOption[];
+  // Several can be picked (each tap toggles).
+  multi: boolean;
+  // A decision: picking highlights, and nothing is saved until Confirm.
+  confirm: boolean;
+  // "Skip this question" (moves to the next question; never skips anything else).
+  skip: boolean;
+  layout: "buttons" | "cards" | "swatches";
+  quote?: Quote;
+  image?: string | null;
+  // A typed answer: the option it belongs to ("Choose my own") and the hint in the box.
+  input?: { optionId: string; placeholder: string } | null;
+  upload?: { accept: "photo" | "document" | "spreadsheet" | "any"; multiple: boolean; label: string } | null;
+  // What's saved now, shown picked (Change on a recap).
+  selected?: string[];
+};
+
+export type RecapRow = { q: string; label: string; value: string; status: "answered" | "skipped"; swatches?: string[] };
+export type RecapData = { chapter: string; title: string; rows: RecapRow[]; next: string | null };
 
 export type ChatMessage = {
   id: string;
@@ -39,7 +67,9 @@ export type ChatMessage = {
 
 export type StepStatus = "not_started" | "in_progress" | "done" | "partial" | "skipped" | "waiting";
 export type ProgressStep = { key: string; title: string; status: StepStatus };
-export type ProgressData = { steps: ProgressStep[]; position: number; total: number };
+// chapters: what the owner sees (a chapter groups steps); chapter: the one they're on.
+export type ProgressChapter = { key: string; title: string; status: StepStatus; left: string[] };
+export type ProgressData = { steps: ProgressStep[]; position: number; total: number; chapters?: ProgressChapter[]; chapter?: { n: number; total: number; title: string; key: string } | null };
 
 // A card the owner checks and corrects ("Is this right?"): label and value rows.
 // colour: a colour code, drawn as a swatch next to the value.

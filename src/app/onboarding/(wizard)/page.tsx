@@ -10,6 +10,8 @@ import { PRICE_GBP, trialDays } from "@/lib/billing/config";
 import { resetSetup, startTrial } from "@/app/onboarding/actions";
 import { loadOnboarding } from "@/app/onboarding/load";
 import { button, Card, Frame, secondary } from "@/app/onboarding/ui";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/onboarding/sessions";
 
 export const metadata: Metadata = { title: "Set up Naila", robots: { index: false, follow: false } };
 
@@ -25,6 +27,10 @@ export default function OnboardingPage({ searchParams }: PageProps<"/onboarding"
 
 async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchParams">) {
   const { s, restaurantId, q } = await loadOnboarding(searchParams, "/onboarding");
+  // Setting up with Dina: there's one setup, and it's her chat (owner's plan, 7 Nov
+  // 2026: "Finish setting up" used to open this older wizard and ask everything again).
+  const dina = await getSession(restaurantId);
+  if (dina && !dina.completed_at) redirect(`/onboarding/chat?r=${restaurantId}`);
   const r = s.restaurant;
   const trial = billingStanding(r).ok ? null : <TrialCard restaurantId={restaurantId} problem={typeof q.billing === "string" ? q.billing : undefined} />;
 

@@ -15,7 +15,7 @@ const callDina = vi.fn();
 const startReview = vi.fn(async (_id: string) => false);
 const usage = { purpose: "turn", model: "claude-sonnet-5-5", tokens: { input: 1000, output: 100, cacheRead: 0, cacheWrite: 0, cost: 0.003 } };
 const answer = (text: string, component: unknown = null) => ({ reply: { messages: [{ text, component }] }, calls: [usage], toolCalls: [], attempts: 1 });
-const ALL = ["hello", "google", "tone", "make_it_right", "menu", "hours_faqs"];
+const ALL = ["hello", "google", "look", "tone", "make_it_right", "menu", "hours_faqs"];
 const LATER_STEPS = ["sales", "team", "rewards", "customers_qr", "approvals_timing"];
 
 beforeEach(() => {
@@ -37,7 +37,7 @@ beforeEach(() => {
         { restaurant_id: REAL, completed_at: null },
       ],
       onboarding_steps: [
-        ...ALL.slice(0, 5).map((k) => ({ restaurant_id: R, step_key: k, status: k === "menu" ? "partial" : "done", data: {}, completed_at: "2026-10-31T10:05:00Z" })),
+        ...ALL.slice(0, 6).map((k) => ({ restaurant_id: R, step_key: k, status: k === "menu" ? "partial" : "done", data: {}, completed_at: "2026-10-31T10:05:00Z" })),
         // Steps 7 to 12 skipped already, so hours and FAQs is the last one left.
         ...LATER_STEPS.map((k) => ({ restaurant_id: R, step_key: k, status: "skipped", data: {}, skipped_at: "2026-10-31T10:06:00Z" })),
         { restaurant_id: REAL, step_key: "hello", status: "done", data: {} },
@@ -167,8 +167,8 @@ describe("the summary card", () => {
     expect(s.items.map((i) => [i.title, i.status, i.detail])).toEqual([
       ["Hello", "done", "Ember Grill, Grill, 1 High St"],
       ["Google profile", "waiting", "Invited: waiting for Google to accept"],
-      ["Making it right", "done", "A free dessert. Complaints go to Amina."],
       ["Your menu", "partial", "12 dishes; allergens confirmed for 9, 3 still to check"],
+      ["Making it right", "done", "A free dessert. Complaints go to Amina."],
     ]);
     expect(s.items[0].editHref).toBe(`/onboarding/chat?r=${R}&step=hello`);
     expect(s.locked.map((l) => l.title)).toEqual(["Your tone", "Your menu"]);
