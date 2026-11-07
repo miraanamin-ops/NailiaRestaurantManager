@@ -1,13 +1,17 @@
 import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import Link from "next/link";
-import { pickRestaurantId, requireOwner } from "@/lib/auth";
+import { RestaurantSwitcher } from "@/components/restaurant-switcher";
+import { Eyebrow, ListCard, Notice, Page, PageHeader, Panel, Pill, Row } from "@/components/ui";
+import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
+import { initials } from "@/lib/dashboard/rules";
 import { DAYS } from "@/lib/onboarding/profile-data";
 import { getRestaurant } from "@/lib/onboarding/store";
 import { menuWithIds } from "@/lib/ops/menu";
 import { AllergenEditor, MenuEditor } from "@/app/onboarding/(wizard)/setup/editors";
-import { button, Card, Frame, input } from "../onboarding/ui";
+import { button, Card, input } from "../onboarding/ui";
 import { OFFER_TYPE_LABELS, OFFER_TYPES } from "@/lib/offers";
 import { getSupabase } from "@/lib/supabase";
 import { dryRunContext, googleDryRun } from "@/lib/gate-rules";
@@ -17,7 +21,7 @@ import { BillingBanner, BillingCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 import { OutsideDataCard, TeamsCard } from "./outside-cards";
 
-export const metadata: Metadata = { title: "Settings", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Settings · DinerAI", robots: { index: false, follow: false } };
 
 const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked on WhatsApp.", teams: "✅ Teams saved.", benchmark: "✅ Nearby comparison saved." };
 
@@ -32,11 +36,12 @@ export default function SettingsPage({ searchParams }: PageProps<"/settings">) {
 }
 
 async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchParams">) {
+  await connection(); // fresh on every visit (it shows today's hours)
   const q = await searchParams;
   const one = (k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]);
   const owner = await requireOwner(`/settings${one("r") ? `?r=${one("r")}` : ""}`);
   const restaurantId = pickRestaurantId(owner, one("r"));
-  if (!restaurantId) return <Frame>No restaurant found for this login.</Frame>;
+  if (!restaurantId) return <Page narrow>No restaurant found for this login.</Page>;
   const r = await getRestaurant(restaurantId);
   // The menu with dish ids, so an edit (even a rename) keeps the same dishes.
   const menu = await menuWithIds(restaurantId);
@@ -47,24 +52,89 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
     .eq("restaurant_id", restaurantId)
     .is("deleted_at", null);
   const label = "text-sm font-medium";
+  const dishes = (r.menu ?? []).flatMap((c) => c.items);
+  const toConfirm = dishes.filter((i) => !i.allergens_confirmed).length;
+  const todayName = new Date().toLocaleDateString("en-GB", { weekday: "long", timeZone: "Europe/London" });
+  const hoursToday = r.opening_hours?.[todayName] ?? null;
+  const hhmm = (t: string | null | undefined) => (t ? t.slice(0, 5) : "");
+  const choices = await restaurantChoices(owner);
 
   return (
-    <Frame>
-      <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{r.name}: settings</h1>
-        <Link href={`/?r=${restaurantId}`} className="text-sm text-emerald-700 underline">
-          Dashboard
-        </Link>
+    <Page narrow>
+      <RestaurantSwitcher choices={choices} current={restaurantId} path="/settings" />
+      <PageHeader eyebrow="Settings" title="Settings" sub={<>Or just tell me on WhatsApp, e.g. “change Friday hours to 11pm”. Send UNDO to take back any change.</>} />
+      <div className="space-y-4">
+        <BillingBanner r={r} />
+        {one("saved") && <Notice>{SAVED[one("saved")!] ?? `✅ ${one("saved")}`}</Notice>}
+        {one("error") && <Notice tone="neg">{one("error")}</Notice>}
       </div>
-      <p className="mb-4 text-sm text-stone-600">
-        Tip: you can also just tell Naila on WhatsApp, e.g. <i>change Friday hours to 11pm</i> or <i>add lamb chops, £14</i>. Every change can be undone by sending <b>UNDO</b>.
-      </p>
-      <BillingBanner r={r} />
-      {one("saved") && <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-emerald-900">{SAVED[one("saved")!] ?? `✅ ${one("saved")}`}</p>}
-      {one("error") && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-red-800">{one("error")}</p>}
 
-      <div className="space-y-5">
+      <div className="mb-8 mt-2 space-y-6">
+        <Panel className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3.5">
+            {r.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- the owner's own uploaded logo
+              <img src={r.logo_url} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-1" />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[15px] font-semibold text-white" style={{ background: r.brand_color || "#8b1e1e" }}>
+                {initials(r.name)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="truncate text-[16px] font-medium text-[#edefe8]">{r.name}</div>
+              <div className="truncate text-[13px] text-[#a3a99d]">{r.address ?? "No address yet"}</div>
+            </div>
+          </div>
+          <a href="#details" className="shrink-0 rounded-full bg-[#1e221b] px-3 py-1.5 text-[13px] text-[#c8f03c]">
+            Edit details
+          </a>
+        </Panel>
+
+        <SettingsGroup title="Your restaurant">
+          <Row href="#details" icon="settings" label="Details and opening hours" value={hoursToday ? `Today ${hoursToday}` : undefined} />
+          <Row href="#menu" icon="report" label="Menu" value={`${dishes.length} dish${dishes.length === 1 ? "" : "es"}`} />
+          {dishes.length > 0 && <Row href="#allergens" icon="shield" label="Allergens" value={toConfirm ? <Pill tone="amber">{toConfirm} to confirm</Pill> : <Pill tone="signal">All confirmed</Pill>} />}
+        </SettingsGroup>
+
+        <SettingsGroup title="How you sound">
+          <Row href="#voice" icon="whatsapp" label="Brand voice" value={r.brand_voice ? <span className="max-w-[10rem] truncate">{r.brand_voice}</span> : undefined} />
+          <Row
+            href="#emails"
+            icon="mail"
+            label="How your emails look"
+            value={
+              <span className="flex -space-x-1.5">
+                <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[#171a14]" style={{ background: r.brand_dark }} />
+                <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[#171a14]" style={{ background: r.brand_color }} />
+              </span>
+            }
+          />
+        </SettingsGroup>
+
+        <SettingsGroup title="Offers and sending">
+          <Row href="#details" icon="spark" label="Sign-up reward" value={r.signup_reward ?? "Not set"} />
+          <Row href="#details" icon="shield" label="Biggest discount allowed" value={`${r.discount_cap_percent}%`} />
+          <Row icon="pause" label="Sending hours" value={`${hhmm(r.send_window_start)}–${hhmm(r.send_window_end)}`} sub={r.paused ? "Paused: text RESUME to start again" : "Text PAUSE on WhatsApp to stop everything"} />
+        </SettingsGroup>
+
+        <SettingsGroup title="Connections">
+          <Row href={`/settings/google?r=${restaurantId}`} icon="google" label="Google Business Profile" value={r.google_location_id ? <Pill tone="signal">Connected</Pill> : <Pill tone="amber">Not connected</Pill>} />
+          <Row href="#spreadsheets" icon="upload" label="Spreadsheets" />
+          <Row href="#teams" icon="calendar" label="Local teams and calendar" />
+        </SettingsGroup>
+
+        <SettingsGroup title="Customers and account">
+          <Row href={`/customers?r=${restaurantId}`} icon="customers" label="Customer list" value={`${customerCount ?? 0}`} />
+          <Row href="#comparison" icon="sales" label="Nearby comparison" value={r.benchmark_opt_out ? "Off" : "On"} />
+          <Row href="#billing" icon="report" label="Plan and billing" />
+          <Row href="#history" icon="activity" label="Change history" />
+        </SettingsGroup>
+      </div>
+
+      <div className="space-y-5 [&>*]:scroll-mt-20">
+        <div id="billing" className="scroll-mt-20" />
         <BillingCard r={r} />
+        <div id="google" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Google Business Profile</h2>
           <p className="text-stone-700">{r.google_location_id ? `Connected: ${r.google_location_title ?? "your listing"}.` : "Not connected yet. Connect it so the replies and posts you approve go straight onto Google."}</p>
@@ -75,6 +145,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
             {r.google_location_id ? "Manage Google" : "Connect Google"}
           </Link>
         </Card>
+        <div id="details" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Details</h2>
           <form action={saveDetails} className="space-y-4">
@@ -136,8 +207,10 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
 
         <OwnerCard r={r} />
 
+        <div id="voice" className="scroll-mt-20" />
         <VoiceCard r={r} />
 
+        <div id="emails" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">How your emails look</h2>
           <p className="text-sm text-stone-600">Customers&apos; emails come from &quot;{r.name}&quot; and use your logo and colours. Replies go to your reply-to email.</p>
@@ -198,6 +271,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           </p>
         </Card>
 
+        <div id="customers" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Your customers</h2>
           <p className="text-sm text-stone-600">
@@ -208,6 +282,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           </a>
         </Card>
 
+        <div id="comparison" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Nearby comparison</h2>
           <form action={saveBenchmark} className="space-y-4">
@@ -224,6 +299,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           </form>
         </Card>
 
+        <div id="menu" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Menu</h2>
           {(r.menu ?? []).length ? null : <p className="text-sm text-stone-600">No menu yet. Add dishes below, or send photos of your menu on WhatsApp during set-up.</p>}
@@ -236,6 +312,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           <p className="mt-2 text-xs text-stone-500">Cost: roughly what each dish costs you to make (ingredients per plate). An estimate is fine. It shows which dishes make the most money, so offers push those. Never shown to customers.</p>
         </Card>
 
+        <div id="spreadsheets" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Spreadsheets</h2>
           <p className="text-sm text-stone-600">Easier at a laptop: download a sheet, fill it in, then upload it here (or send it to me on WhatsApp). Text SPREADSHEETS on WhatsApp for these links on your phone.</p>
@@ -260,6 +337,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           <p className="mt-2 text-xs text-stone-500">Download links work for {TEMPLATE_LINK_DAYS} days. Your costs are private: never shown to customers.</p>
         </Card>
 
+        <div id="allergens" className="scroll-mt-20" />
         {(r.menu ?? []).length > 0 && (
           <Card>
             <h2 className="text-lg font-bold">Allergens</h2>
@@ -279,8 +357,10 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           </Card>
         )}
 
+        <div id="teams" className="scroll-mt-20" />
         <TeamsCard restaurantId={restaurantId} />
 
+        <div id="history" className="scroll-mt-20" />
         <HistoryCard restaurantId={restaurantId} />
 
         {owner.isBuilder && <BuilderCard r={r} />}
@@ -288,6 +368,16 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         {owner.isBuilder && <CalendarCard restaurantId={restaurantId} />}
         {owner.isBuilder && <CostCard restaurantId={restaurantId} />}
       </div>
-    </Frame>
+    </Page>
+  );
+}
+
+// A titled group of rows, like a phone's settings app.
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <Eyebrow className="px-1">{title}</Eyebrow>
+      <ListCard>{children}</ListCard>
+    </section>
   );
 }

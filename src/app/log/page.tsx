@@ -2,7 +2,12 @@ import { PageSkeleton } from "@/components/app-shell";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { logOut } from "@/app/login/actions";
+import { Icon, type IconName } from "@/components/icons";
+import { RestaurantSwitcher } from "@/components/restaurant-switcher";
+import { Eyebrow, Page, PageHeader } from "@/components/ui";
+import { ago } from "@/lib/dashboard/rules";
+import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
+import { whatsAppLink } from "@/lib/onboarding/steps";
 import { recentLog, type AuditEntry } from "@/lib/audit";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { check } from "@/lib/drafts";
@@ -19,7 +24,7 @@ import { forecastBriefsOn, type ForecastBriefRow } from "@/lib/forecast";
 import { BASELINE } from "@/lib/forecast/baseline";
 import { testToolsEnabled } from "@/lib/test-mode";
 
-export const metadata: Metadata = { title: "Activity log", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Activity · DinerAI", robots: { index: false, follow: false } };
 
 // Every action, newest first: who did what and when. Owner-only (see src/proxy.ts).
 export default function LogPage({ searchParams }: PageProps<"/log">) {
@@ -58,6 +63,40 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
   billing: { icon: "💳", label: "Billing" },
 };
 
+// What the owner never needs to see: agents' and the builder's own working entries.
+const BUILDER_ONLY = new Set(["checked", "agent_drafted", "agent_failed", "job_retried", "builder_command", "outside_data"]);
+// What UNDO can take back (lib/undo-plan.ts decides; this only picks the card to show).
+const UNDOABLE = new Set(["setting", "profile_changed", "approved", "skipped", "staff_added", "staff_removed"]);
+
+const FILTERS: Record<string, { label: string; actions: string[] }> = {
+  all: { label: "All", actions: [] },
+  sent: { label: "Sent", actions: ["sent", "queued", "blocked"] },
+  decisions: { label: "Your decisions", actions: ["approved", "skipped", "edited", "answered", "undone"] },
+  changes: { label: "Changes", actions: ["setting", "profile_changed", "profile_reverted", "staff_added", "staff_removed", "billing"] },
+  customers: { label: "Customers", actions: ["data_deleted", "exported"] },
+  sales: { label: "Sales", actions: ["sales_saved", "sales_imported"] },
+};
+
+type Tone = "signal" | "amber" | "ember" | "grey";
+const TONE: Record<string, Tone> = { sent: "signal", approved: "signal", answered: "signal", queued: "amber", skipped: "amber", blocked: "ember", agent_failed: "ember" };
+const TONE_CLASS: Record<Tone, string> = {
+  signal: "bg-[#c8f03c]/15 text-[#c8f03c]",
+  amber: "bg-[#ffb23d]/15 text-[#ffb23d]",
+  ember: "bg-[#ff7a3d]/15 text-[#ff7a3d]",
+  grey: "bg-[#1e221b] text-[#a3a99d]",
+};
+const TONE_ICON: Record<Tone, IconName> = { signal: "check", amber: "pause", ember: "shield", grey: "edit" };
+
+function who(actor: string) {
+  if (actor === "owner") return "You";
+  if (actor === "customer") return "Customer";
+  if (actor === "staff") return "Staff";
+  if (actor === "safety rules" || actor === "checker") return "Safety rules";
+  if (actor === "hourly job" || actor === "scheduled job" || actor === "system" || actor === "stripe") return "Automatic";
+  if (actor === "builder") return "DinerAI";
+  return "Dina";
+}
+
 const dayOf = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long" });
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
@@ -74,7 +113,6 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   // The builder can switch to the Reputation shadow comparison.
   // The builder can switch to an agent's shadow comparison.
   const compare: CompareAgent | null = owner.isBuilder && (sp.view === "reputation" || sp.view === "visibility" || sp.view === "insights" || sp.view === "growth" || sp.view === "gm") ? sp.view : null;
-  const viewParam = compare ? `&view=${compare}` : "";
   const restaurant = rid ? check(await supabase.from("restaurants").select("*").eq("id", rid).maybeSingle<Restaurant>()) : null;
   if (!restaurant) return <p className="p-6">No restaurant for {owner.email} yet.</p>;
   const choices = await restaurantChoices(owner);
@@ -94,72 +132,99 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
   // The forecast in today's brief, every restaurant (builder only). Before supabase/042 there's none.
   const forecast = owner.isBuilder ? await forecastSummary(owner.restaurantIds).catch(() => null) : null;
 
+  // Agents' and the builder's own working entries stay out of the owner's view.
+  const visible = owner.isBuilder ? entries : entries.filter((e) => !BUILDER_ONLY.has(e.action));
+  const show = typeof sp.show === "string" && sp.show in FILTERS ? sp.show : "all";
+  const shown = visible.filter((e) => show === "all" || FILTERS[show].actions.includes(e.action));
   const days = new Map<string, AuditEntry[]>();
-  for (const e of entries) {
+  for (const e of shown) {
     const d = dayOf(e.created_at);
     days.set(d, [...(days.get(d) ?? []), e]);
   }
+  const lastChange = visible.find((e) => e.actor === "owner" && !e.undone_at && UNDOABLE.has(e.action));
+  const now = new Date();
 
   return (
-    <div className="bg-stone-100 text-stone-900">
-      <header className="px-4 pb-6 pt-8 text-white" style={{ background: restaurant.brand_dark }}>
-        <div className="mx-auto max-w-2xl">
-          <p className="text-sm text-stone-300">{restaurant.name}</p>
-          <h1 className="text-2xl font-bold tracking-tight">Activity log</h1>
-          <p className="mt-1 text-xs text-stone-400">Every draft, decision, send and setting change, newest first. Text UNDO to reverse your last one.</p>
-          {choices.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {choices.map((c) => (
-                <a
-                  key={c.id}
-                  href={`/log?r=${c.id}${viewParam}`}
-                  className={`rounded-full px-3 py-1 ${c.id === restaurant.id ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}
-                >
-                  {c.name}
-                </a>
-              ))}
-            </div>
-          )}
-          {owner.isBuilder && (
-            <div className="mt-3 flex gap-2 text-xs">
-              <a href={`/log?r=${restaurant.id}`} className={`rounded-full px-3 py-1 ${compare ? "bg-white/15 text-white underline" : "bg-white text-stone-900"}`}>
-                Everything
-              </a>
-              {(["reputation", "visibility", "insights", "growth", "gm"] as const).map((a) => (
-                <a key={a} href={`/log?r=${restaurant.id}&view=${a}`} className={`rounded-full px-3 py-1 ${compare === a ? "bg-white text-stone-900" : "bg-white/15 text-white underline"}`}>
-                  {a === "reputation" ? "Reputation" : a === "visibility" ? "Visibility" : a === "insights" ? "Insights" : a === "growth" ? "Growth" : "GM"} comparison
-                </a>
-              ))}
-            </div>
-          )}
+    <Page narrow={!compare}>
+      <RestaurantSwitcher choices={choices} current={restaurant.id} path="/log" />
+      <PageHeader
+        eyebrow="Activity"
+        title="What's happened"
+        sub="Every draft, decision, send and change, newest first. Nothing happens behind your back."
+      />
+      {owner.isBuilder && (
+        <div className="mb-4 flex flex-wrap gap-2 text-[12px]">
+          <a href={`/log?r=${restaurant.id}`} className={`rounded-full px-3 py-1 ${compare ? "bg-[#1e221b] text-[#a3a99d]" : "bg-[#edefe8] text-[#0b0c0a]"}`}>
+            Everything
+          </a>
+          {(["reputation", "visibility", "insights", "growth", "gm"] as const).map((x) => (
+            <a key={x} href={`/log?r=${restaurant.id}&view=${x}`} className={`rounded-full px-3 py-1 ${compare === x ? "bg-[#edefe8] text-[#0b0c0a]" : "bg-[#1e221b] text-[#a3a99d]"}`}>
+              {x === "gm" ? "GM" : x[0].toUpperCase() + x.slice(1)} comparison
+            </a>
+          ))}
         </div>
-      </header>
+      )}
       {compare ? (
-        <main className="mx-auto w-full max-w-4xl px-4 py-5">
-          <AgentCompare restaurantId={restaurant.id} agent={compare} />
-        </main>
+        <AgentCompare restaurantId={restaurant.id} agent={compare} />
       ) : (
-      <main className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5">
-        {!entries.length && <p className="text-sm text-stone-600">Nothing has happened yet.</p>}
+      <div className="space-y-6">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
+          {Object.entries(FILTERS).map(([key, f]) => (
+            <a
+              key={key}
+              href={`/log?r=${restaurant.id}${key === "all" ? "" : `&show=${key}`}`}
+              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] ${show === key ? "bg-[#c8f03c] font-semibold text-[#0b0c0a]" : "bg-[#1e221b] text-[#a3a99d] hover:text-[#edefe8]"}`}
+            >
+              {f.label}
+            </a>
+          ))}
+        </div>
+
+        {lastChange && show === "all" && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#1e221b] p-4">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#171a14] text-[#a3a99d]">
+                <Icon name="activity" className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <Eyebrow>Your last change · {ago(lastChange.created_at, now)}</Eyebrow>
+                <p className="mt-0.5 text-[14px] text-[#edefe8]">{lastChange.detail ?? ACTION_STYLE[lastChange.action]?.label}</p>
+              </div>
+            </div>
+            <a href={whatsAppLink(ourWhatsAppNumber(), "UNDO")} target="_blank" rel="noreferrer" className="shrink-0 rounded-full bg-[#171a14] px-4 py-1.5 text-[13px] font-medium text-[#c8f03c] ring-1 ring-[#2c3127]">
+              Undo
+            </a>
+          </div>
+        )}
+
+        {!shown.length && <p className="text-[14px] text-[#a3a99d]">Nothing here yet.</p>}
         {[...days].map(([day, list]) => (
-          <section key={day}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-500">{day}</h2>
-            <ul className="divide-y divide-stone-100 rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/70">
+          <section key={day} className="space-y-2">
+            <div className="sticky top-14 z-10 flex items-center justify-between bg-[#0b0c0a]/90 py-1.5 backdrop-blur-md">
+              <Eyebrow>{day}</Eyebrow>
+              <span className="font-mono text-[11px] text-[#6e7468]">{list.length}</span>
+            </div>
+            <ul className="space-y-1.5">
               {list.map((e) => {
                 const style = ACTION_STYLE[e.action] ?? { icon: "•", label: e.action };
+                const tone = TONE[e.action] ?? "grey";
                 return (
-                  <li key={e.id} className={`flex gap-3 px-4 py-3 ${e.undone_at ? "opacity-50" : ""}`}>
-                    <span className="mt-0.5 text-lg" aria-hidden>
-                      {style.icon}
-                    </span>
+                  <li key={e.id} className={`flex items-start gap-3 rounded-xl bg-[#171a14] p-3.5 ${e.undone_at ? "opacity-50" : ""}`}>
+                    <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${TONE_CLASS[tone]}`}>
+                      <Icon name={TONE_ICON[tone]} className="h-[15px] w-[15px]" strokeWidth={2.2} />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-stone-900">
-                        {e.detail ?? style.label}
-                        {e.undone_at && <span className="ml-1 text-xs text-stone-500">(undone)</span>}
-                      </p>
-                      <p className="mt-0.5 text-xs text-stone-500">
-                        {timeOf(e.created_at)} · {style.label} · by {e.actor}
-                      </p>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-[14px] text-[#edefe8]">
+                          {e.detail ?? style.label}
+                          {e.undone_at && <span className="ml-1 text-[12px] text-[#a3a99d]">(undone)</span>}
+                        </p>
+                        <time className="shrink-0 font-mono text-[11px] text-[#a3a99d]">{timeOf(e.created_at)}</time>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full bg-[#1e221b] px-2 py-0.5 text-[11px] ${tone === "ember" ? "text-[#ff7a3d]" : "text-[#a3a99d]"}`}>{who(e.actor)}</span>
+                        <span className="text-[12px] text-[#6e7468]">{style.label}</span>
+                      </div>
                     </div>
                   </li>
                 );
@@ -251,14 +316,9 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
             </ul>
           </section>
         )}
-        <form action={logOut} className="pt-2 text-center">
-          <button type="submit" className="text-sm text-stone-600 underline">
-            Log out ({owner.email})
-          </button>
-        </form>
-      </main>
+      </div>
       )}
-    </div>
+    </Page>
   );
 }
 
