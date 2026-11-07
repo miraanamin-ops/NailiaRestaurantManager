@@ -1,15 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { currentOwner, emailLoginLink } from "@/lib/auth";
+import { currentOwner } from "@/lib/auth";
 import { finishedCheckout } from "@/lib/billing/checkout";
 import { stripeConfigured } from "@/lib/billing/config";
 import { getRestaurant } from "@/lib/onboarding/store";
-import { limitKey, MINUTE, overLimit } from "@/lib/rate-limit";
 import { baseUrlFrom } from "@/lib/supabase";
 
 // Back from Stripe Checkout. The subscription itself is recorded by the webhook;
 // this only checks with Stripe that Checkout really finished, then:
 //   - already logged in as this restaurant's owner: straight into onboarding
-//   - otherwise: email a login link (which lands on onboarding) and say "Check your email".
+//   - otherwise: the login page (email and the password chosen at sign-up), then onboarding.
 // Never logs anyone in by itself: that would let someone who typed another
 // person's email into the form into that person's account.
 export async function GET(req: NextRequest) {
@@ -29,8 +28,5 @@ export async function GET(req: NextRequest) {
   const owner = await currentOwner();
   if (owner?.restaurantIds.includes(r.id)) return go(`/onboarding?r=${r.id}`);
 
-  // Reloading this page doesn't send another email each time.
-  if (await overLimit([{ key: limitKey("checkout-return", sessionId), max: 2, windowMs: 10 * MINUTE }])) return go("/start?sent=1&paid=1");
-  const error = await emailLoginLink(r.owner_email, `/onboarding?r=${r.id}`, base);
-  return go(error ? `/start?error=${error}&paid=1` : "/start?sent=1&paid=1");
+  return go(`/login?paid=1&next=${encodeURIComponent(`/onboarding?r=${r.id}`)}`);
 }

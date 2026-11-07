@@ -1,6 +1,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { authClient, safeNext } from "@/lib/auth";
+import { authClient, markEmailProven, safeNext } from "@/lib/auth";
 
 // Login links that carry a token_hash (a customised Supabase email template) or a
 // "code" (works when opened in the same browser that asked for it) land here via
@@ -23,5 +23,6 @@ export async function GET(req: NextRequest) {
     if (error) console.warn("Login code failed", error.message);
   }
 
+  if (ok) await markEmailProven(); // an emailed link: the email is theirs
   return NextResponse.redirect(new URL(ok ? next : `/login?error=expired&next=${encodeURIComponent(next)}`, req.url));
 }

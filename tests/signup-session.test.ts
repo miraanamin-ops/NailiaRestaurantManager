@@ -1,14 +1,15 @@
-// Logged in straight after sign-up (lib/auth.ts, lib/auth-rules.ts): the same
-// Supabase login a login link gives, made without the email, only for a login
-// account Supabase made just now, and limited to the one restaurant it signed up.
-// An ordinary login (from an emailed link) keeps its usual access.
+// Logging in (lib/auth.ts, lib/auth-rules.ts), since 7 Nov 2026 with email and
+// password. A brand-new owner gets a login account with the password they chose at
+// sign-up and is logged straight in, but nobody has proved the email is theirs, so
+// that account only sees the restaurant it signed up until they open a link we
+// emailed (a password reset). Older sign-up sessions (their own table) are limited
+// the same way. An ordinary login keeps its usual access.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { isFreshUser, scopeToSignup, sessionIdFromToken } from "@/lib/auth-rules";
+import { passwordProblem, scopeToSignup, sessionIdFromToken, signupScope } from "@/lib/auth-rules";
 import { memoryDb } from "./support/memory-db";
 
 const A = "aaaaaaaa-0000-4000-8000-00000000000a";
 const B = "bbbbbbbb-0000-4000-8000-00000000000b";
-const NOW = Date.parse("2026-10-28T12:00:00Z");
 
 const b64url = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const token = (sessionId: string | null) => `${b64url({ alg: "HS256" })}.${b64url(sessionId ? { sub: "u1", session_id: sessionId } : { sub: "u1" })}.sig`;
@@ -31,20 +32,31 @@ describe("the rules", () => {
     expect(scopeToSignup({ ...owner, restaurantIds: [B] }, A)).toMatchObject({ restaurantIds: [], allowed: false });
   });
 
-  test("only a login account made just now, that has never logged in, counts as new", () => {
-    expect(isFreshUser({ created_at: "2026-10-28T11:59:30Z", last_sign_in_at: null }, NOW)).toBe(true);
-    expect(isFreshUser({ created_at: "2026-10-28T11:50:00Z", last_sign_in_at: null }, NOW)).toBe(false);
-    expect(isFreshUser({ created_at: "2026-10-28T11:59:30Z", last_sign_in_at: "2026-10-28T11:59:40Z" }, NOW)).toBe(false);
-    expect(isFreshUser(null, NOW)).toBe(false);
+  test("the limit comes from an older sign-up session, else the account's server-only metadata", () => {
+    expect(signupScope(A, { signup_restaurant_id: B })).toBe(A);
+    expect(signupScope(null, { signup_restaurant_id: B })).toBe(B);
+    expect(signupScope(null, { signup_restaurant_id: null })).toBeNull();
+    expect(signupScope(null, { signup_restaurant_id: 42 })).toBeNull();
+    expect(signupScope(null, undefined)).toBeNull();
+  });
+
+  test("passwords: at least 8 characters (spaces alone don't count), at most 72", () => {
+    expect(passwordProblem("")).toBe("short");
+    expect(passwordProblem("        ")).toBe("short");
+    expect(passwordProblem("seven77")).toBe("short");
+    expect(passwordProblem("eight888")).toBeNull();
+    expect(passwordProblem("x".repeat(72))).toBeNull();
+    expect(passwordProblem("x".repeat(73))).toBe("long");
   });
 });
 
 describe("on the server", () => {
   let db: ReturnType<typeof memoryDb>;
-  const generateLink = vi.fn();
-  const verifyOtp = vi.fn();
-  const signOut = vi.fn(async () => ({ error: null }));
+  const createUser = vi.fn();
+  const updateUserById = vi.fn(async () => ({ error: null }));
+  const signInWithPassword = vi.fn();
   let cookieToken: string | null;
+  let appMetadata: Record<string, unknown>;
 
   beforeEach(() => {
     vi.resetModules();
@@ -57,19 +69,22 @@ describe("on the server", () => {
       ],
       signup_sessions: [],
     });
-    generateLink.mockReset();
-    verifyOtp.mockReset();
-    signOut.mockClear();
+    createUser.mockReset();
+    updateUserById.mockClear();
+    signInWithPassword.mockReset();
     cookieToken = null;
-    vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => ({ ...db.client, auth: { admin: { generateLink } } }) }));
+    appMetadata = {};
+    vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => ({ ...db.client, auth: { admin: { createUser, updateUserById } } }) }));
     vi.doMock("next/headers", () => ({ cookies: async () => ({ getAll: () => [], set: () => {} }) }));
     vi.doMock("@supabase/ssr", () => ({
       createServerClient: () => ({
         auth: {
-          verifyOtp,
-          signOut,
+          signInWithPassword,
+          signOut: async () => ({ error: null }),
           getSession: async () => ({ data: { session: cookieToken ? { access_token: cookieToken } : null } }),
-          getUser: async (t: string) => ({ data: { user: t === cookieToken ? { email: "x@grill.test" } : null } }),
+          getUser: async (t?: string) => ({
+            data: { user: cookieToken && (t === undefined || t === cookieToken) ? { id: "u1", email: "x@grill.test", app_metadata: appMetadata } : null },
+          }),
         },
       }),
     }));
@@ -78,51 +93,48 @@ describe("on the server", () => {
     for (const m of ["@/lib/supabase", "next/headers", "@supabase/ssr"]) vi.doUnmock(m);
   });
 
-  const fresh = () => ({ data: { properties: { hashed_token: "hash-1" }, user: { created_at: new Date().toISOString(), last_sign_in_at: null } }, error: null });
-
-  test("a new owner: the login is made with the same verifyOtp a login link uses, and recorded as a sign-up session", async () => {
-    generateLink.mockResolvedValue(fresh());
-    verifyOtp.mockResolvedValue({ data: { session: { access_token: token("sess-1") } }, error: null });
-    const { startSignupSession } = await import("@/lib/auth");
-    expect(await startSignupSession("x@grill.test", A)).toEqual({ ok: true });
-    expect(generateLink).toHaveBeenCalledWith({ type: "magiclink", email: "x@grill.test" });
-    expect(verifyOtp).toHaveBeenCalledWith({ token_hash: "hash-1", type: "email" });
-    expect(db.tables.signup_sessions).toEqual([expect.objectContaining({ session_id: "sess-1", restaurant_id: A })]);
+  test("a new owner: the account is made with their password, limited to the restaurant it signed up, then logged in", async () => {
+    createUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    signInWithPassword.mockResolvedValue({ data: {}, error: null });
+    const { createPasswordAccount } = await import("@/lib/auth");
+    expect(await createPasswordAccount("x@grill.test", "correct horse", A)).toEqual({ ok: true });
+    expect(createUser).toHaveBeenCalledWith({ email: "x@grill.test", password: "correct horse", email_confirm: true, app_metadata: { signup_restaurant_id: A } });
+    expect(signInWithPassword).toHaveBeenCalledWith({ email: "x@grill.test", password: "correct horse" });
   });
 
-  test("an email Supabase already knew: no login is made", async () => {
-    generateLink.mockResolvedValue({ data: { properties: { hashed_token: "hash-1" }, user: { created_at: "2026-01-01T00:00:00Z", last_sign_in_at: null } }, error: null });
-    const { startSignupSession } = await import("@/lib/auth");
-    expect(await startSignupSession("x@grill.test", A)).toEqual({ ok: false, reason: "existing_user" });
-    expect(verifyOtp).not.toHaveBeenCalled();
+  test("an email Supabase already knew: nothing is changed and nobody is logged in", async () => {
+    createUser.mockResolvedValue({ data: { user: null }, error: { status: 422, message: "A user with this email address has already been registered" } });
+    const { createPasswordAccount } = await import("@/lib/auth");
+    expect(await createPasswordAccount("x@grill.test", "correct horse", A)).toEqual({ ok: false, reason: "existing_user" });
+    expect(signInWithPassword).not.toHaveBeenCalled();
   });
 
-  test("if the sign-up session can't be recorded, the login is undone at once", async () => {
-    generateLink.mockResolvedValue(fresh());
-    verifyOtp.mockResolvedValue({ data: { session: { access_token: token(null) } }, error: null });
-    const { startSignupSession } = await import("@/lib/auth");
-    expect(await startSignupSession("x@grill.test", A)).toEqual({ ok: false, reason: "failed" });
-    expect(db.tables.signup_sessions).toEqual([]);
-    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
-  });
-
-  test("currentOwner: a sign-up login sees only its restaurant; an emailed-link login sees all of that email's", async () => {
-    db.tables.signup_sessions.push({ session_id: "sess-1", restaurant_id: A });
-    const { currentOwner } = await import("@/lib/auth");
-    cookieToken = token("sess-1");
+  test("currentOwner: a sign-up account sees only its restaurant until the email is proved, then all of that email's", async () => {
+    const { currentOwner, markEmailProven } = await import("@/lib/auth");
+    cookieToken = token("sess-9");
+    appMetadata = { signup_restaurant_id: A };
     expect(await currentOwner()).toMatchObject({ restaurantIds: [A], isBuilder: false, allowed: true });
-    cookieToken = token("sess-from-email-link");
+    await markEmailProven();
+    expect(updateUserById).toHaveBeenCalledWith("u1", { app_metadata: { signup_restaurant_id: null } });
+    appMetadata = { signup_restaurant_id: null };
     expect((await currentOwner())?.restaurantIds.sort()).toEqual([A, B].sort());
     cookieToken = null;
     expect(await currentOwner()).toBeNull();
   });
 
-  test("a sign-up login asking for another restaurant's page (?r=) gets its own instead", async () => {
+  test("an older sign-up session is still limited to its restaurant", async () => {
     db.tables.signup_sessions.push({ session_id: "sess-1", restaurant_id: A });
     const { currentOwner, pickRestaurantId } = await import("@/lib/auth");
     cookieToken = token("sess-1");
     const owner = (await currentOwner())!;
+    expect(owner).toMatchObject({ restaurantIds: [A], allowed: true });
     expect(pickRestaurantId(owner, B)).toBe(A);
-    expect(owner.restaurantIds.includes(B)).toBe(false);
+  });
+
+  test("an ordinary login with nothing to lift changes nothing", async () => {
+    const { markEmailProven } = await import("@/lib/auth");
+    cookieToken = token("sess-2");
+    await markEmailProven();
+    expect(updateUserById).not.toHaveBeenCalled();
   });
 });

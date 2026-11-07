@@ -111,6 +111,11 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
             <input name="email" type="email" required autoComplete="email" inputMode="email" className={input} />
           </label>
           <label className={label}>
+            {s.fields.password}
+            <input name="password" type="password" required minLength={8} autoComplete="new-password" className={input} />
+            <span className="mt-1.5 block text-[13px] font-normal text-fog">{s.fields.passwordHint}</span>
+          </label>
+          <label className={label}>
             {s.fields.whatsapp}
             <input name="whatsapp" type="tel" required autoComplete="tel" inputMode="tel" placeholder="07700 900123" className={input} />
             <span className="mt-1.5 block text-[13px] font-normal text-fog">{s.fields.whatsappHint}</span>

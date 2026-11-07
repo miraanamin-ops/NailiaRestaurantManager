@@ -124,6 +124,9 @@ export function AccountMenu() {
           <Link href={withR("/log", r)} className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-[#edefe8] hover:bg-[#1e221b]" onClick={() => setOpen(false)}>
             <Icon name="activity" className="h-4 w-4 text-[#a3a99d]" /> Activity
           </Link>
+          <Link href="/account/password" className="flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-[#edefe8] hover:bg-[#1e221b]" onClick={() => setOpen(false)}>
+            <Icon name="shield" className="h-4 w-4 text-[#a3a99d]" /> Change password
+          </Link>
           <form action={logOut}>
             <button className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[14px] text-[#ff8a6e] hover:bg-[#1e221b]">
               <Icon name="logout" className="h-4 w-4" /> Log out

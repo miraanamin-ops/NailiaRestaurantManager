@@ -259,6 +259,8 @@ export const site = {
     fields: {
       ownerName: "Your name",
       email: "Your email",
+      password: "Choose a password",
+      passwordHint: "At least 8 characters. You'll log in with your email and this password.",
       restaurantName: "Restaurant name",
       whatsapp: "Your mobile (for WhatsApp)",
       whatsappHint: "DinerAI runs on WhatsApp: drafts, approvals and your 9am brief.",
@@ -272,7 +274,7 @@ export const site = {
     pendingCheckout: "Opening secure checkout…",
     pendingInvite: "Setting you up…",
     after: "Next, Stripe asks for your card. You won't be charged until your {days} day free trial ends, and you can cancel before then.",
-    steps: ["Your details", "Card on Stripe, {days} days free", "Login link by email", "Set up in about 20 minutes"],
+    steps: ["Your details and a password", "Card on Stripe, {days} days free", "Straight into setup", "Set up in about 20 minutes"],
     // While ONBOARDING_REQUIRES_PAYMENT is off: no card, straight into setup with Dina.
     stepsInvite: ["Your details and invite code", "Straight into setup, no card", "Chat with Dina here or on WhatsApp", "Set up in about 20 minutes"],
     stepsLabel: "What happens next",
@@ -285,6 +287,8 @@ export const site = {
     errors: {
       missing: "Please fill in your name and your restaurant's name.",
       email: "That doesn't look like an email address.",
+      password_short: "Please choose a password of at least 8 characters.",
+      password_long: "That password is too long. Please use 72 characters or fewer.",
       whatsapp: "Please check your mobile number (e.g. 07700 900123).",
       terms: "Please tick the box to agree to the Terms and the Data processing agreement.",
       invite: "That invite code isn't valid, or has been used up. Check it, or leave the box empty.",

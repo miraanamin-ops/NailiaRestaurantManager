@@ -58,6 +58,7 @@ async function More({ searchParams }: Pick<PageProps<"/more">, "searchParams">) 
           <Eyebrow className="px-1">Account</Eyebrow>
           <ListCard>
             <Row href={withR("/settings", r)} icon="settings" label="Settings" />
+            <Row href="/account/password" icon="shield" label="Change password" />
             {owner.isBuilder && <Row href={withR("/builder", r)} icon="shield" label="Test data (builder)" />}
             <form action={logOut}>
               <button className="flex min-h-[54px] w-full items-center gap-3 px-4 text-left text-[15px] font-medium text-[#ff8a6e] transition hover:bg-[#1e221b]">

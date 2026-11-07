@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
-import { authClient } from "@/lib/auth";
+import { authClient, markEmailProven } from "@/lib/auth";
 
-// The login page (/auth/confirm) hands over the login from the email link here,
+// /auth/confirm hands over the login from an emailed link (a password reset) here,
 // and this stores it in the login cookies. Supabase checks the tokens are genuine;
 // which pages the person can then see is still decided by lib/auth.ts.
 export async function POST(req: NextRequest) {
@@ -20,5 +20,7 @@ export async function POST(req: NextRequest) {
     console.warn("Login from the email link failed", error.message);
     return new Response("Login failed", { status: 401 });
   }
+  // Only links we emailed come through here, so the email is theirs.
+  await markEmailProven();
   return new Response(null, { status: 204 });
 }

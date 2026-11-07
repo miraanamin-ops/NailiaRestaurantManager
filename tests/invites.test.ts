@@ -1,18 +1,18 @@
-// The sign-up form (/start): pilot invite codes skip Stripe, an email that already
-// has a running restaurant only gets a login link (nothing attached to it), and the
-// live site stays invite-only until PUBLIC_SIGNUP=true.
+// The sign-up form (/start): the owner chooses a password, pilot invite codes skip
+// Stripe, an email that already has a running restaurant is sent to log in (nothing
+// attached to it), and the live site stays invite-only until PUBLIC_SIGNUP=true.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { planSignup } from "@/lib/billing/signup-plan";
 import { fakeAfter, flushAfter } from "./support/after";
 import { memoryDb } from "./support/memory-db";
 
 const ACTIVE_ID = "33333333-3333-4333-8333-333333333333";
-const emailLoginLink = vi.fn<(email: string, next: string, base: string) => Promise<null | "wait" | "send">>(async () => null);
 const createTrialCheckout = vi.fn<(r: { id: string }, base: string) => Promise<string>>(async () => "https://checkout.stripe.test/c/pay");
 const logAction = vi.fn<(entry: unknown) => Promise<void>>(async () => {});
-const startSignupSession = vi.fn<(email: string, restaurantId: string) => Promise<{ ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" }>>(
+const createPasswordAccount = vi.fn<(email: string, password: string, restaurantId: string) => Promise<{ ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" }>>(
   async () => ({ ok: true }),
 );
+const logInWithPassword = vi.fn<(email: string, password: string) => Promise<boolean>>(async () => false);
 let db: ReturnType<typeof memoryDb>;
 
 function seed(extra: Record<string, unknown>[] = []) {
@@ -49,13 +49,13 @@ beforeEach(() => {
   process.env.ONBOARDING_REQUIRES_PAYMENT = "true";
   delete process.env.PUBLIC_SIGNUP;
   delete process.env.TURNSTILE_SECRET_KEY;
-  emailLoginLink.mockClear();
   createTrialCheckout.mockClear();
   logAction.mockClear();
-  startSignupSession.mockClear();
+  createPasswordAccount.mockClear();
+  logInWithPassword.mockClear();
   seed();
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
-  vi.doMock("@/lib/auth", async (orig) => ({ ...(await orig<object>()), emailLoginLink, startSignupSession }));
+  vi.doMock("@/lib/auth", async (orig) => ({ ...(await orig<object>()), createPasswordAccount, logInWithPassword }));
   vi.doMock("@/lib/billing/checkout", () => ({ createTrialCheckout }));
   vi.doMock("@/lib/audit", () => ({ logAction }));
   vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => false }));
@@ -83,7 +83,7 @@ class Redirect extends Error {
 async function submit(fields: Record<string, string>) {
   const { startSignup } = await import("@/app/start/actions");
   const form = new FormData();
-  const all = { owner_name: "Aisha Khan", email: "aisha@grill.test", restaurant_name: "Ember Grill", whatsapp: "07700 900123", terms: "yes", ...fields };
+  const all = { owner_name: "Aisha Khan", email: "aisha@grill.test", password: "correct horse", restaurant_name: "Ember Grill", whatsapp: "07700 900123", terms: "yes", ...fields };
   for (const [k, v] of Object.entries(all)) if (v !== "") form.set(k, v);
   try {
     await startSignup(form);
@@ -96,14 +96,14 @@ async function submit(fields: Record<string, string>) {
 }
 
 describe("pilot invite codes", () => {
-  test("a valid code skips Stripe: the code is stored and a login link goes straight into onboarding", async () => {
+  test("a valid code skips Stripe: the code is stored, the account made and the owner goes straight into onboarding", async () => {
     const to = await submit({ invite: "pilot-one" });
-    expect(to).toBe("/start?sent=1");
+    expect(to).toBe(`/onboarding?r=${db.tables.restaurants[0].id}`);
     expect(createTrialCheckout).not.toHaveBeenCalled();
     const r = db.tables.restaurants[0];
     expect(r).toMatchObject({ pilot_invite_code: "PILOT-ONE", active: false, terms_version: expect.any(String) });
     expect(r.terms_accepted_at).toBeTruthy();
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding?r=${r.id}`, expect.any(String));
+    expect(createPasswordAccount).toHaveBeenCalledWith("aisha@grill.test", "correct horse", r.id);
     expect(db.tables.pilot_invites[0].used_count).toBe(1);
   });
 
@@ -115,17 +115,17 @@ describe("pilot invite codes", () => {
     expect(db.tables.restaurants).toHaveLength(1);
   });
 
-  test("a plus-address signs up as its own owner, kept exactly as typed, with the login link to it", async () => {
+  test("a plus-address signs up as its own owner, kept exactly as typed, with its own login account", async () => {
     process.env.VERCEL_ENV = "production";
-    expect(await submit({ invite: "pilot-one", email: "Aisha+Pilot0@Grill.test" })).toBe("/start?sent=1");
+    await submit({ invite: "pilot-one", email: "Aisha+Pilot0@Grill.test" });
     const r = db.tables.restaurants[0];
     expect(r.owner_email).toBe("aisha+pilot0@grill.test");
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha+pilot0@grill.test", `/onboarding?r=${r.id}`, expect.any(String));
+    expect(createPasswordAccount).toHaveBeenCalledWith("aisha+pilot0@grill.test", "correct horse", r.id);
   });
 
   test("works on the live site while sign-up is invite-only", async () => {
     process.env.VERCEL_ENV = "production";
-    expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
+    expect(await submit({ invite: "PILOT-ONE" })).toBe(`/onboarding?r=${db.tables.restaurants[0]?.id}`);
     expect(db.tables.restaurants[0].pilot_invite_code).toBe("PILOT-ONE");
   });
 
@@ -141,10 +141,10 @@ describe("pilot invite codes", () => {
 describe("an email that already has a running restaurant", () => {
   const running = { id: ACTIVE_ID, name: "Ember Grill", owner_email: "Aisha@Grill.test", active: true, billing_exempt: true, created_at: "2026-01-01T00:00:00Z" };
 
-  test("just gets a login link: no Stripe customer, invite or terms attached", async () => {
+  test("is sent to log in: no account, Stripe customer, invite or terms attached", async () => {
     seed([{ ...running }]);
-    expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", "/", expect.any(String));
+    expect(await submit({ invite: "PILOT-ONE" })).toBe("/login?error=exists&next=%2F");
+    expect(createPasswordAccount).not.toHaveBeenCalled();
     expect(createTrialCheckout).not.toHaveBeenCalled();
     expect(db.tables.restaurants).toEqual([running]);
     expect(db.tables.pilot_invites[0].used_count).toBe(0);
@@ -154,7 +154,7 @@ describe("an email that already has a running restaurant", () => {
   test("the same on the live site while invite-only", async () => {
     process.env.VERCEL_ENV = "production";
     seed([{ ...running }]);
-    expect(await submit({})).toBe("/start?sent=1");
+    expect(await submit({})).toBe("/login?error=exists&next=%2F");
     expect(db.tables.restaurants).toEqual([running]);
   });
 });
@@ -176,7 +176,7 @@ describe("paid sign-up", () => {
     expect(r.pilot_invite_code ?? null).toBeNull();
     expect(r.terms_accepted_at).toBeTruthy();
     expect(createTrialCheckout).toHaveBeenCalledWith(expect.objectContaining({ id: r.id }), expect.any(String));
-    expect(emailLoginLink).not.toHaveBeenCalled();
+    expect(createPasswordAccount).toHaveBeenCalledWith("aisha@grill.test", "correct horse", r.id);
   });
 
   test("coming back after cancelling Checkout carries on with the same restaurant", async () => {
@@ -189,6 +189,12 @@ describe("paid sign-up", () => {
   test("without Stripe set up, only invite codes work", async () => {
     delete process.env.STRIPE_SECRET_KEY;
     expect(await submit({})).toBe("/start?error=invite_only");
+  });
+
+  test("a password of at least 8 characters is needed", async () => {
+    expect(await submit({ password: "short" })).toBe("/start?error=password_short");
+    expect(await submit({ password: "" })).toBe("/start?error=password_short");
+    expect(db.tables.restaurants).toHaveLength(0);
   });
 
   test("the terms box must be ticked", async () => {
@@ -212,39 +218,37 @@ describe("no paywall (ONBOARDING_REQUIRES_PAYMENT off, the default)", () => {
     expect(createTrialCheckout).not.toHaveBeenCalled();
   });
 
-  test("a brand-new owner is logged straight in and lands in the chat with Dina; onboarding has started; the login email still goes", async () => {
+  test("a brand-new owner gets an account with their password, is logged straight in and lands in the chat with Dina", async () => {
     const to = await submit({ invite: "PILOT-ONE" });
     const r = db.tables.restaurants[0];
     expect(to).toBe(`/onboarding/chat?r=${r.id}`);
-    expect(startSignupSession).toHaveBeenCalledWith("aisha@grill.test", r.id);
+    expect(createPasswordAccount).toHaveBeenCalledWith("aisha@grill.test", "correct horse", r.id);
     expect(createTrialCheckout).not.toHaveBeenCalled();
     expect(r).toMatchObject({ pilot_invite_code: "PILOT-ONE", active: false, terms_version: expect.any(String), privacy_version: expect.any(String), dpa_version: expect.any(String) });
     expect(db.tables.onboarding_sessions).toEqual([expect.objectContaining({ restaurant_id: r.id, current_step: "hello", channel_last_used: "web" })]);
     expect(db.tables.onboarding[0]).toMatchObject({ restaurant_id: r.id, pending_whatsapp: "whatsapp:+447700900123" });
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/chat?r=${r.id}`, expect.any(String));
   });
 
-  test("if Supabase already had a login for that email, no automatic login: a login link instead", async () => {
-    startSignupSession.mockResolvedValueOnce({ ok: false, reason: "existing_user" });
+  test("if Supabase already had a login for that email, only the right password logs in; otherwise the login page", async () => {
+    createPasswordAccount.mockResolvedValueOnce({ ok: false, reason: "existing_user" });
     const to = await submit({ invite: "PILOT-ONE" });
     const r = db.tables.restaurants[0];
-    expect(to).toBe("/start?sent=1");
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/chat?r=${r.id}`, expect.any(String));
+    expect(logInWithPassword).toHaveBeenCalledWith("aisha@grill.test", "correct horse");
+    expect(to).toBe(`/login?error=exists&next=${encodeURIComponent(`/onboarding/chat?r=${r.id}`)}`);
     expect(db.tables.onboarding_sessions).toHaveLength(1);
   });
 
   test("an email with an earlier unfinished sign-up is never logged in automatically", async () => {
     seed([{ id: ACTIVE_ID, name: "Ember Grill", owner_email: "aisha@grill.test", active: false, created_at: new Date().toISOString() }]);
     db.tables.onboarding.push({ restaurant_id: ACTIVE_ID });
-    expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
-    expect(startSignupSession).not.toHaveBeenCalled();
-    expect(emailLoginLink).toHaveBeenCalledWith("aisha@grill.test", `/onboarding/chat?r=${ACTIVE_ID}`, expect.any(String));
+    expect(await submit({ invite: "PILOT-ONE" })).toBe(`/login?error=exists&next=${encodeURIComponent(`/onboarding/chat?r=${ACTIVE_ID}`)}`);
+    expect(createPasswordAccount).not.toHaveBeenCalled();
   });
 
-  test("an email with a running restaurant only gets a login link, as before", async () => {
+  test("an email with a running restaurant is only sent to log in, as before", async () => {
     seed([{ id: ACTIVE_ID, name: "Ember Grill", owner_email: "aisha@grill.test", active: true, billing_exempt: true, created_at: "2026-01-01T00:00:00Z" }]);
-    expect(await submit({ invite: "PILOT-ONE" })).toBe("/start?sent=1");
-    expect(startSignupSession).not.toHaveBeenCalled();
+    expect(await submit({ invite: "PILOT-ONE" })).toBe("/login?error=exists&next=%2F");
+    expect(createPasswordAccount).not.toHaveBeenCalled();
     expect(db.tables.onboarding_sessions).toHaveLength(0);
   });
 });

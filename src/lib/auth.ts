@@ -3,13 +3,14 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { isFreshUser, scopeToSignup, sessionIdFromToken } from "@/lib/auth-rules";
+import { scopeToSignup, sessionIdFromToken, signupScope } from "@/lib/auth-rules";
 import { builderEmails } from "@/lib/builder-emails";
 import { assertNotLiveByAccident } from "@/lib/live-guard";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
 
-// Owner login: Supabase magic links (an email with a one-time link, no password).
+// Owner login: email and password (Supabase Auth). An emailed link is only used to
+// set or reset a password ("Forgot your password?").
 // Only allowed emails can log in: each restaurant's owner_email, plus the
 // builder (BUILDER_EMAIL, comma-separated for more than one).
 // Protected: the data page (/), the activity log (/log) and weekly reports.
@@ -60,7 +61,8 @@ export async function currentOwner(): Promise<Owner | null> {
   // Supabase checks this exact token; only then is its session id read from it.
   const { data } = await client.auth.getUser(token);
   if (!data.user?.email) return null;
-  const access = scopeToSignup(await accessFor(data.user.email), await signupRestaurantOf(sessionIdFromToken(token)));
+  const scope = signupScope(await signupRestaurantOf(sessionIdFromToken(token)), data.user.app_metadata);
+  const access = scopeToSignup(await accessFor(data.user.email), scope);
   return access.allowed ? access : null;
 }
 
@@ -75,38 +77,46 @@ async function signupRestaurantOf(sessionId: string | null) {
   return data?.restaurant_id ?? null;
 }
 
-export type SignupSession = { ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" };
+export type NewAccount = { ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" };
 
-// Logs a brand-new owner straight in after sign-up, with the same Supabase login
-// a login link gives (the cookies verifyOtp sets, as on /auth/verify), but made
-// on the server without sending the email. Only for a login account Supabase
-// made just now; that session is then limited to this restaurant. Anything odd:
-// not logged in, and the caller emails a login link instead.
-export async function startSignupSession(email: string, restaurantId: string): Promise<SignupSession> {
+// Makes the login account for a brand-new owner with the password they chose at
+// sign-up, and logs them in. Nobody has proved they own that email yet, so the
+// account only ever sees the restaurant it signed up (lib/auth-rules.ts signupScope)
+// until they open a password link we email. An email that already has a login
+// account isn't touched: "existing_user", and they log in (or reset) as usual.
+export async function createPasswordAccount(email: string, password: string, restaurantId: string): Promise<NewAccount> {
   if (!authConfigured()) return { ok: false, reason: "not_configured" };
-  const { data, error } = await getSupabase().auth.admin.generateLink({ type: "magiclink", email });
-  if (error || !data.properties?.hashed_token) {
-    console.error("Couldn't make the sign-up login", error?.message);
+  const { error } = await getSupabase().auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    app_metadata: { signup_restaurant_id: restaurantId },
+  });
+  if (error) {
+    if (error.status === 422 || /already|exists|registered/i.test(error.message)) return { ok: false, reason: "existing_user" };
+    console.error("Couldn't make the login account", error.message);
     return { ok: false, reason: "failed" };
   }
-  if (!isFreshUser(data.user)) return { ok: false, reason: "existing_user" };
+  return (await logInWithPassword(email, password)) ? { ok: true } : { ok: false, reason: "failed" };
+}
+
+// Logs in with email and password (sets the login cookies). True if Supabase accepted them.
+export async function logInWithPassword(email: string, password: string) {
+  if (!authConfigured()) return false;
+  const { error } = await (await authClient()).auth.signInWithPassword({ email, password });
+  if (error) console.warn("Password login refused", error.message);
+  return !error;
+}
+
+// After a login from a link we emailed (a password reset): the person has shown the
+// email is theirs, so a sign-up account is no longer limited to its first restaurant.
+export async function markEmailProven() {
   const client = await authClient();
-  const verified = await client.auth.verifyOtp({ token_hash: data.properties.hashed_token, type: "email" });
-  const sessionId = verified.data.session ? sessionIdFromToken(verified.data.session.access_token) : null;
-  if (verified.error || !sessionId) {
-    console.error("Couldn't start the sign-up login", verified.error?.message ?? "no session id");
-    // A login that can't be limited to this restaurant must not stay.
-    if (verified.data.session) await client.auth.signOut({ scope: "local" });
-    return { ok: false, reason: "failed" };
-  }
-  const { error: recordError } = await getSupabase().from("signup_sessions").insert({ session_id: sessionId, restaurant_id: restaurantId });
-  if (recordError) {
-    // Never leave a sign-up login that isn't limited to its restaurant.
-    console.error("Couldn't record the sign-up login; logging out", recordError.message);
-    await client.auth.signOut({ scope: "local" });
-    return { ok: false, reason: "failed" };
-  }
-  return { ok: true };
+  const { data } = await client.auth.getUser();
+  const user = data.user;
+  if (!user || !(user.app_metadata as { signup_restaurant_id?: unknown } | undefined)?.signup_restaurant_id) return;
+  const { error } = await getSupabase().auth.admin.updateUserById(user.id, { app_metadata: { signup_restaurant_id: null } });
+  if (error) console.error("Couldn't lift the sign-up limit after an email link", error.message);
 }
 
 // For owner pages: sends anyone not logged in (or not allowed) to the login page.
@@ -142,23 +152,27 @@ export function looksLikeEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
-// Emails a one-time login link that lands on `next`. "implicit": the link in
-// Supabase's standard email brings the login back after a "#" in the address, so
-// it works in whichever browser opens it (no email template changes needed).
-// /auth/confirm picks it up. Returns "wait" (too many emails just now), "send" or null.
-export async function emailLoginLink(email: string, next: string, base: string) {
+// Emails a link to set a new password (Supabase's "Reset your password" email). It
+// lands on /auth/confirm, which logs them in and goes on to /account/password.
+// "implicit": the login comes back after a "#" in the address, so the link works in
+// whichever browser opens it. Only call this for an allowed email (lib/auth.ts
+// accessFor). An owner who has never logged in has no login account yet: one is made
+// first (no password), so the email can go. Returns "wait" (too many emails just
+// now), "send" or null.
+export async function emailPasswordLink(email: string, base: string) {
   if (!authConfigured()) {
-    console.error("Can't send a login link: SUPABASE_PUBLISHABLE_KEY isn't set here");
+    console.error("Can't send a password link: SUPABASE_PUBLISHABLE_KEY isn't set here");
     return "send" as const;
+  }
+  const made = await getSupabase().auth.admin.createUser({ email, email_confirm: true });
+  if (made.error && !(made.error.status === 422 || /already|exists|registered/i.test(made.error.message))) {
+    console.error("Couldn't make a login account for a password link", made.error.message);
   }
   const sender = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
-  const { error } = await sender.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${base}/auth/confirm?next=${encodeURIComponent(safeNext(next))}`, shouldCreateUser: true },
-  });
+  const { error } = await sender.auth.resetPasswordForEmail(email, { redirectTo: `${base}/auth/confirm?next=${encodeURIComponent("/account/password?reset=1")}` });
   if (!error) return null;
-  console.error("Magic link failed", error.message);
+  console.error("Password link failed", error.message);
   return error.status === 429 ? ("wait" as const) : ("send" as const);
 }

@@ -74,8 +74,7 @@ beforeAll(() => {
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client, appUrl: () => "https://app.test" }));
   vi.doMock("@/lib/auth", async (orig) => ({
     ...(await orig<object>()),
-    emailLoginLink: async () => null,
-    startSignupSession: async () => ({ ok: true }),
+    createPasswordAccount: async () => ({ ok: true }),
     currentOwner: async () => ({ email: "amina@grill.test", isBuilder: false, restaurantIds: [restaurantId], allowed: true }),
   }));
   vi.doMock("@/lib/builder-alerts", () => ({ alertBuilder: async (_k: string, m: string) => (stumbles.push(`builder alert: ${m.slice(0, 160)}`), "sent") }));
@@ -232,7 +231,7 @@ describe("a whole onboarding, for real", () => {
   test("sign-up to the summary", async () => {
     const { startSignup } = await import("@/app/start/actions");
     const form = new FormData();
-    for (const [k, v] of Object.entries({ owner_name: "Amina Khan", email: "amina@grill.test", restaurant_name: "Ember & Spice Grill", whatsapp: "07700 900123", terms: "yes", invite: "FULL-RUN" })) form.set(k, v);
+    for (const [k, v] of Object.entries({ owner_name: "Amina Khan", email: "amina@grill.test", password: "correct horse", restaurant_name: "Ember & Spice Grill", whatsapp: "07700 900123", terms: "yes", invite: "FULL-RUN" })) form.set(k, v);
     let to = "";
     try {
       await startSignup(form);
