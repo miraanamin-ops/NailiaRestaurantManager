@@ -7,7 +7,7 @@ import type { DinaReply } from "@/lib/onboarding/dina/reply";
 import { codeTurn, dinaTurn, type TurnInput } from "@/lib/onboarding/dina/turn";
 import { cardFor, chatMessage, confirmText, progressFrom, skippableNow } from "@/lib/onboarding/dina/view";
 import { enterStep, skipStep } from "@/lib/onboarding/sessions";
-import { limitKey, MINUTE, overLimit } from "@/lib/rate-limit";
+import { limitKey, limitReached, MINUTE, recordAttempt } from "@/lib/rate-limit";
 
 // The web chat with Dina: one owner action in, Dina's answer streamed back as
 // lines of JSON (one event per line):
@@ -19,7 +19,9 @@ import { limitKey, MINUTE, overLimit } from "@/lib/rate-limit";
 // Dina's words are checked before they're shown (lib/onboarding/dina/reply.ts), so
 // they arrive whole, message by message, never word by word.
 // Only the restaurant's own owner (or the builder) can use it; a repeated send (same
-// clientId) is answered once; at most 40 turns per restaurant per 10 minutes.
+// clientId) is answered once; at most 120 of Dina's turns per restaurant per 10
+// minutes. Taps that code answers by itself (the allergen cards) cost nothing and
+// don't count, so a long menu never runs into the limit.
 
 export const maxDuration = 120;
 
@@ -36,7 +38,7 @@ const Action = z.discriminatedUnion("kind", [
 const Body = z.object({ r: z.string().uuid(), action: Action });
 
 const MESSAGE_GAP_MS = 450;
-const TURNS = { max: 40, windowMs: 10 * MINUTE };
+const TURNS = { max: 120, windowMs: 10 * MINUTE };
 
 export async function POST(req: Request) {
   const owner = await currentOwner();
@@ -45,7 +47,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return Response.json({ error: "That didn't look right." }, { status: 400 });
   const { r, action } = parsed.data;
   if (!owner.restaurantIds.includes(r)) return Response.json({ error: "Not your restaurant." }, { status: 403 });
-  if (action.kind !== "start" && (await overLimit([{ key: limitKey("dina-turn", r), ...TURNS }]))) {
+  const limits = [{ key: limitKey("dina-turn", r), ...TURNS }];
+  if (action.kind !== "start" && (await limitReached(limits))) {
     return Response.json({ error: "That's a lot of messages in a short time. Give it a few minutes." }, { status: 429 });
   }
 
@@ -60,6 +63,8 @@ export async function POST(req: Request) {
           send({ type: "done" });
           return;
         }
+        // Only turns that go to Dina (a Claude call) use up the allowance.
+        if (action.kind !== "start" && !input.codeReply) await recordAttempt(limits);
         // A tap code answers itself (the next allergen card): no Claude call.
         const result = input.codeReply
           ? await codeTurn({ restaurantId: r, channel: "web", text: input.text ?? "", externalId: input.externalId, ownerParts: input.ownerParts, messages: input.codeReply })

@@ -20,6 +20,14 @@ export function clientIp(headers: Headers) {
 
 // True if any limit is already used up. Otherwise records one attempt against each and returns false.
 export async function overLimit(limits: Limit[], now = new Date()) {
+  if (await limitReached(limits, now)) return true;
+  await recordAttempt(limits);
+  return false;
+}
+
+// True if any limit is already used up; records nothing. For actions that only
+// count once we know what they cost (pair with recordAttempt).
+export async function limitReached(limits: Limit[], now = new Date()) {
   const supabase = getSupabase();
   for (const l of limits) {
     const since = new Date(now.getTime() - l.windowMs).toISOString();
@@ -31,9 +39,12 @@ export async function overLimit(limits: Limit[], now = new Date()) {
     }
     if ((count ?? 0) >= l.max) return true;
   }
-  const { error } = await supabase.from("rate_limits").insert(limits.map((l) => ({ key: l.key })));
-  if (error) console.error("Couldn't record a rate-limit attempt", error);
   return false;
+}
+
+export async function recordAttempt(limits: Limit[]) {
+  const { error } = await getSupabase().from("rate_limits").insert(limits.map((l) => ({ key: l.key })));
+  if (error) console.error("Couldn't record a rate-limit attempt", error);
 }
 
 // Rows older than two days are never needed (the longest window is a day). Run hourly.

@@ -134,6 +134,9 @@ let db: ReturnType<typeof memoryDb>;
 let owner: { email: string; isBuilder: boolean; restaurantIds: string[]; allowed: boolean } | null;
 let limited = false;
 const dinaTurn = vi.fn();
+const codeTurn = vi.fn();
+const recordAttempt = vi.fn();
+let codeAnswer: unknown = null;
 
 beforeEach(() => {
   vi.resetModules();
@@ -147,13 +150,20 @@ beforeEach(() => {
   owner = { email: "amina@grill.test", isBuilder: false, restaurantIds: [R], allowed: true };
   limited = false;
   dinaTurn.mockReset();
+  codeTurn.mockReset();
+  recordAttempt.mockReset();
+  codeAnswer = null;
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
   vi.doMock("@/lib/auth", () => ({ currentOwner: async () => owner }));
-  vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => limited }));
-  vi.doMock("@/lib/onboarding/dina/turn", () => ({ dinaTurn }));
+  vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), limitReached: async () => limited, recordAttempt }));
+  vi.doMock("@/lib/onboarding/dina/turn", () => ({ dinaTurn, codeTurn }));
+  vi.doMock("@/lib/onboarding/dina/answers", async (orig) => {
+    const real = await orig<{ handleAnswer: (...a: unknown[]) => Promise<unknown> }>();
+    return { ...real, handleAnswer: async (...a: unknown[]) => codeAnswer ?? real.handleAnswer(...a) };
+  });
 });
 afterEach(() => {
-  for (const m of ["@/lib/supabase", "@/lib/auth", "@/lib/rate-limit", "@/lib/onboarding/dina/turn"]) vi.doUnmock(m);
+  for (const m of ["@/lib/supabase", "@/lib/auth", "@/lib/rate-limit", "@/lib/onboarding/dina/turn", "@/lib/onboarding/dina/answers"]) vi.doUnmock(m);
 });
 
 async function call(body: object) {
@@ -187,6 +197,24 @@ describe("the chat endpoint", () => {
     limited = true;
     expect((await call({ r: R, action: { kind: "message", text: "hi", clientId: uuid() } })).status).toBe(429);
     expect(dinaTurn).not.toHaveBeenCalled();
+    expect(recordAttempt).not.toHaveBeenCalled();
+  });
+
+  test("only Dina's turns use up the allowance: a tap code answers by itself (an allergen card) is free", async () => {
+    reply(["Lovely."]);
+    await call({ r: R, action: { kind: "message", text: "hi", clientId: uuid() } });
+    expect(recordAttempt).toHaveBeenCalledTimes(1);
+    expect(recordAttempt.mock.calls[0][0]).toMatchObject([{ max: 120, windowMs: 600_000 }]);
+
+    recordAttempt.mockReset();
+    dinaTurn.mockReset();
+    codeAnswer = { reply: [{ text: "Next dish: lamb chops.", component: null }] };
+    codeTurn.mockResolvedValue({ duplicate: false, messages: [{ id: uuid(), text: "Next dish: lamb chops.", component: null }] });
+    const { status } = await call({ r: R, action: { kind: "answer", messageId: uuid(), choiceId: "allergens-ok", label: "Looks right", clientId: uuid() } });
+    expect(status).toBe(200);
+    expect(codeTurn).toHaveBeenCalled();
+    expect(dinaTurn).not.toHaveBeenCalled();
+    expect(recordAttempt).not.toHaveBeenCalled();
   });
 
   test("a message streams: typing, what she's doing, each checked message in order, the new state, done", async () => {
