@@ -175,9 +175,27 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
         out.push({ kind: "text", body: clip(`*${card.quote.author}* ${stars}\n"${card.quote.text}"`, WA.text) });
       }
       if (card.layout === "cards") card.options.forEach((o, n) => o.body && out.push({ kind: "text", body: clip(`*${n + 1}. ${o.label}*\n${o.body}`, WA.text) }));
-      const upload = card.upload ? `\n\n${card.upload.multiple ? "Send the photos here." : "Send it here as a photo."}` : "";
-      if (choices.length) out.push(withChoices(`${m.text}${upload}`, m.id, choices));
-      else out.push({ kind: "text", body: clip(`${m.text}${upload}`, WA.text) });
+      // The allergen grid as text: each dish and what's marked, in as many messages as it takes.
+      if (card.grid) {
+        const cols = new Map(card.grid.columns.map((col) => [col.id, col.label]));
+        const rows = card.grid.rows.map((r) => `*${r.label}*: ${r.unsure ? "not sure" : r.marked.map((x) => cols.get(x) ?? x).join(", ") || "none of the 14"}`);
+        let chunk = "";
+        for (const row of rows) {
+          if (chunk.length + row.length + 1 > WA.text - 40) {
+            out.push({ kind: "text", body: chunk });
+            chunk = "";
+          }
+          chunk += `${chunk ? "\n" : ""}${row}`;
+        }
+        if (chunk) out.push({ kind: "text", body: chunk });
+      }
+      const upload = card.upload ? `\n\n${card.upload.accept === "spreadsheet" ? "Send the CSV or Excel file here." : card.upload.multiple ? "Send the photos here." : "Send it here as a photo."}` : "";
+      const link = card.link ? `\n\n${card.link.label}: ${abs(card.link.href)}` : "";
+      const words = card.input && card.options.length ? "\n\nOr type your own." : "";
+      const several = card.multi ? "\n\nReply with all the numbers that apply, for example 1, 3." : "";
+      const gridHow = card.grid ? `\n\nTell me any changes in your own words, like "Lamb chops: add sesame", or check them on the web: ${opts.chatUrl}` : "";
+      if (choices.length) out.push(withChoices(`${m.text}${gridHow}${upload}${link}${words}${several}`, m.id, choices));
+      else out.push({ kind: "text", body: clip(`${m.text}${upload}${link}`, WA.text) });
     } else if (c?.type === "recap") {
       const rows = c.recap.rows.map((r) => `${r.status === "skipped" ? "⏭" : "✅"} ${r.label}: ${r.value}${r.swatches?.length ? ` (${r.swatches.join(", ")})` : ""}`);
       out.push({ kind: "text", body: clip(`${m.text}\n\n*${c.recap.title}*\n${rows.join("\n")}`, WA.text) });

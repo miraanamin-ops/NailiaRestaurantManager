@@ -51,6 +51,12 @@ export type QuestionCardData = {
   upload?: { accept: "photo" | "document" | "spreadsheet" | "any"; multiple: boolean; label: string } | null;
   // What's saved now, shown picked (Change on a recap).
   selected?: string[];
+  // The allergen grid (owner's call, 7 Nov 2026): dishes down the side, the 14
+  // allergens (and dietary tags) along the top, an X in each cell. suggested: a
+  // row that is still only the AI's guess (shown as such).
+  grid?: { columns: { id: string; label: string; short: string }[]; rows: { id: string; label: string; section: string; marked: string[]; suggested: boolean; unsure: boolean }[] } | null;
+  // A link shown on the card (the costs spreadsheet).
+  link?: { label: string; href: string } | null;
 };
 
 export type RecapRow = { q: string; label: string; value: string; status: "answered" | "skipped"; swatches?: string[] };

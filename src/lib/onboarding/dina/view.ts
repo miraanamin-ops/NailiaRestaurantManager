@@ -167,9 +167,13 @@ const SUMMARY_DETAIL: Partial<Record<FlowStepKey, (s: CardSources) => string>> =
     const via = (data(s, "customers_qr") as { qr_via?: string[] }).qr_via ?? [];
     return via.length ? `QR codes sent by ${via.join(" and ")}` : "QR codes ready";
   },
-  approvals_timing: (s) => {
-    const d = data(s, "approvals_timing") as { brief_hour?: number; quiet_start?: string; quiet_end?: string };
-    return `Brief at ${hourWords(d.brief_hour ?? 9)}; customer messages ${d.quiet_start ?? "09:00"} to ${d.quiet_end ?? "21:00"}; you approve everything`;
+  approvals_timing: ({ restaurant }) => {
+    const r = restaurant as { brief_hour?: number | null; send_window_start?: string | null; send_window_end?: string | null };
+    return `Brief at ${hourWords(r.brief_hour ?? 9)}; customer messages ${String(r.send_window_start ?? "09:00").slice(0, 5)} to ${String(r.send_window_end ?? "21:00").slice(0, 5)}; you approve everything`;
+  },
+  languages_dates: ({ restaurant }) => {
+    const r = restaurant as { customer_languages?: string[] | null; event_audiences?: string[] | null };
+    return [r.customer_languages?.length ? `Languages: ${r.customer_languages.join(", ")}` : null, r.event_audiences?.length ? `${r.event_audiences.length} kinds of date planned for` : "Christmas and bank holidays planned for"].filter(Boolean).join("; ");
   },
 };
 
@@ -218,7 +222,7 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
   const p = part as { type?: string; card?: string };
   if (p.type === "question" && sources.setup) {
     const facts = factsFromSources(sources);
-    const asked = askFor((part as { q?: string }).q ?? "", facts, inputsFrom({ restaurant: facts.r, state: sources.state, tones: sources.setup.tones }));
+    const asked = askFor((part as { q?: string }).q ?? "", facts, inputsFrom({ restaurant: facts.r, state: sources.state, tones: sources.setup.tones, templateLinks: sources.setup.templateLinks }));
     return asked ? { type: "question", card: asked.card } : null;
   }
   if (p.type === "recap" && sources.setup) {

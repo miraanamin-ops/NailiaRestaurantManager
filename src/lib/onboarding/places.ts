@@ -54,10 +54,11 @@ type PlaceSummary = { id: string; displayName?: { text: string }; formattedAddre
 export async function searchPlaces(query: string): Promise<GoogleCandidate[]> {
   const out = await places<{ places?: PlaceSummary[] }>("/places:searchText", {
     method: "POST",
-    body: JSON.stringify({ textQuery: query, regionCode: "GB", maxResultCount: 3 }),
+    // UK only (7 Nov 2026: "MN Test" matched a business in Minnesota).
+    body: JSON.stringify({ textQuery: query, regionCode: "GB", maxResultCount: 3, locationRestriction: { rectangle: { low: { latitude: 49.8, longitude: -8.7 }, high: { latitude: 60.9, longitude: 1.8 } } } }),
     fieldMask: "places.id,places.displayName,places.formattedAddress",
   });
-  return (out.places ?? []).map((p) => ({ id: p.id, name: p.displayName?.text ?? query, address: p.formattedAddress ?? "" }));
+  return (out.places ?? []).filter((p) => isUkAddress(p.formattedAddress ?? "")).map((p) => ({ id: p.id, name: p.displayName?.text ?? query, address: p.formattedAddress ?? "" }));
 }
 
 type PlaceDetails = {
@@ -117,4 +118,9 @@ export async function profileFromPlace(restaurantId: string, placeId: string): P
     ...(d.primaryTypeDisplayName?.text ? { cuisine: d.primaryTypeDisplayName.text } : {}),
     ...(photos.length ? { photos } : {}),
   };
+}
+
+// A UK address: it says so, or ends with a UK postcode.
+export function isUkAddress(address: string) {
+  return /(UK|United Kingdom|England|Scotland|Wales|Northern Ireland)/i.test(address) || /[A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2}/i.test(address);
 }

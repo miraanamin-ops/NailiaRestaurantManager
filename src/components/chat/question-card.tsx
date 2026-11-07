@@ -3,6 +3,7 @@ import { useState } from "react";
 import { card, primary, secondary } from "./styles";
 import type { QuestionCardData, QuestionOption } from "./types";
 import { UploadCard } from "./upload-card";
+import { AllergenGrid, initialGrid, type GridValue } from "./allergen-grid";
 
 // One of setup's questions (lib/onboarding/guide/cards.ts). A tap selects (it's
 // highlighted); on a decision nothing is saved until Confirm, and the pick can be
@@ -10,7 +11,7 @@ import { UploadCard } from "./upload-card";
 // words ("Choose my own") opens a box. "Skip this question" moves to the next
 // question and never skips anything else. Once answered, it stays as a record.
 
-export type QuestionAnswer = { choiceIds: string[]; text?: string; label: string };
+export type QuestionAnswer = { choiceIds: string[]; text?: string; label: string; grid?: GridValue };
 
 export function QuestionCard({
   data,
@@ -27,9 +28,12 @@ export function QuestionCard({
 }) {
   const [picked, setPicked] = useState<string[]>(data.selected ?? []);
   const [text, setText] = useState("");
-  const needsWords = data.input && picked.includes(data.input.optionId);
-  const ready = picked.length > 0 && (!needsWords || text.trim().length > 0);
-  const labelOf = (ids: string[]) => (needsWords ? text.trim() : ids.map((id) => data.options.find((o) => o.id === id)?.label ?? id).join(", "));
+  const [grid, setGrid] = useState<GridValue>(() => (data.grid ? initialGrid(data.grid) : {}));
+  // Only words to type (no choices): the box is always there.
+  const wordsOnly = Boolean(data.input) && data.options.length === 0;
+  const needsWords = data.input && (wordsOnly || picked.includes(data.input.optionId));
+  const ready = data.grid ? true : (picked.length > 0 || wordsOnly) && (!needsWords || text.trim().length > 0);
+  const labelOf = (ids: string[]) => (data.grid ? "These are right" : needsWords ? text.trim() : ids.map((id) => data.options.find((o) => o.id === id)?.label ?? id).join(", "));
 
   const tap = (o: QuestionOption) => {
     if (disabled) return;
@@ -38,7 +42,12 @@ export function QuestionCard({
     // Not a decision, one choice, no words needed: a tap is the answer.
     if (!data.confirm && !data.multi && !(data.input && o.id === data.input.optionId)) onAnswer({ choiceIds: next, label: o.label });
   };
-  const confirm = () => ready && onAnswer({ choiceIds: picked, ...(needsWords ? { text: text.trim() } : {}), label: labelOf(picked) });
+  const confirm = () => {
+    if (!ready) return;
+    if (data.grid) return onAnswer({ choiceIds: [data.options[0]?.id ?? "grid_ok"], grid, label: labelOf([]) });
+    const ids = wordsOnly ? [data.input!.optionId] : picked;
+    onAnswer({ choiceIds: ids, ...(needsWords ? { text: text.trim() } : {}), label: labelOf(ids) });
+  };
 
   return (
     <div className="space-y-3">
@@ -62,7 +71,15 @@ export function QuestionCard({
         </figure>
       )}
 
-      {data.options.length > 0 && (
+      {data.grid && <AllergenGrid grid={data.grid} value={grid} onChange={setGrid} disabled={disabled} />}
+
+      {data.link && (
+        <a href={data.link.href} target="_blank" rel="noreferrer" className={`${secondary} inline-flex items-center`}>
+          {data.link.label}
+        </a>
+      )}
+
+      {data.options.length > 0 && !data.grid && (
         <div role={data.multi ? "group" : "radiogroup"} aria-label="Choices" className={data.layout === "cards" ? "grid gap-3 sm:grid-cols-2" : data.layout === "swatches" ? "grid gap-2 sm:grid-cols-2" : "flex flex-wrap gap-2"}>
           {data.options.map((o) => {
             const on = picked.includes(o.id);
@@ -128,11 +145,11 @@ export function QuestionCard({
 
       {data.upload && onFiles && <UploadCard accept={data.upload.accept} multiple={data.upload.multiple} label={data.upload.label} disabled={disabled} status={uploadStatus} onFiles={onFiles} />}
 
-      {!disabled && (data.confirm || data.multi || needsWords || data.skip) && (
+      {!disabled && (data.confirm || data.multi || needsWords || data.skip || data.grid) && (
         <div className="flex flex-wrap items-center gap-3">
-          {(data.confirm || data.multi || needsWords) && data.options.length > 0 && (
+          {(data.confirm || data.multi || needsWords || data.grid) && (data.options.length > 0 || wordsOnly) && (
             <button type="button" disabled={!ready} onClick={confirm} className={primary}>
-              Confirm
+              {data.grid ? "These are right" : "Confirm"}
             </button>
           )}
           {data.skip && (

@@ -62,8 +62,9 @@ export async function guideNext(restaurantId: string): Promise<GuideNext> {
   const intro = await introFor(restaurantId, action.step, facts);
   if (action.kind === "recap") return { action, messages: [...intro, { text: recapText(action.chapter), component: { type: "recap", chapter: action.chapter } }], dinaNote: null };
   if (action.kind === "ask") {
-    const { toneConfig } = await import("../dina/setup-config");
-    const asked = askFor(action.question.id, facts, inputsFrom({ restaurant: facts.r, state: facts.state, tones: toneConfig() }));
+    const { setupExtras } = await import("../dina/setup-config");
+    const extras = await setupExtras(restaurantId);
+    const asked = askFor(action.question.id, facts, inputsFrom({ restaurant: facts.r, state: facts.state, tones: extras.tones, templateLinks: extras.templateLinks }));
     if (asked) return { action, messages: [...intro, { text: asked.text, component: { type: "question", q: action.question.id } }], dinaNote: null };
   }
   const brief = action.kind === "dina" ? action.question?.brief : null;

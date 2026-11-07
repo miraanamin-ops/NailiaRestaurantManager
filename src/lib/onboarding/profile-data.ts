@@ -24,6 +24,10 @@ export type MenuItem = {
   cost?: number | null;
   cost_estimated?: boolean;
   seller?: "top" | "slow" | null;
+  // Dietary tags the owner ticked on the allergen grid (vegetarian, vegan, gluten_free),
+  // and whether it's one of their 3 signature dishes (setup, 7 Nov 2026).
+  dietary?: string[];
+  signature?: boolean;
   // The dish's id, only while the settings page edits the menu (never in restaurants.menu).
   id?: string;
 };

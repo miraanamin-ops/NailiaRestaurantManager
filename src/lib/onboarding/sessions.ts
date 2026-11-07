@@ -131,11 +131,14 @@ type Opts = { channel?: Channel; now?: Date };
 // nothing confirmed, so a question is asked rather than wrongly skipped.
 export async function factsFor(restaurantId: string, state: flow.FlowState): Promise<Facts> {
   const supabase = getSupabase();
-  const [r, versions] = await Promise.all([
+  const { salesHintFor } = await import("./guide/sales-hint");
+  const [r, versions, sales] = await Promise.all([
     supabase.from("restaurants").select("*").eq("id", restaurantId).maybeSingle<Record<string, unknown>>(),
     supabase.from("profile_versions").select("field").eq("restaurant_id", restaurantId).returns<{ field: string }[]>(),
+    // The takings already in, for the sales target and quiet days (only once the sales step is reached).
+    flow.stepState(state, "sales").status !== "not_started" ? salesHintFor(supabase, restaurantId) : Promise.resolve(null),
   ]);
-  return { r: r.data ?? {}, confirmed: new Set(versions.error ? [] : (versions.data ?? []).map((v) => v.field)), state };
+  return { r: { ...(r.data ?? {}), _sales: sales }, confirmed: new Set(versions.error ? [] : (versions.data ?? []).map((v) => v.field)), state };
 }
 
 async function change(restaurantId: string, key: flow.FlowStepKey, opts: Opts, fn: (state: flow.FlowState, now: string) => flow.FlowState, focus?: flow.FlowStepKey) {

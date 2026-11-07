@@ -1,5 +1,6 @@
 import { availableSteps, stepState, type FlowState, type FlowStatus, type FlowStepKey, type StepState } from "../flow";
 import { availableChapters, type ChapterKey } from "./chapters";
+import { catalogById } from "./catalog";
 
 // Every question setup asks, in code (owner's plan, 7 Nov 2026). A step is only
 // done once each of its questions is answered or skipped on purpose: a tap can
@@ -51,36 +52,69 @@ const baseDone = (k: FlowStepKey) => (f: Facts) => {
 
 const base = (step: FlowStepKey, label: string, brief: string): Question => ({ id: `${step}.base`, step, level: "essential", asker: "dina", decision: false, label, answered: baseDone(step), brief });
 
+// A catalog question (guide/catalog.ts): code's own, answered only by the owner's answer.
+const fromCatalog = (id: string): Question => {
+  const c = catalogById.get(id);
+  if (!c) throw new Error(`No catalog question ${id}`);
+  return { id, step: c.step, level: c.level, asker: "code", decision: c.decision, label: c.label, answered: () => false, applies: c.applies };
+};
+const code = (q: Omit<Question, "asker">): Question => ({ ...q, asker: "code" });
+const menuItems = (f: Facts) => ((f.r.menu ?? []) as { items?: { cost?: number | null; seller?: string | null; signature?: boolean; allergens_confirmed?: boolean }[] }[]).flatMap((c) => c.items ?? []);
+const hasMenu = (f: Facts) => menuItems(f).length > 0;
+const menuSaved = (f: Facts) => {
+  const s = stepState(f.state, "menu");
+  return Boolean(s.data.saved_at) || Boolean(s.data._outcome) || Boolean(s.completedAt);
+};
+
 export const QUESTIONS: Question[] = [
+  // Chapter 1: you and your restaurant. Dina confirms the basics; code asks the rest.
   base("hello", "Your basics", "the basics (name, restaurant, address, cuisine, owner or manager), then the basics card"),
+  ...["restaurant.phone", "restaurant.venue", "restaurant.seats", "restaurant.spend", "restaurant.customers", "restaurant.instagram", "restaurant.ordering", "restaurant.booking", "restaurant.goals"].map(fromCatalog),
+
+  // Chapter 2: Google.
   base("google", "Google profile", "the Google profile questions and steps"),
 
   // Chapter 3: your look and voice.
-  { id: "look.logo", step: "look", level: "essential", asker: "code", decision: true, label: "Logo", answered: (f) => f.confirmed.has("logo") && filled(f.r.logo_url) },
-  { id: "look.colours", step: "look", level: "essential", asker: "code", decision: true, label: "Colours", answered: (f) => f.confirmed.has("colours") },
-  {
-    id: "look.photos",
-    step: "look",
-    level: "important",
-    asker: "code",
-    decision: false,
-    label: "Dish photos",
-    answered: (f) => (Array.isArray(f.r.photo_library) ? f.r.photo_library.length : 0) >= 3,
-  },
-  { id: "tone.praise", step: "tone", level: "essential", asker: "code", decision: true, label: "Replies to good reviews", answered: (f) => Boolean((data(f, "tone").picks as Record<string, unknown> | undefined)?.praise) },
-  { id: "tone.complaint", step: "tone", level: "essential", asker: "code", decision: true, label: "Replies to bad reviews", answered: (f) => Boolean((data(f, "tone").picks as Record<string, unknown> | undefined)?.complaint) },
-  { id: "tone.sign_off", step: "tone", level: "essential", asker: "code", decision: true, label: "How replies are signed", answered: (f) => filled(f.r.sign_off_name) },
-  { id: "tone.emoji", step: "tone", level: "essential", asker: "code", decision: true, label: "Emoji", answered: (f) => f.confirmed.has("emoji_allowed") },
+  code({ id: "look.logo", step: "look", level: "essential", decision: true, label: "Logo", answered: (f) => f.confirmed.has("logo") && filled(f.r.logo_url) }),
+  code({ id: "look.colours", step: "look", level: "essential", decision: true, label: "Colours", answered: (f) => f.confirmed.has("colours") }),
+  code({ id: "look.photos", step: "look", level: "important", decision: false, label: "Dish photos", answered: (f) => (Array.isArray(f.r.photo_library) ? f.r.photo_library.length : 0) >= 3 }),
+  code({ id: "tone.praise", step: "tone", level: "essential", decision: true, label: "Replies to good reviews", answered: (f) => Boolean((data(f, "tone").picks as Record<string, unknown> | undefined)?.praise) }),
+  code({ id: "tone.complaint", step: "tone", level: "essential", decision: true, label: "Replies to bad reviews", answered: (f) => Boolean((data(f, "tone").picks as Record<string, unknown> | undefined)?.complaint) }),
+  code({ id: "tone.sign_off", step: "tone", level: "essential", decision: true, label: "How replies are signed", answered: (f) => filled(f.r.sign_off_name) }),
+  code({ id: "tone.emoji", step: "tone", level: "essential", decision: true, label: "Emoji", answered: (f) => f.confirmed.has("emoji_allowed") }),
 
-  base("menu", "Your menu and allergens", "the menu (photos or PDF, then the menu card), then the allergens"),
-  base("rewards", "Rewards and limits", "the sign-up reward and the discount cap"),
-  base("make_it_right", "Putting things right", "what may be offered to an unhappy customer, and who handles complaints"),
+  // Chapter 4: your menu and margins. Dina reads the menu; code asks the rest.
+  { ...base("menu", "Your menu", "the menu (photos or PDF, then the menu card)"), answered: menuSaved },
+  code({ id: "menu.allergens", step: "menu", level: "essential", decision: true, label: "Allergens", answered: () => false, applies: hasMenu }),
+  { ...fromCatalog("menu.allergen_statement"), applies: hasMenu },
+  code({ id: "menu.costs", step: "menu", level: "important", decision: true, label: "Dish costs", answered: (f) => menuItems(f).some((i) => typeof i.cost === "number"), applies: hasMenu }),
+  code({ id: "menu.top", step: "menu", level: "important", decision: true, label: "Best sellers", answered: () => false, applies: hasMenu }),
+  code({ id: "menu.slow", step: "menu", level: "important", decision: true, label: "Slowest sellers", answered: () => false, applies: hasMenu }),
+  code({ id: "menu.signature", step: "menu", level: "important", decision: true, label: "Signature dishes", answered: () => false, applies: hasMenu }),
+
+  // Chapter 5: offers and limits (after the dish costs, so the minimum profit means something).
+  ...["offers.reward", "offers.birthday", "offers.types", "offers.cap", "offers.margin", "offers.no_discount"].map(fromCatalog),
+
+  // Chapter 6: customers and complaints.
+  base("make_it_right", "Putting things right", "what may be offered to an unhappy customer, who handles complaints and how customers reach them"),
   base("hours_faqs", "Hours and common questions", "the opening hours (then the hours card), then the common questions one at a time"),
-  base("customers_qr", "QR codes", "their QR codes"),
+  code({ id: "customers.qr", step: "customers_qr", level: "essential", decision: false, label: "QR codes", answered: (f) => Boolean(data(f, "customers_qr").qr_sent_at) }),
+  code({ id: "customers.import", step: "customers_qr", level: "important", decision: false, label: "Your customer list", answered: () => false }),
+  code({ id: "customers.consent", step: "customers_qr", level: "essential", decision: true, label: "How they agreed", answered: () => false, applies: (f) => Boolean(data(f, "customers_qr").import_draft) }),
+
+  // Chapter 7: sales and team.
   base("sales", "Sales history", "their sales history"),
+  ...["sales.target", "sales.quiet", "sales.busy"].map(fromCatalog),
   base("team", "Your team", "their team, the site manager, cover rules and labour target"),
-  base("languages_dates", "Languages and key dates", "their languages and key dates"),
-  base("approvals_timing", "When you hear from me", "the morning brief time and when customers may get messages"),
+
+  // Chapter 8: your calendar.
+  ...["calendar.languages", "calendar.dates", "calendar.closures"].map(fromCatalog),
+
+  // Chapter 9: working together.
+  fromCatalog("working.brief"),
+  code({ id: "working.window", step: "approvals_timing", level: "essential", decision: true, label: "When customers can hear from you", answered: () => false }),
+  code({ id: "working.quiet", step: "approvals_timing", level: "essential", decision: true, label: "When I won't message you", answered: () => false }),
+  ...["working.language", "working.style"].map(fromCatalog),
 ];
 
 // Each chapter ends with a recap the owner confirms ("Looks right"), held on its last step.

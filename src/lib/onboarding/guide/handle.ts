@@ -4,7 +4,7 @@ import { stepState } from "../flow";
 import { loadFlow, patchStepData, type Channel } from "../sessions";
 import type { DinaReply } from "../dina/reply";
 import { CHAPTER_SKIP } from "../dina/view";
-import { answerQuestion, confirmRecap, reaskFromRecap, skipChapter, skipQuestion } from "./answer";
+import { answerQuestion, confirmRecap, reaskFromRecap, skipChapter, skipQuestion, type GridAnswer } from "./answer";
 import { askFor, inputsFrom, pickedLabel, RECAP_OK, SKIP_ID } from "./cards";
 import { availableChapters, CHAPTERS, chapterOf, type ChapterKey } from "./chapters";
 import { loadFacts } from "./next";
@@ -46,17 +46,17 @@ async function setPending(restaurantId: string, q: string, pending: Pending | nu
   if (question) await patchStepData(restaurantId, question.step, { pending_pick: pending });
 }
 
-async function answer(restaurantId: string, q: string, picked: string[], typed: string | null, channel: Channel): Promise<GuideReply> {
+async function answer(restaurantId: string, q: string, picked: string[], typed: string | null, channel: Channel, grid?: GridAnswer | null): Promise<GuideReply> {
   if (picked.includes(SKIP_ID)) {
     await skipQuestion(restaurantId, q, channel);
     return say("No problem, we can come back to that later.");
   }
-  const result = await answerQuestion({ restaurantId, q, picked, typed, channel });
-  return say(result.said);
+  const result = await answerQuestion({ restaurantId, q, picked, typed, channel, grid });
+  return { messages: [{ text: result.said, component: (result.ok && result.component ? result.component : null) as never }] };
 }
 
 // A pick on one of code's question cards.
-export async function guidePick(input: { restaurantId: string; messageId: string; choiceIds: string[]; text?: string | null; channel: Channel; confirmed: boolean }): Promise<GuideReply | null> {
+export async function guidePick(input: { restaurantId: string; messageId: string; choiceIds: string[]; text?: string | null; channel: Channel; confirmed: boolean; grid?: GridAnswer | null }): Promise<GuideReply | null> {
   const part = await partOf(input.restaurantId, input.messageId);
   if (!part?.type) return null;
   const typed = input.text?.trim() || null;
@@ -112,7 +112,7 @@ export async function guidePick(input: { restaurantId: string; messageId: string
       return { messages: [{ text: `You picked: ${label}. Shall I save that?`, component: { type: "pick_confirm", q: q.id } as never }] };
     }
   }
-  return answer(input.restaurantId, q.id, input.choiceIds, typed, input.channel);
+  return answer(input.restaurantId, q.id, input.choiceIds, typed, input.channel, input.grid);
 }
 
 // A typed message while one of code's cards is on screen: the words it was
@@ -137,6 +137,12 @@ export async function guideTyped(input: { restaurantId: string; text: string; ch
   const inputs = inputsFrom({ restaurant: facts.r, state: facts.state, tones: toneConfig() });
   const asked = askFor(input.asking.part.q, facts, inputs);
   if (!asked) return null;
+  // Numbers for a question where several can be picked ("1, 3 and 5"; WhatsApp).
+  if (asked.card.multi && /^\s*\d{1,2}(\s*(,|and|&|\s)\s*\d{1,2})*\s*$/i.test(text)) {
+    const n = text.match(/\d{1,2}/g)!.map(Number);
+    const picked = [...new Set(n)].map((i) => asked.card.options[i - 1]?.id).filter((x): x is string => Boolean(x));
+    if (picked.length) return guidePick({ restaurantId: input.restaurantId, messageId: input.asking.messageId, choiceIds: picked, channel: input.channel, confirmed: false });
+  }
   // Typed the words of one of the options ("yes", "no emoji").
   const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
   const option = asked.card.options.find((o) => norm(o.label) === norm(text) || norm(o.short ?? "") === norm(text) || norm(o.id) === norm(text));
@@ -151,7 +157,31 @@ export async function guideFiles(input: { restaurantId: string; files: import(".
   const facts = await loadFacts(input.restaurantId);
   const { nextAction } = await import("./questions");
   const action = nextAction(facts);
-  if (action.kind !== "ask" || (action.question.id !== "look.logo" && action.question.id !== "look.photos")) return null;
+  if (action.kind !== "ask") return null;
+  // The customer list (a CSV or Excel file), read into a draft; how they agreed is asked next.
+  if (action.question.id === "customers.import") {
+    const sheet = input.files.find((f) => f.kind === "csv" || f.kind === "excel");
+    if (!sheet) return say("Send your customer list as a CSV or Excel file, with a column of emails.");
+    const { readCustomerFile } = await import("./import");
+    const read = await readCustomerFile(input.restaurantId, sheet);
+    return say(read.ok ? `Thanks, I've read ${read.count} customers with an email address${read.skipped ? ` (${read.skipped} rows had no usable email, so I left them out)` : ""}.` : read.text);
+  }
+  // Our menu costs sheet, filled in, while the costs are being asked.
+  if (action.question.id === "menu.costs") {
+    const sheet = input.files.find((f) => f.kind === "csv" || f.kind === "excel");
+    if (!sheet) return null;
+    const [{ readOwnSheet }, { readSavedFile }, { saveCostsSheet }, { getRestaurant }] = await Promise.all([import("@/lib/templates/read-file"), import("../dina/uploads-store"), import("@/lib/templates/import"), import("../store")]);
+    const own = await readOwnSheet(await readSavedFile(input.restaurantId, sheet.path)).catch(() => null);
+    if (own?.kind !== "menu_costs") return null;
+    const saved = await saveCostsSheet(await getRestaurant(input.restaurantId), own.table);
+    if (saved.ok) {
+      const { recordQuestion } = await import("../sessions");
+      const { withRecord } = await import("./questions");
+      await recordQuestion(input.restaurantId, "menu", (d, now) => withRecord(d, "menu.costs", "answered", now), { channel: input.channel });
+    }
+    return say(saved.message.replace(/^✅\s*/, ""));
+  }
+  if (action.question.id !== "look.logo" && action.question.id !== "look.photos") return null;
   const { lookFiles } = await import("../dina/details-step");
   const purpose = action.question.id === "look.logo" ? "logo" : "photos";
   const said = await lookFiles(input.restaurantId, input.files, purpose).catch((err) => (console.error("Saving the photos failed", err), null));

@@ -140,7 +140,10 @@ const feedback: JobHandler = {
     const s = await runFeedbackJob(r, new Date());
     // A failed send isn't retried here (it's marked failed); the builder hears about it.
     if (s.failed) await alertBuilder(`feedback-failed:${r.id}`, `${r.name}: ${s.failed} "How was your visit?" email(s) failed to send.`);
-    return s;
+    // Customers imported at setup: their confirm emails, a few each hour (guide/import.ts).
+    const { runImportConfirms } = await import("@/lib/onboarding/guide/import");
+    const imports = await runImportConfirms(r, new Date()).catch((err) => (console.error("Import confirm emails failed", err), { sent: 0, error: String(err) }));
+    return { ...s, imports };
   },
 };
 
@@ -170,13 +173,20 @@ const healthCheck: JobHandler = {
 
 // Hourly: nudges for restaurants still setting up with Dina (the 24-hour Google nudge).
 const setupNudges: JobHandler = {
-  run: async () => {
+  run: async (job) => {
     // Owners' Google invitations to our manager account: accepted and linked (lib/google/invitations.ts).
     const { acceptManagerInvitations } = await import("@/lib/google/invitations");
     const invitations = await acceptManagerInvitations().catch(async (err) => {
       await alertBuilder("google-invitations-failed", `Checking our manager account's Google invitations failed: ${err instanceof Error ? err.message : String(err)}`.slice(0, 400));
       return null;
     });
+    // The last quick check after "Done, I've invited you" (10 minutes): still nothing,
+    // so the owner hears it rather than a silent wait (7 Nov 2026).
+    const late = (job as QueueJob).idempotency_key?.match(/^setup_nudges:invite:([0-9a-f-]{36}):10$/);
+    if (late) {
+      const { inviteNotFound } = await import("@/lib/onboarding/dina/google-step");
+      await inviteNotFound(late[1]).catch((err) => console.error("Couldn't tell the owner the invite hasn't arrived", err));
+    }
     const { runGoogleNudges } = await import("@/lib/onboarding/dina/google-step");
     const google = await runGoogleNudges(new Date());
     const failed = google.filter((g) => g.error);

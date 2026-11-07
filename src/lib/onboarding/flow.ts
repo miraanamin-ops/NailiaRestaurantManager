@@ -61,7 +61,7 @@ export const STEP_DEFS: Record<FlowStepKey, StepDef> = {
   team: step("team", "Team and labour", "Share your team and labour target and I'll track labour % daily and suggest rotas."),
   rewards: step("rewards", "Rewards and limits", "Set your rewards and limits and I'll run offers without ever going over budget."),
   customers_qr: step("customers_qr", "Customer list and QR codes", "Import your customers and print your QR codes and I'll start growing your list."),
-  languages_dates: step("languages_dates", "Languages and key dates", "Tell me your languages and key dates and I'll plan campaigns around them.", { available: false }),
+  languages_dates: step("languages_dates", "Languages and key dates", "Tell me your languages and key dates and I'll plan campaigns around them."),
   approvals_timing: step("approvals_timing", "Approvals and timing", "Tell me who approves and when to message you, and I’ll fit around your day."),
 };
 

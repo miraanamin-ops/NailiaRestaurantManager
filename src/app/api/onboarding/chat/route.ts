@@ -32,7 +32,16 @@ const Action = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("message"), text: z.string().trim().min(1).max(2000), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("answer"), messageId: z.string().uuid(), choiceId: z.string().min(1).max(40), label: z.string().min(1).max(60), clientId: z.string().uuid() }),
   // One of code's question cards, confirmed on the card (guide/handle.ts): what was picked, and any words typed in it.
-  z.object({ kind: z.literal("pick"), messageId: z.string().uuid(), choiceIds: z.array(z.string().min(1).max(80)).min(1).max(20), text: z.string().trim().max(600).optional(), label: z.string().min(1).max(200), clientId: z.string().uuid() }),
+  z.object({
+    kind: z.literal("pick"),
+    messageId: z.string().uuid(),
+    choiceIds: z.array(z.string().min(1).max(200)).min(1).max(40),
+    text: z.string().trim().max(600).optional(),
+    label: z.string().min(1).max(200),
+    // The allergen grid: each dish's ticks (allergens, and "diet:" tags), or "unsure".
+    grid: z.record(z.string().max(200), z.union([z.array(z.string().max(60)).max(30), z.literal("unsure")])).optional(),
+    clientId: z.string().uuid(),
+  }),
   z.object({ kind: z.literal("confirm"), messageId: z.string().uuid(), changes: z.record(z.string().max(40), z.string().max(300)), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("skip"), clientId: z.string().uuid() }),
   z.object({ kind: z.literal("jump"), step: z.string(), clientId: z.string().uuid() }),
@@ -115,7 +124,7 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       return { event: "message", text: action.text, externalId: action.clientId };
     }
     case "pick": {
-      const g = await guidePick({ restaurantId: r, messageId: action.messageId, choiceIds: action.choiceIds, text: action.text ?? null, channel: "web", confirmed: true });
+      const g = await guidePick({ restaurantId: r, messageId: action.messageId, choiceIds: action.choiceIds, text: action.text ?? null, channel: "web", confirmed: true, grid: action.grid ?? null });
       if (!g) return null;
       return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceIds.join(",") }], codeReply: g.messages, note: g.note ?? null };
     }

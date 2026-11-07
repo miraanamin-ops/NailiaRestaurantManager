@@ -82,6 +82,10 @@ export const TOOLS: DinaTool[] = [
     description: "Skip a step the owner wants to leave for later (only skippable steps; never Hello). It becomes a setup gap to come back to.",
     schema: z.object({ step: stepKey }),
     async run(ctx, input) {
+      // A step waiting on Google (or the profile's owner) isn't skipped: it finishes on its own.
+      const { loadFlow: load } = await import("../sessions");
+      const { stepState: st } = await import("../flow");
+      if (st((await load(ctx.restaurantId)).state, input.step).waitingOn) return { ok: false, text: "That step is waiting on Google, so it isn't skipped: it finishes by itself once Google passes the invitation on. Carry on." };
       const { session } = await skipStep(ctx.restaurantId, input.step, { channel: ctx.channel });
       const { afterSkip } = await import("./answers");
       await afterSkip(ctx.restaurantId, input.step);

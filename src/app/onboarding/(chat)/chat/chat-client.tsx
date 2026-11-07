@@ -13,7 +13,7 @@ type Action =
   | { kind: "start" }
   | { kind: "message"; text: string }
   | { kind: "answer"; messageId: string; choiceId: string; label: string }
-  | { kind: "pick"; messageId: string; choiceIds: string[]; text?: string; label: string }
+  | { kind: "pick"; messageId: string; choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | "unsure"> }
   | { kind: "confirm"; messageId: string; changes: Record<string, string> }
   | { kind: "skip" }
   | { kind: "jump"; step: string }
@@ -168,7 +168,7 @@ export function ChatClient(props: {
         },
         onAnswer: (messageId, a) => {
           setChosen((c) => ({ ...c, [messageId]: a.choiceIds.join(",") }));
-          void send({ kind: "pick", messageId, choiceIds: a.choiceIds, ...(a.text ? { text: a.text } : {}), label: a.label.slice(0, 200) }, a.label);
+          void send({ kind: "pick", messageId, choiceIds: a.choiceIds, ...(a.text ? { text: a.text } : {}), ...(a.grid ? { grid: a.grid } : {}), label: a.label.slice(0, 200) }, a.label);
         },
         onSkip: () => void send({ kind: "skip" }, progress.chapter ? "Do this chapter later" : "Skip for now"),
         onJump: (step) => void send({ kind: "jump", step }, "Let's do that step now"),

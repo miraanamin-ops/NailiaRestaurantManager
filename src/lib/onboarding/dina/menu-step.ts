@@ -115,7 +115,8 @@ export async function confirmMenu(restaurantId: string, channel: Channel) {
   const r = await getRestaurant(restaurantId);
   await saveProfileFields(r, { menu: withAllergens }, "Menu confirmed with Dina at setup", { source: "photo" });
   await noteStep(restaurantId, "menu", { draft: null, saved_at: new Date().toISOString(), not_sure: [] }, { channel });
-  return `Code saved their menu (${menuItemCount(withAllergens)} dishes). Next, allergens, one dish at a time: say in a line that you've suggested them from each dish's name and they confirm each one (nothing is shown to customers until they do), then show allergen_check.`;
+  // Code shows the allergen grid next (guide: menu.allergens), all the dishes at once.
+  return `Code saved their menu (${menuItemCount(withAllergens)} dishes). Say so in a line; code shows the allergens next.`;
 }
 
 // ---------- Allergens, one dish at a time ----------

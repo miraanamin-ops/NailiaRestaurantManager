@@ -19,7 +19,10 @@ export async function chatSources(restaurantId: string): Promise<CardSources & {
     setupExtras(restaurantId),
     getSupabase().from("profile_versions").select("field").eq("restaurant_id", restaurantId).returns<{ field: string }[]>(),
   ]);
-  return { restaurant, state, focus: session, setup, confirmed: versions.error ? [] : [...new Set((versions.data ?? []).map((v) => v.field))] };
+  // The takings already in (the sales target and quiet days questions offer them).
+  const { salesHintFor } = await import("../guide/sales-hint");
+  const sales = state.sales && state.sales.status !== "not_started" ? await salesHintFor(getSupabase(), restaurantId) : null;
+  return { restaurant: { ...restaurant, _sales: sales } as typeof restaurant, state, focus: session, setup, confirmed: versions.error ? [] : [...new Set((versions.data ?? []).map((v) => v.field))] };
 }
 
 export async function loadChat(restaurantId: string) {

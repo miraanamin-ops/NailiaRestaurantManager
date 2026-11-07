@@ -53,6 +53,23 @@ export type EditableFields = ProfileFields &
     | "send_window_start"
     | "send_window_end"
     | "brief_hour"
+    // Setup's chapters (061)
+    | "venue_types"
+    | "goals"
+    | "instagram"
+    | "ordering_url"
+    | "booking_url"
+    | "seats"
+    | "avg_spend"
+    | "customer_types"
+    | "no_discount_days"
+    | "weekly_sales_target"
+    | "quiet_days"
+    | "busy_days"
+    | "customer_languages"
+    | "closures_note"
+    | "message_style"
+    | "event_audiences"
   >;
 
 const FIELD_NAMES: Record<keyof EditableFields, string> = {
@@ -92,6 +109,22 @@ const FIELD_NAMES: Record<keyof EditableFields, string> = {
   send_window_start: "sending hours start",
   send_window_end: "sending hours end",
   brief_hour: "morning brief time",
+  venue_types: "how you serve",
+  goals: "your goals",
+  instagram: "Instagram",
+  ordering_url: "ordering link",
+  booking_url: "booking link",
+  seats: "seats",
+  avg_spend: "spend per head",
+  customer_types: "your customers",
+  no_discount_days: "days never to discount",
+  weekly_sales_target: "weekly sales target",
+  quiet_days: "quiet days",
+  busy_days: "busy days",
+  customer_languages: "customers' languages",
+  closures_note: "holiday closures",
+  message_style: "how you like messages",
+  event_audiences: "dates that matter",
 };
 
 // The menu goes through saveMenu (src/lib/ops/menu.ts): sent with the settings

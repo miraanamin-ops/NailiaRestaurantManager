@@ -127,3 +127,20 @@ export async function runGoogleNudges(now = new Date()) {
   }
   return results;
 }
+
+// 10 minutes after "Done, I've invited you", if Google still hasn't passed the
+// invitation on: the owner is told what to check (once). The step keeps waiting,
+// and the hourly check still accepts it whenever it arrives.
+export async function inviteNotFound(restaurantId: string) {
+  const { state } = await loadFlow(restaurantId);
+  const s = stepState(state, "google");
+  if (s.status !== "in_progress" || s.waitingOn !== "google" || s.data.not_found_said_at) return false;
+  const email = await managerEmail();
+  const r = await getRestaurant(restaurantId);
+  await patchStepData(restaurantId, "google", { not_found_said_at: new Date().toISOString() });
+  await sayFromCode(
+    restaurantId,
+    `I haven't received your Google invitation yet. Check you added ${email ?? "our manager email"} as a Manager on the Google profile for ${r.name}. Google can take a little while, and I'll keep checking every hour.`,
+  );
+  return true;
+}

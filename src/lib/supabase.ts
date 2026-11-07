@@ -38,6 +38,22 @@ export type Restaurant = {
   discount_cap_percent: number;
   // Menu engineering: the least profit a dish may make after an offer (%; null = the recommended 50). Migration 059.
   min_margin_pct?: number | null;
+  // Asked in setup's chapters (061, 7 Nov 2026).
+  venue_types?: string[] | null;
+  goals?: string[] | null;
+  instagram?: string | null;
+  ordering_url?: string | null;
+  booking_url?: string | null;
+  seats?: string | null;
+  avg_spend?: string | null;
+  customer_types?: string[] | null;
+  no_discount_days?: string[] | null;
+  weekly_sales_target?: number | null;
+  quiet_days?: string[] | null;
+  busy_days?: string[] | null;
+  customer_languages?: string[] | null;
+  closures_note?: string | null;
+  message_style?: string | null;
   send_window_start: string; // "09:00:00"
   send_window_end: string; // "21:00:00"
   paused: boolean;
