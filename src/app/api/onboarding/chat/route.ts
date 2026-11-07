@@ -195,6 +195,17 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       }
       if (!isFlowStep(action.step)) throw new FlowError("That step doesn't exist", "unavailable");
       await enterStep(r, action.step, { channel: "web" });
+      // A chapter that's all answered (from the summary or Settings): its recap, with a
+      // Change on every answer, rather than starting it again (7 Nov 2026).
+      const { chapterOf } = await import("@/lib/onboarding/guide/chapters");
+      const { openQuestions, isRecap } = await import("@/lib/onboarding/guide/questions");
+      const { loadFacts } = await import("@/lib/onboarding/guide/next");
+      const { recapText } = await import("@/lib/onboarding/guide/cards");
+      const ch = chapterOf(action.step);
+      const facts = await loadFacts(r);
+      if (ch && ch.recap !== false && ch.steps.every((k) => openQuestions(k, facts).every((q) => isRecap(q.id)))) {
+        return { event: "message", text: `Change ${ch.title.toLowerCase()}`, externalId: action.clientId, codeReply: [{ text: recapText(ch.key), component: { type: "recap", chapter: ch.key } }] };
+      }
       return {
         event: "action",
         text: `Let's do ${STEP_DEFS[action.step].title.toLowerCase()} now`,

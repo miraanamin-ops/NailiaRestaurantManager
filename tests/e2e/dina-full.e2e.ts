@@ -163,8 +163,12 @@ async function ownerMove() {
       await db.client.storage.from("onboarding-uploads").upload(`${restaurantId}/incoming/logo.png`, logo, { contentType: "image/png" });
       return chat({ kind: "files", paths: [`${restaurantId}/incoming/logo.png`] }, "sends the logo");
     }
-    const preferred: Record<string, string> = { "tone.praise": "warm", "tone.complaint": "short", "tone.emoji": "yes" };
-    const opt = card.options.find((o) => o.id === preferred[card.q]) ?? card.options.find((o) => o.id !== card.input?.optionId);
+    const preferred: Record<string, string> = { "tone.praise": "warm", "tone.complaint": "short", "tone.emoji": "yes", "offers.cap": "cap20", "working.brief": "h8", "team.method": "type" };
+    const typed: Record<string, string> = { "restaurant.phone": "020 7946 0000", "restaurant.website": "www.example.com", "restaurant.instagram": "@emberandspice" };
+    if (typed[card.q] && card.input) return chat({ kind: "pick", messageId: m.id, choiceIds: [card.input.optionId], text: typed[card.q], label: typed[card.q] }, `types "${typed[card.q]}"`);
+    // (Slowest sellers and busy days: the last choice, so they never repeat the best sellers or quiet days.)
+    const last = card.q === "menu.slow" || card.q === "sales.busy";
+    const opt = card.options.find((o) => o.id === preferred[card.q]) ?? (last ? [...card.options].reverse() : card.options).find((o) => o.id !== card.input?.optionId && o.id !== "none");
     if (opt) return chat({ kind: "pick", messageId: m.id, choiceIds: [opt.id], label: opt.label }, `confirms "${opt.label}"`);
     return chat({ kind: "pick", messageId: m.id, choiceIds: ["skip_q"], label: "Skip this question" }, "skips the question");
   }

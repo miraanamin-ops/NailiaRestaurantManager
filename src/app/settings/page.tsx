@@ -90,6 +90,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           </a>
         </Panel>
 
+        <SetupChapters restaurant={r} />
+
         <SettingsGroup title="Your restaurant">
           <Row href="#details" icon="settings" label="Details and opening hours" value={hoursToday ? `Today ${hoursToday}` : undefined} />
           <Row href="#menu" icon="report" label="Menu" value={`${dishes.length} dish${dishes.length === 1 ? "" : "es"}`} />
@@ -379,5 +381,22 @@ function SettingsGroup({ title, children }: { title: string; children: React.Rea
       <Eyebrow className="px-1">{title}</Eyebrow>
       <ListCard>{children}</ListCard>
     </section>
+  );
+}
+
+// Everything setup asked, chapter by chapter (the same 9 chapters as onboarding,
+// 7 Nov 2026): each opens the chat at that chapter, where its recap has a Change
+// for every answer.
+async function SetupChapters({ restaurant }: { restaurant: Awaited<ReturnType<typeof getRestaurant>> }) {
+  const { dinaSetup } = await import("@/lib/dashboard/data");
+  const view = await dinaSetup(restaurant).catch(() => null);
+  if (!view) return null;
+  const chapters = view.items.filter((s) => s.label !== "Link your WhatsApp");
+  return (
+    <SettingsGroup title="Your setup, chapter by chapter">
+      {chapters.map((c) => (
+        <Row key={c.label} href={c.href} icon="settings" label={c.label} value={c.done ? <Pill tone="signal">{c.status}</Pill> : <Pill tone="amber">{c.status}</Pill>} sub={c.detail ?? "Change any answer here"} />
+      ))}
+    </SettingsGroup>
   );
 }

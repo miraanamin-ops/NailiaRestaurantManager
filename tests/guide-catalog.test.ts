@@ -131,3 +131,19 @@ describe("the go-live screen", () => {
     expect(waiting[1].needs).toEqual([expect.stringMatching(/^Google access/)]);
   });
 });
+
+describe("the owner's comments of 7 Nov", () => {
+  test("the website is asked in chapter 1, before the look reads it; the team and costs sheets have their upload on the same card", () => {
+    const ids = QUESTIONS.filter((x) => x.step === "hello").map((x) => x.id);
+    expect(ids.indexOf("restaurant.website")).toBeGreaterThan(ids.indexOf("restaurant.phone"));
+    expect(ids.indexOf("restaurant.website")).toBeLessThan(ids.indexOf("restaurant.goals"));
+    const inputs = { ...inputsFrom({ restaurant: {}, state: {}, tones }), templateLinks: { staff: "https://app.test/t/staff", menu_costs: "https://app.test/t/costs" } };
+    const menu = [{ category: "Grills", items: [{ name: "Lamb chops", price: 14, description: null }] }];
+    const team = askFor("team.method", facts(), inputs)!;
+    expect(team.card).toMatchObject({ link: { href: "https://app.test/t/staff" }, upload: { accept: "spreadsheet" }, options: [{ id: "type" }] });
+    const costs = askFor("menu.costs", facts({ menu }), inputs)!;
+    expect(costs.card).toMatchObject({ link: { href: "https://app.test/t/costs" }, upload: { accept: "spreadsheet" } });
+    expect(costs.card.options.map((o) => o.id)).toEqual(["pct25", "pct30", "pct35"]);
+    expect(QUESTIONS.filter((x) => x.step === "team").map((x) => x.id)).toEqual(["team.method", "team.base"]);
+  });
+});

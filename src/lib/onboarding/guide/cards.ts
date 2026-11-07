@@ -137,15 +137,26 @@ export function askFor(id: string, f: Facts, inputs: CardInputs): AskedQuestion 
   }
   if (id === "menu.costs")
     return {
-      text: "Roughly what does a dish cost you to make, as a share of its price? An estimate is fine: it shows which dishes make the most, so offers push those and never the thin ones.",
+      text: "Roughly what does a dish cost you to make, as a share of its price? An estimate is fine: it shows which dishes make the most, so offers push those and never the thin ones. For exact costs, download the sheet with your dishes filled in and send it back here.",
       card: card(id, {
         options: [
           { id: "pct25", label: "About 25% of the price", short: "About 25%" },
           { id: "pct30", label: "About 30% of the price", short: "About 30%" },
           { id: "pct35", label: "About 35% of the price", short: "About 35%" },
-          { id: "sheet", label: "I'll fill in the spreadsheet", short: "The spreadsheet" },
         ],
+        // Exact costs: the sheet, downloaded and sent back on this same card (owner, 7 Nov 2026).
         link: inputs.templateLinks?.menu_costs ? { label: "Download your menu costs sheet", href: inputs.templateLinks.menu_costs } : null,
+        upload: { accept: "spreadsheet", multiple: false, label: "Send back the filled-in sheet" },
+      }),
+    };
+  if (id === "team.method")
+    return {
+      text: "Now your team. The quickest way is our team sheet: download it, fill it in, and send it back here. You can also send your own staff list, or just tell me who works for you.",
+      card: card(id, {
+        options: [{ id: "type", label: "I'll tell you here", short: "Tell you here" }],
+        confirm: false,
+        link: inputs.templateLinks?.staff ? { label: "Download the team sheet", href: inputs.templateLinks.staff } : null,
+        upload: { accept: "spreadsheet", multiple: false, label: "Send the sheet or your own list" },
       }),
     };
   if (id === "menu.top" || id === "menu.slow" || id === "menu.signature") {
@@ -299,7 +310,7 @@ export function recapFor(chapter: ChapterKey, f: Facts, inputs: Pick<CardInputs,
   };
   for (const step of c.steps) {
     for (const q of questionsFor(step, f)) {
-      if (isRecap(q.id)) continue;
+      if (isRecap(q.id) || q.id === "team.method") continue;
       const res = resolution(q, f);
       if (res === "open") continue;
       const skipped = res === "skipped";

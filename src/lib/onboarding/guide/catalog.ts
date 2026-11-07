@@ -131,6 +131,23 @@ export const CATALOG: CatalogQuestion[] = [
     ],
   },
   {
+    id: "restaurant.website",
+    step: "hello",
+    level: "important",
+    decision: false,
+    label: "Website",
+    field: "website",
+    kind: "text",
+    text: (f) => (str(f.r.website) ? `Is ${f.r.website} your website? I'll read your logo, colours and the way you write from it.` : "What's your website? I'll read your logo, colours and the way you write from it."),
+    options: (f) => [
+      ...(str(f.r.website) ? [{ id: "keep", label: "Yes, that's it", value: str(f.r.website) }] : []),
+      { id: "none", label: "We don't have one", value: null },
+    ],
+    input: { optionId: "own", placeholder: "e.g. www.emberandspice.co.uk" },
+    parse: url,
+    error: "That doesn't look like a web address. Could you type it again, for example www.emberandspice.co.uk?",
+  },
+  {
     id: "restaurant.seats",
     step: "hello",
     level: "important",

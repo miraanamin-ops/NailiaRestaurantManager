@@ -166,6 +166,15 @@ export async function guideFiles(input: { restaurantId: string; files: import(".
     const read = await readCustomerFile(input.restaurantId, sheet);
     return say(read.ok ? `Thanks, I've read ${read.count} customers with an email address${read.skipped ? ` (${read.skipped} rows had no usable email, so I left them out)` : ""}.` : read.text);
   }
+  // The team sheet (or their own list) sent on the team card: that answers how,
+  // and Dina reads it (dina/whatsapp-turn.ts noteForFiles), so code steps aside.
+  if (action.question.id === "team.method") {
+    if (!input.files.some((f) => f.kind === "csv" || f.kind === "excel")) return say("Send the team sheet or your staff list as a CSV or Excel file, or tap I'll tell you here.");
+    const { recordQuestion } = await import("../sessions");
+    const { withRecord } = await import("./questions");
+    await recordQuestion(input.restaurantId, "team", (d, now) => withRecord(d, "team.method", "answered", now), { channel: input.channel });
+    return null;
+  }
   // Our menu costs sheet, filled in, while the costs are being asked.
   if (action.question.id === "menu.costs") {
     const sheet = input.files.find((f) => f.kind === "csv" || f.kind === "excel");

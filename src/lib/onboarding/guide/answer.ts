@@ -135,6 +135,13 @@ export async function answerQuestion(input: { restaurantId: string; q: string; p
     return ok(input.picked.length ? "Got it, thanks." : "No problem.");
   }
 
+  // The team: typing it in the chat (a sheet or file sent on the card answers it too).
+  if (q === "team.method") {
+    if (pick !== "type") return no("Send the team sheet or your own list, or tap I'll tell you here.");
+    await record(id, q, channel);
+    return ok("Great.");
+  }
+
   if (q === "customers.qr") {
     const { sendQrKit } = await import("../dina/ops-step");
     const sent = await sendQrKit(id, channel);

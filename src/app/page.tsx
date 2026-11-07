@@ -57,11 +57,7 @@ async function HomePage({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
       <div className="space-y-4">
         {one("done") && <Notice>{one("done")}</Notice>}
         {one("oops") && <Notice tone="neg">{one("oops")}</Notice>}
-        {!restaurant.active && (
-          <Link href={withR("/onboarding", r)} className="block">
-            <Notice tone="amber">{restaurant.name} isn&apos;t set up yet. Finish setting up →</Notice>
-          </Link>
-        )}
+        {!restaurant.active && <SetupNotice restaurant={restaurant} r={r} />}
         {restaurant.paused && (
           <Notice tone="amber">The assistant is paused: nothing goes to customers or Google. Text RESUME on WhatsApp to start again.</Notice>
         )}
@@ -384,7 +380,25 @@ function CampaignCard({ data }: { data: HomeData }) {
   );
 }
 
+// The bar while setup isn't finished: what's actually missing, and where to do it.
+async function SetupNotice({ restaurant, r }: { restaurant: Restaurant; r: string }) {
+  const { dinaSetup } = await import("@/lib/dashboard/data");
+  const view = await dinaSetup(restaurant).catch(() => null);
+  if (view?.allDealtWith && !view.whatsappLinked)
+    return (
+      <Link href={`/onboarding/in?r=${restaurant.id}`} className="block">
+        <Notice tone="amber">Every chapter is done. Link your WhatsApp to finish setting up: your morning brief comes there →</Notice>
+      </Link>
+    );
+  return (
+    <Link href={view ? `/onboarding/chat?r=${restaurant.id}` : withR("/onboarding", r)} className="block">
+      <Notice tone="amber">{restaurant.name} isn&apos;t set up yet. Finish setting up →</Notice>
+    </Link>
+  );
+}
+
 function SetupCard({ data }: { data: HomeData }) {
+  if (data.setupView) return <ChapterSetupCard view={data.setupView} />;
   const left = data.setup.filter((s) => !s.done);
   if (!left.length) return null;
   const done = data.setup.length - left.length;
@@ -410,6 +424,63 @@ function SetupCard({ data }: { data: HomeData }) {
           ))}
         </ul>
         <span className={linkText}>Each takes a minute or two.</span>
+      </Panel>
+    </Section>
+  );
+}
+
+// Setup the way the onboarding runs it (7 Nov 2026): the chapters, what's left in
+// each, and the go-live screen. Shown until every chapter is done and every agent ready.
+function ChapterSetupCard({ view }: { view: import("@/lib/dashboard/data").SetupView }) {
+  const left = view.items.filter((s) => !s.done);
+  const waiting = view.agents.filter((a) => !a.ready);
+  if (!left.length && !waiting.length) return null;
+  const chapters = view.items.filter((s) => s.label !== "Link your WhatsApp");
+  const done = chapters.filter((s) => s.done).length;
+  return (
+    <Section title="Finish setting up">
+      <Panel className="space-y-3">
+        <div className="flex items-center justify-between text-[13px] text-[#a3a99d]">
+          <span>
+            {done} of {chapters.length} chapters done
+          </span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-[#1e221b]">
+          <div className="h-full rounded-full bg-[#c8f03c]" style={{ width: `${Math.max(4, (done / Math.max(1, chapters.length)) * 100)}%` }} />
+        </div>
+        {left.length > 0 && (
+          <ul className="divide-y divide-[#1e221b]">
+            {left.map((s) => (
+              <li key={s.label}>
+                <Link href={s.href} className="flex items-center justify-between gap-3 py-2.5 text-[14px] text-[#edefe8]">
+                  <span className="min-w-0">
+                    <span className="block">{s.label}</span>
+                    <span className="block text-[12px] text-[#a3a99d]">{[s.status, s.detail].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  <Icon name="chevron" className="h-4 w-4 shrink-0 text-[#a3a99d]" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="border-t border-[#1e221b] pt-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#a3a99d]">Going live</p>
+          <ul className="mt-2 space-y-1.5">
+            {view.agents.map((a) => (
+              <li key={a.key} className="flex items-start gap-2 text-[13px]">
+                <span aria-hidden className={a.ready ? "text-[#c8f03c]" : "text-[#e8a33d]"}>{a.ready ? "●" : "◐"}</span>
+                <span className="min-w-0 flex-1 text-[#edefe8]">
+                  {a.name}: <span className="text-[#a3a99d]">{a.ready ? "ready" : `waiting for ${a.needs.join(", ")}`}</span>
+                </span>
+                {!a.ready && a.href && (
+                  <Link href={a.href} className="shrink-0 text-[#c8f03c] underline underline-offset-4">
+                    Do it now
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       </Panel>
     </Section>
   );

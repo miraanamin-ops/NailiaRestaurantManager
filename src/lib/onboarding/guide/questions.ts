@@ -69,7 +69,7 @@ const menuSaved = (f: Facts) => {
 export const QUESTIONS: Question[] = [
   // Chapter 1: you and your restaurant. Dina confirms the basics; code asks the rest.
   base("hello", "Your basics", "the basics (name, restaurant, address, cuisine, owner or manager), then the basics card"),
-  ...["restaurant.phone", "restaurant.venue", "restaurant.seats", "restaurant.spend", "restaurant.customers", "restaurant.instagram", "restaurant.ordering", "restaurant.booking", "restaurant.goals"].map(fromCatalog),
+  ...["restaurant.phone", "restaurant.website", "restaurant.venue", "restaurant.seats", "restaurant.spend", "restaurant.customers", "restaurant.instagram", "restaurant.ordering", "restaurant.booking", "restaurant.goals"].map(fromCatalog),
 
   // Chapter 2: Google.
   base("google", "Google profile", "the Google profile questions and steps"),
@@ -105,7 +105,8 @@ export const QUESTIONS: Question[] = [
   // Chapter 7: sales and team.
   base("sales", "Sales history", "their sales history"),
   ...["sales.target", "sales.quiet", "sales.busy"].map(fromCatalog),
-  base("team", "Your team", "their team, the site manager, cover rules and labour target"),
+  code({ id: "team.method", step: "team", level: "important", decision: false, label: "How you'll send your team", answered: (f) => Boolean(data(f, "team").staff_files) || Boolean(data(f, "team").team_draft) || Boolean(data(f, "team")._outcome) }),
+  base("team", "Your team", "their team (from the sheet or file they sent, or in their own words: name, role, hourly rate, contracted hours and when each person can work), then the site manager, cover rules and labour target"),
 
   // Chapter 8: your calendar.
   ...["calendar.languages", "calendar.dates", "calendar.closures"].map(fromCatalog),

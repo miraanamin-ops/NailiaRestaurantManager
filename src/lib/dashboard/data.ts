@@ -238,13 +238,14 @@ export async function weekAhead(restaurantId: string, now: Date, withForecast = 
 
 // ---------- Setup checklist ----------
 
-export type SetupItem = { label: string; done: boolean; href: string };
+// detail: what's still to do in it (a setup chapter); status: done, half done, skipped or to do.
+export type SetupItem = { label: string; done: boolean; href: string; detail?: string | null; status?: string };
+export type SetupView = { items: SetupItem[]; agents: { key: string; name: string; ready: boolean; needs: string[]; href?: string }[]; dina: boolean; allDealtWith: boolean; whatsappLinked: boolean };
 
 async function setupList(restaurant: Restaurant, hasSales: boolean): Promise<SetupItem[]> {
-  // Set up with Dina: the same list as her setup (its open gaps), so the two never
-  // disagree (7 Nov 2026), each opening the chat at that step.
-  const dina = await safe("setup gaps", fromDinaGaps(restaurant), null);
-  if (dina) return dina;
+  // Set up with Dina: her chapters (the same list as her setup, 7 Nov 2026).
+  const dina = await safe("setup chapters", dinaSetup(restaurant), null);
+  if (dina) return dina.items;
   const google = await safe(
     "google connection",
     getSupabase().from("google_connections").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurant.id).eq("kind", "owner").eq("status", "ok").then(count),
@@ -261,21 +262,36 @@ async function setupList(restaurant: Restaurant, hasSales: boolean): Promise<Set
   ];
 }
 
-async function fromDinaGaps(restaurant: Restaurant): Promise<SetupItem[] | null> {
-  const supabase = getSupabase();
-  const { data: session } = await supabase.from("onboarding_sessions").select("restaurant_id").eq("restaurant_id", restaurant.id).maybeSingle();
+// Set up with Dina: her 9 chapters, each with what's still to do and a link that
+// opens the chat there, plus the go-live screen (each agent, ready or what it waits for).
+export async function dinaSetup(restaurant: Restaurant): Promise<SetupView | null> {
+  const { data: session } = await getSupabase().from("onboarding_sessions").select("restaurant_id").eq("restaurant_id", restaurant.id).maybeSingle();
   if (!session) return null;
-  const { data: gaps } = await supabase.from("setup_gaps").select("step_key, resolved_at, dismissed").eq("restaurant_id", restaurant.id).returns<{ step_key: string; resolved_at: string | null; dismissed: boolean }[]>();
-  const { gapTitle, EXTRA_GAPS, isFlowStep } = await import("@/lib/onboarding/flow");
-  const chat = (step: string) => `/onboarding/chat?r=${restaurant.id}&step=${step}`;
-  return [
-    { label: "Link your WhatsApp", done: Boolean(restaurant.owner_whatsapp), href: `/onboarding/in?r=${restaurant.id}` },
-    ...(gaps ?? []).map((g) => ({
-      label: gapTitle(g.step_key),
-      done: Boolean(g.resolved_at) || g.dismissed,
-      href: chat(isFlowStep(g.step_key) ? g.step_key : (EXTRA_GAPS[g.step_key]?.step ?? "hello")),
-    })),
-  ];
+  const [{ chatSources }, { progressFrom, factsFromSources, goLive }, { availableChapters }] = await Promise.all([
+    import("@/lib/onboarding/dina/chat"),
+    import("@/lib/onboarding/dina/view"),
+    import("@/lib/onboarding/guide/chapters"),
+  ]);
+  const sources = await chatSources(restaurant.id);
+  const progress = progressFrom(sources.state, null, factsFromSources(sources));
+  const firstStep = new Map(availableChapters().map((c) => [c.key, c.steps[0]]));
+  const WORDS: Record<string, string> = { done: "Done", partial: "Half done", skipped: "Skipped", waiting: "Waiting on Google", in_progress: "In progress", not_started: "To do" };
+  const items: SetupItem[] = (progress.chapters ?? []).map((c) => ({
+    label: c.title,
+    done: c.status === "done" || c.status === "waiting",
+    status: WORDS[c.status] ?? c.status,
+    detail: c.left.length ? `Still to do: ${c.left.slice(0, 4).join(", ")}${c.left.length > 4 ? "…" : ""}` : null,
+    href: `/onboarding/chat?r=${restaurant.id}&step=${firstStep.get(c.key as never) ?? "hello"}`,
+  }));
+  const whatsappLinked = Boolean(restaurant.owner_whatsapp);
+  const allDealtWith = (progress.chapters ?? []).every((c) => ["done", "partial", "skipped", "waiting"].includes(c.status));
+  return {
+    items: [...(whatsappLinked ? [] : [{ label: "Link your WhatsApp", done: false, status: "To do", detail: "Your morning brief and alerts come here", href: `/onboarding/in?r=${restaurant.id}` }]), ...items],
+    agents: goLive(sources),
+    dina: true,
+    allDealtWith,
+    whatsappLinked,
+  };
 }
 
 // ---------- Everything for the home page ----------
@@ -291,7 +307,8 @@ export async function homeData(restaurant: Restaurant, now: Date) {
   ]);
   const setup = await setupList(restaurant, week.sales.hasData);
   const latestReviews = [...reviews].sort((a, b) => b.review_date.localeCompare(a.review_date)).slice(0, 3);
-  return { waiting, tally, week, today: ahead.today, campaign: campaigns[0] ?? null, setup, latestReviews };
+  const setupView = await safe("setup view", dinaSetup(restaurant), null);
+  return { waiting, tally, week, today: ahead.today, campaign: campaigns[0] ?? null, setup, setupView, latestReviews };
 }
 
 export type HomeData = Awaited<ReturnType<typeof homeData>>;
