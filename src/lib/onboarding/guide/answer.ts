@@ -82,6 +82,11 @@ export async function answerQuestion(input: { restaurantId: string; q: string; p
     const facts = await factsFor(id, state);
     const v = catalogValue(cat, facts, input.picked, typed);
     if ("error" in v) return no(v.error);
+    // A day can't be both quiet and busy.
+    if (q === "sales.busy" && Array.isArray(v.value)) {
+      const both = (v.value as string[]).filter((d) => ((r as { quiet_days?: string[] | null }).quiet_days ?? []).includes(d));
+      if (both.length) return no(`You said ${both.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(" and ")} ${both.length === 1 ? "is" : "are"} quiet. Pick your busy days, or change the quiet ones on the recap.`);
+    }
     if (q === "offers.reward" || q === "offers.cap") {
       const reward = q === "offers.reward" ? String(v.value) : (r.signup_reward ?? DEFAULT_SIGNUP_REWARD);
       const cap = q === "offers.cap" ? Number(v.value) : (r.discount_cap_percent ?? DEFAULT_DISCOUNT_CAP);
@@ -111,6 +116,11 @@ export async function answerQuestion(input: { restaurantId: string; q: string; p
 
   if (q === "menu.top" || q === "menu.slow" || q === "menu.signature") {
     if (input.picked.length > (q === "menu.signature" ? 3 : 5)) return no(`Pick up to ${q === "menu.signature" ? 3 : 5}.`);
+    // A dish can't be both a best and a slowest seller.
+    if (q === "menu.slow") {
+      const top = ((r.menu ?? []) as MenuCategory[]).flatMap((c) => c.items.filter((i) => i.seller === "top" && input.picked.includes(dishKey(c.category, i.name))).map((i) => i.name));
+      if (top.length) return no(`${top.join(" and ")} ${top.length === 1 ? "is" : "are"} on your best sellers. Pick the ones that sell least.`);
+    }
     const menu = ((r.menu ?? []) as MenuCategory[]).map((c) => ({
       ...c,
       items: c.items.map((i) => {
@@ -272,8 +282,9 @@ export async function skipChapter(restaurantId: string, chapter: ChapterKey, cha
 
 // What code says after a setting is saved.
 function savedLine(label: string, value: unknown) {
+  void label;
   if (value === null || (Array.isArray(value) && !value.length)) return "Got it.";
-  return `Saved: ${label.charAt(0).toLowerCase()}${label.slice(1)}.`;
+  return "Got it, thanks.";
 }
 
 // The allergen grid confirmed: each dish's allergens and dietary tags as ticked, confirmed;

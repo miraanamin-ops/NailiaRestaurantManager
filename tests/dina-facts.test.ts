@@ -209,47 +209,44 @@ describe("step 5, the menu", () => {
     expect(await readMenuFiles(R, [{ type: "file", path: `${R}/menu/x.csv`, kind: "csv", contentType: "text/csv", bytes: 8 }])).toMatch(/none is a photo or a PDF/);
   });
 
-  test("confirmed: saved with suggested allergens, all unconfirmed; then dish by dish, code's own cards, no Claude call per dish", async () => {
+  test("confirmed: saved with suggested allergens, all unconfirmed; then code's allergen grid (7 Nov 2026): ticks saved and confirmed, 'not sure' stays unknown", async () => {
     db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "menu", status: "in_progress", data: { draft: structuredClone(MENU).map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, allergens: [] })) })), unsure: {} } });
     suggestAllergens.mockImplementation(async (menu: MenuCategory[]) => menu.map((c) => ({ ...c, items: c.items.map((i) => ({ ...i, allergens: i.name === "Lamb chops" ? ["milk", "mustard"] : [], allergens_confirmed: false })) })));
     db.tables.onboarding_messages.push({ id: "aaaaaaaa-0000-4000-8000-000000000001", restaurant_id: R, role: "dina", body: "Is this right?", parts: [{ type: "editable_card", card: "menu" }], created_at: "2026-10-31T10:10:00Z" });
-    expect(await tap("aaaaaaaa-0000-4000-8000-000000000001", "confirm")).toMatch(/Code saved their menu \(3 dishes\)\. Next, allergens/);
+    expect(await tap("aaaaaaaa-0000-4000-8000-000000000001", "confirm")).toMatch(/Code saved their menu \(3 dishes\)\. Say so in a line; code shows the allergens next/);
     expect(r().menu[0].items[0]).toMatchObject({ name: "Lamb chops", allergens: ["milk", "mustard"], allergens_confirmed: false });
     expect(step("menu")?.data.draft).toBeNull();
 
-    // Dina shows the first card: code fixes the dish on it.
-    callDina.mockResolvedValueOnce(answer([{ text: "Now allergens, one dish at a time.", component: { type: "allergen_check" } }]));
-    await turn("ok");
-    const first = lastDina();
-    expect(first.parts).toEqual([{ type: "allergen_check", dish: "grills::lamb chops" }]);
+    // Code's grid: every dish, the suggestions marked as such.
+    const { loadFacts } = await import("@/lib/onboarding/guide/next");
+    const { nextAction } = await import("@/lib/onboarding/guide/questions");
+    const { allergenGrid } = await import("@/lib/onboarding/guide/cards");
+    const facts = await loadFacts(R);
+    expect(nextAction(facts)).toMatchObject({ kind: "ask", question: { id: "menu.allergens" } });
+    const grid = allergenGrid(facts);
+    expect(grid.rows.map((x) => [x.id, x.marked, x.suggested])).toEqual([
+      ["grills::lamb chops", ["milk", "mustard"], true],
+      ["grills::mixed grill", [], true],
+      ["sides::chips", [], true],
+    ]);
+    expect(grid.columns).toHaveLength(17); // the 14 allergens, then vegetarian, vegan, gluten free
 
-    // "That's right": confirmed, and code's next card comes straight back.
-    const next = await tap(first.id, "allergen_ok");
-    expect(next).toEqual({ reply: [{ text: expect.stringMatching(/^Mixed grill \(Grills\), dish 2 of 3\. My suggestion from its name: none of the 14\. That's only a guess, so is it right\?$/), component: { type: "allergen_check" } }] });
-    expect(dinaReplyProblems({ messages: (next as { reply: { text: string; component: null }[] }).reply })).toEqual([]);
-    expect(r().menu[0].items[0].allergens_confirmed).toBe(true);
-    const { codeTurn } = await import("@/lib/onboarding/dina/turn");
-    await codeTurn({ restaurantId: R, channel: "web", text: "That's right", externalId: "tap-1", messages: (next as { reply: never[] }).reply });
-    const second = lastDina();
-    expect(second.parts).toEqual([{ type: "allergen_check", dish: "grills::mixed grill" }]);
-    expect(callDina).toHaveBeenCalledTimes(1); // the second card cost no Claude call
-    expect(await codeTurn({ restaurantId: R, channel: "web", text: "That's right", externalId: "tap-1", messages: (next as { reply: never[] }).reply })).toEqual({ duplicate: true });
-
-    // "Not sure": stays unknown (never shown to customers), and on to the next.
-    expect(await tap(second.id, "allergen_unsure")).toMatchObject({ reply: [{ text: expect.stringMatching(/^Chips \(Sides\)/) }] });
+    // The owner fixes the grid: lamb chops milk only, chips vegan, mixed grill not sure.
+    const { answerQuestion } = await import("@/lib/onboarding/guide/answer");
+    expect(await answerQuestion({ restaurantId: R, q: "menu.allergens", picked: ["grid_ok"], channel: "web", grid: { "grills::lamb chops": ["milk"], "grills::mixed grill": "unsure", "sides::chips": ["diet:vegan", "diet:vegetarian"] } })).toMatchObject({ ok: true });
+    expect(r().menu[0].items[0]).toMatchObject({ allergens: ["milk"], allergens_confirmed: true });
+    expect(r().menu[1].items[0]).toMatchObject({ allergens: [], dietary: ["vegan", "vegetarian"], allergens_confirmed: true });
+    expect(r().menu[0].items[1].allergens_confirmed).toBe(false);
     expect(customerSafeMenu(r().menu)[0].items[1]).not.toHaveProperty("allergens");
-
-    // "Change it": Dina asks, then saves exactly what they say; the last dish done, the step half done (one unknown).
-    expect(await tap(second.id, "allergen_change")).toMatch(/change the allergens for this dish/);
-    expect(await tool("set_allergens", { dish: "chips", allergens: [] })).toMatchObject({ ok: true, text: expect.stringMatching(/^Saved chips: none of the 14 \(confirmed\)\. Every dish is dealt with: 2 confirmed, 1 left as unknown/) });
-    // Half done by its own count; it closes (half done, a gap) once the chapter's recap is confirmed.
-    expect(step("menu")?.data._outcome).toBe("partial");
-    expect(step("menu")?.status).toBe("in_progress");
-    const { confirmRecap } = await import("@/lib/onboarding/guide/answer");
-    await confirmRecap(R, "menu", "web");
-    expect(step("menu")?.status).toBe("partial");
-    expect(db.tables.setup_gaps).toEqual(expect.arrayContaining([expect.objectContaining({ step_key: "menu" })]));
+    // A dish left unknown: the allergens question counts as skipped (a gap), and the step half done in the end.
+    expect(step("menu")?.data.q).toMatchObject({ "menu.allergens": { status: "skipped" } });
+    expect(callDina).not.toHaveBeenCalled();
+    // A typed change later still goes through Dina's tool.
+    expect(await tool("set_allergens", { dish: "mixed grill", allergens: ["sesame"] })).toMatchObject({ ok: true });
     expect(await tool("set_allergens", { dish: "Samosa", allergens: ["milk"] })).toMatchObject({ ok: false });
+    void dinaReplyProblems;
+    void turn;
+    void lastDina;
   });
 
   test("a change in their words goes to the draft (before it's saved)", async () => {

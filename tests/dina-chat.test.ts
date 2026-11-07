@@ -63,7 +63,7 @@ describe("what the chat draws", () => {
     // Every step dealt with: the summary links to the dashboard; part way through it doesn't.
     let state = complete({}, "hello", "done", {}, T);
     expect(summaryFrom({ restaurant: { ...restaurant, id: "r-1" }, state }).dashboardHref).toBeNull();
-    for (const k of ["google", "look", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "approvals_timing"]) state = skip(state, k as never, T);
+    for (const k of ["google", "look", "tone", "make_it_right", "menu", "hours_faqs", "sales", "team", "rewards", "customers_qr", "languages_dates", "approvals_timing"]) state = skip(state, k as never, T);
     expect(summaryFrom({ restaurant: { ...restaurant, id: "r-1" }, state }).dashboardHref).toBe("/?r=r-1");
   });
 
@@ -82,8 +82,8 @@ describe("what the chat draws", () => {
     state = skip(state, "tone", T);
     const p = progressFrom(state, "make_it_right");
     // In chapter order (7 Nov 2026): hello, google, look, tone, menu, rewards, make_it_right, ...
-    expect(p).toMatchObject({ position: 7, total: 12, chapter: { n: 6, total: 8, title: "Customers and complaints" } });
-    expect(p.steps.map((s) => s.status)).toEqual(["done", "waiting", "not_started", "skipped", "not_started", "not_started", "in_progress", ...Array(5).fill("not_started")]);
+    expect(p).toMatchObject({ position: 7, total: 13, chapter: { n: 6, total: 9, title: "Customers and complaints" } });
+    expect(p.steps.map((s) => s.status)).toEqual(["done", "waiting", "not_started", "skipped", "not_started", "not_started", "in_progress", ...Array(6).fill("not_started")]);
     // The chapters the owner sees: Google waits, the look and voice chapter is half there (the tone skipped).
     expect(p.chapters?.map((c) => [c.key, c.status])).toEqual([
       ["restaurant", "done"],
@@ -93,6 +93,7 @@ describe("what the chat draws", () => {
       ["offers", "not_started"],
       ["customers", "in_progress"],
       ["sales_team", "not_started"],
+      ["calendar", "not_started"],
       ["working", "not_started"],
     ]);
     // Editing a finished step: it stays done in the list.
@@ -102,7 +103,7 @@ describe("what the chat draws", () => {
   test("'Skip for now' only on a skippable step that's part of setup", () => {
     expect(skippableNow("hello")).toBe(false);
     expect(skippableNow("tone")).toBe(true);
-    expect(skippableNow("languages_dates")).toBe(false); // not built yet
+    expect(skippableNow("languages_dates")).toBe(true); // the calendar chapter, built 7 Nov 2026
     expect(skippableNow(null)).toBe(false);
   });
 
@@ -111,7 +112,7 @@ describe("what the chat draws", () => {
     state = skip(state, "google", T);
     state = complete(state, "tone", "partial", {}, T);
     const s = summaryFrom({ restaurant: { ...restaurant, cuisine: "Halal grill" }, state });
-    expect(s).toMatchObject({ done: 1, total: 12 });
+    expect(s).toMatchObject({ done: 1, total: 13 });
     expect(s.items.map((i) => [i.title, i.status, i.detail])).toEqual([
       ["Hello", "done", "Ember & Spice Grill, Halal grill, 12 High Street, London E1 6AN"],
       ["Your tone", "partial", "Half done"],
@@ -236,7 +237,7 @@ describe("the chat endpoint", () => {
     expect(status).toBe(200);
     expect(events.map((e) => e.type)).toEqual(["typing", "status", "message", "message", "state", "done"]);
     expect(events.filter((e) => e.type === "message").map((e) => (e as { message: { text: string } }).message.text)).toEqual(["Lovely, saved.", "Next, your tone."]);
-    expect(events.find((e) => e.type === "state")).toMatchObject({ skippable: true, progress: { position: 4, total: 12, chapter: { n: 3, title: "Your look and voice" } } });
+    expect(events.find((e) => e.type === "state")).toMatchObject({ skippable: true, progress: { position: 4, total: 13, chapter: { n: 3, title: "Your look and voice" } } });
     expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ restaurantId: R, channel: "web", event: "message", text: "We're a halal grill", externalId: clientId }));
   });
 
@@ -262,14 +263,14 @@ describe("the chat endpoint", () => {
     expect(dinaTurn).not.toHaveBeenCalled();
   });
 
-  test("picking a step from the list moves there first; a step that isn't built is refused with a message", async () => {
+  test("picking a step from the list moves there first; a step that doesn't exist is refused with a message", async () => {
     reply(["Let's do it."]);
     await call({ r: R, action: { kind: "jump", step: "menu", clientId: uuid() } });
     expect(db.tables.onboarding_sessions[0].current_step).toBe("menu");
     expect(dinaTurn).toHaveBeenCalledWith(expect.objectContaining({ event: "action", note: expect.stringMatching(/Your menu/) }));
     dinaTurn.mockClear();
-    const { events } = await call({ r: R, action: { kind: "jump", step: "languages_dates", clientId: uuid() } });
-    expect(events.at(-1)).toEqual({ type: "error", text: expect.stringMatching(/isn't part of setup yet/) });
+    const { events } = await call({ r: R, action: { kind: "jump", step: "nonsense", clientId: uuid() } });
+    expect(events.at(-1)).toEqual({ type: "error", text: expect.stringMatching(/doesn't exist/) });
     expect(dinaTurn).not.toHaveBeenCalled();
   });
 

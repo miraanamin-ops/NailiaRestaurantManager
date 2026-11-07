@@ -16,7 +16,7 @@ const startReview = vi.fn(async (_id: string) => false);
 const usage = { purpose: "turn", model: "claude-sonnet-5-5", tokens: { input: 1000, output: 100, cacheRead: 0, cacheWrite: 0, cost: 0.003 } };
 const answer = (text: string, component: unknown = null) => ({ reply: { messages: [{ text, component }] }, calls: [usage], toolCalls: [], attempts: 1 });
 const ALL = ["hello", "google", "look", "tone", "make_it_right", "menu", "hours_faqs"];
-const LATER_STEPS = ["sales", "team", "rewards", "customers_qr", "approvals_timing"];
+const LATER_STEPS = ["sales", "team", "rewards", "customers_qr", "languages_dates", "approvals_timing"];
 
 beforeEach(() => {
   vi.resetModules();
@@ -197,11 +197,11 @@ describe("the builder's test controls", () => {
     expect(r()).toMatchObject({ active: false, address: null, faqs: {}, owner_whatsapp: "whatsapp:+447700900111" });
   });
 
-  test("jump to a step; a step that isn't built is refused", async () => {
+  test("jump to a step; a step that doesn't exist is refused", async () => {
     const { jumpTestSite } = await import("@/lib/onboarding/dina/test-sites");
     await jumpTestSite(R, "tone");
     expect(session().current_step).toBe("tone");
-    await expect(jumpTestSite(R, "languages_dates")).rejects.toThrow(/isn't a step in setup/);
+    await expect(jumpTestSite(R, "nonsense" as never)).rejects.toThrow(/isn't a step in setup/);
   });
 
   test("reset, delete and link never touch a real restaurant", async () => {

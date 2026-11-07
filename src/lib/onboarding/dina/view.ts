@@ -9,6 +9,7 @@ import type { Hours, MenuCategory } from "../profile-data";
 import { askFor, inputsFrom, recapFor } from "../guide/cards";
 import { availableChapters, CHAPTERS, type ChapterKey } from "../guide/chapters";
 import { openQuestions, type Facts } from "../guide/questions";
+import { missingForGoLive, PROFILE_FIELDS, type ProfileFieldName } from "@/lib/profile/fields";
 
 // What the web chat draws, made from what's saved: the conversation (with which
 // question each tap answered), the step list, and the cards. Plain code, so it's
@@ -209,7 +210,29 @@ export function summaryFrom(sources: CardSources): SummaryData {
       qr ? `Your QR codes are ready to print: ${qr}` : "Your QR codes will be ready to print.",
     ],
     dashboardHref: currentStep(sources.state) === null && sources.restaurant.id ? `/?r=${sources.restaurant.id}` : null,
+    agents: goLive(sources),
   };
+}
+
+// The go-live screen: each agent and what it still needs (the same checklist that
+// decides whether it really sends: lib/profile/fields.ts GO_LIVE_FIELDS).
+const AGENT_NAMES: Record<string, string> = { reputation: "Review replies", visibility: "Google posts", growth: "Offers and emails", gm: "Your morning brief" };
+const FIELD_STEP: Partial<Record<ProfileFieldName, FlowStepKey>> = {
+  sign_off_name: "tone", emoji_allowed: "tone", logo: "look", colours: "look", allergen_statement: "menu", halal_statement: "hours_faqs", hours: "hours_faqs",
+  complaint_contact: "make_it_right", recovery_offers: "make_it_right", approved_offer_types: "rewards", discount_cap: "rewards", signup_offer: "rewards",
+  quiet_hours: "approvals_timing", language: "approvals_timing", owner_name: "hello",
+};
+export function goLive(sources: CardSources) {
+  const row = sources.restaurant as Record<string, unknown>;
+  const confirmed = new Set(sources.confirmed ?? []);
+  const googleIn = stepState(sources.state, "google").status === "done";
+  return Object.entries(AGENT_NAMES).map(([key, name]) => {
+    const missing = missingForGoLive(row, key as never, confirmed);
+    const needs = missing.map((f) => PROFILE_FIELDS[f].label.toLowerCase());
+    if ((key === "reputation" || key === "visibility") && !googleIn) needs.push("Google access (we'll switch it on as soon as Google accepts us)");
+    const step = missing.map((f) => FIELD_STEP[f]).find(Boolean);
+    return { key, name, ready: needs.length === 0, needs, ...(step ? { href: editHref(sources, step) } : {}) };
+  });
 }
 
 // What code's question cards and recaps are judged on, from the sources.

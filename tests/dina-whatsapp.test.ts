@@ -315,7 +315,7 @@ describe("Dina on WhatsApp, whole turns", () => {
     expect(db.tables.setup_gaps).toEqual([expect.objectContaining({ step_key: "google" })]);
     // The next chapter opens with its line, then code's own first question (no Claude call).
     const after = db.tables.onboarding_messages.filter((m) => m.role === "dina").slice(-2);
-    expect(after.map((m) => m.body)[0]).toMatch(/^Chapter 3 of 8: Your look and voice/);
+    expect(after.map((m) => m.body)[0]).toMatch(/^Chapter 3 of 9: Your look and voice/);
     expect(after[1]).toMatchObject({ parts: [{ type: "question", q: "look.logo" }] });
     expect(callDina).not.toHaveBeenCalled();
   });

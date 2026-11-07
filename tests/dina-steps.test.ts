@@ -473,9 +473,9 @@ describe("notes only count on their own open step", () => {
       return answer([{ text: "Saved. Next, Google." }], { hello_notes: { cuisine: "Halal grill" } });
     });
     await turn("Looks right");
-    // Saved and not reopened by the notes; the chapter's recap comes next (code's card).
+    // Saved and not reopened by the notes; code's first question of the chapter's rest comes next.
     expect(step("hello")?.data?._outcome).toBe("done");
     expect(db.tables.onboarding_sessions[0].current_step).toBe("hello");
-    expect(db.tables.onboarding_messages.at(-1)).toMatchObject({ role: "dina", parts: [{ type: "recap", chapter: "restaurant" }] });
+    expect(db.tables.onboarding_messages.at(-1)).toMatchObject({ role: "dina", parts: [{ type: "question", q: "restaurant.phone" }] });
   });
 });

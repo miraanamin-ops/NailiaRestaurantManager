@@ -30,6 +30,27 @@ export function SummaryCard({ summary }: { summary: SummaryData }) {
           </li>
         ))}
       </ul>
+      {summary.agents && summary.agents.length > 0 && (
+        <div className="border-t border-ink-700 p-4">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-fog">Going live</p>
+          <ul className="mt-2 space-y-2">
+            {summary.agents.map((a) => (
+              <li key={a.key} className="flex items-start gap-3 text-[14px]">
+                <span aria-hidden className={`mt-0.5 ${a.ready ? "text-signal" : "text-[#e8a33d]"}`}>{a.ready ? "●" : "◐"}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-mist">{a.name}:</span>{" "}
+                  <span className="text-fog">{a.ready ? "ready" : `waiting for ${a.needs.join(", ")}`}</span>
+                </span>
+                {!a.ready && a.href && (
+                  <a href={a.href} className="shrink-0 text-signal underline underline-offset-4">
+                    Do it now
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {summary.locked.length > 0 && (
         <div className="border-t border-ink-700 p-4">
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-fog">Still to unlock</p>

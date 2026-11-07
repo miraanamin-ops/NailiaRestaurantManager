@@ -188,7 +188,7 @@ export type NextAction =
   | { kind: "dina"; step: FlowStepKey; question: Question | null }
   | { kind: "end" };
 
-const resolved = (s: StepState) => ["done", "partial", "skipped"].includes(s.status) || (s.status === "in_progress" && s.waitingOn !== null);
+const resolved = (s: StepState) => ["done", "partial", "skipped"].includes(s.status) || (s.status === "in_progress" && Boolean(s.waitingOn));
 
 export function nextAction(f: Facts, steps: FlowStepKey[] = availableSteps()): NextAction {
   const step = steps.find((k) => !resolved(stepState(f.state, k)));

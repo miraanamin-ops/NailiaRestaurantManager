@@ -93,4 +93,7 @@ export type SummaryData = {
   next: string[];
   // Setup finished: the button to the owner's dashboard.
   dashboardHref?: string | null;
+  // The go-live screen (7 Nov 2026): each agent, ready or not, and exactly what a
+  // held-back one still needs, with where to do it. Nothing is held back silently.
+  agents?: { key: string; name: string; ready: boolean; needs: string[]; href?: string }[];
 };

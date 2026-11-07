@@ -161,6 +161,7 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
         m.text,
         `Setup ${s.done} of ${s.total} done.`,
         ...s.items.map((it) => `✅ ${it.title}: ${it.detail}`),
+        ...(s.agents?.length ? ["", "Going live:", ...s.agents.map((a) => `${a.ready ? "✅" : "⏳"} ${a.name}: ${a.ready ? "ready" : `waiting for ${a.needs.join(", ")}`}`)] : []),
         ...(s.locked.length ? ["", "For later:", ...s.locked.map((l) => `• ${l.title}: ${l.unlock}`)] : []),
         "",
         `Everything is here too: ${opts.chatUrl}`,

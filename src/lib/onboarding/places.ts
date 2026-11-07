@@ -122,5 +122,6 @@ export async function profileFromPlace(restaurantId: string, placeId: string): P
 
 // A UK address: it says so, or ends with a UK postcode.
 export function isUkAddress(address: string) {
-  return /(UK|United Kingdom|England|Scotland|Wales|Northern Ireland)/i.test(address) || /[A-Z]{1,2}\d[A-Z\d]? ?\d[A-Z]{2}/i.test(address);
+  // (Word edges written as character classes, so no escape can be mangled.)
+  return /(^|[^A-Za-z])(UK|United Kingdom|England|Scotland|Wales|Northern Ireland)([^A-Za-z]|$)/i.test(address) || /(^|[^A-Za-z])[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}([^A-Za-z]|$)/i.test(address);
 }

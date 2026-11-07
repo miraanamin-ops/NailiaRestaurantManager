@@ -54,8 +54,10 @@ describe("changing steps", () => {
     let { session } = await completeStep(A, "hello", "done", { owner_name: "Amina" }, { channel: "whatsapp" });
     expect(session).toMatchObject({ current_step: "hello", channel_last_used: "whatsapp" });
     expect(db.tables.onboarding_steps).toEqual([expect.objectContaining({ restaurant_id: A, step_key: "hello", status: "in_progress", data: expect.objectContaining({ owner_name: "Amina", _outcome: "done" }) })]);
-    const { withRecord } = await import("@/lib/onboarding/guide/questions");
-    ({ session } = await recordQuestion(A, "hello", (d, now) => withRecord(d, "recap.restaurant", "answered", now), { channel: "whatsapp" }));
+    const { withRecord, QUESTIONS } = await import("@/lib/onboarding/guide/questions");
+    // Chapter 1's own questions (phone, how they serve, ... goals) and its recap.
+    const ch1 = ["recap.restaurant", ...QUESTIONS.filter((q) => q.step === "hello" && q.asker === "code").map((q) => q.id)];
+    ({ session } = await recordQuestion(A, "hello", (d, now) => ch1.reduce((x, id) => withRecord(x, id, "answered", now), d), { channel: "whatsapp" }));
     expect(session).toMatchObject({ current_step: "google", channel_last_used: "whatsapp" });
     const { state } = await loadFlow(A);
     expect(state.hello?.status).toBe("done");
@@ -72,10 +74,11 @@ describe("changing steps", () => {
 
   test("skips and partials become gaps; finishing the step later closes its gap", async () => {
     const { completeStep, enterStep, recordQuestion, skipStep, startOnboarding } = await load();
-    const { withRecord } = await import("@/lib/onboarding/guide/questions");
+    const { withRecord, QUESTIONS } = await import("@/lib/onboarding/guide/questions");
     await startOnboarding(A);
     await completeStep(A, "hello", "done", {});
-    await recordQuestion(A, "hello", (d, now) => withRecord(d, "recap.restaurant", "answered", now));
+    const ch1 = ["recap.restaurant", ...QUESTIONS.filter((q) => q.step === "hello" && q.asker === "code").map((q) => q.id)];
+    await recordQuestion(A, "hello", (d, now) => ch1.reduce((x, id) => withRecord(x, id, "answered", now), d));
     await skipStep(A, "google");
     // Making it right isn't its chapter's last step, so no recap holds it: half done is a gap at once.
     await completeStep(A, "make_it_right", "partial", { offers: ["A free dessert"] });

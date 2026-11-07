@@ -63,8 +63,14 @@ async function mondayReportHeadline(r: Restaurant, due: Date) {
 }
 
 // The brief: the GM's when it's live (see gmMode), today's otherwise.
+// Plus, at most once a day, one setup reminder as a footnote (guide/nudge.ts), marked only once the brief went.
 async function briefFor(r: Restaurant, channel: OwnerChannel, now: Date, opts: { extra?: string[]; note?: string }) {
-  return (await gmMode(r)) === "live" ? gmBrief(r, channel, now, opts) : sendBrief(r, channel, now, opts);
+  const { setupNudgeFor, markNudged } = await import("@/lib/onboarding/guide/nudge");
+  const nudge = await setupNudgeFor(r.id, now).catch((err) => (console.error("Setup reminder failed", err), null));
+  const withNudge = nudge ? { ...opts, note: [opts.note, nudge.text].filter(Boolean).join("\n\n") } : opts;
+  const outcome = (await gmMode(r)) === "live" ? await gmBrief(r, channel, now, withNudge) : await sendBrief(r, channel, now, withNudge);
+  if (nudge && outcome.sent) await markNudged(r.id, nudge.gapId, now).catch((err) => console.error("Couldn't mark the setup reminder", err));
+  return outcome;
 }
 
 // One step of the morning job. Throws if it fails (the queue retries it).

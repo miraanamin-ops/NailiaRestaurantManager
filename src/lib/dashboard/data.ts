@@ -241,6 +241,10 @@ export async function weekAhead(restaurantId: string, now: Date, withForecast = 
 export type SetupItem = { label: string; done: boolean; href: string };
 
 async function setupList(restaurant: Restaurant, hasSales: boolean): Promise<SetupItem[]> {
+  // Set up with Dina: the same list as her setup (its open gaps), so the two never
+  // disagree (7 Nov 2026), each opening the chat at that step.
+  const dina = await safe("setup gaps", fromDinaGaps(restaurant), null);
+  if (dina) return dina;
   const google = await safe(
     "google connection",
     getSupabase().from("google_connections").select("id", { count: "exact", head: true }).eq("restaurant_id", restaurant.id).eq("kind", "owner").eq("status", "ok").then(count),
@@ -254,6 +258,23 @@ async function setupList(restaurant: Restaurant, hasSales: boolean): Promise<Set
     { label: "Set a sign-up reward", done: Boolean(restaurant.signup_reward), href: r("/settings") },
     { label: unconfirmed ? `Confirm allergens for ${unconfirmed} dish${unconfirmed === 1 ? "" : "es"}` : "Confirm your allergens", done: unconfirmed === 0, href: r("/settings#menu") },
     { label: "Send your sales (till or spreadsheet)", done: hasSales, href: r("/sales") },
+  ];
+}
+
+async function fromDinaGaps(restaurant: Restaurant): Promise<SetupItem[] | null> {
+  const supabase = getSupabase();
+  const { data: session } = await supabase.from("onboarding_sessions").select("restaurant_id").eq("restaurant_id", restaurant.id).maybeSingle();
+  if (!session) return null;
+  const { data: gaps } = await supabase.from("setup_gaps").select("step_key, resolved_at, dismissed").eq("restaurant_id", restaurant.id).returns<{ step_key: string; resolved_at: string | null; dismissed: boolean }[]>();
+  const { gapTitle, EXTRA_GAPS, isFlowStep } = await import("@/lib/onboarding/flow");
+  const chat = (step: string) => `/onboarding/chat?r=${restaurant.id}&step=${step}`;
+  return [
+    { label: "Link your WhatsApp", done: Boolean(restaurant.owner_whatsapp), href: `/onboarding/in?r=${restaurant.id}` },
+    ...(gaps ?? []).map((g) => ({
+      label: gapTitle(g.step_key),
+      done: Boolean(g.resolved_at) || g.dismissed,
+      href: chat(isFlowStep(g.step_key) ? g.step_key : (EXTRA_GAPS[g.step_key]?.step ?? "hello")),
+    })),
   ];
 }
 

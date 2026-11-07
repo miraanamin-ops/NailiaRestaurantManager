@@ -170,7 +170,7 @@ describe("data is never instructions", () => {
     });
     expect(text).toMatch(/# The step you're on: tone \(Your tone\)\nSkippable: yes\nWhat it unlocks: Pick a tone/);
     expect(text).toMatch(/- google \(Google profile\): skipped/);
-    expect(text).toMatch(/Setup so far \(step 3 of 12\)/);
+    expect(text).toMatch(/Setup so far \(step 3 of 13\)/);
     expect(text).toMatch(/- owner_name: Amina/);
     expect(text).not.toMatch(/address/);
     expect(text.match(/<\/owner_message>/g)).toHaveLength(1);
@@ -247,12 +247,11 @@ describe("her tools: the only way anything is saved, each checked in code", () =
     expect(db.tables.restaurants[0].name).toBe("Ember Grill");
   });
 
-  test("skip_step: Hello can't be skipped; a skippable step becomes a gap; unbuilt steps are refused", async () => {
+  test("skip_step: Hello can't be skipped; a skippable step becomes a gap; an unknown tool is refused", async () => {
     const { runTool, TOOLS } = await import("@/lib/onboarding/dina/tools");
     expect(await runTool(ctx, TOOLS, "skip_step", { step: "hello" })).toMatchObject({ ok: false, text: expect.stringMatching(/can't be skipped/) });
     expect(await runTool(ctx, TOOLS, "skip_step", { step: "google" })).toMatchObject({ ok: true });
     expect(db.tables.setup_gaps.map((g) => g.step_key)).toEqual(["google"]);
-    expect(await runTool(ctx, TOOLS, "go_to_step", { step: "languages_dates" })).toMatchObject({ ok: false, text: expect.stringMatching(/isn't part of setup yet/) });
     expect(await runTool(ctx, TOOLS, "mark_all_done", {})).toMatchObject({ ok: false, text: expect.stringMatching(/no tool called mark_all_done/) });
   });
 
@@ -271,8 +270,10 @@ describe("her tools: the only way anything is saved, each checked in code", () =
   test("go_to_step puts Dina on that step, even a finished one being edited", async () => {
     const { runTool, TOOLS } = await import("@/lib/onboarding/dina/tools");
     await runTool(ctx, TOOLS, "save_hello", hello);
-    const { confirmRecap } = await import("@/lib/onboarding/guide/answer");
-    await confirmRecap(R, "restaurant", "web");
+    const { recordQuestion } = await import("@/lib/onboarding/sessions");
+    const { withRecord, QUESTIONS } = await import("@/lib/onboarding/guide/questions");
+    const ch1 = ["recap.restaurant", ...QUESTIONS.filter((q) => q.step === "hello" && q.asker === "code").map((q) => q.id)];
+    await recordQuestion(R, "hello", (d, now) => ch1.reduce((x, id) => withRecord(x, id, "answered", now), d));
     expect(stepRow("hello")?.status).toBe("done");
     await runTool(ctx, TOOLS, "go_to_step", { step: "hello" });
     expect(db.tables.onboarding_sessions[0].current_step).toBe("hello");

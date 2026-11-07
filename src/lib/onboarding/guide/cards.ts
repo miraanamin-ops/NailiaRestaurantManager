@@ -75,7 +75,8 @@ function catalogCard(q: CatalogQuestion, f: Facts): AskedQuestion {
       options: options.map((o) => ({ id: o.id, label: o.label, ...(o.short ? { short: o.short } : {}), ...(o.body ? { body: o.body } : {}) })),
       multi: q.kind === "many",
       confirm: q.decision,
-      skip: q.skip ?? q.level === "important",
+      // Every question can be skipped on its own (a skipped essential one is a gap).
+      skip: q.skip ?? true,
       layout: q.layout ?? "buttons",
       input: q.input ?? null,
       selected: catalogSelected(q, f),

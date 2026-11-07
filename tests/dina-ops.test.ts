@@ -126,12 +126,17 @@ const filesNote = async (stepKey: "sales" | "team", files = [sheet]) => {
   return noteForFiles(R, stepKey, files, "in the chat");
 };
 
+// The sales step's own questions (the weekly target, quiet and busy days: code's
+// cards, 7 Nov 2026) answered, so the step closes on what the import says.
+const salesQuestionsAnswered = () =>
+  db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "sales", status: "in_progress", data: { q: Object.fromEntries(["sales.target", "sales.quiet", "sales.busy"].map((id) => [id, { status: "answered", at: "2026-11-07T10:00:00Z" }])) } });
+
 describe("step 7, sales history", () => {
   test("a layout we know imports at once: 'Got it: 12 months of sales', the step done", async () => {
     receivePosFile.mockImplementation(async () => (imported("imp-1", "2025-11-01", "2026-10-30"), { status: "imported", importId: "imp-1", message: "ok" }));
     expect(await filesNote("sales")).toMatch(/Code saved their sales: "Got it: 12 months of sales, Nov 2025 to Oct 2026\."/);
     expect(receivePosFile).toHaveBeenCalledWith(expect.objectContaining({ restaurantId: R, channel: "web", actor: "owner", maxBytes: 16 * 1024 * 1024 }));
-    expect(step("sales")).toMatchObject({ status: "done", data: { weeks: 52, first_day: "2025-11-01", last_day: "2026-10-30" } });
+    expect(step("sales")).toMatchObject({ data: { _outcome: "done", weeks: 52, first_day: "2025-11-01", last_day: "2026-10-30" } });
     expect(gap("sales")).toBeUndefined();
   });
 
@@ -144,11 +149,12 @@ describe("step 7, sales history", () => {
   });
 
   test("daily takings with no number of orders: done (forecasts work from takings), plus low-priority gaps for order counts and item sales", async () => {
+    salesQuestionsAnswered();
     receivePosFile.mockImplementation(async () => (imported("imp-o", "2025-11-01", "2026-10-30", null, false), { status: "imported", importId: "imp-o", message: "ok" }));
     const note = await filesNote("sales");
     expect(note).toMatch(/Got it: 12 months of sales[\s\S]*order counts \(transactions or receipts\) make forecasts more accurate[\s\S]*low-priority/);
     expect(note).not.toMatch(/sales-by-item export/); // one reminder at a time
-    expect(step("sales")).toMatchObject({ status: "done", data: { days_with_orders: 0, extra_gaps: ["sales_items", "order_counts"] } });
+    expect(step("sales")).toMatchObject({ data: { _outcome: "done", days_with_orders: 0, extra_gaps: ["sales_items", "order_counts"] } });
     expect(gap("sales")).toBeUndefined();
     expect(gap("order_counts")?.unlock_text).toBe("Send your sales with the number of orders each day (transactions or receipts) and I'll make your forecasts more accurate.");
     expect(gap("sales_items")).toBeTruthy();
@@ -159,6 +165,7 @@ describe("step 7, sales history", () => {
   });
 
   test("a new layout asks once; 'Yes, import it' imports; under 8 weeks is half done, with its own gap line", async () => {
+    salesQuestionsAnswered();
     receivePosFile.mockResolvedValue({ status: "needs_mapping", importId: "imp-2", message: "?" });
     getImport.mockResolvedValue({ id: "imp-2", status: "needs_mapping", mapping: { date: "Date", time: null, item: "Item", quantity: null, price: "Price", price_is: "line_total", receipt: null, date_order: "dmy", pos_name: "Square" } });
     const note = await filesNote("sales");
@@ -167,14 +174,15 @@ describe("step 7, sales history", () => {
 
     confirmImport.mockImplementation(async () => (imported("imp-2", "2026-10-01", "2026-10-20"), { status: "imported", importId: "imp-2", message: "ok" }));
     expect(await tool("confirm_sales_columns", { owner_confirmed: true })).toMatchObject({ ok: true, text: expect.stringMatching(/2 weeks of sales, Oct 2026[\s\S]*at least 8 weeks/) });
-    expect(step("sales")?.status).toBe("partial");
+    expect(step("sales")?.data._outcome).toBe("partial");
     expect(gap("sales")?.unlock_text).toBe("Send me at least 8 weeks of sales and I'll forecast quiet nights and plan offers before they happen.");
   });
 
   test("daily takings with orders: done (forecasts need nothing more), plus a low-priority gap for item sales that never blocks", async () => {
+    salesQuestionsAnswered();
     receivePosFile.mockImplementation(async () => (imported("imp-3", "2025-11-01", "2026-10-30", null), { status: "imported", importId: "imp-3", message: "ok" }));
     expect(await filesNote("sales")).toMatch(/Got it: 12 months of sales[\s\S]*daily totals[\s\S]*sales-by-item export[\s\S]*low-priority/);
-    expect(step("sales")).toMatchObject({ status: "done", data: { daily_only: true, extra_gaps: ["sales_items"] } });
+    expect(step("sales")).toMatchObject({ data: { _outcome: "done", daily_only: true, extra_gaps: ["sales_items"] } });
     expect(gap("sales")).toBeUndefined();
     expect(gap("sales_items")?.unlock_text).toMatch(/item sales export too and I'll unlock dish-level insights/);
     const { currentStep, pickNudge, gapReply } = await import("@/lib/onboarding/flow");

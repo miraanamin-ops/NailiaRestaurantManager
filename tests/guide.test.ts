@@ -21,23 +21,26 @@ const facts = (state: FlowState, r: Record<string, unknown> = {}, confirmed: str
 const inputs = (f: Facts) => inputsFrom({ restaurant: f.r, state: f.state, tones });
 const hello = () => complete({}, "hello", "done", {}, T);
 // Chapters 1 and 2 dealt with: Hello and its recap, Google skipped.
+const CH1 = QUESTIONS.filter((q) => q.step === "hello" && q.asker === "code").map((q) => q.id);
 const through2 = () => {
   let s = hello();
-  s = { ...s, hello: { ...s.hello!, data: withRecord(s.hello!.data, recapId("restaurant"), "answered", T) } };
+  let d = withRecord(s.hello!.data, recapId("restaurant"), "answered", T);
+  for (const id of CH1) d = withRecord(d, id, "answered", T);
+  s = { ...s, hello: { ...s.hello!, data: d } };
   return skip(s, "google", T);
 };
 
 describe("the chapters", () => {
   test("every step of setup is in one chapter, in the flow's order; Google has no recap", () => {
     expect(chapterOrder()).toEqual(availableSteps());
-    expect(availableChapters().map((c) => c.key)).toEqual(["restaurant", "google", "look_voice", "menu", "offers", "customers", "sales_team", "working"]);
+    expect(availableChapters().map((c) => c.key)).toEqual(["restaurant", "google", "look_voice", "menu", "offers", "customers", "sales_team", "calendar", "working"]);
     expect(CHAPTERS.google.recap).toBe(false);
     expect(questionsFor("google", facts({})).map((q) => q.id)).toEqual(["google.base"]);
     expect(questionsFor("tone", facts({})).map((q) => q.id)).toEqual(["tone.praise", "tone.complaint", "tone.sign_off", "tone.emoji", "recap.look_voice"]);
   });
 
   test("a chapter opens with its number, title and what it covers; the words pass Dina's checks", () => {
-    expect(chapterIntro(CHAPTERS.look_voice)).toBe("Chapter 3 of 8: Your look and voice. About 4 minutes on your logo, your colours, your tone and how you sign off.");
+    expect(chapterIntro(CHAPTERS.look_voice)).toBe("Chapter 3 of 9: Your look and voice. About 4 minutes on your logo, your colours, your tone and how you sign off.");
     for (const c of availableChapters()) expect(dinaReplyProblems({ messages: [{ text: chapterIntro(c), component: null }, { text: recapText(c.key), component: null }] })).toEqual([]);
   });
 });
@@ -215,7 +218,7 @@ beforeEach(() => {
     restaurants: [{ id: R, name: "Ember Grill", slug: "ember-grill", owner_name: "Amina Khan", website: null, logo_url: null, brand_color: "#c2410c", brand_dark: "#1c1917", emoji_allowed: EMOJI_YES, sign_off_name: null, photo_library: [], menu: [], profile_version: 0, brand_voice: null, profile_examples: {} }],
     onboarding_sessions: [{ restaurant_id: R, flow_version: 2, current_step: "look", channel_last_used: "web", started_at: T, completed_at: null }],
     onboarding_steps: [
-      { restaurant_id: R, step_key: "hello", status: "done", data: { _outcome: "done", q: { "recap.restaurant": { status: "answered", at: T } } }, completed_at: T },
+      { restaurant_id: R, step_key: "hello", status: "done", data: { _outcome: "done", q: Object.fromEntries(["recap.restaurant", ...CH1].map((id) => [id, { status: "answered", at: T }])) }, completed_at: T },
       { restaurant_id: R, step_key: "google", status: "skipped", data: {}, skipped_at: T },
     ],
     onboarding_messages: [],
@@ -265,7 +268,7 @@ describe("chapter 3, answered on the web", () => {
   test("the chapter opens, then each question in turn; every answer is saved as confirmed; the recap closes it", async () => {
     await showNext();
     const said = db.tables.onboarding_messages.filter((m) => m.role === "dina").map((m) => m.body);
-    expect(said).toContain("Chapter 3 of 8: Your look and voice. About 4 minutes on your logo, your colours, your tone and how you sign off.");
+    expect(said).toContain("Chapter 3 of 9: Your look and voice. About 4 minutes on your logo, your colours, your tone and how you sign off.");
     expect(lastDina().parts).toEqual([{ type: "question", q: "look.logo" }]);
 
     // The logo they send: kept as a draft and shown to them; nothing saved until they confirm.
@@ -356,5 +359,43 @@ describe("chapter 3, answered on the web", () => {
     expect(db.tables.setup_gaps.map((g) => g.step_key)).toEqual(expect.arrayContaining(["look", "tone"]));
     // Skipping the tone keeps a safe default voice.
     expect(r().brand_voice).toMatch(/^Warm and personal/);
+  });
+});
+
+describe("chapters 5, 6 and 9, answered", () => {
+  test("offers: the reward must fit the cap; settings saved; the typed sending hours checked; a customer list only added when they agreed", async () => {
+    Object.assign(r(), { signup_reward: null, discount_cap_percent: 15, recovery_offers: [], brief_hour: 9 });
+    db.tables.customers = [];
+    db.tables.consents = [];
+    const { answerQuestion } = await import("@/lib/onboarding/guide/answer");
+    // A 20% reward over a 15% cap is refused, then fine once the cap is 25%.
+    expect(await answerQuestion({ restaurantId: R, q: "offers.reward", picked: ["own"], typed: "20% off your first visit", channel: "web" })).toMatchObject({ ok: false, said: expect.stringMatching(/15%/) });
+    expect(await answerQuestion({ restaurantId: R, q: "offers.cap", picked: ["cap25"], channel: "web" })).toMatchObject({ ok: true });
+    expect(await answerQuestion({ restaurantId: R, q: "offers.reward", picked: ["own"], typed: "20% off your first visit", channel: "web" })).toMatchObject({ ok: true });
+    expect(r()).toMatchObject({ discount_cap_percent: 25, signup_reward: "20% off your first visit" });
+    await answerQuestion({ restaurantId: R, q: "offers.no_discount", picked: ["friday", "saturday"], channel: "web" });
+    expect(r().no_discount_days).toEqual(["friday", "saturday"]);
+
+    // Sending hours typed: inside 7am to 10pm, saved; outside, refused.
+    expect(await answerQuestion({ restaurantId: R, q: "working.window", picked: ["own"], typed: "6am to 8pm", channel: "web" })).toMatchObject({ ok: false });
+    expect(await answerQuestion({ restaurantId: R, q: "working.window", picked: ["own"], typed: "10am to 8pm", channel: "web" })).toMatchObject({ ok: true });
+    expect(r()).toMatchObject({ send_window_start: "10:00:00", send_window_end: "20:00:00" });
+    await answerQuestion({ restaurantId: R, q: "working.quiet", picked: ["q22_8"], channel: "web" });
+    expect(r()).toMatchObject({ quiet_hours_start: "22:00:00", quiet_hours_end: "08:00:00" });
+
+    // The customer list: "not sure" adds nobody; "they signed up" adds them unconfirmed, with their consent record.
+    const draft = { rows: [{ email: "sara@x.test", name: "Sara", birthday: null }, { email: "omar@y.test", name: "Omar", birthday: "1985-07-02" }], count: 2, skipped: 0 };
+    db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "customers_qr", status: "in_progress", data: { import_draft: draft } });
+    await answerQuestion({ restaurantId: R, q: "customers.consent", picked: ["not_sure"], channel: "web" });
+    expect(db.tables.customers).toEqual([]);
+    step("customers_qr")!.data = { import_draft: draft };
+    expect(await answerQuestion({ restaurantId: R, q: "customers.consent", picked: ["agreed"], channel: "web" })).toMatchObject({ ok: true, said: expect.stringMatching(/^Added 2 customers/) });
+    expect(db.tables.customers.map((c) => [c.email, c.source, c.marketing_opt_in, c.email_confirmed_at ?? null])).toEqual([
+      ["sara@x.test", "import", false, null],
+      ["omar@y.test", "import", false, null],
+    ]);
+    expect(db.tables.consents).toHaveLength(2);
+    expect(db.tables.consents[0]).toMatchObject({ granted: true, source: "import" });
+    expect(db.tables.consents[0].confirmed_at ?? null).toBeNull();
   });
 });

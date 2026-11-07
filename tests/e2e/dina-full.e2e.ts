@@ -228,7 +228,7 @@ async function ownerMove() {
   if (step() === "sales") return chat({ kind: "message", text: "Yes, that's right, import it" }, '"Yes, import it"');
   if (step() === "team") {
     if (/manager|day to day|runs/.test(asked)) return chat({ kind: "message", text: "Sara runs the floor day to day" }, "the site manager");
-    if (/cover|on shift|minimum|at least/.test(asked)) return chat({ kind: "message", text: "Always at least 2 in the kitchen" }, "the cover rule");
+    if (/cover|on shift|minimum|at least|fewest/.test(asked)) return chat({ kind: "message", text: "Always at least 2 in the kitchen" }, "the cover rule");
     if (/target|labour|%/.test(asked)) return chat({ kind: "message", text: "30% is fine" }, '"30% is fine"');
     return chat({ kind: "message", text: TEAM }, "the team");
   }
@@ -262,7 +262,7 @@ describe("a whole onboarding, for real", () => {
 
     await chat({ kind: "start" }, "opens the chat");
     const turnsAt: Record<string, number> = {};
-    while (turns < 100 && step()) {
+    while (turns < 160 && step()) {
       const s = step()!;
       turnsAt[s] = (turnsAt[s] ?? 0) + 1;
       await ownerMove();
@@ -292,7 +292,8 @@ describe("a whole onboarding, for real", () => {
     // Every question code asks was answered (7 Nov 2026): the agents' go-live fields from chapter 3 are all set.
     const versions = new Set(db.tables.profile_versions.map((v) => v.field));
     console.log("[Confirmed fields]", [...versions].sort().join(", "));
-    for (const f of ["logo", "colours", "sign_off_name", "emoji_allowed"]) expect(versions.has(f), f).toBe(true);
+    for (const f of ["logo", "colours", "sign_off_name", "emoji_allowed", "allergen_statement", "approved_offer_types"]) expect(versions.has(f), f).toBe(true);
+    console.log("[Summary agents]", JSON.stringify(shown.filter((x) => x.component?.type === "summary").at(-1)?.component));
 
     expect(session.completed_at).toEqual(expect.any(String));
     expect(db.tables.onboarding[0].completed_at).toEqual(expect.any(String));

@@ -14,7 +14,7 @@ beforeEach(() => {
   process.env.PLACES_DAILY_MAX = "2";
   db = memoryDb({ rate_limits: [] });
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
-  vi.stubGlobal("fetch", async (url: string) => (fetched.push(url), new Response(JSON.stringify({ places: [{ id: "p1", displayName: { text: "Ember Grill" }, formattedAddress: "12 High St" }] }))));
+  vi.stubGlobal("fetch", async (url: string) => (fetched.push(url), new Response(JSON.stringify({ places: [{ id: "p1", displayName: { text: "Ember Grill" }, formattedAddress: "12 High St, London E1 6AN, UK" }] }))));
 });
 afterEach(() => {
   vi.doUnmock("@/lib/supabase");
@@ -25,7 +25,7 @@ afterEach(() => {
 
 test("after the day's cap, no more calls reach Google", async () => {
   const { searchPlaces, PlacesCapReached } = await import("@/lib/onboarding/places");
-  expect(await searchPlaces("Ember Grill")).toEqual([{ id: "p1", name: "Ember Grill", address: "12 High St" }]);
+  expect(await searchPlaces("Ember Grill")).toEqual([{ id: "p1", name: "Ember Grill", address: "12 High St, London E1 6AN, UK" }]);
   await searchPlaces("Ember Grill");
   await expect(searchPlaces("Ember Grill")).rejects.toBeInstanceOf(PlacesCapReached);
   expect(fetched).toHaveLength(2);

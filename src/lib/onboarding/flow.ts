@@ -89,7 +89,7 @@ export const statusOf = (state: FlowState, key: FlowStepKey): FlowStatus => step
 // Dealt with for now: Dina moves on. A step waiting on someone else counts, so the
 // owner isn't stuck while Google accepts an invite.
 export function isResolved(s: StepState) {
-  return s.status === "done" || s.status === "partial" || s.status === "skipped" || (s.status === "in_progress" && s.waitingOn !== null);
+  return s.status === "done" || s.status === "partial" || s.status === "skipped" || (s.status === "in_progress" && Boolean(s.waitingOn));
 }
 
 // The step Dina is on: the first one not dealt with (null = all are).
