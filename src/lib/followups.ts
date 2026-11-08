@@ -16,6 +16,6 @@ export function ownerChannel(restaurant: Restaurant): OwnerChannel | null {
 export async function releaseQueue(restaurant: Restaurant, now: Date) {
   const results = await processQueue(restaurant, now);
   const channel = ownerChannel(restaurant);
-  if (results.length && channel) await messageOwner(channel, queueResultsMessage(results));
+  if (results.length && channel) await messageOwner(channel, queueResultsMessage(results), false, { opener: "update" });
   return results;
 }

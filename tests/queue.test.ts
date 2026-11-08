@@ -278,6 +278,7 @@ describe("the morning job", () => {
       canMessageFreely: async () => false, // the owner hasn't written in 24 hours
       markBriefWaiting: async (r: { id: string }, now: Date) => void Object.assign(mem.tables.restaurants.find((x) => x.id === r.id)!, { brief_waiting_since: now.toISOString() }),
       sendBrief: async () => ({ sent: true }),
+      waitingDrafts: async () => [],
     }));
     const { runMorningStep } = await import("@/lib/morning");
     const a = mem.tables.restaurants.find((r) => r.id === A)!;

@@ -1,5 +1,7 @@
 import "server-only";
 import { getSupabase } from "@/lib/supabase";
+import type { OpenerRequest } from "@/lib/openers";
+import { isPlaceholderNumber } from "@/lib/switches";
 import { sendImage, sendText, sendWithApprovalButtons, type ButtonTarget } from "@/lib/whatsapp";
 
 export type OwnerChannel = { restaurantId: string; from: string; to: string };
@@ -8,12 +10,23 @@ export type OwnerChannel = { restaurantId: string; from: string; to: string };
 // (Messages to the owner aren't customer sends, so the safety rules don't apply.)
 // withButtons: true = Approve / Edit / Skip for the draft on screen; a target = for that one draft.
 // mediaUrl: a picture sent just before the text (e.g. the preview of an email draft), with mediaCaption under it.
+// opener: set by anything DinerAI sends on its own (not a reply to the owner). If the
+// owner hasn't messaged in 24 hours it's held, and that template opens the chat
+// (lib/outbox.ts, lib/openers.ts). Demo restaurants on placeholder numbers never hold.
 export async function messageOwner(
   channel: OwnerChannel,
   text: string,
   withButtons: boolean | ButtonTarget = false,
-  { mediaUrl = null, mediaCaption = "📧 How the email will look:" }: { mediaUrl?: string | null; mediaCaption?: string } = {},
+  {
+    mediaUrl = null,
+    mediaCaption = "📧 How the email will look:",
+    opener,
+  }: { mediaUrl?: string | null; mediaCaption?: string; opener?: OpenerRequest } = {},
 ) {
+  if (opener && (text || mediaUrl) && !isPlaceholderNumber(channel.to)) {
+    const { sendOrHold } = await import("@/lib/outbox");
+    if (!(await sendOrHold(channel, { text, withButtons, mediaUrl, mediaCaption }, opener))) return;
+  }
   if (mediaUrl) await sendAndLog(channel, () => sendImage(channel.from, channel.to, mediaUrl, mediaCaption), "[image] " + mediaCaption);
   if (!text) return;
   await sendAndLog(

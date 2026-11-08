@@ -5,6 +5,7 @@ import { releaseQueue } from "@/lib/followups";
 import type { Send } from "@/lib/google-jobs";
 import { deliverWaitingBrief } from "@/lib/morning";
 import { messageOwner, type OwnerChannel } from "@/lib/notify";
+import { OPENER_SHOW_ID } from "@/lib/openers";
 import { runCommand } from "./commands";
 import { handleConversation } from "./conversation";
 import { photoPost } from "./flows";
@@ -53,9 +54,24 @@ export async function handleMessage(input: {
 
     // This morning's brief was held because the owner hadn't messaged in 24 hours:
     // now they have, so it goes first (unless they're asking for it anyway).
+    const hadBrief = Boolean(ctx.restaurant.brief_waiting_since);
     if (ctx.restaurant.brief_waiting_since && command?.name !== "run_brief") {
       await deliverWaitingBrief(ctx.restaurant, channel, ctx.now);
       ctx = await loadRestaurantContext(restaurantId);
+    }
+
+    // Anything held for the 24-hour window (alerts, the rota, reports) goes now,
+    // oldest first. A "Show me" tap on an opener is answered by exactly that.
+    const { deliverOutbox } = await import("@/lib/outbox");
+    const held = await deliverOutbox(ctx.restaurantId, channel).catch((err) => {
+      console.error("Couldn't deliver the held messages", err);
+      return 0;
+    });
+    if (input.buttonPayload === OPENER_SHOW_ID) {
+      const { deliverWaitingReview } = await import("@/lib/review/deliver");
+      const review = await deliverWaitingReview(ctx.restaurant, channel, new Date()).catch(() => false);
+      if (!held && !review && !hadBrief) await send("✅ You're all caught up: nothing is waiting for you right now.");
+      return;
     }
 
     // The business review waited for the owner's next message (WhatsApp's 24-hour

@@ -27,6 +27,8 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/reward/[to
       await messageOwner(
         channel,
         `🎁 *Reward redeemed* at ${formatLondon(new Date(reward.redeemed_at!))}\n${customer.name} (${customer.email}) used: *${reward.reward}*`,
+        false,
+        { opener: "none" },
       );
     }
   }

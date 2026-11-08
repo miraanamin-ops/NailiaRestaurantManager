@@ -71,7 +71,7 @@ export async function promptOwnerForGoLive(restaurant: Restaurant, agent: AgentN
   if (Date.now() - last < PROMPT_EVERY_HOURS * 60 * 60 * 1000) return false;
   const channel = ownerChannel(restaurant);
   if (!channel) return false;
-  await messageOwner(channel, goLivePromptText(restaurant, missing, agent));
+  await messageOwner(channel, goLivePromptText(restaurant, missing, agent), false, { opener: "update" });
   const { error } = await getSupabase().from("restaurants").update({ pilot_prompted_at: new Date().toISOString() }).eq("id", restaurant.id);
   if (error) console.error("Couldn't record the go-live prompt", error);
   await logAction({ restaurantId: restaurant.id, actor: "system", action: "setting", detail: `Asked the owner for the ${agent} go-live details: ${missing.join(", ")}`, data: { field: "pilot_prompted_at" } });

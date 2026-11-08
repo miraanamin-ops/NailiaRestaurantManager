@@ -67,7 +67,7 @@ export async function salesFromMedia(sender: SalesSender, file: IncomingFile, no
       // Only the owner can confirm a new layout: ask them, and tell the staff member.
       const r = await restaurantFor(sender.restaurantId);
       const channel = r && ownerChannel(r);
-      if (channel) await messageOwner(channel, `👥 Your staff (${sender.number.replace(/^whatsapp:/, "")}) sent a sales file.\n\n${outcome.message}`);
+      if (channel) await messageOwner(channel, `👥 Your staff (${sender.number.replace(/^whatsapp:/, "")}) sent a sales file.\n\n${outcome.message}`, false, { opener: "update" });
       await sender.reply("📊 Thanks! That's a new file layout, so I've asked the owner to check the columns once. After that, files like it import straight away.");
     } else {
       await sender.reply(outcome.message);

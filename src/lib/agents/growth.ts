@@ -339,7 +339,7 @@ export async function liveGrowthBirthdays(restaurant: Restaurant, today: string)
     for (const d of outcome.drafts) {
       if (d.kind === "reply") await saveLiveDraft(restaurant, d, "Weekly birthday email", "hold", jobId);
       // No birthday offer yet: Growth asks the owner once (the birthday email waits for it).
-      else if (channel) await messageOwner(channel, `🎂 ${d.question}`);
+      else if (channel) await messageOwner(channel, `🎂 ${d.question}`, false, { opener: "update" });
     }
     return true;
   } catch (err) {

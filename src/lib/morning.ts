@@ -1,7 +1,7 @@
 import "server-only";
 import { loadRestaurantContext } from "@/lib/assistant";
 import { proposeBirthdayCampaign } from "@/lib/bot/flows";
-import { canMessageFreely, markBriefWaiting, sendBrief } from "@/lib/brief";
+import { canMessageFreely, markBriefWaiting, sendBrief, waitingDrafts } from "@/lib/brief";
 import { londonLongDate, londonWeekday, londonYmd } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import { queueResultsMessage } from "@/lib/format";
@@ -156,7 +156,13 @@ export async function runMorningStep(
       // WhatsApp's 24-hour rule is about real time, whatever the simulated date.
       if (channel && !(await canMessageFreely(fresh, simulating ? new Date() : now))) {
         await markBriefWaiting(fresh, now);
-        brief = "waiting for the owner to message (24h rule)";
+        // On a real WhatsApp sender, an approved template opens the chat ("Show me").
+        const { sendBriefOpener } = await import("@/lib/outbox");
+        const opened = await sendBriefOpener(fresh, channel, (await waitingDrafts(fresh.id)).length, new Date()).catch((err) => {
+          console.error("Couldn't send the brief opener", err);
+          return false;
+        });
+        brief = opened ? "waiting for the owner's tap (opener sent)" : "waiting for the owner to message (24h rule)";
       } else if (channel) {
         // A simulated day's brief says so (a footnote: it doesn't make a quiet day send one).
         const note = simulating ? simulatedLabel(londonLongDate(now)) : undefined;

@@ -115,7 +115,7 @@ const reviewCheck: JobHandler = {
     const channel = r?.active ? ownerChannel(r) : null;
     if (!r || !channel) return { skipped: "no owner WhatsApp yet" };
     const ctx = await loadRestaurantContext(r.id, { realTime: true });
-    const result = await runReviewCheck(ctx, (text, withButtons) => messageOwner(channel, text, withButtons));
+    const result = await runReviewCheck(ctx, (text, withButtons) => messageOwner(channel, text, withButtons, { opener: "alert" }));
     // A review whose reply couldn't be drafted isn't marked handled: the retry picks it up.
     if (result.failed) throw new Error(`${result.failed} review(s) couldn't be handled`);
     return result;
@@ -128,7 +128,7 @@ const gmAlerts: JobHandler = {
     const r = await restaurantFor(job);
     const channel = r?.active ? ownerChannel(r) : null;
     if (!r || !channel || (await gmMode(r)) !== "live") return { skipped: "the GM isn't live" };
-    return { released: await releaseAlerts(r, (text, withButtons) => messageOwner(channel, text, withButtons), new Date()) };
+    return { released: await releaseAlerts(r, (text, withButtons) => messageOwner(channel, text, withButtons, { opener: "alert" }), new Date()) };
   },
 };
 
@@ -225,7 +225,7 @@ const rotaWeekJob: JobHandler = {
     const channel = r?.active ? ownerChannel(r) : null;
     if (!r || !channel) return { skipped: "no owner WhatsApp yet" };
     const { suggestRota } = await import("@/lib/rota/build");
-    return suggestRota(r, { now: new Date(), send: (text, withButtons = false, mediaUrl = null) => messageOwner(channel, text, withButtons, { mediaUrl }), mode: "urgent", actor: "scheduled job", rebuild: false });
+    return suggestRota(r, { now: new Date(), send: (text, withButtons = false, mediaUrl = null) => messageOwner(channel, text, withButtons, { mediaUrl, opener: "rota" }), mode: "urgent", actor: "scheduled job", rebuild: false });
   },
 };
 

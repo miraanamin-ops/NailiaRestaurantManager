@@ -41,6 +41,8 @@ export async function POST(_req: NextRequest, ctx: RouteContext<"/api/offer/[tok
       await messageOwner(
         channel,
         `🎁 *Offer redeemed* at ${formatLondon(new Date(send.redeemed_at!))}\n${who} used *${campaign.offer}* from "${campaign.name}".`,
+        false,
+        { opener: "none" },
       );
     }
   }

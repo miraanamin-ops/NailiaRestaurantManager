@@ -1,0 +1,46 @@
+{
+  "_about": "WhatsApp templates that open the conversation when the owner hasn't messaged in 24 hours. Read by src/lib/openers.ts (sending) and scripts/whatsapp-templates.mjs (creating them in Twilio and submitting them to Meta). Meta rules: no variable at the very start or end, sample values for every variable. Changing the wording means a new name (_v2) and a new approval.",
+  "showButtonId": "opener:show",
+  "templates": {
+    "brief": {
+      "name": "dinerai_brief_ready_v1",
+      "body": "Good morning {{1}}. Your DinerAI brief for {{2}} is ready: {{3}}. Tap below to see it.",
+      "sample": { "1": "Sam", "2": "Ember & Spice Grill", "3": "3 things to approve" }
+    },
+    "review": {
+      "name": "dinerai_review_alert_v1",
+      "body": "Hi {{1}}, {{2}} has a new {{3}}-star Google review. I've drafted a reply for you to check.",
+      "sample": { "1": "Sam", "2": "Ember & Spice Grill", "3": "2" }
+    },
+    "feedback": {
+      "name": "dinerai_customer_feedback_v1",
+      "body": "Hi {{1}}, a customer rated their visit to {{2}} {{3}} out of 5 and left a private note. Tap below to read it.",
+      "sample": { "1": "Sam", "2": "Ember & Spice Grill", "3": "2" }
+    },
+    "report": {
+      "name": "dinerai_report_ready_v1",
+      "body": "Hi {{1}}, your {{2}} DinerAI report for {{3}} is ready. Tap below to see it.",
+      "sample": { "1": "Sam", "2": "October", "3": "Ember & Spice Grill" }
+    },
+    "rota": {
+      "name": "dinerai_rota_ready_v1",
+      "body": "Hi {{1}}, next week's rota for {{2}} is ready to check. Tap below to see it.",
+      "sample": { "1": "Sam", "2": "Ember & Spice Grill" }
+    },
+    "update": {
+      "name": "dinerai_update_waiting_v1",
+      "body": "Hi {{1}}, there's an update for {{2}} that needs a quick look. Tap below to see it.",
+      "sample": { "1": "Sam", "2": "Ember & Spice Grill" }
+    }
+  },
+  "_other": "Templates sent by their own code (not the outbox), listed here so the script submits them too. Body and button must match the code that creates them.",
+  "other": {
+    "business_review": {
+      "name": "dinerai_business_review_ready_v1",
+      "body": "Your DinerAI business review is ready, {{1}}. Tap below and I'll send it to you here.",
+      "textBody": "Your DinerAI business review is ready, {{1}}. Reply to see it.",
+      "button": { "title": "See my review", "id": "review:open" },
+      "sample": { "1": "Sam" }
+    }
+  }
+}

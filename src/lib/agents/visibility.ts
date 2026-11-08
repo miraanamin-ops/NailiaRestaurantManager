@@ -285,19 +285,19 @@ export async function runVisibilityLive(job: AgentJob): Promise<JobOutcome> {
       // Fixed wording (never the AI's), to the staff number that sent the photo.
       await messageOwner({ restaurantId: restaurant.id, from: restaurant.whatsapp_from, to: input.photo.staff_number }, tip);
     } else if (channel) {
-      await messageOwner(channel, `📷 I can't use that photo for Google: ${outcome.output.photo_check?.reason ?? "it won't work"}\n\n${tip.replace(/^📸 Thanks! /, "")}`);
+      await messageOwner(channel, `📷 I can't use that photo for Google: ${outcome.output.photo_check?.reason ?? "it won't work"}\n\n${tip.replace(/^📸 Thanks! /, "")}`, false, { opener: "update" });
     }
     return { ...base, verdict: "unusable" };
   }
 
   if (outcome.kind === "question") {
-    if (channel) await messageOwner(channel, `❓ ${outcome.question}`);
+    if (channel) await messageOwner(channel, `❓ ${outcome.question}`, false, { opener: "update" });
     return { ...base, verdict: "question" };
   }
 
   const out = outcome.output;
   if (out.type === "content_brief") {
-    if (channel) await messageOwner(channel, contentBriefText(out));
+    if (channel) await messageOwner(channel, contentBriefText(out), false, { opener: "update" });
     return { ...base, verdict: outcome.checker.verdict };
   }
 
@@ -344,7 +344,7 @@ export async function runVisibilityLive(job: AgentJob): Promise<JobOutcome> {
       mode: present ? "present" : "hold",
     });
   }
-  if (present && channel) await messageOwner(channel, draftMessage(draft, restaurant), true);
+  if (present && channel) await messageOwner(channel, draftMessage(draft, restaurant), true, { opener: "update" });
   return { ...base, verdict: outcome.checker.verdict };
 }
 

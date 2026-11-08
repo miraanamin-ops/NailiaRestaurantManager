@@ -174,6 +174,8 @@ export async function loginBroken(conn: GoogleConnection, reason: string, restau
   await messageOwner(
     channel,
     `🔌 *Google needs you to sign in again.* I can't see new reviews or post replies until you do. It takes 30 seconds:\n${appUrl()}/settings/google?r=${owned.id}`,
+    false,
+    { opener: "update" },
   );
   check(await supabase.from("google_connections").update({ reconnect_sent_on: today }).eq("id", conn.id));
 }

@@ -149,7 +149,7 @@ export async function deliverMonthlyReport(r: Restaurant, report: { token: strin
   const channel = ownerChannel(r);
   if (opts.whatsapp && channel) {
     const { messageOwner } = await import("@/lib/notify");
-    await messageOwner(channel, monthlyWhatsApp(report.data, report.url), false, { mediaUrl: pdfLink(report.token), mediaCaption: `${monthName(report.data.figures.month)} report (PDF)` });
+    await messageOwner(channel, monthlyWhatsApp(report.data, report.url), false, { mediaUrl: pdfLink(report.token), mediaCaption: `${monthName(report.data.figures.month)} report (PDF)`, opener: "report" });
     out.whatsapp = true;
   }
   if (!opts.email) return out;

@@ -77,6 +77,7 @@ export type Restaurant = {
   last_brief_on: string | null;
   last_brief_at: string | null;
   brief_waiting_since: string | null;
+  last_opener_at?: string | null; // supabase/062
   last_report_on: string | null;
   // Morning job retries (added in step 9)
   morning_lock_until: string | null;

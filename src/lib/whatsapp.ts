@@ -1,9 +1,10 @@
 import "server-only";
 import twilio from "twilio";
 import { BUTTON_IDS, HOURS_IDS, QUESTION_IDS } from "@/lib/bot/parse";
-import { REVIEW_OPEN_ID } from "@/lib/review/config";
 import { clip } from "@/lib/text";
 import { isPlaceholderNumber, whatsAppSendAllowed } from "@/lib/switches";
+import { fillTemplate, templateFor, type OpenerKind } from "@/lib/openers";
+import templateList from "@/lib/whatsapp-templates.json";
 
 // Quick-reply template with Approve / Edit / Skip buttons. Created in the
 // Twilio account automatically the first time it's needed.
@@ -228,23 +229,38 @@ export async function sendDinaChoices(from: string, to: string, msg: DinaChoices
 }
 
 // ---------- Templates for outside the 24-hour window ----------
-// These need Meta's approval (submitted from the Twilio console once we have a
-// real WhatsApp sender); until then they're only used off the sandbox.
+// These need Meta's approval: scripts/whatsapp-templates.mjs creates them in
+// Twilio and submits them (wording: lib/whatsapp-templates.json). They can't be
+// sent on the sandbox.
 //   dinerai_business_review_ready_v1  "Your DinerAI business review is ready",
 //                                     button "See my review" (lib/review/deliver.ts)
-export const REVIEW_READY_TEMPLATE = "dinerai_business_review_ready_v1";
-export const OUTSIDE_WINDOW_TEMPLATES = [REVIEW_READY_TEMPLATE] as const;
+//   the openers (lib/openers.ts)      "Show me", sent by lib/outbox.ts
+const REVIEW_READY = templateList.other.business_review;
+export const REVIEW_READY_TEMPLATE = REVIEW_READY.name;
 
-export async function sendReviewReadyTemplate(from: string, to: string, firstName: string) {
-  const sid = await contentSid(REVIEW_READY_TEMPLATE, () => ({
-    variables: { 1: "there" },
+function quickReplyTemplate(t: { name: string; body: string; textBody?: string; sample: Record<string, string>; button?: { title: string; id: string } }) {
+  const button = t.button ?? { title: "Show me", id: templateList.showButtonId };
+  return contentSid(t.name, () => ({
+    variables: t.sample,
     types: {
-      "twilio/quick-reply": { body: "Your DinerAI business review is ready, {{1}}. Tap below and I'll send it to you here.", actions: [{ title: "See my review", id: REVIEW_OPEN_ID }] },
-      "twilio/text": { body: "Your DinerAI business review is ready, {{1}}. Reply to see it." },
+      "twilio/quick-reply": { body: t.body, actions: [{ title: button.title, id: button.id }] },
+      "twilio/text": { body: t.textBody ?? t.body.replace(/ Tap below[^.]*\.$/, " Reply to see it.") },
     },
   }));
+}
+
+export async function sendReviewReadyTemplate(from: string, to: string, firstName: string) {
+  const sid = await quickReplyTemplate(REVIEW_READY);
   const msg = await createMessage({ from, to, contentSid: sid, contentVariables: JSON.stringify({ 1: firstName }) });
   return { sid: msg.sid, body: `Your DinerAI business review is ready, ${firstName}. [See my review]` };
+}
+
+// An opener ("Show me"): the owner's tap opens the chat and the held messages follow.
+export async function sendOpenerTemplate(from: string, to: string, kind: OpenerKind, vars: Record<string, string>) {
+  const t = templateFor(kind);
+  const sid = await quickReplyTemplate(t);
+  const msg = await createMessage({ from, to, contentSid: sid, contentVariables: JSON.stringify(vars) });
+  return { sid: msg.sid, body: `${fillTemplate(t.body, vars)} [Show me]` };
 }
 
 // A picture (e.g. the email preview), with an optional caption. Twilio fetches it from mediaUrl, which must be public.
