@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { fill, site } from "@/content/site";
-import { PRICE_GBP, trialDays } from "@/lib/billing/config";
+import { PRICE_GBP } from "@/lib/billing/config";
 import { Check, CtaButton, ExampleTag, Eyebrow, SectionTitle } from "./_components/bits";
 import { CountUp } from "./_components/count-up";
 import { Gate } from "./_components/gate";
@@ -14,7 +14,7 @@ import "./landing.css";
 // Served at "/" on dinerai.co.uk (src/proxy.ts rewrites it to /site); on the app
 // domain and previews it's at /site.
 
-const values = { days: trialDays(), price: PRICE_GBP };
+const values = { price: PRICE_GBP };
 const t = (text: string) => fill(text, values);
 
 export const metadata: Metadata = {

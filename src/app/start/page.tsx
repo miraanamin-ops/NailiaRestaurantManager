@@ -4,7 +4,7 @@ import { Check } from "@/app/site/_components/bits";
 import { Wordmark } from "@/app/site/_components/wordmark";
 import { Turnstile } from "@/components/turnstile";
 import { fill, site } from "@/content/site";
-import { onboardingRequiresPayment, PRICE_GBP, publicSignupOpen, trialDays } from "@/lib/billing/config";
+import { onboardingRequiresPayment, PRICE_GBP, publicSignupOpen } from "@/lib/billing/config";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { startSignup } from "./actions";
 import "../site/landing.css";
@@ -40,10 +40,11 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
   const q = await searchParams;
   const one = (k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]);
   const s = site.signup;
-  const values = { days: trialDays(), price: PRICE_GBP };
+  const values = { price: PRICE_GBP };
   const t = (text: string) => fill(text, values);
   const siteKey = turnstileSiteKey();
   const invite = one("invite") ?? "";
+  const referral = (one("ref") ?? "").slice(0, 40);
   const open = publicSignupOpen();
   const inviteFirst = !open || Boolean(invite);
   const error = one("error");
@@ -120,6 +121,18 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
             <input name="whatsapp" type="tel" required autoComplete="tel" inputMode="tel" placeholder="07700 900123" className={input} />
             <span className="mt-1.5 block text-[13px] font-normal text-fog">{s.fields.whatsappHint}</span>
           </label>
+          {referral ? (
+            <ReferralField value={referral} className={input} label={label} />
+          ) : (
+            <details className="rounded-xl border border-ink-800 px-4 py-3">
+              <summary className="cursor-pointer list-none text-[14px] text-fog">
+                <span className="text-signal underline underline-offset-4">{s.fields.referral}</span>
+              </summary>
+              <div className="pt-3">
+                <ReferralField value="" className={input} label={label} />
+              </div>
+            </details>
+          )}
           {!inviteFirst && (
             <details className="rounded-xl border border-ink-800 px-4 py-3">
               <summary className="cursor-pointer list-none text-[14px] text-fog">
@@ -186,6 +199,25 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
         )}
       </aside>
     </main>
+  );
+}
+
+// Recommended by another restaurant: their code (filled in from /start?ref=CODE).
+function ReferralField({ value, className, label }: { value: string; className: string; label: string }) {
+  const f = site.signup.fields;
+  return (
+    <label className={label}>
+      {f.referral} <span className="font-normal text-fog">{f.inviteOptional}</span>
+      <input
+        name="ref"
+        defaultValue={value}
+        placeholder={f.referralHint}
+        autoComplete="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        className={`${className} font-mono uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal`}
+      />
+    </label>
   );
 }
 

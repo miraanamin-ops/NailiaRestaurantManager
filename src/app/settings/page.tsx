@@ -17,7 +17,7 @@ import { getSupabase } from "@/lib/supabase";
 import { dryRunContext, googleDryRun } from "@/lib/gate-rules";
 import { saveBenchmark, saveBrand, saveDetails, saveSettingsAllergens, saveSettingsMenu, uploadSheet } from "./actions";
 import { safeTemplateUrls, TEMPLATE_KINDS, TEMPLATE_LABELS, TEMPLATE_LINK_DAYS } from "@/lib/templates/links";
-import { BillingBanner, BillingCard } from "./billing-card";
+import { BillingBanner, BillingCard, ReferralCard } from "./billing-card";
 import { BuilderCard, CalendarCard, CostCard, HistoryCard, OwnerCard, VoiceCard } from "./profile-cards";
 import { OutsideDataCard, TeamsCard } from "./outside-cards";
 
@@ -136,6 +136,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
       <div className="space-y-5 [&>*]:scroll-mt-20">
         <div id="billing" className="scroll-mt-20" />
         <BillingCard r={r} />
+        <ReferralCard r={r} />
         <div id="google" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Google Business Profile</h2>

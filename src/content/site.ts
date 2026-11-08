@@ -6,14 +6,14 @@
 // - Every made-up number is marked as an example (the "example" fields).
 // - Only describe what works today. Anything not built yet says "Coming soon".
 //
-// {days} is replaced with the free trial length (TRIAL_DAYS, default 14) and
-// {price} with the monthly price.
+// {price} is replaced with the monthly price. The free trial is one calendar
+// month ("first month free", lib/billing/config.ts).
 
 export const site = {
   meta: {
     title: "DinerAI: your AI restaurant manager, on WhatsApp",
     description:
-      "DinerAI drafts your review replies, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve on WhatsApp with one tap. £{price} a month, {days} days free, no contract.",
+      "DinerAI drafts your review replies, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve on WhatsApp with one tap. £{price} a month, first month free, no contract.",
   },
 
   nav: [
@@ -31,7 +31,7 @@ export const site = {
     subline:
       "DinerAI drafts the work: replies to your reviews, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve with one tap. Nothing reaches a customer without your yes.",
     secondary: "See how it works",
-    note: "{days} days free, then £{price} a month. No contract, no setup fee.",
+    note: "First month free, then £{price} a month. No contract, no setup fee.",
     phoneLabel: "Example conversation",
   },
 
@@ -204,7 +204,7 @@ export const site = {
     title: "One plan. Everything included.",
     price: "£{price}",
     per: "a month",
-    trial: "{days} days free",
+    trial: "First month free",
     points: [
       "No contract. Cancel any time and keep it until the end of the month you've paid for.",
       "No setup fee.",
@@ -247,7 +247,7 @@ export const site = {
 
   final: {
     title: "Get your evenings back.",
-    body: "Set up in about 20 minutes. {days} days free. Cancel any time.",
+    body: "Set up in about 20 minutes. First month free. Cancel any time.",
   },
 
   // The sign-up page (/start on the app domain).
@@ -267,19 +267,21 @@ export const site = {
       invite: "Pilot invite code",
       inviteOptional: "(optional)",
       inviteHint: "Have a pilot code? No card needed.",
+      referral: "Recommended by another restaurant?",
+      referralHint: "Their DinerAI code, e.g. EMBER-7K2Q",
       terms: "I agree to the Terms and the Data processing agreement, and have read the Privacy notice.",
     },
     submit: "Continue to card details",
     submitInvite: "Start setting up",
     pendingCheckout: "Opening secure checkout…",
     pendingInvite: "Setting you up…",
-    after: "Next, Stripe asks for your card. You won't be charged until your {days} day free trial ends, and you can cancel before then.",
-    steps: ["Your details and a password", "Card on Stripe, {days} days free", "Straight into setup", "Set up in about 20 minutes"],
+    after: "Next, Stripe asks for your card. You won't be charged until your free month ends, and you can cancel before then. Founding restaurants: add your code on the card page.",
+    steps: ["Your details and a password", "Card on Stripe, first month free", "Straight into setup", "Set up in about 20 minutes"],
     // While ONBOARDING_REQUIRES_PAYMENT is off: no card, straight into setup with Dina.
     stepsInvite: ["Your details and invite code", "Straight into setup, no card", "Chat with Dina here or on WhatsApp", "Set up in about 20 minutes"],
     stepsLabel: "What happens next",
     pilotStep: "Pilot code: no card needed",
-    reassurance: ["£{price} a month after the trial", "No contract, no setup fee", "Cancel any time in settings"],
+    reassurance: ["£{price} a month after your free month", "No contract, no setup fee", "Cancel any time in settings"],
     cancelled: "No problem, nothing was charged. Your details are saved: press the button again whenever you're ready.",
     sentTitle: "Check your email",
     sentBody: "We've sent you a login link. Open it on this phone and you'll go straight to setting up.",
@@ -293,6 +295,7 @@ export const site = {
       terms: "Please tick the box to agree to the Terms and the Data processing agreement.",
       invite: "That invite code isn't valid, or has been used up. Check it, or leave the box empty.",
       invite_only: "Sign-ups are by invite only right now. Enter your pilot code, or email us.",
+      referral: "We couldn't find that recommendation code. Check it with the restaurant that gave it to you, or leave the box empty.",
       wait: "Too many login emails just now. Please wait a minute and try again.",
       send: "Couldn't send the login email. Please try again.",
       captcha: "Please complete the “I'm human” check and try again.",
@@ -312,7 +315,7 @@ export const site = {
   },
 } as const;
 
-// Fills in {days} and {price}.
-export function fill(text: string, values: { days: number; price: number }) {
-  return text.replaceAll("{days}", String(values.days)).replaceAll("{price}", String(values.price));
+// Fills in {price}.
+export function fill(text: string, values: { price: number }) {
+  return text.replaceAll("{price}", String(values.price));
 }

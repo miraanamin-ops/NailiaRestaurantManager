@@ -25,8 +25,12 @@ export async function GET(req: NextRequest) {
   const r = await getRestaurant(restaurantId).catch(() => null);
   if (!r?.owner_email) return go("/start?error=checkout");
 
+  // The card is saved: setup with Dina opens (the webhook does the same; made once).
+  const { startOnboarding } = await import("@/lib/onboarding/sessions");
+  await startOnboarding(r.id, { channel: "web" }).catch((err) => console.error("Couldn't start onboarding after Checkout", err));
+  const next = `/onboarding/chat?r=${r.id}`;
   const owner = await currentOwner();
-  if (owner?.restaurantIds.includes(r.id)) return go(`/onboarding?r=${r.id}`);
+  if (owner?.restaurantIds.includes(r.id)) return go(next);
 
-  return go(`/login?paid=1&next=${encodeURIComponent(`/onboarding?r=${r.id}`)}`);
+  return go(`/login?paid=1&next=${encodeURIComponent(next)}`);
 }

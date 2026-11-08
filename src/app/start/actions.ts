@@ -9,6 +9,8 @@ import { createTrialCheckout } from "@/lib/billing/checkout";
 import { DPA_VERSION, onboardingRequiresPayment, PRIVACY_VERSION, publicSignupOpen, TERMS_VERSION } from "@/lib/billing/config";
 import { startOnboarding } from "@/lib/onboarding/sessions";
 import { claimInvite, cleanInviteCode } from "@/lib/billing/invites";
+import { findReferrer } from "@/lib/billing/referrals";
+import { canRefer } from "@/lib/billing/referrals-rules";
 import { planSignup } from "@/lib/billing/signup-plan";
 import { normaliseWhatsApp } from "@/lib/onboarding/steps";
 import { createRestaurantFromSignup, getRestaurant, restaurantsForEmail, updateRestaurantFields } from "@/lib/onboarding/store";
@@ -28,6 +30,8 @@ import { verifyTurnstile } from "@/lib/turnstile";
 //   - Otherwise the restaurant is made (inactive) and the owner goes to Stripe Checkout
 //     for the free trial; /start/return then sends them on to onboarding.
 //     On the live site that's only open once PUBLIC_SIGNUP=true (invite-only before).
+// A referral code (field "ref", or /start?ref=CODE) records who recommended them:
+// that restaurant gets a free month once this one pays (lib/billing/referrals.ts).
 // Protected by a hidden bot field, Cloudflare Turnstile (when its keys are set) and
 // rate limits: 5 sign-ups per connection an hour, 20 a day.
 export async function startSignup(form: FormData) {
@@ -42,7 +46,9 @@ export async function startSignup(form: FormData) {
   const password = String(form.get("password") ?? "");
   const inviteTyped = get("invite");
   const invite = cleanInviteCode(inviteTyped);
-  const back = (error: string) => redirect(`/start?error=${error}${inviteTyped ? `&invite=${encodeURIComponent(inviteTyped.slice(0, 40))}` : ""}`);
+  const referralTyped = get("ref").slice(0, 40);
+  const back = (error: string) =>
+    redirect(`/start?error=${error}${inviteTyped ? `&invite=${encodeURIComponent(inviteTyped.slice(0, 40))}` : ""}${referralTyped ? `&ref=${encodeURIComponent(referralTyped)}` : ""}`);
   if (!ownerName || !restaurantName) back("missing");
   if (!looksLikeEmail(email)) back("email");
   if (!whatsapp) back("whatsapp");
@@ -70,6 +76,9 @@ export async function startSignup(form: FormData) {
 
   const plan = planSignup(existing, restaurantName);
   if (plan.kind === "login") return toLogin(plan.next);
+  // Recommended by another restaurant: who, checked before anything is made.
+  const referrer = referralTyped ? await findReferrer(referralTyped) : null;
+  if (referralTyped && (!referrer || !canRefer(referrer, { email }))) back("referral");
   if (!invite && !publicSignupOpen()) back("invite_only");
   if (invite && !(await claimInvite(invite))) back("invite");
 
@@ -78,7 +87,14 @@ export async function startSignup(form: FormData) {
   const restaurant = plan.kind === "continue" ? await getRestaurant(plan.restaurantId) : await createRestaurantFromSignup({ ownerName, email, restaurantName, whatsapp });
   // A login account is only ever made for an email with no restaurant before.
   const brandNew = plan.kind === "new" && !existing.length;
-  const accepted = { terms_accepted_at: new Date().toISOString(), terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, dpa_version: DPA_VERSION };
+  const accepted = {
+    terms_accepted_at: new Date().toISOString(),
+    terms_version: TERMS_VERSION,
+    privacy_version: PRIVACY_VERSION,
+    dpa_version: DPA_VERSION,
+    ...(referrer && referrer.id !== restaurant.id && !restaurant.referred_by ? { referred_by: referrer.id } : {}),
+  };
+  if (referrer) after(() => logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: `Recommended by ${referrer.name} (code ${referrer.referral_code})`, data: { referrer: referrer.id } }));
 
   // No paywall while onboarding is being tested (ONBOARDING_REQUIRES_PAYMENT off):
   // every sign-up has an invite code (checked above) and goes straight into
@@ -95,8 +111,9 @@ export async function startSignup(form: FormData) {
 
   if (invite) {
     await updateRestaurantFields(restaurant.id, { ...accepted, pilot_invite_code: invite });
+    await startOnboarding(restaurant.id, { channel: "web" });
     await logAction({ restaurantId: restaurant.id, actor: "owner", action: "billing", detail: `Signed up with pilot code ${invite}: no card needed`, data: { invite } });
-    const next = `/onboarding?r=${restaurant.id}`;
+    const next = `/onboarding/chat?r=${restaurant.id}`;
     if (await signIn(email, password, restaurant.id, brandNew)) redirect(next);
     return toLogin(next);
   }

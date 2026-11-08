@@ -95,10 +95,34 @@ async function submit(fields: Record<string, string>) {
   throw new Error("no redirect");
 }
 
+describe("referral codes at sign-up", () => {
+  const REF = "aaaaaaaa-1111-4111-8111-111111111111";
+  const referrer = () => db.tables.restaurants.push({ id: REF, name: "Cardamom Corner", owner_email: "sam@cardamom.test", referral_code: "CARDAMOM-7K2Q", active: true });
+  const created = () => db.tables.restaurants.find((r) => r.id !== REF)!;
+
+  test("a valid code (typed any way) records who recommended them", async () => {
+    referrer();
+    await submit({ invite: "pilot-one", ref: " cardamom-7k2q " });
+    expect(created().referred_by).toBe(REF);
+  });
+
+  test("an unknown code is refused before anything is made, and kept in the form", async () => {
+    referrer();
+    expect(await submit({ invite: "pilot-one", ref: "NOPE-AAAA" })).toBe("/start?error=referral&invite=pilot-one&ref=NOPE-AAAA");
+    expect(db.tables.restaurants).toHaveLength(1);
+  });
+
+  test("an owner can't recommend themselves", async () => {
+    referrer();
+    expect(await submit({ invite: "pilot-one", email: "sam@cardamom.test", ref: "CARDAMOM-7K2Q" })).toMatch(/error=referral|\/login/);
+    expect(db.tables.restaurants.filter((r) => r.referred_by)).toHaveLength(0);
+  });
+});
+
 describe("pilot invite codes", () => {
   test("a valid code skips Stripe: the code is stored, the account made and the owner goes straight into onboarding", async () => {
     const to = await submit({ invite: "pilot-one" });
-    expect(to).toBe(`/onboarding?r=${db.tables.restaurants[0].id}`);
+    expect(to).toBe(`/onboarding/chat?r=${db.tables.restaurants[0].id}`);
     expect(createTrialCheckout).not.toHaveBeenCalled();
     const r = db.tables.restaurants[0];
     expect(r).toMatchObject({ pilot_invite_code: "PILOT-ONE", active: false, terms_version: expect.any(String) });
@@ -125,7 +149,7 @@ describe("pilot invite codes", () => {
 
   test("works on the live site while sign-up is invite-only", async () => {
     process.env.VERCEL_ENV = "production";
-    expect(await submit({ invite: "PILOT-ONE" })).toBe(`/onboarding?r=${db.tables.restaurants[0]?.id}`);
+    expect(await submit({ invite: "PILOT-ONE" })).toBe(`/onboarding/chat?r=${db.tables.restaurants[0]?.id}`);
     expect(db.tables.restaurants[0].pilot_invite_code).toBe("PILOT-ONE");
   });
 

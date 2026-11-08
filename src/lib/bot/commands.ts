@@ -45,6 +45,7 @@ const HELP_TEXT = `🛠️ *Commands*
 - *MONTHLY REPORT*: last month's report as a PDF (*MONTHLY REPORT SEPTEMBER* for another month). It comes on its own early each month
 - *EMAIL PREVIEWS*: see the automatic emails (confirm, welcome, "how was your visit?")
 - *EXPORT CUSTOMERS*: a download link for your customer list
+- *REFER*: your code to recommend DinerAI to another restaurant (a month free for you when they join)
 - *SPREADSHEETS*: your menu costs, team and daily takings sheets to fill in (send them back here), and an example till export
 - Send the day's sales and I'll forecast your days and find you more profit. Best is your till's *sales-by-item file* (CSV or Excel, or upload it on the sales page); else sales by the hour; else a *photo of your till report* (Z-report), or type the total, e.g. *we took £2,340, 180 orders*
 - *SALES*: last 7 days' sales and the sales page link
@@ -198,6 +199,12 @@ export async function runCommand(command: Command, turn: Turn) {
       );
     case "export_customers":
       return exportCustomersCommand(turn);
+    case "refer": {
+      const { referralCodeOf, referralLink } = await import("@/lib/billing/referrals");
+      const { referralShareText } = await import("@/lib/billing/referrals-rules");
+      const code = await referralCodeOf(r);
+      return send(referralShareText(code, referralLink(code)));
+    }
     case "spreadsheets": {
       const { spreadsheetsText } = await import("@/lib/templates/message");
       return send(spreadsheetsText(r.id));

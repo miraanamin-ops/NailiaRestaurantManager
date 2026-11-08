@@ -19,6 +19,28 @@ export function BillingBanner({ r }: { r: Restaurant }) {
   );
 }
 
+// Recommend a restaurant: the owner's code and link (step 47). Shown to running
+// restaurants only. One month free for each one that becomes a paying customer.
+export async function ReferralCard({ r }: { r: Restaurant }) {
+  if (!r.active) return null;
+  const { referralCodeOf, referralLink } = await import("@/lib/billing/referrals");
+  const code = await referralCodeOf(r).catch(() => null); // before supabase/063: no card
+  if (!code) return null;
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">Recommend a restaurant</h2>
+      <p className="text-stone-700">
+        Know another owner who&apos;d like DinerAI? Give them your code. When they&apos;ve had their free month and paid their first, <strong>you get a month free</strong>. No limit.
+      </p>
+      <p className="font-mono text-2xl font-bold tracking-wider">{code}</p>
+      <p className="break-all text-sm text-stone-600">
+        Or send them this link: <a className="underline" href={referralLink(code)}>{referralLink(code)}</a>
+      </p>
+      <p className="text-sm text-stone-600">On WhatsApp, text REFER to get it there.</p>
+    </Card>
+  );
+}
+
 // Plan, status and the "Manage billing" button (Stripe's Customer Portal).
 export function BillingCard({ r }: { r: Restaurant }) {
   const { standing } = billingStanding(r);

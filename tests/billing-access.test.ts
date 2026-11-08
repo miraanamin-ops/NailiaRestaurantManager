@@ -3,7 +3,7 @@
 // it running; a cancelled or unpaid subscription doesn't.
 import { describe, expect, test } from "vitest";
 import { billingNotice, billingStanding, shouldBeActive } from "@/lib/billing/access";
-import { publicSignupOpen, trialDays } from "@/lib/billing/config";
+import { publicSignupOpen } from "@/lib/billing/config";
 import { isLiveKey } from "@/lib/billing/stripe";
 
 describe("who may run", () => {
@@ -70,21 +70,10 @@ describe("configuration", () => {
     expect(publicSignupOpen({ ...stripe })).toBe(true);
     expect(publicSignupOpen({ VERCEL_ENV: "preview", PUBLIC_SIGNUP: "true" })).toBe(false);
   });
-  test("live Stripe keys are refused", () => {
+  test("live Stripe keys are recognised (allowed only on the live site: tests/referrals.test.ts)", () => {
     expect(isLiveKey("sk_live_abc")).toBe(true);
     expect(isLiveKey("rk_live_abc")).toBe(true);
     expect(isLiveKey("sk_test_abc")).toBe(false);
     expect(isLiveKey("rk_test_abc")).toBe(false);
-  });
-  test("trial length comes from TRIAL_DAYS, 14 by default", () => {
-    const before = process.env.TRIAL_DAYS;
-    delete process.env.TRIAL_DAYS;
-    expect(trialDays()).toBe(14);
-    process.env.TRIAL_DAYS = "30";
-    expect(trialDays()).toBe(30);
-    process.env.TRIAL_DAYS = "nonsense";
-    expect(trialDays()).toBe(14);
-    if (before === undefined) delete process.env.TRIAL_DAYS;
-    else process.env.TRIAL_DAYS = before;
   });
 });

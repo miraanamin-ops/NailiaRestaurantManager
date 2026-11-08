@@ -1,7 +1,7 @@
 import "server-only";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { CHECKOUT_TAG, trialDays } from "./config";
+import { CHECKOUT_TAG, trialEnd } from "./config";
 import { getStripe } from "./stripe";
 
 // Stripe Checkout (the card page) and the Customer Portal (Manage billing).
@@ -30,18 +30,20 @@ export async function ensureStripeCustomer(r: Restaurant): Promise<string> {
   return row?.stripe_customer_id ?? customer.id;
 }
 
-// A Checkout page for the £99 a month subscription with the free trial.
-// The card is collected now; the first charge is when the trial ends.
+// A Checkout page for the £99 a month subscription with the free month.
+// The card is collected now; the first charge is when the trial ends. Owners can
+// type a promotion code (FOUNDER) on Stripe's page.
 export async function createTrialCheckout(r: Restaurant, base: string): Promise<string> {
   const customer = await ensureStripeCustomer(r);
-  const days = trialDays();
+  const end = trialEnd(new Date());
   const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
     customer,
     client_reference_id: r.id,
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
     payment_method_collection: "always",
-    subscription_data: { metadata: { restaurant_id: r.id }, ...(days > 0 ? { trial_period_days: days } : {}) },
+    subscription_data: { metadata: { restaurant_id: r.id }, ...(end ? { trial_end: Math.floor(end.getTime() / 1000) } : {}) },
+    allow_promotion_codes: true,
     metadata: { restaurant_id: r.id },
     locale: "en-GB",
     integration_identifier: CHECKOUT_TAG,

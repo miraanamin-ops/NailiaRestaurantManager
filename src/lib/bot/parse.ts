@@ -109,7 +109,7 @@ export type Command =
   | { name: "reward" | "qr" | "birthday_campaign" | "campaign_results" | "which_report" }
   | { name: "my_email"; email: string }
   | { name: "reset_onboarding" }
-  | { name: "export_customers" | "email_previews" | "run_feedback" | "run_business_review" | "spreadsheets" }
+  | { name: "export_customers" | "email_previews" | "run_feedback" | "run_business_review" | "spreadsheets" | "refer" }
   | { name: "add_staff" | "remove_staff"; number: string }
   | { name: "staff" | "sales" | "run_weather" }
   | { name: "test_forecast"; on: boolean }
@@ -170,6 +170,7 @@ export function parseCommand(body: string, todayWeekday: number): Command | null
   if (email) return { name: "my_email", email: email[1].toLowerCase() };
   if (t === "RESET ONBOARDING" || t === "RESET SETUP") return { name: "reset_onboarding" };
   if (/^EXPORT( MY)? (CUSTOMERS|CUSTOMER LIST|LIST)$/.test(t)) return { name: "export_customers" };
+  if (/^(REFER|REFERRAL|REFERRALS|MY REFERRAL CODE|REFERRAL CODE|RECOMMEND)$/.test(t)) return { name: "refer" };
   if (t === "EMAIL PREVIEWS" || t === "EMAIL PREVIEW" || t === "PREVIEW EMAILS") return { name: "email_previews" };
   if (t === "RUN FEEDBACK") return { name: "run_feedback" };
   if (/^(SPREADSHEETS?|SHEETS|TEMPLATES?)$/.test(t)) return { name: "spreadsheets" };

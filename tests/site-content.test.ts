@@ -25,7 +25,7 @@ describe("landing page copy", () => {
   });
 
   test("trial length and price are filled in", () => {
-    expect(fill(site.hero.note, { days: 14, price: 99 })).toBe("14 days free, then £99 a month. No contract, no setup fee.");
-    expect(strings(site).map((s) => fill(s, { days: 14, price: 99 })).filter((s) => /\{(days|price)\}/.test(s))).toEqual([]);
+    expect(fill(site.hero.note, { price: 99 })).toBe("First month free, then £99 a month. No contract, no setup fee.");
+    expect(strings(site).map((s) => fill(s, { price: 99 })).filter((s) => /\{(days|price)\}/.test(s))).toEqual([]);
   });
 });

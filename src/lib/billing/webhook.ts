@@ -43,6 +43,17 @@ async function apply(event: Stripe.Event): Promise<WebhookResult> {
   await db.from("stripe_events").update({ restaurant_id: r.id }).eq("id", event.id);
   await logAction({ restaurantId: r.id, actor: "stripe", action: "billing", detail: plan.detail, data: { event: event.id, type: event.type } });
   if (plan.alert) await alertBuilder(`billing:${event.type}:${r.id}`, `${r.name}: ${plan.alert}`);
+  // Card saved and trial started: setup with Dina opens (also done on the way
+  // back from Checkout; whichever comes first, it's made once).
+  if (event.type === "checkout.session.completed") {
+    const { startOnboarding } = await import("@/lib/onboarding/sessions");
+    await startOnboarding(r.id, { channel: "web" });
+  }
+  if (event.type === "invoice.paid") {
+    const { creditReferralIfDue } = await import("./referrals");
+    const fresh = check(await db.from("restaurants").select("*").eq("id", r.id).single<Restaurant>());
+    if (fresh) await creditReferralIfDue(fresh, event.data.object as Stripe.Invoice);
+  }
   await syncActive(r.id);
   return "applied";
 }

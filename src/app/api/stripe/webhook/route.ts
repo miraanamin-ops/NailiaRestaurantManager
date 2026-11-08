@@ -5,7 +5,7 @@ import { handleStripeEvent } from "@/lib/billing/webhook";
 
 // Stripe's events (set up in Stripe > Developers > Webhooks):
 //   checkout.session.completed, customer.subscription.created / updated / deleted,
-//   invoice.payment_failed
+//   invoice.payment_failed, invoice.paid (referral credits)
 // Only events signed with STRIPE_WEBHOOK_SECRET are accepted. A repeat of an event
 // already handled gets a 200 and does nothing (lib/billing/webhook.ts).
 export async function POST(req: NextRequest) {

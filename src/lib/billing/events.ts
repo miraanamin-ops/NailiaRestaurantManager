@@ -11,6 +11,7 @@ export const HANDLED = [
   "customer.subscription.updated",
   "customer.subscription.deleted",
   "invoice.payment_failed",
+  "invoice.paid", // a recommended restaurant's first payment earns its recommender a free month
 ] as const;
 
 export type BillingUpdate = BillingFields & {
@@ -97,6 +98,11 @@ export function planEvent(event: Stripe.Event, current: { billing_event_at?: str
         detail: `Payment failed (${amount}, attempt ${inv.attempt_count ?? 1})`,
         alert: `Payment failed: ${amount}, attempt ${inv.attempt_count ?? 1}. Stripe will retry; the restaurant keeps running and settings shows a banner.`,
       };
+    }
+    case "invoice.paid": {
+      const inv = event.data.object;
+      if (!inv.amount_paid) return null; // the free month's £0 invoice
+      return { fields: {}, detail: `Payment received: £${(inv.amount_paid / 100).toFixed(2)}` };
     }
     default:
       return null;

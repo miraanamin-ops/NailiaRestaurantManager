@@ -6,7 +6,7 @@ import { qrPackUrl, summaryLines } from "@/lib/onboarding/engine";
 import { STEPS } from "@/lib/onboarding/steps";
 import { testToolsOn } from "@/lib/test-mode";
 import { billingStanding } from "@/lib/billing/access";
-import { PRICE_GBP, trialDays } from "@/lib/billing/config";
+import { PRICE_GBP } from "@/lib/billing/config";
 import { resetSetup, startTrial } from "@/app/onboarding/actions";
 import { loadOnboarding } from "@/app/onboarding/load";
 import { button, Card, Frame, secondary } from "@/app/onboarding/ui";
@@ -100,7 +100,7 @@ function TrialCard({ restaurantId, problem }: { restaurantId: string; problem?: 
     <div className="mt-5 rounded-2xl bg-stone-900 p-5 text-white">
       <p className="text-lg font-semibold">Start your free trial</p>
       <p className="mt-1 text-sm text-stone-300">
-        {trialDays()} days free, then £{PRICE_GBP} a month. No contract. DinerAI starts working for you once your trial has started.
+        Your first month is free, then £{PRICE_GBP} a month. No contract. DinerAI starts working for you once your trial has started.
       </p>
       {problem && (
         <p className="mt-2 text-sm text-amber-300">
