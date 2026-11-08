@@ -2,7 +2,7 @@
 // tests can prove them: who gets it, when it's ready, what the message says,
 // and that every number in the message matches the data.
 import { londonParts, londonTime } from "@/lib/clock";
-import { DEADLINE_MINUTES, EVENTS_IN_MESSAGE, GREAT_SCORE, MESSAGE_MAX, OPEN_TO_REAL_SITES, PART_AFTER, RECEIPT, SEND_CLAIM_STALE_MINUTES, type Part } from "./config";
+import { DEADLINE_MINUTES, EVENTS_IN_MESSAGE, GREAT_SCORE, MESSAGE_MAX, OPEN_TO_REAL_SITES, PART_AFTER, RECEIPT, REPLIES_PER_DAY, SEND_CLAIM_STALE_MINUTES, type Part } from "./config";
 import type { PartResults } from "./types";
 
 const MINUTE = 60_000;
@@ -94,7 +94,8 @@ export function sectionLines(f: ReviewFacts): string[] {
     if (u === 0) lines.push("💬 You've replied to every review. Nice work.");
     else {
       const head = u === 1 ? "💬 1 review has no reply." : `💬 ${u} reviews have no reply.`;
-      const tail = d >= u ? (u === 1 ? " I've drafted a reply." : " I've drafted replies to all of them.") : d > 0 ? ` I've drafted replies to ${d} so far.` : " I'll draft replies next.";
+      // (At most 15 a day: the rest follow each morning, owner's call of 8 Nov 2026.)
+      const tail = d >= u ? (u === 1 ? " I've drafted a reply." : " I've drafted replies to all of them.") : d > 0 ? ` I've drafted replies to ${d} so far, the most important first, and I'll draft ${REPLIES_PER_DAY} more each morning.` : " I'll draft replies next.";
       lines.push(head + tail);
     }
   }

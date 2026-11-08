@@ -30,6 +30,12 @@ export const MESSAGE_MAX = 1000;
 // this many reviews per job; approved replies go to Google this far apart.
 export const REVIEWS_MAX = 200;
 export const REPLY_BATCH = 10;
+// Old unanswered reviews (owner's call, 8 Nov 2026): at most this many reply drafts
+// a day, the worst-rated then the newest first (day one in the business review, then
+// each morning before the brief), and none for a review over a year old. Keeps the
+// Claude cost of a big backlog small, and the owner's approvals manageable.
+export const REPLIES_PER_DAY = 15;
+export const BACKLOG_MAX_AGE_DAYS = 365;
 export const REPLY_RELEASE_SECONDS = 10;
 
 // The themes section needs at least this many reviews.

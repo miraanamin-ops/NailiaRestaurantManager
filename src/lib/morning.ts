@@ -65,6 +65,9 @@ async function mondayReportHeadline(r: Restaurant, due: Date) {
 // The brief: the GM's when it's live (see gmMode), today's otherwise.
 // Plus, at most once a day, one setup reminder as a footnote (guide/nudge.ts), marked only once the brief went.
 async function briefFor(r: Restaurant, channel: OwnerChannel, now: Date, opts: { extra?: string[]; note?: string }) {
+  // Old unanswered reviews: today's 15 drafted first, so they're in this brief (review/parts/reviews.ts).
+  const { dailyBacklog } = await import("@/lib/review/parts/reviews");
+  await dailyBacklog(r, now).catch((err) => console.error("The daily review replies failed", err));
   const { setupNudgeFor, markNudged } = await import("@/lib/onboarding/guide/nudge");
   const nudge = await setupNudgeFor(r.id, now).catch((err) => (console.error("Setup reminder failed", err), null));
   const withNudge = nudge ? { ...opts, note: [opts.note, nudge.text].filter(Boolean).join("\n\n") } : opts;

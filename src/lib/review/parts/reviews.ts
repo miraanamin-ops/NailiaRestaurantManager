@@ -5,7 +5,7 @@ import { googleModeFor } from "@/lib/google";
 import { linkFor } from "@/lib/google/connections";
 import { draftReviewReply } from "@/lib/google-jobs";
 import { getSupabase } from "@/lib/supabase";
-import { REPLY_BATCH, REVIEWS_MAX } from "../config";
+import { BACKLOG_MAX_AGE_DAYS, REPLIES_PER_DAY, REPLY_BATCH, REVIEWS_MAX } from "../config";
 import { passedEveryCheck } from "../rules";
 import { logTimeSaved } from "../time-saved";
 import type { PartResults } from "../types";
@@ -24,7 +24,15 @@ async function latestReviews(restaurantId: string) {
   return (check(await db().from("reviews").select("*").eq("restaurant_id", restaurantId).order("review_date", { ascending: false }).limit(REVIEWS_MAX)) ?? []) as ReviewRow[];
 }
 
-const unanswered = (rows: ReviewRow[]) => rows.filter((r) => !r.replied && !r.reply_text);
+// Unanswered and under a year old (replying years later looks odd), the worst-rated
+// first, then the newest: the order old reviews get their drafts in.
+export function backlogOrder<T extends { rating: number | null; review_date: string; replied: boolean; reply_text: string | null }>(rows: T[], now = new Date()): T[] {
+  const since = new Date(now.getTime() - BACKLOG_MAX_AGE_DAYS * 86_400_000).toISOString();
+  return rows
+    .filter((r) => !r.replied && !r.reply_text && r.review_date >= since)
+    .sort((a, b) => Number((a.rating ?? 5) > 3) - Number((b.rating ?? 5) > 3) || b.review_date.localeCompare(a.review_date));
+}
+const unanswered = (rows: ReviewRow[], now = new Date()) => backlogOrder(rows, now);
 
 export async function syncPart(ctx: PartContext): Promise<PartResults["reviews_sync"]> {
   const r = ctx.restaurant;
@@ -88,7 +96,7 @@ const CLAIM_MINUTES = 10;
 export async function backlogPart(ctx: PartContext) {
   const r = ctx.restaurant;
   if (!ctx.connected) return { unanswered: 0, drafted: 0, positiveReady: 0, negative: 0 };
-  const rows = unanswered(await latestReviews(r.id));
+  const rows = unanswered(await latestReviews(r.id), ctx.now);
   // Reviews that already have a reply draft waiting (e.g. from the hourly check) are picked up, not drafted again.
   const existing = rows.length
     ? ((check(await db().from("drafts").select("id, review_id, status, business_review_id").eq("restaurant_id", r.id).in("review_id", rows.map((x) => x.id))) ?? []) as Pick<Draft, "id" | "review_id" | "status" | "business_review_id">[])
@@ -97,7 +105,9 @@ export async function backlogPart(ctx: PartContext) {
   const adopt = waiting.filter((d) => !d.business_review_id && d.status === "pending").map((d) => d.id);
   if (adopt.length) check(await db().from("drafts").update({ business_review_id: ctx.review.id }).eq("restaurant_id", r.id).in("id", adopt));
   const covered = new Set(waiting.map((d) => d.review_id));
-  const todo = rows.filter((x) => !covered.has(x.id)).slice(0, REPLY_BATCH);
+  // Day one drafts at most REPLIES_PER_DAY; the rest come REPLIES_PER_DAY a morning (dailyBacklog).
+  const budget = Math.max(0, REPLIES_PER_DAY - waiting.filter((d) => d.business_review_id === ctx.review.id || adopt.includes(d.id)).length);
+  const todo = rows.filter((x) => !covered.has(x.id)).slice(0, Math.min(REPLY_BATCH, budget));
 
   if (todo.length) {
     // Claim them, so two runs (or the hourly check) never draft the same review twice.
@@ -136,5 +146,40 @@ export async function backlogPart(ctx: PartContext) {
   }
   const counts = backlogCounts(await reviewReplyDrafts(r.id, ctx.review.id), rows.length);
   const left = rows.length - waiting.length - todo.length;
-  return left > 0 ? continueWith(counts) : counts;
+  return left > 0 && budget - todo.length > 0 ? continueWith(counts) : counts;
 }
+
+// Each morning before the brief: the next REPLIES_PER_DAY old reviews get a held
+// reply draft, so they arrive in that brief for approval, until the backlog is clear.
+// Only once setup has finished and Google is connected (a finished business review).
+export async function dailyBacklog(r: import("@/lib/supabase").Restaurant, now: Date) {
+  const { data: review } = await db().from("business_reviews").select("id, google_connected, status").eq("restaurant_id", r.id).maybeSingle<{ id: string; google_connected: boolean | null; status: string }>();
+  if (!review?.google_connected) return { drafted: 0, skipped: "Google isn't connected" };
+  const rows = unanswered(await latestReviews(r.id), now);
+  if (!rows.length) return { drafted: 0 };
+  const existing = (check(await db().from("drafts").select("review_id, status").eq("restaurant_id", r.id).in("review_id", rows.map((x) => x.id))) ?? []) as { review_id: string; status: string }[];
+  const covered = new Set(existing.filter((d) => !["superseded", "withdrawn", "skipped"].includes(d.status)).map((d) => d.review_id));
+  // Today's own allowance: drafts already made today for old reviews count.
+  const dayStart = new Date(now.getTime() - 20 * 3_600_000).toISOString();
+  const { count: today } = await db().from("drafts").select("id", { count: "exact", head: true }).eq("restaurant_id", r.id).eq("kind", "review_reply").eq("request", BACKLOG_REQUEST).gte("created_at", dayStart);
+  const todo = rows.filter((x) => !covered.has(x.id)).slice(0, Math.max(0, REPLIES_PER_DAY - (today ?? 0)));
+  if (!todo.length) return { drafted: 0 };
+  const rctx = await loadRestaurantContext(r.id, { realTime: true });
+  const learning = await getLearningContext(r.id);
+  let drafted = 0;
+  for (let i = 0; i < todo.length; i += 3) {
+    await Promise.all(
+      todo.slice(i, i + 3).map(async (review) => {
+        try {
+          const draft = await draftReviewReply(rctx, learning, { ...review, rating: review.rating ?? 0 }, { mode: "hold", request: BACKLOG_REQUEST, live: undefined });
+          await logTimeSaved(r.id, "review_reply", draft.id);
+          drafted++;
+        } catch (err) {
+          console.error("Couldn't draft a reply for an old review", err);
+        }
+      }),
+    );
+  }
+  return { drafted, left: rows.length - covered.size - drafted };
+}
+const BACKLOG_REQUEST = "An older review with no reply (15 a day)";

@@ -84,9 +84,9 @@ beforeEach(() => {
   vi.doMock("@/lib/assistant", () => ({ loadRestaurantContext: async () => ({ restaurantId: R, restaurant: db.tables.restaurants[0], now: new Date() }) }));
   // The reply writer and its four checks stand in here (their own tests cover them).
   vi.doMock("@/lib/google-jobs", () => ({
-    draftReviewReply: async (_ctx: unknown, _l: unknown, review: { id: string; rating: number }) => {
+    draftReviewReply: async (_ctx: unknown, _l: unknown, review: { id: string; rating: number }, opts?: { request?: string }) => {
       drafted.push(review.id);
-      const row = { id: `draft-${review.id}`, restaurant_id: R, kind: "review_reply", status: "pending", content: `Thank you, ${review.id}!`, review_id: review.id, version: 1, held_at: new Date().toISOString(), waiting_for: null, approved_at: null, sent_at: null, created_at: new Date().toISOString(), checks: review.id === "rev-07" ? { ...allPass, facts: flagged } : allPass, agent_check: null, audience: "Google review" };
+      const row = { id: `draft-${review.id}`, restaurant_id: R, kind: "review_reply", status: "pending", content: `Thank you, ${review.id}!`, review_id: review.id, version: 1, held_at: new Date().toISOString(), waiting_for: null, approved_at: null, sent_at: null, created_at: new Date().toISOString(), checks: review.id === "rev-07" ? { ...allPass, facts: flagged } : allPass, agent_check: null, audience: "Google review", request: opts?.request ?? null };
       db.tables.drafts.push(row);
       Object.assign(db.tables.reviews.find((x) => x.id === review.id)!, { handled_at: new Date().toISOString(), claimed_at: null });
       return row;
@@ -106,7 +106,7 @@ describe("the backlog", () => {
     expect(db.tables.reviews.every((r) => r.handled_at)).toBe(true);
   });
 
-  test("replies in batches of 10, each review once, even when a round runs twice", async () => {
+  test("replies in batches of 10, each review once, even when a round runs twice; at most 15 on day one, the worst-rated first (8 Nov 2026)", async () => {
     const { backlogPart } = await import("@/lib/review/parts/reviews");
     const { isContinue } = await import("@/lib/review/parts");
     const first = await backlogPart(ctx(0));
@@ -116,11 +116,13 @@ describe("the backlog", () => {
     await backlogPart(ctx(1)); // the same round again (a retried job)
     const last = await backlogPart(ctx(2));
     expect(isContinue(last)).toBe(false);
-    expect(new Set(drafted).size).toBe(22);
-    expect(drafted).toHaveLength(22);
-    expect(last).toEqual({ unanswered: 22, drafted: 22, positiveReady: 15, negative: 6 });
+    expect(new Set(drafted).size).toBe(15);
+    expect(drafted).toHaveLength(15);
+    // The six 1 to 3 star reviews first, then the newest of the rest.
+    expect(drafted.slice(0, 6).sort()).toEqual(["rev-00", "rev-01", "rev-02", "rev-03", "rev-04", "rev-05"]);
+    expect(last).toEqual({ unanswered: 22, drafted: 15, positiveReady: 8, negative: 6 });
     expect(db.tables.drafts.every((d) => d.business_review_id === RV)).toBe(true);
-    expect(db.tables.time_saved_log).toHaveLength(22);
+    expect(db.tables.time_saved_log).toHaveLength(15);
   });
 
   test("Google not connected: nothing drafted", async () => {
@@ -141,13 +143,13 @@ describe("Approve all, the release and UNDO", () => {
     const { approveAllPositive } = await import("@/lib/review/replies");
     const now = new Date("2026-11-03T12:00:00Z");
     const { approved } = await approveAllPositive(db.tables.restaurants[0] as never, RV, now);
-    expect(approved).toBe(15);
+    expect(approved).toBe(8);
     const approvedIds = db.tables.drafts.filter((d) => d.status === "approved").map((d) => d.review_id);
-    expect(approvedIds).toHaveLength(15);
+    expect(approvedIds).toHaveLength(8);
     for (const id of approvedIds) expect(db.tables.reviews.find((r) => r.id === id)!.rating).toBeGreaterThanOrEqual(4);
     expect(approvedIds).not.toContain("rev-07"); // its reply was flagged
     const releases = queued.filter((q) => q.type === "review_reply_release");
-    expect(releases).toHaveLength(15);
+    expect(releases).toHaveLength(8);
     expect(releases[1].runAt!.getTime() - releases[0].runAt!.getTime()).toBe(10_000);
     // Nothing reached (dummy) Google yet: only the release does that.
     expect(db.tables.reviews.filter((r) => r.reply_text && r.reply_text !== "Thanks!")).toHaveLength(0);
@@ -162,15 +164,15 @@ describe("Approve all, the release and UNDO", () => {
     const releases = queued.filter((q) => q.type === "review_reply_release");
     for (const q of releases) await releaseReplyHandler.run({ payload: q.payload, restaurant_id: R } as never);
     const posted = () => db.tables.reviews.filter((r) => r.replied && r.reply_text !== "Thanks!");
-    expect(posted()).toHaveLength(15);
+    expect(posted()).toHaveLength(8);
     // A retried release job: the gate refuses a second post.
     const again = await releaseReplyHandler.run({ payload: releases[0].payload, restaurant_id: R } as never);
     expect(again).toMatchObject({ outcome: "blocked", reason: "duplicate" });
-    expect(posted()).toHaveLength(15);
+    expect(posted()).toHaveLength(8);
     const { undoLast } = await import("@/lib/undo");
     await undoLast(db.tables.restaurants[0] as never, new Date());
     expect(posted()).toHaveLength(0);
-    expect(db.tables.drafts.filter((d) => d.status === "withdrawn")).toHaveLength(15);
+    expect(db.tables.drafts.filter((d) => d.status === "withdrawn")).toHaveLength(8);
   });
 });
 
@@ -193,11 +195,11 @@ describe("the replies in the guided flow", () => {
       send: async (t: string, target?: { draftId?: string }) => void out.push({ text: t, buttons: target && typeof target === "object" && target.draftId ? [`approve:${target.draftId}`] : [] }),
     } as never;
     await flow.handleReviewFlow(turn, "GO", undefined);
-    expect(out.at(-1)!.text).toMatch(/I've drafted replies to 15 of your 4 to 5 star reviews/);
+    expect(out.at(-1)!.text).toMatch(/I've drafted replies to 8 of your 4 to 5 star reviews/);
     expect(out.at(-1)!.text).toMatch(/7 more need a closer look/);
     expect(out.at(-1)!.buttons).toEqual([`review:${RV}:replies:all`, `review:${RV}:replies:one`, `review:${RV}:replies:skip`]);
     await flow.handleReviewFlow(turn, "", `review:${RV}:replies:all`);
-    expect(out.at(-2)!.text).toMatch(/^✅ Approved 15 replies\. They're posted to your test Google page now/);
+    expect(out.at(-2)!.text).toMatch(/^✅ Approved 8 replies\. They're posted to your test Google page now/);
     expect(out.at(-1)!.text).toBe("Next? Up next: replies to the harder reviews.");
     await flow.handleReviewFlow(turn, "", `review:${RV}:next`);
     expect(out.at(-2)!.text).toMatch(/7 replies need your eye/);
@@ -208,5 +210,33 @@ describe("the replies in the guided flow", () => {
     await flow.afterReviewDecision(turn, { id: first, business_review_id: RV });
     expect(out.at(-1)!.text).toMatch(/^\*2 of 7\*/);
     for (const m of ["@/lib/notify", "@/lib/whatsapp"]) vi.doUnmock(m);
+  });
+});
+
+describe("old reviews, 15 a day (8 Nov 2026)", () => {
+  test("the order: 1 to 3 stars first, then the newest; none over a year old or already answered", async () => {
+    const { backlogOrder } = await import("@/lib/review/parts/reviews");
+    const now = new Date("2026-11-08T09:00:00Z");
+    const rows = [
+      { id: "a", rating: 5, review_date: "2026-11-01T00:00:00Z", replied: false, reply_text: null },
+      { id: "b", rating: 2, review_date: "2026-06-01T00:00:00Z", replied: false, reply_text: null },
+      { id: "c", rating: 4, review_date: "2026-10-01T00:00:00Z", replied: false, reply_text: null },
+      { id: "d", rating: 1, review_date: "2025-01-01T00:00:00Z", replied: false, reply_text: null }, // over a year old
+      { id: "e", rating: 3, review_date: "2026-11-02T00:00:00Z", replied: true, reply_text: "Thanks" }, // answered
+    ];
+    expect(backlogOrder(rows, now).map((r) => r.id)).toEqual(["b", "a", "c"]);
+  });
+
+  test("each morning the next 15 get a held draft (for that brief), once a day, only with Google connected", async () => {
+    const { dailyBacklog } = await import("@/lib/review/parts/reviews");
+    const r = db.tables.restaurants[0] as never;
+    const now = new Date(); // (the drafts are stamped with the real clock)
+    const saved = { ...(db.tables.business_reviews[0] as Record<string, unknown>) };
+    Object.assign(db.tables.business_reviews[0], { google_connected: false });
+    expect(await dailyBacklog(r, now)).toMatchObject({ drafted: 0, skipped: "Google isn't connected" });
+    Object.assign(db.tables.business_reviews[0], { ...saved, google_connected: true });
+    expect(await dailyBacklog(r, now)).toMatchObject({ drafted: 15, left: 7 });
+    expect(await dailyBacklog(r, now)).toMatchObject({ drafted: 0 }); // today's 15 are done
+    expect(await dailyBacklog(r, new Date(now.getTime() + 24 * 3_600_000))).toMatchObject({ drafted: 7, left: 0 });
   });
 });
