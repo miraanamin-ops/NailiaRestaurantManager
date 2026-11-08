@@ -28,8 +28,8 @@
       "sample": { "1": "Sam", "2": "Ember & Spice Grill" }
     },
     "update": {
-      "name": "dinerai_update_waiting_v1",
-      "body": "Hi {{1}}, there's an update for {{2}} that needs a quick look. Tap below to see it.",
+      "name": "dinerai_account_message_v2",
+      "body": "Hi {{1}}, DinerAI has a message for you about your {{2}} account. Tap below to see it.",
       "sample": { "1": "Sam", "2": "Ember & Spice Grill" }
     }
   },
