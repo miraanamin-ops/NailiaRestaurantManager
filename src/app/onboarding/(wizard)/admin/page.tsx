@@ -8,6 +8,7 @@ import { requireOwner } from "@/lib/auth";
 import { availableSteps, STEP_DEFS } from "@/lib/onboarding/flow";
 import { setupsForAdmin } from "@/lib/onboarding/dina/test-sites";
 import { Card, Frame } from "@/app/onboarding/ui";
+import { ImportsSection } from "./imports";
 import { UnansweredSection } from "./unanswered";
 import { checkGoogleInvitations, deleteTest, jumpTest, linkMyNumber, markGoogleAccepted, resetTest, startTest } from "./actions";
 
@@ -131,6 +132,7 @@ async function Admin({ searchParams }: Pick<PageProps<"/onboarding/admin">, "sea
       </form>
 
       <UnansweredSection />
+      <ImportsSection />
 
       <h2 className="mt-8 text-xl font-semibold">Test restaurants ({tests.length})</h2>
       <div className="mt-3 space-y-3">{tests.length ? tests.map(row) : <p className="text-sm text-stone-500">None yet.</p>}</div>

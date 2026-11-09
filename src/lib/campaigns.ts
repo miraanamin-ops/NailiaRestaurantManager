@@ -6,6 +6,7 @@ import { sendCampaignEmail } from "@/lib/email";
 import { isDummyAddress } from "@/lib/email/route";
 import { CAMPAIGN_GAP_DAYS, weeklyLimit } from "@/lib/gate-rules";
 import { newToken } from "@/lib/signups";
+import { importedContactReady } from "@/lib/customer-import/rules";
 import type { StructuredOffer } from "@/lib/offers";
 import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -71,6 +72,9 @@ type SegmentCustomer = {
   source: string;
   email_confirmed_at: string | null;
   deleted_at: string | null;
+  // An imported contact (064): not_contacted until their welcome email has gone.
+  import_status?: string | null;
+  bounced_at?: string | null;
 };
 
 // ---------- Dates (London) ----------
@@ -160,9 +164,10 @@ export function segmentRecipients(customers: SegmentCustomer[], segment: Segment
   if (segment === "birthdays_7d") inSegment = inSegment.filter((c) => hasBirthdayInNext7Days(c.birthday, now));
   else if (segment === "unredeemed_signups") inSegment = inSegment.filter((c) => c.source === "signup" && unredeemedIds.has(c.id));
 
-  // Safety rule: only customers with valid consent who haven't unsubscribed, and
-  // (double opt-in) whose email address has been confirmed.
-  const eligible = inSegment.filter((c) => c.marketing_opt_in && !c.unsubscribed_at && c.email_confirmed_at && !c.deleted_at);
+  // Safety rule: only customers with valid consent who haven't unsubscribed, whose
+  // address hasn't bounced, and (double opt-in) whose email has been confirmed, or (an
+  // imported contact) whose welcome email has gone out.
+  const eligible = inSegment.filter((c) => c.marketing_opt_in && !c.unsubscribed_at && !c.deleted_at && !c.bounced_at && importedContactReady(c));
   return { eligible, excluded: inSegment.length - eligible.length };
 }
 
@@ -172,7 +177,7 @@ export async function recipientsFor(restaurant: Restaurant, segment: Segment, no
     check(
       await supabase
         .from("customers")
-        .select("id, name, email, birthday, marketing_opt_in, unsubscribed_at, source, email_confirmed_at, deleted_at")
+        .select("id, name, email, birthday, marketing_opt_in, unsubscribed_at, source, email_confirmed_at, deleted_at, import_status, bounced_at")
         .eq("restaurant_id", restaurant.id)
         .returns<SegmentCustomer[]>(),
     ) ?? [];

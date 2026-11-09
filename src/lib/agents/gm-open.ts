@@ -6,6 +6,8 @@ import { getSupabase } from "@/lib/supabase";
 import { cancelImport, confirmImport, pendingImport } from "@/lib/sales/pos-import";
 import { answerSalesInWords, pendingSalesText, pendingZReport, receiveTypedTakings, type SalesSender, type ZRow } from "@/lib/sales/z-reports";
 import { stillOpen, type ConversationLine, type OpenItem, type RouterOutputType } from "./gm-rules";
+import { cancelPreview, chooseBasis, confirmImport as confirmCustomerImport, pendingPreview, type CustomerImport } from "@/lib/customer-import";
+import { basisQuestion, declarationQuestion } from "@/lib/customer-import/rules";
 
 // Everything Naila asked the owner and is still waiting on, so the GM can tell
 // whether a new message answers one of them, corrects it, or is about something
@@ -15,6 +17,7 @@ import { stillOpen, type ConversationLine, type OpenItem, type RouterOutputType 
 //   "file"     a sales file's columns, waiting for yes or no
 //   "question" a question a specialist (Growth, Insights) asked the owner
 //   "choice"   "which did you mean?" (context only: the clarified message is routed)
+//   "import"   a customer list the owner sent: how they agreed, then the declaration
 
 export type OpenState = {
   items: OpenItem[];
@@ -23,6 +26,7 @@ export type OpenState = {
   // The specialist's question or the choice card on screen, open or gone stale.
   question: Draft | null;
   choice: Draft | null;
+  customerImport: CustomerImport | null;
 };
 
 const minutesSince = (iso: string, now: Date) => Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000));
@@ -30,9 +34,10 @@ const minutesSince = (iso: string, now: Date) => Math.max(0, Math.round((now.get
 export async function openItemsFor(turn: Turn, active: Draft | null): Promise<OpenState> {
   const now = turn.ctx.now;
   const realNow = new Date();
-  const [z, pos] = await Promise.all([
+  const [z, pos, preview] = await Promise.all([
     pendingZReport({ restaurantId: turn.ctx.restaurantId, number: turn.owner }, now).catch(() => null),
     pendingImport(turn.ctx.restaurantId, now).catch(() => null),
+    pendingPreview(turn.ctx.restaurantId).catch(() => null),
   ]);
   const items: OpenItem[] = [];
   const sales = z && stillOpen(z.status === "needs_date" ? "sales_date" : z.status === "needs_replace" ? "sales_replace" : "sales_confirm", z.created_at, realNow) ? z : null;
@@ -43,6 +48,18 @@ export async function openItemsFor(turn: Turn, active: Draft | null): Promise<Op
   const file = pos && pos.mapping && stillOpen("file_layout", pos.created_at, realNow) ? { id: pos.id, mapping: pos.mapping } : null;
   if (file && pos) items.push({ ref: "file", kind: "file_layout", asks: "A sales file sent on WhatsApp has a new column layout: import it with the columns shown?", minutes_ago: minutesSince(pos.created_at, realNow) });
 
+  const customerImport = preview && stillOpen("customer_import", preview.created_at, realNow) ? preview : null;
+  if (customerImport) {
+    const n = customerImport.rows_to_add.toLocaleString("en-GB");
+    items.push({
+      ref: "import",
+      kind: "customer_import",
+      asks: customerImport.basis
+        ? `The owner said these ${n} people ${customerImport.basis === "opted_in" ? "opted in" : "are past customers given a chance to opt out"}. Waiting for YES to the declaration (or to be told they should confirm their email first).`
+        : `A customer list of ${n} new people: how did they agree to hear from the restaurant? (opted in / past customers given a chance to opt out / not sure)`,
+      minutes_ago: minutesSince(customerImport.created_at, realNow),
+    });
+  }
   const waiting = active?.waiting_for === "decision" ? active : null;
   const question = waiting?.kind === "agent_question" ? waiting : null;
   const choice = waiting?.kind === "choice" ? waiting : null;
@@ -55,7 +72,7 @@ export async function openItemsFor(turn: Turn, active: Draft | null): Promise<Op
   if (choice && stillOpen("choice", choice.created_at, realNow)) {
     items.push({ ref: "choice", kind: "choice", asks: `${choice.content} (about the owner's message: "${(choice.request ?? "").slice(0, 200)}")`, minutes_ago: minutesSince(choice.created_at, realNow) });
   }
-  return { items, sales, file, question, choice };
+  return { items, sales, file, question, choice, customerImport };
 }
 
 // The owner moved on (the GM routed their message somewhere else): a specialist's
@@ -75,6 +92,10 @@ export async function handleSalesRoute(turn: Turn, routed: RouterOutputType, ope
   if (routed.route === "answer_open" && routed.open_item === "sales" && open.sales) {
     const done = await answerSalesInWords(sender, open.sales, { decision: routed.decision, change: routed.sales }, turn.ctx.now);
     if (!done) await turn.send(routed.sales ? FIGURE_NOT_USABLE : "Should I save it? A yes saves it; or tell me what's different.");
+    return true;
+  }
+  if (routed.route === "answer_open" && routed.open_item === "import" && open.customerImport) {
+    await answerImport(turn, routed, open.customerImport);
     return true;
   }
   if (routed.route === "answer_open" && routed.open_item === "file" && open.file) {
@@ -105,11 +126,41 @@ export async function handleSalesRoute(turn: Turn, routed: RouterOutputType, ope
 // nobody has to use special words. Anything else carries on as before (false).
 export async function salesAnswerWithoutGm(turn: Turn, body: string, active: Draft | null) {
   const open = await openItemsFor(turn, null);
-  if (!open.sales && !open.file) return false;
+  if (!open.sales && !open.file && !open.customerImport) return false;
   const { routeMessage } = await import("./gm");
   const routed = await routeMessage(turn.ctx.restaurantId, turn.owner, body, active, { open: open.items, today: londonYmd(turn.ctx.now) });
   if (!routed || !["answer_open", "sales_entry"].includes(routed.output.route)) return false;
   return handleSalesRoute(turn, routed.output, open);
+}
+
+// The owner's answers about a customer list they sent: how these people agreed (any
+// words), then YES to the declaration; "not sure" can't be imported (and says why).
+async function answerImport(turn: Turn, routed: RouterOutputType, imp: CustomerImport) {
+  const r = turn.ctx.restaurant;
+  if (routed.import_basis && routed.import_basis !== imp.basis) {
+    const chosen = await chooseBasis(r, imp, routed.import_basis);
+    if (chosen.accepted && routed.double_opt_in) await setDoubleOptIn(r.id, imp.id, true);
+    return turn.send(chosen.text);
+  }
+  if (!imp.basis) return turn.send(basisQuestion());
+  if (routed.decision === "no") {
+    await cancelPreview(r.id, imp.id);
+    return turn.send("OK, I didn't import that list. Send it again whenever you're ready.");
+  }
+  const doubleOptIn = routed.double_opt_in ?? imp.double_opt_in;
+  if (routed.decision !== "yes") {
+    if (routed.double_opt_in !== null && routed.double_opt_in !== undefined) await setDoubleOptIn(r.id, imp.id, routed.double_opt_in);
+    return turn.send(`${routed.double_opt_in ? "Got it: each one will be asked to confirm their email first, and only those who do are added to your offers. " : ""}${declarationQuestion(imp.basis, r.name, imp.rows_to_add)}`);
+  }
+  const result = await confirmCustomerImport({ restaurant: r, importId: imp.id, basis: imp.basis, declaredBy: turn.owner, doubleOptIn });
+  if (!result.ok) return turn.send(result.text);
+  const { draftMessage } = await import("@/lib/format");
+  await turn.send(`✅ Added ${result.added.toLocaleString("en-GB")} customer${result.added === 1 ? "" : "s"} to your list. Nobody has been emailed yet: here's the first message they'd get, for you to approve.`);
+  return turn.send(draftMessage(result.draft, r), true);
+}
+
+async function setDoubleOptIn(restaurantId: string, importId: string, on: boolean) {
+  check(await getSupabase().from("customer_imports").update({ double_opt_in: on }).eq("restaurant_id", restaurantId).eq("id", importId));
 }
 
 // The conversation before the newest message, oldest first (what every agent reads).

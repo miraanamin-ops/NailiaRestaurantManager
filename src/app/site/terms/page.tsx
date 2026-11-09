@@ -3,7 +3,7 @@ import { COMPANY, CONTACT_EMAIL, LEGAL_ENTITY, SiteFrame } from "../frame";
 
 export const metadata: Metadata = { title: "Terms · DinerAI" };
 
-const UPDATED = "7 November 2026";
+const UPDATED = "9 November 2026";
 
 // Plain-English terms of use for restaurant owners.
 export default function SiteTerms() {
@@ -26,6 +26,12 @@ export default function SiteTerms() {
           You&apos;re responsible for what you approve, including prices, offers and claims, and for honouring offers sent to your customers. Please
           check drafts before approving them. Only add customers who have signed up through your {COMPANY} sign-up page or otherwise agreed to hear from
           you, and don&apos;t use the service to send anything unlawful, misleading or offensive.
+        </p>
+        <p className={p}>
+          If you import a customer list, you&apos;re responsible for having a lawful basis to contact everyone on it: that they opted in to hear
+          from you, or that they&apos;re past customers who bought from you and were given a chance to opt out when their details were taken. When you
+          import, you confirm which applies, and we record your answer, the time and the file. {COMPANY} sends each imported customer one welcome
+          email you approve, with a way to unsubscribe, before anything else, and won&apos;t import a list if you don&apos;t know how its customers agreed.
         </p>
 
         <h2 className={h2}>Your data</h2>

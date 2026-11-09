@@ -309,6 +309,9 @@ export async function unsubscribe(token: string, source: string, userAgent: stri
       }),
     );
     await logEvent(customer.restaurant_id, customer.id, "unsubscribed", source);
+    // Never added back by an import.
+    const { suppress } = await import("@/lib/customer-import/suppression");
+    await suppress(customer.restaurant_id, customer.email, "unsubscribed");
   }
   return customer;
 }

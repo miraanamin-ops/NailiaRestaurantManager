@@ -48,6 +48,12 @@ export default function SiteDpa() {
         <p className={p}>
           You make sure you&apos;re allowed to give us the information, for example that customers you import agreed to hear from you.
         </p>
+        <p className={p}>
+          You, as the controller, are responsible for the lawful basis of any personal data you import into {COMPANY}, including customer lists from
+          another system. At each import you tell us the basis (the customers opted in, or they are past customers given a chance to opt out) and confirm
+          it is true; we record that declaration, who made it, when, and a fingerprint of the file, and we process the imported data only on your
+          instructions. We never add back anyone who unsubscribed or asked for their data to be deleted.
+        </p>
 
         <h2 className={h2}>Questions</h2>
         <p className={p}>

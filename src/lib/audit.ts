@@ -25,6 +25,8 @@ export type AuditAction =
   | "undone"
   | "data_deleted" // a customer used "delete my data"
   | "exported" // the owner downloaded (or was sent a link to) their customer list
+  | "customers_imported" // the owner imported a customer list (basis and declaration in data; UNDO removes it)
+  | "import_removed" // a whole imported list removed (UNDO or Customers > Imports)
   | "staff_added" // ADD STAFF: a number that can send till reports and sales files
   | "staff_removed"
   | "sales_saved" // a till report was saved (by the owner or staff)
@@ -67,7 +69,7 @@ export type AuditEntry = {
 };
 
 // The owner's own decisions that UNDO can reverse.
-export const UNDOABLE: AuditAction[] = ["approved", "skipped", "edited", "setting", "staff_added", "staff_removed"];
+export const UNDOABLE: AuditAction[] = ["approved", "skipped", "edited", "setting", "staff_added", "staff_removed", "customers_imported"];
 
 // Never throws: a failed log line mustn't stop the action itself.
 export async function logAction(entry: {

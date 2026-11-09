@@ -24,7 +24,7 @@ export type Route = (typeof ROUTES)[number];
 // Something Naila asked the owner and is still waiting on. The GM decides whether a
 // new message answers it: a waiting question never swallows a message just because
 // it's waiting (that's how "Thursday looks quiet" once got read as an answer about Sunday).
-export const OPEN_KINDS = ["sales_confirm", "sales_date", "sales_replace", "file_layout", "agent_question", "choice"] as const;
+export const OPEN_KINDS = ["sales_confirm", "sales_date", "sales_replace", "file_layout", "agent_question", "choice", "customer_import"] as const;
 export type OpenKind = (typeof OPEN_KINDS)[number];
 export type OpenItem = { ref: string; kind: OpenKind; asks: string; minutes_ago: number };
 
@@ -66,6 +66,11 @@ export const RouterOutput = z.object({
     .describe("reputation only: a review the owner pasted or forwarded into the message; otherwise null"),
   open_item: z.string().nullable().describe("answer_open only: the ref of the waiting question this message answers; otherwise null"),
   decision: z.enum(["yes", "no"]).nullable().describe("answer_open only: yes (save it, go ahead, replace it) or no (don't save, cancel, keep the old one) when the owner said so; otherwise null"),
+  import_basis: z
+    .enum(["opted_in", "past_customers", "unknown"])
+    .nullable()
+    .describe("answer_open on a customer list import only: how the owner says these people agreed (opted_in: they opted in, e.g. a tick box; past_customers: they bought before and were given a chance to opt out; unknown: not sure or don't know); otherwise null"),
+  double_opt_in: z.boolean().nullable().describe("answer_open on a customer list import only: true if the owner wants them to confirm their email first, false if they say not to; otherwise null"),
   sales: SalesFigures.nullable().describe(
     "sales_entry: the figure the owner gave. answer_open on a sales question: only what the owner changed (e.g. basis net for 'it was before VAT', or a different day); null fields stay as they were. Otherwise null",
   ),
@@ -103,6 +108,7 @@ export function routerProblems(out: RouterOutputType, ctx: { openRefs?: string[]
     if (out.decision) problems.push("only answer_open carries a decision");
   }
   if (out.sales && out.route !== "sales_entry" && out.route !== "answer_open") problems.push("only sales_entry or answer_open carries sales figures");
+  if ((out.import_basis || (out.double_opt_in !== null && out.double_opt_in !== undefined)) && !(out.route === "answer_open" && out.open_item === "import")) problems.push("import_basis and double_opt_in only answer a waiting customer list import (answer_open, open_item import)");
   // A specialist can't save a figure: a day's sales given in answer to its question is still sales_entry.
   if (out.route === "answer_open" && out.open_item === "question" && out.sales?.amount != null)
     problems.push("a day's sales figure is sales_entry (code shows it back and saves it), even when it answers a specialist's question asking for it");

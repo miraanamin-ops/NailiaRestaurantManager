@@ -10,8 +10,16 @@ import { check } from "@/lib/drafts";
 import { addDays } from "@/lib/sales/format";
 import { londonYmd } from "@/lib/clock";
 import { getSupabase } from "@/lib/supabase";
+import { importHistory } from "@/lib/customer-import";
 
-// The owner's email list: how it's growing, who's who, the QR cards and the export.
+// The owner's email list: how it's growing, who's who, the QR cards, imports and the export.
+const IMPORT_STATUS: Record<string, string> = {
+  imported: "Welcome email waiting for your approval",
+  sending: "Sending welcome emails",
+  done: "Welcome emails sent",
+  paused: "Paused: too many bounced",
+  undone: "Removed",
+};
 // Only this restaurant's customers; deleted ones never show.
 export const metadata: Metadata = { title: "Customers · DinerAI", robots: { index: false, follow: false } };
 
@@ -32,6 +40,7 @@ type Row = {
   email_confirmed_at: string | null;
   unsubscribed_at: string | null;
   source: string | null;
+  import_status: string | null;
 };
 
 const DAY_MS = 86_400_000;
@@ -44,14 +53,17 @@ async function Customers({ searchParams }: Pick<PageProps<"/customers">, "search
     check(
       await getSupabase()
         .from("customers")
-        .select("id, name, email, birthday, created_at, email_confirmed_at, unsubscribed_at, source")
+        .select("id, name, email, birthday, created_at, email_confirmed_at, unsubscribed_at, source, import_status")
         .eq("restaurant_id", r)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(2000)
         .returns<Row[]>(),
     ) ?? [];
-  const confirmed = all.filter((c) => c.email_confirmed_at && !c.unsubscribed_at);
+  // On the list: confirmed their email, or (imported) their welcome email has gone.
+  const onList = (c: Row) => !c.unsubscribed_at && (Boolean(c.email_confirmed_at) || c.import_status === "welcomed");
+  const confirmed = all.filter(onList);
+  const imports = await importHistory(r).catch(() => []);
   const weekAgo = new Date(now.getTime() - 7 * DAY_MS).toISOString();
   const twoWeeksAgo = new Date(now.getTime() - 14 * DAY_MS).toISOString();
   const joined = (c: Row) => c.email_confirmed_at ?? c.created_at;
@@ -64,7 +76,15 @@ async function Customers({ searchParams }: Pick<PageProps<"/customers">, "search
   const q = (one("q") ?? "").trim().toLowerCase();
   const list = (q ? all.filter((c) => c.name.toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q)) : all).slice(0, 100);
   const status = (c: Row) =>
-    c.unsubscribed_at ? <Pill>Unsubscribed</Pill> : c.email_confirmed_at ? <Pill tone="signal">On the list</Pill> : <Pill tone="amber">Not confirmed</Pill>;
+    c.unsubscribed_at ? (
+      <Pill>Unsubscribed</Pill>
+    ) : onList(c) ? (
+      <Pill tone="signal">On the list</Pill>
+    ) : c.import_status === "not_contacted" ? (
+      <Pill tone="amber">Imported, not yet contacted</Pill>
+    ) : (
+      <Pill tone="amber">Not confirmed</Pill>
+    );
 
   return (
     <Page>
@@ -74,11 +94,18 @@ async function Customers({ searchParams }: Pick<PageProps<"/customers">, "search
         title="Your email list"
         sub="People who signed up with your QR code and confirmed their email."
         action={
-          <a href={`/export/customers?r=${r}`} className={btnSecondary}>
-            <Icon name="download" className="h-4 w-4" /> Export
-          </a>
+          <span className="flex gap-2">
+            <a href={`/customers/import?r=${r}`} className={btnSecondary}>
+              <Icon name="upload" className="h-4 w-4" /> Import customers
+            </a>
+            <a href={`/export/customers?r=${r}`} className={btnSecondary}>
+              <Icon name="download" className="h-4 w-4" /> Export
+            </a>
+          </span>
         }
       />
+      {one("done") && <p className="mb-4 rounded-xl bg-emerald-950/40 px-4 py-3 text-[14px] text-[#c8f03c]">✓ {one("done")}</p>}
+      {one("oops") && <p className="mb-4 rounded-xl bg-amber-950/40 px-4 py-3 text-[14px] text-amber-200">{one("oops")}</p>}
       <div className="space-y-8">
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           <Tile label="On your list" value={confirmed.length.toLocaleString("en-GB")} foot="Can get your offers" />
@@ -138,6 +165,30 @@ async function Customers({ searchParams }: Pick<PageProps<"/customers">, "search
                 )}
               </div>
             </Section>
+            {imports.length > 0 && (
+              <Section title="Imports">
+                <div className="divide-y divide-[#1e221b] rounded-2xl bg-[#171a14]">
+                  {imports.map((imp) => (
+                    <div key={imp.id} className="space-y-1 px-4 py-3 text-[13px] text-[#a3a99d]">
+                      <div className="text-[14px] text-[#edefe8]">
+                        {new Date(imp.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" })}: {imp.rows_added.toLocaleString("en-GB")} customers
+                        {imp.file_name ? ` (${imp.file_name})` : ""}
+                      </div>
+                      <div>{imp.basis === "opted_in" ? "They opted in" : "Past customers, given a chance to opt out"}{imp.double_opt_in ? " · asked to confirm first" : ""}</div>
+                      <div>
+                        {IMPORT_STATUS[imp.status] ?? imp.status} · sent {imp.sent} · bounced {imp.bounced} · unsubscribed {imp.unsubscribed}
+                      </div>
+                      {imp.status !== "undone" && (
+                        <form action={`/customers/import/${imp.id}/remove`} method="post">
+                          <input type="hidden" name="r" value={r} />
+                          <button className="text-[13px] text-amber-300 underline">Remove this import</button>
+                        </form>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
             {birthdays.length > 0 && (
               <Section title="Birthdays this week">
                 <div className="divide-y divide-[#1e221b] rounded-2xl bg-[#171a14]">

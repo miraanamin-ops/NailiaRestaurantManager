@@ -74,6 +74,29 @@ export function welcomeContent(brand: Brand, i: { firstName: string; reward: str
   };
 }
 
+// An imported contact's first email (064): whose list they're on and why, the sign-up
+// reward if there is one, and how to leave. Fixed wording; the owner approves it first.
+export function importWelcomeContent(brand: Brand, i: { firstName: string; reason: string; reward: string | null; rewardUrl: string | null; links: Links }): EmailContent {
+  const first = firstOf(i.firstName);
+  return {
+    ...base(brand),
+    kind: "welcome",
+    subject: i.reward ? `You're on ${brand.name}'s list: a welcome treat inside 🎁` : `You're on ${brand.name}'s list`,
+    preheader: `Why you're hearing from ${brand.name}, and how to stop if you'd rather not.`,
+    heading: first ? `Hi ${first},` : "Hello,",
+    paragraphs: [
+      `You're on ${brand.name}'s email list because ${i.reason}. From now on we'll send you the occasional offer and news, never more than one offer a week.`,
+      "Rather not hear from us? Tap Unsubscribe at the bottom of this email: one tap and you won't get anything else.",
+      ...(i.reward ? [`As a thank you for being with us: ${i.reward}. Next time you're in, tap the button below at the till and show the screen to our staff.`] : []),
+    ],
+    offer: i.reward ? { title: i.reward, detail: "Your welcome treat" } : null,
+    buttons: i.reward && i.rewardUrl ? [{ label: "Show at the till", url: i.rewardUrl, style: "primary" }] : [],
+    note: i.reward ? 'Only tap "Redeem now" when you\'re at the till: the reward can be used once and lasts 10 minutes after you tap it.' : null,
+    signOff: brand.signOff,
+    footer: footer(brand, `You're getting this because ${i.reason}.`, i.links),
+  };
+}
+
 // A campaign or birthday email: the wording the owner approved, plus the offer and its link.
 export function campaignContent(
   brand: Brand,
