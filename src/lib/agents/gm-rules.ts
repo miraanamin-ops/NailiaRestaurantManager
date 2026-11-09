@@ -16,8 +16,9 @@ import type { Problems } from "./schema";
 // and the rota: lib/rota/understand.ts), "edit" (a change to the draft on the
 // owner's screen, typed without tapping Edit), "sales_entry" (a day's sales figure
 // told in words: shown back on a confirm card, then saved) and "answer_open" (the
-// message answers a question Naila asked and is still waiting on).
-export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "sales_entry", "answer_open", "ambiguous"] as const;
+// message answers a question Naila asked and is still waiting on), "how_to" (a
+// question about using DinerAI itself: answered from the owner help guide).
+export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "sales_entry", "answer_open", "how_to", "ambiguous"] as const;
 export type Route = (typeof ROUTES)[number];
 
 // Something Naila asked the owner and is still waiting on. The GM decides whether a
@@ -171,6 +172,7 @@ export const ROUTE_WORDS: Record<Route, string> = {
   edit: "a change to the draft on screen",
   sales_entry: "a day's sales (confirm card, then saved)",
   answer_open: "the answer to a question Naila asked",
+  how_to: "the help guide (how to use DinerAI)",
   ambiguous: "a question with buttons",
 };
 

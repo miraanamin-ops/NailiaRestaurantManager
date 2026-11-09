@@ -213,6 +213,21 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
       else return false;
       return true;
     }
+    // "How do I...?": from the owner help guide and their setup, checked.
+    case "how_to": {
+      const { answerHowTo } = await import("./gm-help");
+      const result = await withOnIt(answerHowTo(turn, body, context), send, language);
+      if (result.kind === "answered") {
+        if (result.action) await offerToDoIt(turn, result.message, result.action);
+        else await send(result.message);
+        return true;
+      }
+      if (result.kind === "not_covered") {
+        await send(result.message);
+        return true;
+      }
+      return false;
+    }
     // The staff team and the rota, in the owner's own words.
     case "team": {
       const { handleTeamMessage } = await import("@/lib/rota/understand");
@@ -227,21 +242,51 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
 
 // ---------- "Which did you mean?" ----------
 
-async function choiceCard(r: Restaurant, message: string, question: string, options: { label: string; route: Route }[], send: Send) {
-  const opts = options.slice(0, 3).map((o) => ({ label: buttonLabel(o.label), route: o.route }));
+// A button: a route for the original message, or (an offer to do something) its own
+// request to start, or "No thanks".
+export type ChoiceOption = { label: string; route: Route; request?: string | null; dismiss?: boolean };
+
+async function choiceCard(r: Restaurant, message: string, question: string, options: ChoiceOption[], send: Send) {
+  const opts = options.slice(0, 3).map((o) => ({ ...o, label: buttonLabel(o.label) }));
   const draft = await createDraft({ restaurantId: r.id, kind: "choice", content: question, audience: "you", request: message, checks: {}, mode: "present", actor: "gm", agentInput: { message, options: opts } });
   await send(question, { draftId: draft.id, buttons: "choice", options: opts.map((o) => o.label) });
 }
 
+// WhatsApp's button messages take about 1,000 characters of text.
+const CARD_TEXT_MAX = 1000;
+
+// "Want me to do that now?": the answer with Yes, do it / No thanks. Yes starts the
+// request as if the owner had typed it (understood and routed as usual).
+export async function offerToDoIt(turn: Turn, text: string, request: string) {
+  const r = turn.ctx.restaurant;
+  const options: ChoiceOption[] = [
+    { label: "Yes, do it", route: "chat", request },
+    { label: "No thanks", route: "chat", dismiss: true },
+  ];
+  if (text.length > CARD_TEXT_MAX) {
+    await turn.send(text);
+    return choiceCard(r, request, "Want me to do that for you now?", options, turn.send);
+  }
+  return choiceCard(r, request, text, options, turn.send);
+}
+
 // The owner picked option n (a button, or a typed 1 to 3): carry on with the original message.
 export async function answerChoice(turn: Turn, draft: Draft, n: number) {
-  const input = (draft as Draft & { agent_input?: { message: string; options: { label: string; route: Route }[] } }).agent_input;
+  const input = (draft as Draft & { agent_input?: { message: string; options: ChoiceOption[] } }).agent_input;
   const option = input?.options[n - 1];
   if (!input || !option) {
     await turn.send(`Reply 1 to ${input?.options.length ?? 3}, or just tell me what you need.`);
     return { handled: true as const };
   }
   await updateDraft(draft.id, { status: "answered", waiting_for: null });
+  if (option.dismiss) {
+    await turn.send("👍 OK. Just ask whenever you need it.");
+    return { handled: true as const };
+  }
+  if (option.request) {
+    const live = await gmLive(turn, option.request, null);
+    return live.handled ? { handled: true as const } : { handled: false as const, message: option.request };
+  }
   const handled = await dispatch(turn, input.message, input.message, option.route, expectedLanguage({ ownerMessage: input.message }), { active: null });
   // Not handled live (chat, a specialist in shadow): today's assistant answers the original message.
   return handled ? { handled: true as const } : { handled: false as const, message: input.message };

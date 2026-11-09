@@ -72,6 +72,7 @@ Send Insights' finished report with a two-line summary: the headline number and 
 | A change to the draft on the owner's screen ("make it shorter") | The specialist that made it |
 | A day's sales figure, told in words ("yesterday's sales 1500£", "we did 2.3k Saturday") | Sales (code shows it back for a yes, then saves it) |
 | An answer to something Naila asked and is waiting on (save this figure? which day? a specialist's question) | Back to that question, with the answer restated |
+| How to use DinerAI ("how do I import my customers?", "where do I change my logo?", "can you post on Instagram?") | Answer from the owner help guide and their setup; offer to do it where DinerAI can |
 | General chat, thanks, a question about reviews or customers | Answer it yourself from the data given |
 
 # Output
