@@ -19,6 +19,8 @@ import { londonYmd } from "@/lib/clock";
 import { closeStaleQuestions, handleSalesRoute, openItemsFor, recentConversation } from "./gm-open";
 import { buttonLabel, expectedLanguage, ON_IT_AFTER_MS, ON_IT_LINES, ROUTE_WORDS, SKIP_REASONS, type LanguageSeen, type OwnerContext, type Route, type RouterOutputType } from "./gm-rules";
 import { asksAboutReviews, waitingReviewsText } from "./gm-review-rules";
+import { couldNotHelpReply, NOT_IN_GUIDE_SUFFIX, offTopicReply } from "./help-rules";
+import { emailSupport, logUnanswered } from "./unanswered";
 import { recordAgentRun } from "./jobs";
 import type { Usage } from "./usage";
 
@@ -117,14 +119,17 @@ export async function agentsCouldNotHelp(turn: Turn, body: string, route: Route 
     `gm-fallback:${r.id}`,
     `${r.name}: the agents couldn't answer an owner message (${why}): "${body.slice(0, 80)}". The old assistant is retired there; if this keeps happening, switch back with: node --env-file=.env.local scripts/assistant-mode.mjs ${r.slug} old`,
   ).catch(() => "");
-  await turn.send(COULD_NOT_HELP[expectedLanguage({ ownerMessage: body })]);
+  await logUnanswered({ restaurantId: r.id, sender: turn.owner, message: body, route, reason: route ? "could_not_help" : "router_failed", detail: why });
+  // A relevant suggestion for what they asked, never a bare "couldn't do that".
+  await turn.send(couldNotHelpReply(route, expectedLanguage({ ownerMessage: body })));
 }
 
-const COULD_NOT_HELP: Record<LanguageSeen, string> = {
-  English: "Sorry, I couldn't do that one just now. Try saying it another way, or ask me about reviews, offers, Google posts, your numbers, the rota or your details.",
-  "Roman Urdu": "Maaf kijiye, abhi yeh nahi ho saka. Dobara thore alag tareeqe se likhein, ya reviews, offers, Google posts, numbers, rota ya details ke baare mein poochein.",
-  Urdu: "معاف کیجیے، ابھی یہ نہیں ہو سکا۔ دوبارہ تھوڑا مختلف لکھیں، یا ریویوز، آفرز، گوگل پوسٹس، نمبرز، روٹا یا تفصیلات کے بارے میں پوچھیں۔",
-};
+// A reply the fact check didn't pass twice: logged, and a relevant suggestion instead.
+async function sendBlocked(turn: Turn, body: string, route: Route, reasons: string[], language: LanguageSeen) {
+  await logUnanswered({ restaurantId: turn.ctx.restaurantId, sender: turn.owner, message: body, route, reason: "blocked", detail: reasons.join("; ") });
+  await turn.send(couldNotHelpReply(route, language));
+  return true;
+}
 
 async function recordReply(r: Restaurant, kind: string, message: string, verdict: string | null, usage: Usage) {
   await recordAgentRun({ restaurantId: r.id, key: `gm:${kind}:${r.id}:${Date.now()}`, agent: "gm", kind: `gm_${kind}`, trigger: "owner_message", output: { message: message.slice(0, 120) }, agentVersion: "gm", verdict, usage }).catch(() => null);
@@ -148,8 +153,8 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
       const profile = await gmProfile(r.id);
       const reply = await composeChecked(r.id, { kind: "reply", owner: ownerOf(r), owner_message: body, profile: profile.fields, conversation: context?.conversation ?? null, meaning: context?.meaning ?? null }, "an owner question (live)");
       await recordReply(r, "reply", reply.message, reply.verdict, reply.usage);
-      // A reply the checker didn't pass isn't sent.
-      if (reply.verdict && reply.verdict !== "pass") return false;
+      // A reply the checker didn't pass (after one retry) isn't sent.
+      if (reply.verdict && reply.verdict !== "pass") return oldAssistantRetired(r) ? sendBlocked(turn, body, route, reply.fails, language) : false;
       await send(reply.message);
       return true;
     }
@@ -171,7 +176,7 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
         language,
       );
       await recordReply(r, "chat", reply.message, reply.verdict, reply.usage);
-      if (reply.verdict && reply.verdict !== "pass") return false;
+      if (reply.verdict && reply.verdict !== "pass") return sendBlocked(turn, body, route, reply.fails, language);
       await send(reply.message);
       return true;
     }
@@ -233,10 +238,19 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
         return true;
       }
       if (result.kind === "not_covered") {
-        await send(result.message);
+        // Not in the guide: the team is asked, and the owner told so.
+        const emailed = await emailSupport(r, turn.owner, body);
+        await logUnanswered({ restaurantId: r.id, sender: turn.owner, message: body, route, reason: "not_in_guide", emailedSupport: emailed });
+        await send(emailed && !/team/i.test(result.message) ? `${result.message} ${NOT_IN_GUIDE_SUFFIX}` : result.message);
         return true;
       }
-      return false;
+      return sendBlocked(turn, body, route, result.reasons, language);
+    }
+    // Nothing to do with the restaurant or DinerAI: a fixed reply (no more AI), logged.
+    case "off_topic": {
+      await logUnanswered({ restaurantId: r.id, sender: turn.owner, message: body, route, reason: "off_topic" });
+      await send(offTopicReply(language, r.name));
+      return true;
     }
     // The staff team and the rota, in the owner's own words.
     case "team": {

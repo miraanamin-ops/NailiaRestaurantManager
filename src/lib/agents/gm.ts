@@ -120,11 +120,20 @@ export async function gmProfile(restaurantId: string) {
   return callTool("gm", "get_profile", restaurantId, {});
 }
 
-// A reply with figures or facts goes through the checker (facts and C6) before it's sent.
+// A reply with figures or facts goes through the checker (facts and C6) before it's
+// sent. If the checker sends it back, the composer gets one retry with its notes.
 export async function composeChecked(restaurantId: string, input: ComposerInput, label: string) {
+  const first = await composeCheckedOnce(restaurantId, input, label);
+  if (!first.verdict || first.verdict === "pass") return first;
+  const second = await composeCheckedOnce(restaurantId, { ...input, fix: first.fails.length ? first.fails : ["the fact check didn't pass it: say only what the data supports"] }, `${label} (retry)`);
+  return { ...second, usage: addUsage(first.usage, second.usage) };
+}
+
+async function composeCheckedOnce(restaurantId: string, input: ComposerInput, label: string) {
   const composed = await runComposer(input, label);
   let usage = composed.usage;
   let verdict: string | null = null;
+  let fails: string[] = [];
   const hasFacts = /\d/.test(composed.output.message) || Boolean(input.profile);
   if (hasFacts) {
     const checkerProfile = await callTool("checker", "get_profile", restaurantId, {});
@@ -144,8 +153,9 @@ export async function composeChecked(restaurantId: string, input: ComposerInput,
     );
     usage = addUsage(usage, checked.usage);
     verdict = checked.output.verdict;
+    fails = checked.output.checks.filter((c) => c.result === "fail").map((c) => `${c.id}: ${c.reason ?? ""}${c.fix ? ` Fix: ${c.fix}` : ""}`);
   }
-  return { message: composed.output.message, verdict, usage };
+  return { message: composed.output.message, verdict, usage, fails };
 }
 
 // ---------- Shadow: every owner message ----------

@@ -185,3 +185,42 @@ describe("how do I...?", () => {
     expect(sent.map((s) => s.text)).toEqual(["Good question. I'll check with the DinerAI team and come back to you."]);
   });
 });
+
+describe("topic limits and fallbacks", () => {
+  test("off topic: a fixed friendly reply, logged, and no more AI after the router", async () => {
+    answers = [route("off_topic", { request: "How many cows are in the UK?" })];
+    await say("How many cows are there in the UK?");
+    expect(prompts).toHaveLength(1);
+    expect(sent.map((s) => s.text)).toEqual([expect.stringMatching(/^That one's outside what I can help with: I'm here to help you run MN Test\./)]);
+    expect(db.tables.unanswered_questions).toEqual([expect.objectContaining({ restaurant_id: A, sender: OWNER, message: "How many cows are there in the UK?", route: "off_topic", reason: "off_topic" })]);
+  });
+
+  test("not in the guide: support is emailed with the question, the owner told, and it's logged", async () => {
+    const emails: { to: string; subject: string; text: string }[] = [];
+    vi.doMock("@/lib/email", async (orig) => ({ ...(await orig<object>()), sendBuilderEmail: async (to: string, subject: string, text: string) => void emails.push({ to, subject, text }) }));
+    answers = [route("how_to", { request: "Can I connect Xero?" }), { covered: false, message: "Good question.", action: null }];
+    await say("can i connect xero");
+    expect(emails).toEqual([expect.objectContaining({ to: "support@dinerai.co.uk", subject: "Owner question not in the help guide: MN Test", text: expect.stringContaining('"can i connect xero"') })]);
+    expect(sent.map((s) => s.text)).toEqual(["Good question. I've passed it to the DinerAI team, and they'll come back to you."]);
+    expect(db.tables.unanswered_questions).toEqual([expect.objectContaining({ reason: "not_in_guide", route: "how_to", emailed_support_at: expect.any(String) })]);
+    vi.doUnmock("@/lib/email");
+  });
+
+  test("a help answer the fact check blocks twice: a relevant suggestion, logged, never a bare 'couldn't do that'", async () => {
+    answers = [route("how_to"), { covered: true, message: "It syncs with Mailchimp.", action: null }, verdict(false), { covered: true, message: "It syncs with Mailchimp daily.", action: null }, verdict(false)];
+    await say("does it sync with mailchimp?");
+    expect(sent.map((s) => s.text)).toEqual([expect.stringMatching(/^Sorry, I couldn't get that one right just now, so I've noted it for the team\. I've noted the question\. Meanwhile \*HELP\*/)]);
+    expect(db.tables.unanswered_questions).toEqual([expect.objectContaining({ reason: "blocked", route: "how_to", detail: expect.stringContaining("Mailchimp") })]);
+  });
+
+  test("a chat reply the fact check sends back once is fixed and sent", async () => {
+    const pass = verdict(true);
+    const fail = verdict(false);
+    db.tables.restaurants[0].agent_modes = { gm: "live", insights: "live", growth: "live", reputation: "live", visibility: "live", checker: "live" };
+    answers = [route("chat", { request: "How many customers have we got?" }), { type: "reply", message: "You have 9 customers." }, fail, { type: "reply", message: "You have 0 customers so far." }, pass];
+    await say("how many customers have we got");
+    expect(prompts[3]).toContain("Your previous reply was sent back by the fact check");
+    expect(prompts[3]).toContain("remove the Mailchimp sync");
+    expect(sent.map((s) => s.text)).toEqual(["You have 0 customers so far."]);
+  });
+});

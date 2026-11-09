@@ -229,15 +229,18 @@ describe("on the agents, the old assistant never answers", () => {
     answers = [];
     await say("how was last week?");
     expect(oldAssistant).not.toHaveBeenCalled();
-    expect(sent.map((s) => s.text)).toEqual([expect.stringMatching(/^Sorry, I couldn't do that one just now/)]);
+    expect(sent.map((s) => s.text)).toEqual([expect.stringMatching(/^Sorry, I couldn't get that one right just now, so I've noted it for the team. Try saying it another way/)]);
+    expect(db.tables.unanswered_questions).toEqual([expect.objectContaining({ reason: "router_failed", message: "how was last week?", route: null })]);
     expect(alerts[0]).toMatch(/scripts\/assistant-mode\.mjs test-kitchen old/);
   });
 
-  test("a chat reply the checker doesn't pass isn't sent", async () => {
-    answers = [route("chat"), { type: "reply", message: "You have 9 customers." }, { ...ownerPass, verdict: "fail", checks: ownerPass.checks.map((c) => (c.id === "F1" ? { id: "F1", result: "fail", reason: "1 is waiting, not 9", fix: "say 1" } : c)) }];
+  test("a chat reply the checker doesn't pass (twice) isn't sent: a relevant suggestion, logged", async () => {
+    const fail = { ...ownerPass, verdict: "fail", checks: ownerPass.checks.map((c) => (c.id === "F1" ? { id: "F1", result: "fail", reason: "1 is waiting, not 9", fix: "say 1" } : c)) };
+    answers = [route("chat"), { type: "reply", message: "You have 9 customers." }, fail, { type: "reply", message: "You have 8 customers." }, fail];
     await say("how many customers have we got?");
     expect(oldAssistant).not.toHaveBeenCalled();
-    expect(sent.map((s) => s.text)).toEqual([expect.stringMatching(/^Sorry/)]);
+    expect(sent.map((s) => s.text)).toEqual([expect.stringMatching(/^Sorry, I couldn't get that one right just now.*which reviews still need a reply/)]);
+    expect(db.tables.unanswered_questions).toEqual([expect.objectContaining({ reason: "blocked", route: "chat", detail: expect.stringContaining("1 is waiting, not 9") })]);
   });
 
   test("on the old assistant (the one-command fallback), it answers as before", async () => {
