@@ -22,11 +22,16 @@ export type HelpResult =
 
 async function check(restaurantId: string, out: HelpOutputType, input: HelpInput, label: string) {
   const profile = await callTool("checker", "get_profile", restaurantId, {});
+  return checkHelpAnswer(out, input, profile, label);
+}
+
+// The fact check on a help answer: the guide is the (cached) reference, the setup a source.
+export async function checkHelpAnswer(out: HelpOutputType, input: HelpInput, profile: { version: number; fields: Record<string, unknown> }, label: string) {
   const checked = await runChecker(
     {
       draft: { type: "gm_reply", channel: "owner", audience: "the owner", content: { text: out.message }, needs_owner_input: null, sources_used: ["help:guide", "help:setup"] },
       text: out.message,
-      sources: [{ ref: "help:setup", found: true, data: { setup: input.setup, owner_question: input.question } }],
+      sources: [{ ref: "help:setup", found: true, data: { setup: input.setup, owner_name: input.owner.owner_name, restaurant: input.owner.restaurant, owner_question: input.question } }],
       profile,
       recent: [],
       maker: "gm",

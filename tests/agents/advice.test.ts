@@ -14,7 +14,7 @@ const money = numbersIn(weekday).find((n) => n.unit === "GBP")!;
 const results = new Map([["q1", weekday]]);
 const extras = [
   { ref: "menu:profit", numbers: [72, 31] },
-  { ref: "facts:uk", numbers: [12.71, 10.85, 8] },
+  { ref: "facts:uk", numbers: [12.71, 10.85, 8, 21, 18, 20, 16, 17] },
 ];
 
 const idea = (title: string, why: string, message = "Draft a Thursday offer for the email list") => ({ title, why, message });
@@ -191,5 +191,37 @@ describe("what are three ways to improve my margins?", () => {
     await say("3. Check your rota", `choose:${card.id}:3`);
     expect(prompts.at(-1)).toContain(`"""Suggest next week's rota"""`);
     expect(db.tables.drafts.find((d) => d.id === card.id)).toMatchObject({ status: "answered" });
+  });
+});
+
+describe("advice: a figure from the profile", () => {
+  test("a pay rate or the discount cap may be cited from the profile, and must really be there", () => {
+    const withPay = (value: number) =>
+      advice(
+        { figures: [...advice().figures, { metric: "kitchen_pay", value, unit: "GBP", period: "now", compare_to: null, compare_value: null, source: "profile:team" }], sources_used: ["metrics:q1", "menu:profit", "profile:team"] },
+        { actions: [...advice().content.actions.slice(0, 2), idea("Check Monday cover", `Your kitchen pay is £${value} an hour, so one fewer Monday shift saves money.`, "Suggest next week's rota")] },
+      );
+    const ctx = { task: "advice" as const, results, themes: null, extras, profileFields: { team: [{ role: "kitchen", pay: 13 }] } };
+    expect(insightsProblems(withPay(13), ctx)).toEqual([]);
+    expect(insightsProblems(withPay(15), ctx).join()).toMatch(/kitchen_pay = 15 isn't in profile:team/);
+  });
+});
+
+describe("advice: pointing to the right person", () => {
+  test("naming a loan, tax or a dismissal is fine when the sentence points to an accountant, HMRC or Acas", () => {
+    for (const why of ["General: an accountant can tell you whether a loan makes sense.", "General: Acas can advise before you dismiss anyone.", "General: HMRC or an accountant can help with your VAT return."]) {
+      const out = advice({}, { actions: [...advice().content.actions.slice(0, 2), idea("Get the right advice", why)] });
+      expect(problems(out), why).toEqual([]);
+    }
+  });
+});
+
+describe("advice: numbers from a cited source", () => {
+  test("the minimum wage from the UK facts, cited, passes without listing every number as a figure", () => {
+    const out = advice({ sources_used: ["metrics:q1", "menu:profit", "facts:uk"] }, { actions: [...advice().content.actions.slice(0, 2), idea("Know the wage rates", "General: from April 2026 it's £12.71 an hour for 21 and over, £10.85 for 18 to 20.", "Suggest next week's rota")] });
+    expect(problems(out)).toEqual([]);
+    // Not cited: rejected.
+    const uncited = advice({}, { actions: [...advice().content.actions.slice(0, 2), idea("Know the wage rates", "General: from April 2026 it's £12.71 an hour.", "Suggest next week's rota")] });
+    expect(problems(uncited).join()).toMatch(/"£12\.71" isn't in figures/);
   });
 });

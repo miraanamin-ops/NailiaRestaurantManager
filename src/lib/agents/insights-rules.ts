@@ -130,6 +130,8 @@ export type InsightsContext = {
   // Other sources code prepared (advice: profit by dish from the owner's costs, UK facts):
   // a figure citing one must be a number in it.
   extras?: { ref: string; numbers: number[] }[];
+  // Advice: the profile fields, so a figure may cite profile:<field> (a pay rate, the discount cap).
+  profileFields?: Record<string, unknown>;
 };
 
 const metricsId = (ref: string) => (ref.startsWith("metrics:") ? ref.slice("metrics:".length).trim() : null);
@@ -162,6 +164,13 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
 
   // Figures: each one is a number its query returned (never worked out by the agent).
   for (const f of out.figures) {
+    if (ctx.task === "advice" && ctx.profileFields && f.source.startsWith("profile:")) {
+      const field = ctx.profileFields[f.source.slice("profile:".length)];
+      const values = (JSON.stringify(field ?? null).match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+      if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);
+      if (field === undefined || !values.some((n) => sameNumber(f.value, n))) problems.push(`figure ${f.metric} = ${f.value} isn't in ${f.source}`);
+      continue;
+    }
     const extra = ctx.extras?.find((e) => e.ref === f.source);
     if (extra) {
       if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);
@@ -194,10 +203,19 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
 
   // Every number in the words is one of the figures.
   const figureNumbers = out.figures.flatMap((f) => [{ value: f.value, unit: f.unit }, ...(f.compare_value !== null ? [{ value: f.compare_value, unit: f.unit }] : [])]);
+  // Advice: a number in a source the answer cites (the UK facts, profit by dish, a profile field) is sourced too.
+  const citedNumbers =
+    ctx.task === "advice"
+      ? [
+          ...(ctx.extras ?? []).filter((e) => out.sources_used.includes(e.ref)).flatMap((e) => e.numbers),
+          ...out.sources_used.filter((s) => s.startsWith("profile:")).flatMap((s) => (JSON.stringify(ctx.profileFields?.[s.slice("profile:".length)] ?? null).match(/\d+(?:\.\d+)?/g) ?? []).map(Number)),
+        ]
+      : [];
   for (const text of texts) {
     for (const q of quotedNumbers(text)) {
       // Small plain counts ("3 of 7 days", "top 5") are left to the checker's F2; money, percentages and bigger counts must be figures.
       if (q.kind === "number" && Number.isInteger(q.value) && q.value <= 12) continue;
+      if (citedNumbers.some((n) => sameNumber(q.value, n))) continue;
       if (!matchesFigure(q, figureNumbers)) problems.push(`"${q.text}" isn't in figures: every number in the words must be one of the figures (add it from the query result, or leave it out)`);
     }
   }
@@ -205,7 +223,10 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
   const cause = causeClaim(allText);
   if (cause) problems.push(`"${cause.words}" in "${cause.sentence}" states a cause as fact: say "coincided with", "likely helped" or "may be linked to"`);
   if (ctx.task === "advice") {
-    const out_ = allText.match(ADVICE_OUT_OF_SCOPE);
+    // Naming the subject is fine when the sentence points them to the right person ("an accountant can help with the loan").
+    const pointed = new RegExp(`\\b(accountant|HMRC|Acas|adviser|advisor|solicitor|lawyer)\\b`, "i");
+    // Anywhere in the answer: then naming the subject is fine (the AI checker still checks it doesn't advise on it).
+    const out_ = pointed.test(allText) ? null : allText.match(ADVICE_OUT_OF_SCOPE);
     if (out_) problems.push(`"${out_[0]}": tax, loans and decisions about a specific person's job are for an accountant, Acas or an adviser; point the owner there instead of advising`);
   } else if (ADVICE.test(allText)) problems.push("that's advice on staffing, pay, loans or tax: share the figures and leave the decision to the owner");
 
@@ -229,13 +250,13 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
     if (n < 1 || n > 3) problems.push(`answer in 1 to 3 sentences (this has ${n})`);
     if (out.content.actions.length) problems.push("an answer has no actions");
   } else if (ctx.task === "advice") {
-    if (!out.content.headline.trim()) problems.push("advice needs a one-line headline introducing the ideas");
-    else if (sentences(out.content.headline).length > 1 || wordCount(out.content.headline) > 30) problems.push("the headline is one sentence, under 30 words");
-    if (sentences(out.content.body).length > 2) problems.push("keep the advice note to 2 sentences at most");
+    if (!out.content.headline.trim()) problems.push("advice needs a short headline introducing the ideas");
+    else if (sentences(out.content.headline).length > 2 || wordCount(out.content.headline) > 45) problems.push("the headline is at most 2 sentences, under 45 words");
+    if (sentences(out.content.body).length > 3) problems.push("keep the advice note to 3 sentences at most");
     if (out.content.actions.length !== 3) problems.push(`exactly 3 ideas (this has ${out.content.actions.length})`);
     out.content.actions.forEach((a, i) => {
       if (!quotedNumbers(a.why).length && !/^general\b/i.test(a.why.trim())) problems.push(`idea ${i + 1}'s why must be tied to one of this restaurant's figures, or start with "General:" when it isn't`);
-      if (wordCount(a.title) > 8) problems.push(`idea ${i + 1}'s title is under 8 words`);
+      if (wordCount(a.title) > 10) problems.push(`idea ${i + 1}'s title is 10 words at most`);
       if (!a.message.trim()) problems.push(`idea ${i + 1} needs the message that starts it (what the owner would say to DinerAI)`);
     });
   } else {

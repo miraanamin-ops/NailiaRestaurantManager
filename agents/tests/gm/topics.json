@@ -1,0 +1,113 @@
+{
+  "about": "Off-topic and borderline messages: where the router must send them.",
+  "cases": [
+    {
+      "message": "how many cows are there in the UK?",
+      "routes": [
+        "off_topic"
+      ]
+    },
+    {
+      "message": "who won the football last night",
+      "routes": [
+        "off_topic"
+      ]
+    },
+    {
+      "message": "can you write my son's history homework",
+      "routes": [
+        "off_topic"
+      ]
+    },
+    {
+      "message": "what's the capital of france",
+      "routes": [
+        "off_topic"
+      ]
+    },
+    {
+      "message": "tell me about the war in the news",
+      "routes": [
+        "off_topic"
+      ]
+    },
+    {
+      "message": "whats the minimum wage?",
+      "routes": [
+        "advice"
+      ],
+      "note": "in scope: a wage fact"
+    },
+    {
+      "message": "how do i reduce food waste",
+      "routes": [
+        "advice"
+      ],
+      "note": "in scope: hospitality know-how"
+    },
+    {
+      "message": "is it worth opening on boxing day",
+      "routes": [
+        "advice",
+        "insights"
+      ]
+    },
+    {
+      "message": "how do I make my biryani taste better",
+      "routes": [
+        "advice",
+        "chat"
+      ],
+      "note": "food: in scope"
+    },
+    {
+      "message": "thanks mate",
+      "routes": [
+        "chat"
+      ]
+    },
+    {
+      "message": "hi",
+      "routes": [
+        "chat"
+      ]
+    },
+    {
+      "message": "what's the weather going to be like saturday",
+      "routes": [
+        "insights",
+        "chat"
+      ],
+      "note": "weather affects the forecast"
+    },
+    {
+      "message": "can you help me with my tax return",
+      "routes": [
+        "advice",
+        "how_to"
+      ],
+      "note": "in scope, then pointed to an accountant"
+    },
+    {
+      "message": "how do i import a customer data list",
+      "routes": [
+        "how_to"
+      ]
+    },
+    {
+      "message": "what are three things I can do to improve my profit margins",
+      "routes": [
+        "advice"
+      ]
+    },
+    {
+      "message": "write me a poem about cheese",
+      "routes": [
+        "off_topic",
+        "one_off"
+      ],
+      "note": "borderline: a one-off piece of writing"
+    }
+  ],
+  "recorded": null
+}
