@@ -68,3 +68,10 @@ export async function setupFacts(r: Restaurant, now: Date): Promise<SetupFacts> 
 export async function yourSetup(r: Restaurant, now: Date) {
   return setupLines(await setupFacts(r, now));
 }
+
+// General UK hospitality facts (minimum wage, VAT, working time), dated, for advice.
+let facts: string | null = null;
+export function ukFacts() {
+  facts ??= readFileSync(join(process.cwd(), "agents", "uk-facts.md"), "utf8");
+  return facts;
+}

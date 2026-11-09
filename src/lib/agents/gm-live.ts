@@ -213,6 +213,16 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
       else return false;
       return true;
     }
+    // Ideas and advice: 3 ideas from this restaurant's figures (Insights), each with a button that starts it.
+    case "advice": {
+      const { insightsMode, adviseWithInsights } = await import("./insights");
+      if ((await insightsMode(r)) !== "live") return false;
+      const advice = await withOnIt(adviseWithInsights(r, body, ctx.now, context), send, language);
+      if (!advice) return false;
+      if (advice.kind === "question") await send(advice.text);
+      else await offerIdeas(turn, advice.text, advice.ideas);
+      return true;
+    }
     // "How do I...?": from the owner help guide and their setup, checked.
     case "how_to": {
       const { answerHowTo } = await import("./gm-help");
@@ -268,6 +278,22 @@ export async function offerToDoIt(turn: Turn, text: string, request: string) {
     return choiceCard(r, request, "Want me to do that for you now?", options, turn.send);
   }
   return choiceCard(r, request, text, options, turn.send);
+}
+
+// "1. Thursday offer" when the title fits a button (20 characters), else "Start idea 1".
+export const ideaLabel = (i: number, title: string) => (`${i + 1}. ${title.trim()}`.length <= 20 ? `${i + 1}. ${title.trim()}` : `Start idea ${i + 1}`);
+
+// Advice: the ideas with one button each ("1. Thursday offer"); a tap starts that
+// idea's request as if the owner had typed it.
+export async function offerIdeas(turn: Turn, text: string, ideas: { title: string; message: string }[]) {
+  const r = turn.ctx.restaurant;
+  const options: ChoiceOption[] = ideas.slice(0, 3).map((idea, i) => ({ label: ideaLabel(i, idea.title), route: "chat", request: idea.message }));
+  if (!options.length) return turn.send(text);
+  if (text.length > CARD_TEXT_MAX) {
+    await turn.send(text);
+    return choiceCard(r, ideas[0].message, "Which one shall I start?", options, turn.send);
+  }
+  return choiceCard(r, ideas[0].message, text, options, turn.send);
 }
 
 // The owner picked option n (a button, or a typed 1 to 3): carry on with the original message.

@@ -7,8 +7,8 @@ import { z } from "zod";
 import { numbersIn, type Figure, type MetricResult } from "./insights-metrics";
 import { draftProblems, type Problems } from "./schema";
 
-export const INSIGHTS_TYPES = ["answer", "report_section"] as const;
-export type InsightsTask = "answer" | "report";
+export const INSIGHTS_TYPES = ["answer", "report_section", "advice"] as const;
+export type InsightsTask = "answer" | "report" | "advice";
 
 // insights.md "Output", with the actions as objects (the Monday report's 3 actions:
 // what, why, and the WhatsApp message that starts it) and each figure naming the
@@ -17,17 +17,17 @@ export const InsightsDraft = z.object({
   type: z.enum(INSIGHTS_TYPES),
   channel: z.literal("owner"),
   content: z.object({
-    headline: z.string().describe("Report: the one-sentence headline. Answer: empty"),
-    body: z.string().describe("Answer: the reply, 1 to 3 sentences. Report: the sales section, a few sentences"),
+    headline: z.string().describe("Report: the one-sentence headline. Advice: one line introducing the ideas. Answer: empty"),
+    body: z.string().describe("Answer: the reply, 1 to 3 sentences. Report: the sales section, a few sentences. Advice: optional, at most 2 sentences (what data is missing, or a note)"),
     actions: z
       .array(
         z.object({
           title: z.string().describe("Under 8 words"),
-          why: z.string().describe("One sentence tied to a number in the report"),
+          why: z.string().describe("One sentence tied to a number in the report (advice: to one of this restaurant's figures; an idea not based on its figures starts with \"General:\")"),
           message: z.string().describe("What the owner sends on WhatsApp to start it"),
         }),
       )
-      .describe("Report: exactly 3. Answer: none"),
+      .describe("Report and advice: exactly 3. Answer: none"),
   }),
   figures: z.array(
     z.object({
@@ -61,6 +61,8 @@ export function causeClaim(text: string) {
 }
 // Advice on loans, tax, pay, hiring or firing (information only; decisions are the owner's).
 const ADVICE = /\b(?:you should|you could|I(?:'d| would)? (?:recommend|suggest|advise)|consider|it(?:'s| is) worth|best to|makes sense to)\b[^.!?]*\b(?:cut|hire|fire|let (?:\w+ )?go|lay off|redundan\w*|reduce (?:staff|hours|shifts)|fewer staff|staff(?:ing)?|rota|shifts?|wages?|pay ?rise|loan|borrow|tax|VAT return)\b/i;
+// Advice may cover rotas, staffing levels and labour cost; never tax, loans, or a decision about a specific person's job.
+const ADVICE_OUT_OF_SCOPE = /\b(?:loan|borrow\w*|mortgage|overdraft|tax (?:return|bill|relief|code)|VAT return|corporation tax|dismiss\w*|fire (?:him|her|them|\w+)|let (?:him|her|them|\w+) go|lay (?:him|her|them|\w+) off|redundan\w*|disciplinary)\b/i;
 const SMALL_WORDS = /\b(only|early|small|few|fewer than|under (?:4|four) weeks|under 20|not enough|too little|limited|short)\b/i;
 const ASK_WORDS = /\b(check|confirm|right|correct|typo|mistake|misread|unusual)\b/i;
 
@@ -125,14 +127,17 @@ export type InsightsContext = {
   results: Map<string, MetricResult>;
   // Reputation's weekly themes (the Monday report), counted by code: a figure may quote a count.
   themes?: { week: string; praise: { label: string; count: number }[]; complaints: { label: string; count: number }[] } | null;
+  // Other sources code prepared (advice: profit by dish from the owner's costs, UK facts):
+  // a figure citing one must be a number in it.
+  extras?: { ref: string; numbers: number[] }[];
 };
 
 const metricsId = (ref: string) => (ref.startsWith("metrics:") ? ref.slice("metrics:".length).trim() : null);
 
 export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Problems {
   const problems = draftProblems(out);
-  const want = ctx.task === "report" ? "report_section" : "answer";
-  if (out.type !== want) problems.push(`this is ${ctx.task === "report" ? "the Monday report" : "an answer to the owner"}: type ${want}`);
+  const want = ctx.task === "report" ? "report_section" : ctx.task === "advice" ? "advice" : "answer";
+  if (out.type !== want) problems.push(`this is ${ctx.task === "report" ? "the Monday report" : ctx.task === "advice" ? "advice for the owner" : "an answer to the owner"}: type ${want}`);
 
   const allNumbers = [...ctx.results.values()].flatMap(numbersIn);
   const texts = [out.content.headline, out.content.body, ...out.content.actions.flatMap((a) => [a.title, a.why, a.message]), out.needs_owner_input ?? ""];
@@ -157,6 +162,12 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
 
   // Figures: each one is a number its query returned (never worked out by the agent).
   for (const f of out.figures) {
+    const extra = ctx.extras?.find((e) => e.ref === f.source);
+    if (extra) {
+      if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);
+      if (!extra.numbers.some((n) => sameNumber(f.value, n))) problems.push(`figure ${f.metric} = ${f.value} isn't in ${f.source}`);
+      continue;
+    }
     if (ctx.themes && f.source === `themes:${ctx.themes.week}`) {
       const counts = [...ctx.themes.praise, ...ctx.themes.complaints].map((t) => t.count);
       if (!out.sources_used.includes(f.source)) problems.push(`figure ${f.metric}: add ${f.source} to sources_used`);
@@ -193,13 +204,16 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
 
   const cause = causeClaim(allText);
   if (cause) problems.push(`"${cause.words}" in "${cause.sentence}" states a cause as fact: say "coincided with", "likely helped" or "may be linked to"`);
-  if (ADVICE.test(allText)) problems.push("that's advice on staffing, pay, loans or tax: share the figures and leave the decision to the owner");
+  if (ctx.task === "advice") {
+    const out_ = allText.match(ADVICE_OUT_OF_SCOPE);
+    if (out_) problems.push(`"${out_[0]}": tax, loans and decisions about a specific person's job are for an accountant, Acas or an adviser; point the owner there instead of advising`);
+  } else if (ADVICE.test(allText)) problems.push("that's advice on staffing, pay, loans or tax: share the figures and leave the decision to the owner");
 
   // Small samples behind a quoted figure are flagged plainly; an answer built on one has low confidence.
   const quoted = new Set(out.figures.map((f) => metricsId(f.source)));
   const small = used.filter((r) => r.available && r.small_sample && quoted.has(r.id));
   if (small.length) {
-    if (ctx.task === "answer" && out.confidence !== "low") problems.push("a figure you used has a small sample (see small_sample): confidence must be low");
+    if (ctx.task !== "report" && out.confidence !== "low") problems.push("a figure you used has a small sample (see small_sample): confidence must be low");
     if (!SMALL_WORDS.test(allText)) problems.push(`say plainly that the sample is small: ${(small[0] as { small_sample: string }).small_sample}`);
   }
 
@@ -214,6 +228,16 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
     const n = sentences(out.content.body).length;
     if (n < 1 || n > 3) problems.push(`answer in 1 to 3 sentences (this has ${n})`);
     if (out.content.actions.length) problems.push("an answer has no actions");
+  } else if (ctx.task === "advice") {
+    if (!out.content.headline.trim()) problems.push("advice needs a one-line headline introducing the ideas");
+    else if (sentences(out.content.headline).length > 1 || wordCount(out.content.headline) > 30) problems.push("the headline is one sentence, under 30 words");
+    if (sentences(out.content.body).length > 2) problems.push("keep the advice note to 2 sentences at most");
+    if (out.content.actions.length !== 3) problems.push(`exactly 3 ideas (this has ${out.content.actions.length})`);
+    out.content.actions.forEach((a, i) => {
+      if (!quotedNumbers(a.why).length && !/^general\b/i.test(a.why.trim())) problems.push(`idea ${i + 1}'s why must be tied to one of this restaurant's figures, or start with "General:" when it isn't`);
+      if (wordCount(a.title) > 8) problems.push(`idea ${i + 1}'s title is under 8 words`);
+      if (!a.message.trim()) problems.push(`idea ${i + 1} needs the message that starts it (what the owner would say to DinerAI)`);
+    });
   } else {
     if (!out.content.headline.trim()) problems.push("the report needs a headline");
     else if (sentences(out.content.headline).length > 1 || wordCount(out.content.headline) > 30) problems.push("the headline is one sentence, under 30 words");

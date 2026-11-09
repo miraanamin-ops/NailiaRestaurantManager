@@ -18,7 +18,7 @@ import type { Problems } from "./schema";
 // told in words: shown back on a confirm card, then saved) and "answer_open" (the
 // message answers a question Naila asked and is still waiting on), "how_to" (a
 // question about using DinerAI itself: answered from the owner help guide).
-export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "sales_entry", "answer_open", "how_to", "ambiguous"] as const;
+export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "sales_entry", "answer_open", "how_to", "advice", "ambiguous"] as const;
 export type Route = (typeof ROUTES)[number];
 
 // Something Naila asked the owner and is still waiting on. The GM decides whether a
@@ -173,6 +173,7 @@ export const ROUTE_WORDS: Record<Route, string> = {
   sales_entry: "a day's sales (confirm card, then saved)",
   answer_open: "the answer to a question Naila asked",
   how_to: "the help guide (how to use DinerAI)",
+  advice: "Insights (3 ideas from the restaurant's own figures)",
   ambiguous: "a question with buttons",
 };
 
