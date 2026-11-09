@@ -17,6 +17,7 @@ import { addDays } from "@/lib/sales/format";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { londonToday } from "./checker-core";
+import type { OwnerContext } from "./gm-rules";
 import { confirmedFields, goLiveChecklist } from "./go-live";
 import { askOwnerNow, gmIsLive, holdAgentQuestion, holdSpecialIdea } from "./gm-held";
 import { growthLoop, type GrowthInput, type GrowthOutcome } from "./growth-core";
@@ -60,6 +61,8 @@ export type GrowthJob = {
   entry?: { day: string; name: string; type: string; date_uncertain: boolean } | null;
   legacy_draft_id?: string | null;
   legacy_text?: string | null;
+  // Owner requests (live): the conversation and what they mean (the GM's words).
+  context?: OwnerContext | null;
 };
 
 // Menu engineering for Growth: the last 8 weeks of the till's sales by item (if
@@ -94,6 +97,7 @@ export async function growthInput(restaurant: Restaurant, job: GrowthJob): Promi
     today: job.today,
     today_words: londonToday(now),
     send_window: { start: restaurant.send_window_start, end: restaurant.send_window_end },
+    context: job.context ?? null,
   };
 }
 
@@ -276,8 +280,8 @@ async function recordLive(restaurant: Restaurant, job: GrowthJob, key: string, o
 
 // Live: Growth answers the owner's ask for an offer (instead of today's campaign
 // flow). Returns false if it couldn't (today's flow answers instead).
-export async function liveGrowthRequest(restaurant: Restaurant, request: string, now: Date, send: (text: string, buttons?: boolean, mediaUrl?: string | null) => Promise<unknown>) {
-  const job: GrowthJob = { task: "owner_request", request, today: londonYmd(now) };
+export async function liveGrowthRequest(restaurant: Restaurant, request: string, now: Date, send: (text: string, buttons?: boolean, mediaUrl?: string | null) => Promise<unknown>, context: OwnerContext | null = null) {
+  const job: GrowthJob = { task: "owner_request", request, today: londonYmd(now), context };
   const key = `growth:request:live:${Date.now()}`;
   try {
     const { outcome, ms } = await runGrowthFor(restaurant, job, "the owner's request (live)");

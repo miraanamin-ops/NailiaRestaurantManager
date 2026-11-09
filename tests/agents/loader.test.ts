@@ -66,7 +66,7 @@ describe("every agent file", () => {
   });
 
   test("the GM has a Haiku router; the others have none", () => {
-    expect(loadAgent("gm").routerModelId).toBe("claude-haiku-5-5");
+    expect(loadAgent("gm").routerModelId).toBe("claude-sonnet-5-5");
     expect(loadAgent("checker").routerModelId).toBeNull();
   });
 

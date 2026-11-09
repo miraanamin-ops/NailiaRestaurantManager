@@ -1,4 +1,4 @@
-// The GM: the router (Haiku) that sends each owner message to the right place, and
+// The GM: the router (Sonnet) that understands each owner message and sends it to the right place, and
 // the composer (Sonnet) that writes what the owner reads. Their output shapes, and
 // the plain-code rules: no invented numbers, no "just checking in", cards under 40
 // words, the owner's language; and the rules code applies around them (the brief's
@@ -10,17 +10,48 @@ import type { Problems } from "./schema";
 
 // ---------- The router ----------
 
-// gm.md's routing table, plus two rows code needs: "profile_question" (a simple
-// question the profile answers: the composer replies) and "chat" (general chat and
+// gm.md's routing table, plus rows code needs: "profile_question" (a simple
+// question the profile answers: the composer replies), "chat" (general chat and
 // look-ups: the composer answers, with the agents live), "team" (the staff team
-// and the rota: lib/rota/understand.ts) and "edit" (a change to the draft on the
-// owner's screen, typed without tapping Edit).
-export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "ambiguous"] as const;
+// and the rota: lib/rota/understand.ts), "edit" (a change to the draft on the
+// owner's screen, typed without tapping Edit), "sales_entry" (a day's sales figure
+// told in words: shown back on a confirm card, then saved) and "answer_open" (the
+// message answers a question Naila asked and is still waiting on).
+export const ROUTES = ["reputation", "growth", "visibility", "insights", "profile_fact", "one_off", "profile_question", "chat", "team", "edit", "sales_entry", "answer_open", "ambiguous"] as const;
 export type Route = (typeof ROUTES)[number];
+
+// Something Naila asked the owner and is still waiting on. The GM decides whether a
+// new message answers it: a waiting question never swallows a message just because
+// it's waiting (that's how "Thursday looks quiet" once got read as an answer about Sunday).
+export const OPEN_KINDS = ["sales_confirm", "sales_date", "sales_replace", "file_layout", "agent_question", "choice"] as const;
+export type OpenKind = (typeof OPEN_KINDS)[number];
+export type OpenItem = { ref: string; kind: OpenKind; asks: string; minutes_ago: number };
+
+// A question an agent asked (or a "which did you mean?") stops waiting after this long.
+export const AGENT_QUESTION_OPEN_MINUTES = 30;
+// A sales question (save it? which day? replace?) or a file layout waits this long.
+export const SALES_QUESTION_OPEN_MINUTES = 6 * 60;
+
+export function stillOpen(kind: OpenKind, createdAt: string, now: Date) {
+  const minutes = (now.getTime() - new Date(createdAt).getTime()) / 60_000;
+  const limit = kind === "agent_question" || kind === "choice" ? AGENT_QUESTION_OPEN_MINUTES : SALES_QUESTION_OPEN_MINUTES;
+  return minutes >= -1 && minutes <= limit;
+}
+
+// A day's sales as the GM understood it (anything the owner didn't say is null).
+export const SalesFigures = z.object({
+  business_date: z.string().nullable().describe("The trading day as YYYY-MM-DD (use the dates listed in the input), or null if not said"),
+  amount: z.number().nullable().describe("The sales figure in pounds (1500 for £1,500, 1500£ or 1.5k), or null if not said"),
+  basis: z.enum(["gross", "net"]).nullable().describe("net = before VAT, ex VAT, excluding VAT or net; gross = including VAT, or a plain 'we took'; null if not said"),
+  transactions: z.number().int().nullable().describe("The number of orders or transactions if said, else null (covers or guests are not transactions)"),
+});
+export type SalesFiguresType = z.infer<typeof SalesFigures>;
 
 export const RouterOutput = z.object({
   route: z.enum(ROUTES),
-  request: z.string().describe("The owner's ask restated in one plain English line (empty for ambiguous)"),
+  request: z
+    .string()
+    .describe("What the owner wants, restated in one plain English line that makes sense on its own: fill in what they refer to from the conversation (which day, which figure, what 'it' or 'that' is). Empty for ambiguous"),
   language: z.enum(["English", "Urdu", "Roman Urdu", "Mixed English and Urdu", "Other"]).describe("The language the owner wrote in"),
   question: z.string().nullable().describe("ambiguous only: one short question for the owner"),
   options: z.array(z.object({ label: z.string().describe("A button, 20 characters at most"), route: z.enum(ROUTES) })).describe("ambiguous only: 2 or 3 choices"),
@@ -32,10 +63,19 @@ export const RouterOutput = z.object({
     })
     .nullable()
     .describe("reputation only: a review the owner pasted or forwarded into the message; otherwise null"),
+  open_item: z.string().nullable().describe("answer_open only: the ref of the waiting question this message answers; otherwise null"),
+  decision: z.enum(["yes", "no"]).nullable().describe("answer_open only: yes (save it, go ahead, replace it) or no (don't save, cancel, keep the old one) when the owner said so; otherwise null"),
+  sales: SalesFigures.nullable().describe(
+    "sales_entry: the figure the owner gave. answer_open on a sales question: only what the owner changed (e.g. basis net for 'it was before VAT', or a different day); null fields stay as they were. Otherwise null",
+  ),
 });
 export type RouterOutputType = z.infer<typeof RouterOutput>;
 
-export function routerProblems(out: RouterOutputType): Problems {
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+// ctx.openRefs: the refs of the questions waiting when the message came in (answer_open must
+// name one of them); ctx.today ("YYYY-MM-DD"): sales can't be for a day that hasn't happened.
+export function routerProblems(out: RouterOutputType, ctx: { openRefs?: string[]; today?: string } = {}): Problems {
   const problems: Problems = [];
   if (out.route === "ambiguous") {
     if (!out.question?.trim()) problems.push("ambiguous: ask one short question");
@@ -43,6 +83,7 @@ export function routerProblems(out: RouterOutputType): Problems {
     for (const o of out.options) {
       if (!o.label.trim()) problems.push("every option needs a label");
       if (o.route === "ambiguous") problems.push("an option can't be ambiguous itself");
+      if (o.route === "answer_open") problems.push("an option can't be answer_open");
     }
   } else {
     if (out.question) problems.push("only an ambiguous message gets a question");
@@ -51,7 +92,61 @@ export function routerProblems(out: RouterOutputType): Problems {
   }
   if (out.pasted_review && out.route !== "reputation") problems.push("only a reputation message can carry a pasted review");
   if (out.pasted_review && !out.pasted_review.text.trim()) problems.push("a pasted review needs its text");
+  if (out.route === "answer_open") {
+    if (!out.open_item) problems.push("answer_open: name the open_item it answers");
+    else if (ctx.openRefs && !ctx.openRefs.includes(out.open_item))
+      problems.push(`answer_open: "${out.open_item}" isn't waiting (waiting: ${ctx.openRefs.join(", ") || "nothing"}); route the message by what it asks instead`);
+    else if (out.open_item === "choice") problems.push("a \"which did you mean?\" isn't answered with answer_open: route the clarified message by what it asks");
+  } else {
+    if (out.open_item) problems.push("only answer_open names an open_item");
+    if (out.decision) problems.push("only answer_open carries a decision");
+  }
+  if (out.sales && out.route !== "sales_entry" && out.route !== "answer_open") problems.push("only sales_entry or answer_open carries sales figures");
+  // A specialist can't save a figure: a day's sales given in answer to its question is still sales_entry.
+  if (out.route === "answer_open" && out.open_item === "question" && out.sales?.amount != null)
+    problems.push("a day's sales figure is sales_entry (code shows it back and saves it), even when it answers a specialist's question asking for it");
+  if (out.route === "sales_entry") {
+    if (!out.sales || out.sales.amount === null) problems.push("sales_entry: give the amount in sales.amount (pounds)");
+    else if (!(out.sales.amount >= 1 && out.sales.amount <= 500_000)) problems.push("sales_entry: the amount must be between £1 and £500,000");
+  }
+  if (out.sales?.business_date) {
+    if (!YMD.test(out.sales.business_date)) problems.push("sales.business_date must be YYYY-MM-DD");
+    else if (ctx.today && out.sales.business_date > ctx.today) problems.push("sales.business_date can't be in the future: sales are for days that have happened");
+  }
   return problems;
+}
+
+// "Monday 9 Nov = 2026-11-09 (today)" and the 7 days before, so the router can
+// turn "yesterday", "Saturday" or "last night" into a date without arithmetic.
+export function recentDays(today: string, back = 7) {
+  const [y, m, d] = today.split("-").map(Number);
+  return Array.from({ length: back + 1 }, (_, i) => {
+    const day = new Date(Date.UTC(y, m - 1, d - i));
+    const label = day.toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "long", day: "numeric", month: "short" });
+    return `${label} = ${day.toISOString().slice(0, 10)}${i === 0 ? " (today)" : i === 1 ? " (yesterday)" : ""}`;
+  }).join("\n");
+}
+
+// The recent conversation as the agents read it (oldest first).
+export type ConversationLine = { from: "owner" | "naila"; text: string };
+
+export function conversationText(lines: ConversationLine[]) {
+  return lines.length ? lines.map((m) => `${m.from === "owner" ? "Owner" : "Naila"}: ${m.text}`).join("\n") : "(none)";
+}
+
+// What a specialist working on an owner's message gets besides the message: what
+// they mean (the GM's words, with the conversation filled in) and the conversation.
+export type OwnerContext = { meaning: string | null; conversation: ConversationLine[] };
+
+export function contextText(context: OwnerContext | null | undefined) {
+  if (!context) return "";
+  const parts: string[] = [];
+  if (context.meaning) parts.push(`What the owner means, given the conversation: ${context.meaning}`);
+  if (context.conversation.length)
+    parts.push(
+      `The conversation before this message (oldest first). It's context: act on the owner's latest message. Never ask for something already said, and don't repeat a point already made unless it's what they asked about:\n${conversationText(context.conversation)}`,
+    );
+  return parts.join("\n\n");
 }
 
 // WhatsApp buttons take 20 characters: a longer label is shortened at a word ("Google or social posts" -> "Google or social").
@@ -74,6 +169,8 @@ export const ROUTE_WORDS: Record<Route, string> = {
   chat: "general chat and look-ups",
   team: "the rota (staff team and rota changes)",
   edit: "a change to the draft on screen",
+  sales_entry: "a day's sales (confirm card, then saved)",
+  answer_open: "the answer to a question Naila asked",
   ambiguous: "a question with buttons",
 };
 

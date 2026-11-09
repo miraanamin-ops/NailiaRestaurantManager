@@ -60,7 +60,7 @@ describe("a day's sales typed on WhatsApp", () => {
     expect(typedConfirmQuestion(result.figures, [], TODAY, "daily")).toBe(
       [
         "🧾 *Tue 3 Nov*: £2,340.00 including VAT (about £1,950.00 before VAT), 180 orders. Save it?",
-        'Reply *YES* to save it, or *NO*. If £2,340.00 was before VAT, reply *NO* and type it with "net". Another day? Reply with the day, e.g. *Monday*.',
+        "Reply *YES* to save it. If £2,340.00 was before VAT, or it's for a different day, just say so.",
         "💡 Even better: your till's sales-by-item export (CSV or Excel), or failing that sales by the hour, shows which dishes and hours make you the most, so I can find you more profit. Send it here whenever you can.",
       ].join("\n"),
     );

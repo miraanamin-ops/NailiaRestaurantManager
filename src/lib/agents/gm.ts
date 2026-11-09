@@ -7,7 +7,8 @@ import { runChecker } from "./checker-core";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
 import { runComposer, runRouter, type ComposerInput } from "./gm-core";
-import { rankBriefItems, ROUTE_WORDS, type BriefItem, type Route, type RouterOutputType } from "./gm-rules";
+import { recentConversation } from "./gm-open";
+import { rankBriefItems, ROUTE_WORDS, type BriefItem, type ConversationLine, type OpenItem, type Route, type RouterOutputType } from "./gm-rules";
 import { enqueueAgentJob, type AgentJob, type JobOutcome } from "./jobs";
 import { loadAgent } from "./loader";
 import { agentMode } from "./modes";
@@ -55,35 +56,32 @@ export async function gmMode(r: Restaurant) {
 
 // ---------- Routing ----------
 
-export const ROUTER_TIMEOUT_MS = 10_000;
-
-async function recentMessages(restaurantId: string, owner: string) {
-  const rows =
-    ok(
-      await getSupabase()
-        .from("messages")
-        .select("direction, body")
-        .eq("restaurant_id", restaurantId)
-        .or(`from_number.eq."${owner}",to_number.eq."${owner}"`)
-        .order("created_at", { ascending: false })
-        .limit(7)
-        .returns<{ direction: string; body: string }[]>(),
-    ) ?? [];
-  // The newest is the message being routed.
-  return rows
-    .slice(1)
-    .reverse()
-    .map((m) => ({ from: m.direction === "inbound" ? ("owner" as const) : ("naila" as const), text: m.body.slice(0, 300) }));
-}
+// Sonnet reading the whole conversation: a little longer than the old Haiku router.
+export const ROUTER_TIMEOUT_MS = 15_000;
 
 export type Routed = { output: RouterOutputType; ms: number; usage: Usage };
 
+// The draft on the owner's screen in a line (questions waiting are listed separately, as open items).
+export function onScreenText(d: Draft | null) {
+  if (!d || d.kind === "agent_question" || d.kind === "choice") return null;
+  if (d.waiting_for !== "decision" && d.waiting_for !== "edit_instructions") return null;
+  const line = `${d.kind.replace(/_/g, " ")} for ${d.audience ?? "the owner"}: "${d.content.replace(/\s+/g, " ").slice(0, 200)}"`;
+  // After Edit: a message about the draft is the change (route edit); anything else is a new topic.
+  return d.waiting_for === "edit_instructions" ? `${line} (the owner tapped Edit and was asked what to change)` : line;
+}
+
 // The router's decision, or null if it failed or took longer than the limit (today's code answers).
-export async function routeMessage(restaurantId: string, owner: string, body: string, onScreen: Draft | null): Promise<Routed | null> {
+export async function routeMessage(
+  restaurantId: string,
+  owner: string,
+  body: string,
+  onScreen: Draft | null,
+  extra: { open?: OpenItem[]; recent?: ConversationLine[]; today?: string } = {},
+): Promise<Routed | null> {
   const started = Date.now();
   try {
-    const recent = await recentMessages(restaurantId, owner).catch(() => []);
-    const run = runRouter({ message: body, recent, onScreen: onScreen ? `${onScreen.kind.replace(/_/g, " ")} for ${onScreen.audience ?? "the owner"}` : null }, "an owner message");
+    const recent = extra.recent ?? (await recentConversation(restaurantId, owner).catch(() => []));
+    const run = runRouter({ message: body, recent, onScreen: onScreenText(onScreen), open: extra.open ?? [], today: extra.today }, "an owner message");
     const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ROUTER_TIMEOUT_MS));
     const r = await Promise.race([run, timeout]);
     return r ? { output: r.output, ms: Date.now() - started, usage: r.usage } : null;

@@ -8,7 +8,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { testToolsOn } from "@/lib/test-mode";
 import { londonToday } from "./checker-core";
-import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome } from "./insights-core";
+import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome, type OwnerContext } from "./insights-core";
 import type { MetricsData } from "./insights-metrics";
 import { insightsText, type InsightsOutput } from "./insights-rules";
 import { enqueueAgentJob, recordAgentRun, type AgentJob, type JobOutcome } from "./jobs";
@@ -170,6 +170,8 @@ export type InsightsJob = {
   // What today's assistant said (answers), or wrote in the report (sentence and actions).
   legacy_text?: string | null;
   report_id?: string | null;
+  // Answers to the owner (live): the conversation and what they mean (the GM's words).
+  context?: OwnerContext | null;
 };
 
 export async function runInsightsFor(restaurant: Restaurant, job: InsightsJob, label: string) {
@@ -187,6 +189,7 @@ export async function runInsightsFor(restaurant: Restaurant, job: InsightsJob, l
     prepared: job.task === "report" ? REPORT_QUERIES : [],
     themes: job.task === "report" ? await themesFor(restaurant.id, weekStart) : null,
     today: londonToday(new Date(`${job.today}T12:00:00Z`)),
+    context: job.context ?? null,
   };
   const started = Date.now();
   const outcome = await insightsLoop(input, { resolve: (refs) => callTool("checker", "resolve_sources", restaurant.id, { refs }), checkerProfile }, label);
@@ -260,8 +263,8 @@ export function answerText(outcome: InsightsOutcome) {
 
 // Live (see insightsMode): Insights answers the owner's number question straight
 // away. Returns false if it couldn't (today's assistant answers instead).
-export async function answerWithInsights(restaurant: Restaurant, question: string, now: Date, send: (text: string) => Promise<unknown>) {
-  const job: InsightsJob = { task: "answer", question, today: londonYmd(now) };
+export async function answerWithInsights(restaurant: Restaurant, question: string, now: Date, send: (text: string) => Promise<unknown>, context: OwnerContext | null = null) {
+  const job: InsightsJob = { task: "answer", question, today: londonYmd(now), context };
   try {
     const { outcome, ms } = await runInsightsFor(restaurant, job, "an owner question (live)");
     // A question back (with the GM live): on screen, so the answer comes back here.

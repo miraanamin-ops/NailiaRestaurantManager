@@ -310,7 +310,7 @@ describe("a day's sales typed on WhatsApp", () => {
     expect(day("2026-10-08")?.net_sales).toBe(1800);
     await type(sender, "takings 900");
     expect(await answer(sender, "no")).toBe(true);
-    expect(replies.at(-1)).toBe("OK, I didn't save it. Type it again whenever you're ready, e.g. *£2,340, 180 orders*.");
+    expect(replies.at(-1)).toBe("OK, I didn't save it. Tell me the figure again whenever you're ready.");
     expect(day("2026-10-09")).toBeUndefined();
   });
 
