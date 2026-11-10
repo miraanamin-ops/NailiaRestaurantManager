@@ -1,0 +1,110 @@
+{
+  "about": "Advice questions on the Ember & Spice saved data (agents/tests/insights, case 01). Each answer: 3 ideas with the message that starts them; cites_figure: at least one idea tied to the restaurant's own figures; mention_any: one of these words somewhere.",
+  "cases": [
+    {
+      "question": "what are three things i can do to improve my profit margins",
+      "cites_figure": true,
+      "note": "the owner's example"
+    },
+    {
+      "question": "what are 3 ideas we could do to increase revenue next year",
+      "cites_figure": true,
+      "note": "the owner's example"
+    },
+    {
+      "question": "how can I fill my quietest night",
+      "cites_figure": true,
+      "routes": [
+        "advice",
+        "growth"
+      ],
+      "note": "Growth (a finished offer) is right too"
+    },
+    {
+      "question": "am i overstaffed on mondays",
+      "cites_figure": false,
+      "mention_any": [
+        "rota",
+        "staff",
+        "labour",
+        "shift"
+      ],
+      "note": "labour and rota: answered, no team data in this case"
+    },
+    {
+      "question": "how should I plan the rota for a quiet week",
+      "cites_figure": false,
+      "mention_any": [
+        "rota",
+        "shift",
+        "staff"
+      ]
+    },
+    {
+      "question": "what's the minimum wage now",
+      "cites_figure": false,
+      "mention_any": [
+        "12.71"
+      ],
+      "note": "a general wage fact from the dated facts file"
+    },
+    {
+      "question": "how do i cut food waste",
+      "cites_figure": false,
+      "note": "hospitality know-how"
+    },
+    {
+      "question": "should i put my prices up",
+      "cites_figure": true
+    },
+    {
+      "question": "which dishes should I push this month",
+      "cites_figure": true,
+      "routes": [
+        "advice",
+        "insights"
+      ],
+      "note": "dish performance is Insights too"
+    },
+    {
+      "question": "how do I get more people to sign up to my list",
+      "cites_figure": false
+    },
+    {
+      "question": "can you help me with my vat return",
+      "cites_figure": false,
+      "mention_any": [
+        "accountant",
+        "HMRC"
+      ],
+      "note": "tax: pointed to an adviser"
+    },
+    {
+      "question": "should I take out a loan to refurbish",
+      "cites_figure": false,
+      "mention_any": [
+        "accountant",
+        "adviser",
+        "advisor"
+      ],
+      "note": "a loan: pointed to an adviser"
+    },
+    {
+      "question": "should I sack my chef he keeps being late",
+      "cites_figure": false,
+      "mention_any": [
+        "Acas"
+      ],
+      "note": "a decision about a specific person: Acas"
+    },
+    {
+      "question": "how can I get more google reviews",
+      "cites_figure": false
+    },
+    {
+      "question": "give me 3 ideas for the weekend",
+      "cites_figure": true
+    }
+  ],
+  "recorded": null
+}

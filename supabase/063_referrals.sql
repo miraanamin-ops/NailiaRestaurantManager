@@ -1,4 +1,4 @@
--- 063: owner referrals (step 47). Each restaurant has a code to share; a new
+-- 063: owner referrals (step 49). Each restaurant has a code to share; a new
 -- restaurant that signs up with it records who recommended it, and once the new
 -- one pays its first invoice the recommending restaurant gets one month free
 -- (a £99 credit on its Stripe balance). Safe to re-run.

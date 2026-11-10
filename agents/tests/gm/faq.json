@@ -1,0 +1,636 @@
+{
+  "about": "How-to questions answered from the owner help guide (agents/help.md) and a fixed setup. routes: right routes for the router; covered: whether the guide answers it; mention_all: each inner list needs one of its words; not_yet_any: one of these words (an honest not yet); action: an offer to do it must come with it.",
+  "cases": [
+    {
+      "question": "how do i import a customer data list",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Import customers",
+          "send the file",
+          "send it here",
+          "send me the file"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "the 9 Nov question that failed"
+    },
+    {
+      "question": "how do I get my QR codes",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "QR"
+        ]
+      ],
+      "action": true,
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "DinerAI can send them: offer first"
+    },
+    {
+      "question": "how do i change the sign up reward",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "reward"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "plain words or Settings"
+    },
+    {
+      "question": "can you text my customers",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "email"
+        ]
+      ],
+      "not_yet_any": [
+        "not yet",
+        "isn't available",
+        "aren't available",
+        "can't",
+        "not available",
+        "email only"
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "missing feature: honest not yet"
+    },
+    {
+      "question": "can you post on instagram for me",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Google"
+        ]
+      ],
+      "not_yet_any": [
+        "not yet",
+        "can't",
+        "don't",
+        "isn't"
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "missing feature"
+    },
+    {
+      "question": "how do i stop everything going out",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "PAUSE"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how do I undo something I approved",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "UNDO"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how can i download my customer list",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "EXPORT CUSTOMERS",
+          "Export"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "what happens if a customer asks to delete their data",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Delete my data",
+          "delete"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how much does dinerai cost",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "£99",
+          "99"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how do i connect my google business profile",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Google"
+        ],
+        [
+          "Settings",
+          "Manager"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "can you connect straight to my till",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "export",
+          "till report",
+          "photo"
+        ]
+      ],
+      "not_yet_any": [
+        "not yet",
+        "isn't",
+        "waiting",
+        "not available",
+        "can't"
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "built, waiting for approvals"
+    },
+    {
+      "question": "whats the best way to send you my sales",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "sales-by-item",
+          "export",
+          "till report",
+          "photo"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how do i add someone to the rota",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "add",
+          "Team"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how do I change our opening hours",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "hours"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "why hasnt my offer email gone out yet",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "sending hours",
+          "9am",
+          "paused",
+          "once a week",
+          "one offer"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "where can i see all my reviews",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Reviews"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "someone left a review on tripadvisor, can you help me reply",
+      "routes": [
+        "how_to",
+        "reputation"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "paste"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "reputation (paste it) is also right"
+    },
+    {
+      "question": "how do i change the biggest discount allowed",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "CAP",
+          "discount"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how do customers use their sign up reward",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Redeem",
+          "till"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "can my manager approve things for me",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "registered",
+          "your WhatsApp number",
+          "your number",
+          "only"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "what is the morning brief",
+      "routes": [
+        "how_to",
+        "chat"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "morning"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "i forgot my password",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "Forgot"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "can i add my second restaurant to this account",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "own account",
+          "separate",
+          "each restaurant"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how do i close my account",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "export",
+          "delete"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "can I import my customers if I don't know if they agreed to marketing",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "QR"
+        ]
+      ],
+      "not_yet_any": [
+        "can't",
+        "cannot",
+        "won't",
+        "not able",
+        "unable",
+        "not if"
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "basis rule: refused, QR instead"
+    },
+    {
+      "question": "how do i get last month's report",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "MONTHLY REPORT"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "how can my staff send the till report",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "ADD STAFF"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "can you take bookings for us",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "booking"
+        ]
+      ],
+      "not_yet_any": [
+        "no",
+        "not",
+        "can't",
+        "doesn't"
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    },
+    {
+      "question": "can I connect xero to dinerai",
+      "routes": [
+        "how_to"
+      ],
+      "covered": false,
+      "mention_all": [],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ],
+      "note": "not in the guide: team asked"
+    },
+    {
+      "question": "where do i change the logo on my emails",
+      "routes": [
+        "how_to"
+      ],
+      "covered": true,
+      "mention_all": [
+        [
+          "How your emails look",
+          "Settings"
+        ]
+      ],
+      "must_not_contain": [
+        "GM",
+        "router",
+        "Insights agent",
+        "Growth agent"
+      ]
+    }
+  ],
+  "recorded": null
+}

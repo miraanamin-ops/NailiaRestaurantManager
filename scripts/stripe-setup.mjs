@@ -1,4 +1,4 @@
-// Makes DinerAI's Stripe setup (step 47), in test or live mode depending on the key:
+// Makes DinerAI's Stripe setup (step 49), in test or live mode depending on the key:
 //   - the product "DinerAI" and its price: £99 a month, VAT included (lookup key dinerai_monthly_99)
 //   - the founder coupon: £49 off for 4 months (the free month counts as one, so
 //     months 2 to 4 cost £50), and the promotion code FOUNDER, 50 uses

@@ -7,7 +7,8 @@ import { runChecker } from "./checker-core";
 import { londonToday } from "./checker-core";
 import { confirmedFields, goLiveChecklist } from "./go-live";
 import { runComposer, runRouter, type ComposerInput } from "./gm-core";
-import { rankBriefItems, ROUTE_WORDS, type BriefItem, type Route, type RouterOutputType } from "./gm-rules";
+import { recentConversation } from "./gm-open";
+import { rankBriefItems, ROUTE_WORDS, type BriefItem, type ConversationLine, type OpenItem, type Route, type RouterOutputType } from "./gm-rules";
 import { enqueueAgentJob, type AgentJob, type JobOutcome } from "./jobs";
 import { loadAgent } from "./loader";
 import { agentMode } from "./modes";
@@ -55,35 +56,32 @@ export async function gmMode(r: Restaurant) {
 
 // ---------- Routing ----------
 
-export const ROUTER_TIMEOUT_MS = 10_000;
-
-async function recentMessages(restaurantId: string, owner: string) {
-  const rows =
-    ok(
-      await getSupabase()
-        .from("messages")
-        .select("direction, body")
-        .eq("restaurant_id", restaurantId)
-        .or(`from_number.eq."${owner}",to_number.eq."${owner}"`)
-        .order("created_at", { ascending: false })
-        .limit(7)
-        .returns<{ direction: string; body: string }[]>(),
-    ) ?? [];
-  // The newest is the message being routed.
-  return rows
-    .slice(1)
-    .reverse()
-    .map((m) => ({ from: m.direction === "inbound" ? ("owner" as const) : ("naila" as const), text: m.body.slice(0, 300) }));
-}
+// Sonnet reading the whole conversation: a little longer than the old Haiku router.
+export const ROUTER_TIMEOUT_MS = 15_000;
 
 export type Routed = { output: RouterOutputType; ms: number; usage: Usage };
 
+// The draft on the owner's screen in a line (questions waiting are listed separately, as open items).
+export function onScreenText(d: Draft | null) {
+  if (!d || d.kind === "agent_question" || d.kind === "choice") return null;
+  if (d.waiting_for !== "decision" && d.waiting_for !== "edit_instructions") return null;
+  const line = `${d.kind.replace(/_/g, " ")} for ${d.audience ?? "the owner"}: "${d.content.replace(/\s+/g, " ").slice(0, 200)}"`;
+  // After Edit: a message about the draft is the change (route edit); anything else is a new topic.
+  return d.waiting_for === "edit_instructions" ? `${line} (the owner tapped Edit and was asked what to change)` : line;
+}
+
 // The router's decision, or null if it failed or took longer than the limit (today's code answers).
-export async function routeMessage(restaurantId: string, owner: string, body: string, onScreen: Draft | null): Promise<Routed | null> {
+export async function routeMessage(
+  restaurantId: string,
+  owner: string,
+  body: string,
+  onScreen: Draft | null,
+  extra: { open?: OpenItem[]; recent?: ConversationLine[]; today?: string } = {},
+): Promise<Routed | null> {
   const started = Date.now();
   try {
-    const recent = await recentMessages(restaurantId, owner).catch(() => []);
-    const run = runRouter({ message: body, recent, onScreen: onScreen ? `${onScreen.kind.replace(/_/g, " ")} for ${onScreen.audience ?? "the owner"}` : null }, "an owner message");
+    const recent = extra.recent ?? (await recentConversation(restaurantId, owner).catch(() => []));
+    const run = runRouter({ message: body, recent, onScreen: onScreenText(onScreen), open: extra.open ?? [], today: extra.today }, "an owner message");
     const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ROUTER_TIMEOUT_MS));
     const r = await Promise.race([run, timeout]);
     return r ? { output: r.output, ms: Date.now() - started, usage: r.usage } : null;
@@ -122,11 +120,20 @@ export async function gmProfile(restaurantId: string) {
   return callTool("gm", "get_profile", restaurantId, {});
 }
 
-// A reply with figures or facts goes through the checker (facts and C6) before it's sent.
+// A reply with figures or facts goes through the checker (facts and C6) before it's
+// sent. If the checker sends it back, the composer gets one retry with its notes.
 export async function composeChecked(restaurantId: string, input: ComposerInput, label: string) {
+  const first = await composeCheckedOnce(restaurantId, input, label);
+  if (!first.verdict || first.verdict === "pass") return first;
+  const second = await composeCheckedOnce(restaurantId, { ...input, fix: first.fails.length ? first.fails : ["the fact check didn't pass it: say only what the data supports"] }, `${label} (retry)`);
+  return { ...second, usage: addUsage(first.usage, second.usage) };
+}
+
+async function composeCheckedOnce(restaurantId: string, input: ComposerInput, label: string) {
   const composed = await runComposer(input, label);
   let usage = composed.usage;
   let verdict: string | null = null;
+  let fails: string[] = [];
   const hasFacts = /\d/.test(composed.output.message) || Boolean(input.profile);
   if (hasFacts) {
     const checkerProfile = await callTool("checker", "get_profile", restaurantId, {});
@@ -146,8 +153,9 @@ export async function composeChecked(restaurantId: string, input: ComposerInput,
     );
     usage = addUsage(usage, checked.usage);
     verdict = checked.output.verdict;
+    fails = checked.output.checks.filter((c) => c.result === "fail").map((c) => `${c.id}: ${c.reason ?? ""}${c.fix ? ` Fix: ${c.fix}` : ""}`);
   }
-  return { message: composed.output.message, verdict, usage };
+  return { message: composed.output.message, verdict, usage, fails };
 }
 
 // ---------- Shadow: every owner message ----------

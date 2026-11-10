@@ -55,6 +55,8 @@ export async function salesFromMedia(sender: SalesSender, file: IncomingFile, no
       await sender.reply(result.message);
       return "handled";
     }
+    // A customer list (an email column, no sales columns): the import preview (owner only).
+    if (await customerListFromFile(sender, bytes, type)) return "handled";
     const outcome = await receivePosFile({
       restaurantId: sender.restaurantId,
       bytes,
@@ -75,6 +77,25 @@ export async function salesFromMedia(sender: SalesSender, file: IncomingFile, no
     return "handled";
   }
   return "unsupported";
+}
+
+// A spreadsheet that's a customer list: read, cleaned and previewed, then the GM asks
+// how they agreed (lib/agents/gm-open.ts). false: not a customer list.
+async function customerListFromFile(sender: SalesSender, bytes: Buffer, contentType: string) {
+  const { fileKind, readTable } = await import("./pos-file");
+  const kind = fileKind(contentType, bytes);
+  if (kind !== "csv" && kind !== "xlsx") return false;
+  const table = await readTable(bytes, kind).catch(() => null);
+  const { looksLikeCustomerList } = await import("@/lib/customer-import/rules");
+  if (!table || !looksLikeCustomerList(table)) return false;
+  if (sender.role === "staff") {
+    await sender.reply("Thanks! That looks like a customer list: only the owner can import one. Please ask them to send it.");
+    return true;
+  }
+  const { previewImport, previewMessage } = await import("@/lib/customer-import");
+  const preview = await previewImport({ restaurantId: sender.restaurantId, table, bytes, fileName: null, channel: "whatsapp", createdBy: sender.number });
+  await sender.reply(preview.ok ? previewMessage(preview) : preview.text);
+  return true;
 }
 
 async function restaurantFor(id: string) {

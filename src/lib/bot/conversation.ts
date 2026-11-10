@@ -1,7 +1,7 @@
 import "server-only";
 import { growthMode, liveGrowthRequest, queueGrowthShadow } from "@/lib/agents/growth";
 import { gmMode, legacyRoute, queueGmShadow } from "@/lib/agents/gm";
-import { agentsCouldNotHelp, answerAgentQuestion, answerChoice, correctFact, decideIdea, gmLive, localEventCard, oldAssistantRetired, saveReasonTap } from "@/lib/agents/gm-live";
+import { agentsCouldNotHelp, answerChoice, correctFact, decideIdea, gmLive, localEventCard, oldAssistantRetired, saveReasonTap } from "@/lib/agents/gm-live";
 import { answerWithInsights, insightsMode, queueInsightsShadow } from "@/lib/agents/insights";
 import { chat, rewriteDraft, type ChatResult, type StoredMessage } from "@/lib/assistant";
 import { londonYmd } from "@/lib/clock";
@@ -60,8 +60,10 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   const offerTap = parseOfferTap(buttonPayload, body);
   if (offerTap && (await answerOfferTap(turn, offerTap))) return;
   const gmOn = (await gmMode(ctx.restaurant)) === "live";
-  // A question from scheduled work (Growth, Insights), answered in words while it's on screen.
-  if (gmOn && !buttonPayload && active?.kind === "agent_question" && active.waiting_for === "decision") return answerAgentQuestion(turn, active, body);
+  // A question from scheduled work (Growth, Insights) is NOT answered by whatever
+  // comes next: with the GM live, it reads each message and decides whether it's
+  // the answer (gm-open.ts), so "Thursday looks quiet" can't be taken as an answer
+  // about Sunday.
 
   const targeted = parseTargetedAction(buttonPayload, body);
   if (targeted) return decideTargeted(turn, targeted);
@@ -69,14 +71,17 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   const action = parseAction(buttonPayload, body);
   if (action && (await decideOnScreen(turn, action, active, Boolean(buttonPayload)))) return;
 
-  // The owner is telling us what to change.
-  if (active?.waiting_for === "edit_instructions") {
-    if (active.kind === "rota") return void (await reviseRota(ctx.restaurant, active, body, { now: ctx.now, send, useClaude: true }));
-    if (active.kind === "profile_change") return correctFact(turn, active, body);
-    if (active.kind === "email_campaign") return reviseCampaignAndSend(ctx, active, body, send);
-    const rewritten = await rewriteDraft(ctx, learning, active, body);
-    return reviseAndSend(ctx, active, body, rewritten, send);
-  }
+  // The owner is telling us what to change (after tapping Edit). With the GM live it
+  // reads the message first: a change to the draft comes back as an edit; anything
+  // else (a new topic) is handled as that, and the draft waits for a decision again.
+  const editFromInstructions = async (draft: Draft) => {
+    if (draft.kind === "rota") return void (await reviseRota(ctx.restaurant, draft, body, { now: ctx.now, send, useClaude: true }));
+    if (draft.kind === "profile_change") return correctFact(turn, draft, body);
+    if (draft.kind === "email_campaign") return reviseCampaignAndSend(ctx, draft, body, send);
+    const rewritten = await rewriteDraft(ctx, learning, draft, body);
+    return reviseAndSend(ctx, draft, body, rewritten, send);
+  };
+  if (active?.waiting_for === "edit_instructions" && (!gmOn || buttonPayload)) return editFromInstructions(active);
 
   // A rota on screen: "Ali can't do Friday" typed straight away is an edit (plain
   // code only here, so other messages still reach the assistant).
@@ -103,11 +108,22 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   // look_up_forecast (with the agents, Insights reads the forecast).
   const retired = gmOn && oldAssistantRetired(ctx.restaurant);
   const forecastQuestion = !retired && !buttonPayload && looksLikeForecastQuestion(body);
+  // After Edit, the message is the change unless the GM read it as something else.
+  let editStillWaiting = active?.waiting_for === "edit_instructions";
   if (gmOn && !buttonPayload && !forecastQuestion && message === body) {
     const live = await gmLive(turn, body, active);
     if (live.handled) return;
+    // The GM read it (route set): it isn't the change, even if no live part answered it.
+    if (live.route !== null) editStillWaiting = false;
+    else if (editStillWaiting) return editFromInstructions(active!);
     if (retired) return agentsCouldNotHelp(turn, body, live.route);
   }
+  // Not on the GM: a reply to a waiting sales question is still read in any words.
+  if (!gmOn && !buttonPayload) {
+    const { salesAnswerWithoutGm } = await import("@/lib/agents/gm-open");
+    if (await salesAnswerWithoutGm(turn, body, active).catch(() => false)) return;
+  }
+  if (editStillWaiting) return editFromInstructions(active!);
   if (retired) return agentsCouldNotHelp(turn, message, null);
 
   const started = Date.now();

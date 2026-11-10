@@ -7,7 +7,7 @@ import { appUrl, getSupabase, type Restaurant } from "@/lib/supabase";
 import { cleanReferralCode, earnsReferralCredit, REFERRAL_CREDIT_PENCE, referralCodeFor, referralCreditedText } from "./referrals-rules";
 import { getStripe } from "./stripe";
 
-// Owner referrals (step 47): the rules are in referrals-rules.ts.
+// Owner referrals (step 49): the rules are in referrals-rules.ts.
 
 type Referral = Pick<Restaurant, "id" | "name" | "owner_email"> & { referral_code?: string | null; stripe_customer_id?: string | null };
 

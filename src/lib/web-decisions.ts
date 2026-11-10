@@ -33,6 +33,12 @@ export async function decideFromWeb(
     return { ok: false, message: "That one needs your answer on WhatsApp." };
   }
 
+  // An imported list's welcome: Approve starts the daily batches (lib/customer-import).
+  if (draft.kind === "import_welcome") {
+    const { decideImportWelcome } = await import("@/lib/bot/decisions");
+    const { plainText: plain } = await import("@/lib/dashboard/rules");
+    return { ok: true, message: plain(await decideImportWelcome(restaurant, draft, action)) };
+  }
   if (action === "approve") {
     const approved = await approveDraft(draft);
     const result = await attemptSend(approved.id, restaurant, restaurantNow(restaurant), "approve");

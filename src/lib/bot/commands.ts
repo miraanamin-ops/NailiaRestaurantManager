@@ -27,7 +27,9 @@ import { updateRestaurant, type Turn } from "./turn";
 
 // Exact typed commands: settings, test commands and shortcuts. (Parsing is in ./parse.ts.)
 
-const HELP_TEXT = `🛠️ *Commands*
+// Every shortcut here must be in the owner help guide, agents/help.md (tests/agents/help.test.ts).
+export const HELP_TEXT = `🛠️ *Commands*
+_You never need these: just tell me what you want in your own words. Not sure how something works? Ask, e.g. "how do I import my customer list?"_
 - *APPROVE ALL*: approve everything in the latest brief (or *APPROVE 2*, *EDIT 2*, *SKIP 2* for one item)
 - *UNDO*: reverse your last approval, skip, edit or setting change (where possible)
 - *QUEUE*: see drafts waiting for you · *NEXT*: bring up the next one

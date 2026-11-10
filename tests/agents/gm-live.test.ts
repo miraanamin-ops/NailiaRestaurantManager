@@ -77,8 +77,9 @@ describe("live routing", () => {
     expect(db.tables.agent_jobs[0]).toMatchObject({ kind: "gm_live", verdict: "profile_question" });
   });
 
-  test("a reply the checker doesn't pass isn't sent: today's assistant answers", async () => {
-    answers = [route("profile_question"), { type: "reply", message: "We close at 11pm on Friday." }, { ...ownerPass, verdict: "fail", checks: ownerPass.checks.map((c) => (c.id === "F2" ? { id: "F2", result: "fail", reason: "the profile says midnight", fix: "say midnight" } : c)) }];
+  test("a reply the checker doesn't pass (after one retry) isn't sent: today's assistant answers", async () => {
+    const fail = { ...ownerPass, verdict: "fail", checks: ownerPass.checks.map((c) => (c.id === "F2" ? { id: "F2", result: "fail", reason: "the profile says midnight", fix: "say midnight" } : c)) };
+    answers = [route("profile_question"), { type: "reply", message: "We close at 11pm on Friday." }, fail, { type: "reply", message: "We close at 11.30pm on Friday." }, fail];
     await say("what time do we close friday?");
     expect(sent.map((s) => s.text)).toEqual(["Today's answer"]);
   });

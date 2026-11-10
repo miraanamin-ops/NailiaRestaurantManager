@@ -130,8 +130,9 @@ export function typedConfirmQuestion(f: ZFigures, problems: string[], today: str
   const day = dayLabel(f.business_date!, Number(today.slice(0, 4)));
   const lines = [`🧾 *${day}*: ${typedSummary(f)}. Save it?`];
   if (problems.length) lines.push(problems.slice(0, 3).map((p) => `- ${p[0].toUpperCase()}${p.slice(1)}`).join("\n"));
-  const vat = f.gross_sales !== null ? ` If ${gbp(f.gross_sales, true)} was before VAT, reply *NO* and type it with "net".` : "";
-  lines.push(`Reply *YES* to save it, or *NO*.${vat} Another day? Reply with the day, e.g. *Monday*.`);
+  // No special words: anything the owner says back is understood (lib/agents/gm-open.ts).
+  const vat = f.gross_sales !== null ? ` If ${gbp(f.gross_sales, true)} was before VAT, or it's for a different day, just say so.` : " If it's for a different day, or the figure's not right, just say so.";
+  lines.push(`Reply *YES* to save it.${vat}`);
   const tip = betterDataLine(best);
   if (tip) lines.push(tip);
   return lines.join("\n");
@@ -141,4 +142,33 @@ export function typedSavedLine(f: ZFigures, today: string) {
   return `${dayLabel(f.business_date!, Number(today.slice(0, 4)))}: ${typedSummary(f)}. Saved. 👍`;
 }
 
-export const TYPED_DISCARDED = "OK, I didn't save it. Type it again whenever you're ready, e.g. *£2,340, 180 orders*.";
+export const TYPED_DISCARDED = "OK, I didn't save it. Tell me the figure again whenever you're ready.";
+
+// What the owner changed about a figure waiting for a yes ("it was before VAT",
+// "no, Saturday", "actually £1,650"): null = unchanged.
+export type SalesChange = { business_date: string | null; amount: number | null; basis: "gross" | "net" | null; transactions: number | null };
+
+export const changesSomething = (c: SalesChange | null | undefined): c is SalesChange =>
+  Boolean(c && (c.business_date !== null || c.amount !== null || c.basis !== null || c.transactions !== null));
+
+// The read with the change applied, for the same checks and confirm card again.
+// A new amount or basis replaces the single total (VAT and the payment split no
+// longer apply to it); "before VAT" alone moves the one figure there is to net (or to
+// gross for "including VAT"). With both totals read off a till report, a basis alone
+// changes nothing (the report says which is which).
+export function applySalesChange(read: ZRead, change: SalesChange): ZRead {
+  const next: ZRead = { ...read };
+  if (change.business_date) next.business_date = change.business_date;
+  if (change.transactions !== null) next.transactions = change.transactions;
+  const single = read.gross_sales !== null && read.net_sales !== null ? null : (read.gross_sales ?? read.net_sales);
+  const currentBasis: "gross" | "net" = read.gross_sales === null && read.net_sales !== null ? "net" : "gross";
+  const amount = change.amount ?? (change.basis ? single : null);
+  if (amount !== null && (change.amount !== null || change.basis !== currentBasis)) {
+    const basis = change.basis ?? currentBasis;
+    next.gross_sales = basis === "gross" ? amount : null;
+    next.net_sales = basis === "net" ? amount : null;
+    next.vat = null;
+    if (change.amount !== null) Object.assign(next, { card: null, cash: null, other_payments: null });
+  }
+  return next;
+}

@@ -7,7 +7,7 @@ import { presentNext } from "@/lib/google-jobs";
 import { attemptSend } from "@/lib/send";
 import { gmMode } from "@/lib/agents/gm";
 import { approveFact, decideIdea, offerSkipReasons } from "@/lib/agents/gm-live";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, type Restaurant } from "@/lib/supabase";
 import type { Action, TargetedAction } from "./parse";
 import { afterReviewDecision } from "@/lib/review/flow-run";
 import type { Turn } from "./turn";
@@ -43,6 +43,8 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
   // The GM's cards: a fact is saved on Approve; a special idea is liked or skipped (never sent).
   if (draft.status === "pending" && draft.kind === "profile_change" && t.action === "approve") return approveFact(turn, draft);
   if (draft.status === "pending" && draft.kind === "special_idea" && t.action !== "edit") return decideIdea(turn, draft, t.action === "approve");
+  // An imported list's welcome: Approve starts the daily batches; its wording is fixed.
+  if (draft.status === "pending" && draft.kind === "import_welcome") return send(await decideImportWelcome(r, draft, t.action));
   // A rota is published on Approve (never sent to anyone).
   if (draft.status === "pending" && draft.kind === "rota" && t.action === "approve") {
     await approveRota(r, draft, send, turn.channel);
@@ -98,6 +100,10 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     await decideIdea(turn, decisionDraft, action === "approve");
     return true;
   }
+  if (decisionDraft?.kind === "import_welcome") {
+    await send(await decideImportWelcome(r, decisionDraft, action));
+    return true;
+  }
   if (decisionDraft?.kind === "rota" && action === "approve") {
     await approveRota(r, decisionDraft, send, turn.channel);
     await presentNext(ctx, send);
@@ -138,4 +144,15 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
     return true;
   }
   return false;
+}
+
+// Approve, Edit or Skip on an imported list's welcome email (lib/customer-import).
+export const IMPORT_WELCOME_EDIT =
+  "✏️ The welcome email's wording is fixed, so every imported customer is told whose list they're on, why, and how to unsubscribe. You can change what's in it: your sign-up reward (\"set sign-up reward to a free drink\") and your logo and colours (*Settings*, then *How your emails look*). Then tap *Approve*.";
+
+export async function decideImportWelcome(r: Restaurant, draft: Draft, action: "approve" | "edit" | "skip") {
+  const { approveImportWelcome, skipImportWelcome } = await import("@/lib/customer-import");
+  if (action === "approve") return approveImportWelcome(r, draft);
+  if (action === "skip") return skipImportWelcome(r, draft);
+  return IMPORT_WELCOME_EDIT;
 }

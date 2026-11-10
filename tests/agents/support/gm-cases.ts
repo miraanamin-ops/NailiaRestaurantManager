@@ -4,7 +4,21 @@
 // must do), with the recorded answers.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { composerProblems, expectedLanguage, numbersFrom, type ComposeKind, type ComposerContext, type ComposerOutputType, type LanguageSeen, type Route, type RouterOutputType } from "@/lib/agents/gm-rules";
+import {
+  composerProblems,
+  expectedLanguage,
+  numbersFrom,
+  routerProblems,
+  type ComposeKind,
+  type ComposerContext,
+  type ComposerOutputType,
+  type ConversationLine,
+  type LanguageSeen,
+  type OpenItem,
+  type Route,
+  type RouterOutputType,
+  type SalesFiguresType,
+} from "@/lib/agents/gm-rules";
 
 export const GM_DIR = join("agents", "tests", "gm");
 
@@ -88,5 +102,46 @@ export function judgeComposer(c: ComposerCase, out: ComposerOutputType) {
   const text = out.message.toLowerCase();
   if (c.expect.mention_any?.length && !c.expect.mention_any.some((w) => text.includes(w.toLowerCase()))) problems.push(`should mention one of: ${c.expect.mention_any.join(", ")}`);
   for (const w of c.expect.must_not_contain ?? []) if (text.includes(w.toLowerCase())) problems.push(`must not contain "${w}"`);
+  return problems;
+}
+
+// ---------- Conversations (conversations.json) ----------
+
+// An owner message in the middle of a conversation: what's waiting (open), what was
+// said before (recent), the right routes, and what else must be right (expect).
+export type ConversationCase = {
+  message: string;
+  routes: Route[];
+  note: string;
+  open?: OpenItem[];
+  recent?: ConversationLine[];
+  on_screen?: string;
+  expect?: { open_item?: string; decision?: "yes" | "no"; sales?: Partial<SalesFiguresType> };
+};
+export type ConversationFile = { about: string; today: string; cases: ConversationCase[]; recorded?: { results: { key: string; output: RouterOutputType }[]; recorded_at: string } | null };
+
+// The same message can be a case more than once (with different context).
+export const conversationKey = (c: ConversationCase) => `${c.message}|${c.note}`;
+
+export function loadConversations(): ConversationFile {
+  return JSON.parse(readFileSync(join(GM_DIR, "conversations.json"), "utf8"));
+}
+
+export function saveConversationsRecorded(recorded: ConversationFile["recorded"]) {
+  const f = loadConversations();
+  writeFileSync(join(GM_DIR, "conversations.json"), `${JSON.stringify({ ...f, recorded }, null, 2)}\n`);
+}
+
+// What's wrong with the router's answer for this case (empty: right).
+export function conversationProblems(c: ConversationCase, out: RouterOutputType, today: string) {
+  const problems: string[] = [...routerProblems(out, { openRefs: (c.open ?? []).map((o) => o.ref), today })];
+  if (!c.routes.includes(out.route)) problems.push(`${out.route}, expected ${c.routes.join(" or ")}`);
+  const e = c.expect ?? {};
+  if (e.open_item && out.route === "answer_open" && out.open_item !== e.open_item) problems.push(`answers ${out.open_item}, expected ${e.open_item}`);
+  if (e.decision && out.decision !== e.decision) problems.push(`decision ${out.decision}, expected ${e.decision}`);
+  for (const [field, want] of Object.entries(e.sales ?? {})) {
+    const got = out.sales?.[field as keyof SalesFiguresType] ?? null;
+    if (got !== want) problems.push(`sales.${field} ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
+  }
   return problems;
 }

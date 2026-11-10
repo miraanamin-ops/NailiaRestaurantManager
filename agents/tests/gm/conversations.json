@@ -1,0 +1,1332 @@
+{
+  "about": "Owner messages read in the middle of a conversation (the 9 Nov 2026 WhatsApp test, and variations): typos, autocorrect, 'sorry I meant', a change of topic while a question waits, sales figures in any words. 'today' is the date the router is given. 'open' lists what Naila is waiting on (answer_open may only name one of these); 'recent' is the conversation before the message. 'routes' lists every right route; 'expect' what else must be right (open_item, decision, and the sales fields that matter; fields not listed can be anything).",
+  "today": "2026-11-09",
+  "cases": [
+    {
+      "message": "Before CAT",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "the 9 Nov test: autocorrect for 'before VAT', right after a sales figure",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "basis": "net"
+        }
+      }
+    },
+    {
+      "message": "sorry i meant before VAT",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "the 9 Nov test: corrects the last message",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        },
+        {
+          "from": "owner",
+          "text": "Before CAT"
+        },
+        {
+          "from": "naila",
+          "text": "Do you mean the carrot cake review, a menu change, or something else?"
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "basis": "net"
+        }
+      }
+    },
+    {
+      "message": "before vat",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "lower case, nothing else",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "basis": "net"
+        }
+      }
+    },
+    {
+      "message": "thats ex vat",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "another way to say net",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "basis": "net"
+        }
+      }
+    },
+    {
+      "message": "1500 was net mate",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "net, casual",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "basis": "net"
+        }
+      }
+    },
+    {
+      "message": "yep save it",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "a yes in other words",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "decision": "yes"
+      }
+    },
+    {
+      "message": "no dont save that",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "a no",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "decision": "no"
+      }
+    },
+    {
+      "message": "no it was saturday",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "a different day",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "business_date": "2026-11-07"
+        }
+      }
+    },
+    {
+      "message": "actually it was 1650",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "a different amount",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "amount": 1650
+        }
+      }
+    },
+    {
+      "message": "sorry i meant before VAT",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "with the 'which did you mean?' card also waiting: it answers the sales question",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        },
+        {
+          "ref": "choice",
+          "kind": "choice",
+          "asks": "Do you mean the carrot cake review, a menu change, or something else? (about the owner's message: \"Before CAT\")",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        },
+        {
+          "from": "owner",
+          "text": "Before CAT"
+        },
+        {
+          "from": "naila",
+          "text": "Do you mean the carrot cake review, a menu change, or something else?"
+        }
+      ],
+      "expect": {
+        "open_item": "sales",
+        "sales": {
+          "basis": "net"
+        }
+      }
+    },
+    {
+      "message": "it was 1500£ before VAT",
+      "routes": [
+        "sales_entry"
+      ],
+      "note": "the 9 Nov test: a figure after Insights said there's no data",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total.",
+          "minutes_ago": 3
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "yesterdays sales figure"
+        },
+        {
+          "from": "naila",
+          "text": "❓ No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total."
+        }
+      ],
+      "expect": {
+        "sales": {
+          "amount": 1500,
+          "basis": "net",
+          "business_date": "2026-11-08"
+        }
+      }
+    },
+    {
+      "message": "Yesterdays sales were £1500 before VAT",
+      "routes": [
+        "sales_entry"
+      ],
+      "note": "a figure, nothing waiting",
+      "expect": {
+        "sales": {
+          "amount": 1500,
+          "basis": "net",
+          "business_date": "2026-11-08"
+        }
+      }
+    },
+    {
+      "message": "we did 2.3k on saturday",
+      "routes": [
+        "sales_entry"
+      ],
+      "note": "k and a weekday",
+      "expect": {
+        "sales": {
+          "amount": 2300,
+          "business_date": "2026-11-07"
+        }
+      }
+    },
+    {
+      "message": "took 1850 last night, 140 orders",
+      "routes": [
+        "sales_entry"
+      ],
+      "note": "last night and orders",
+      "expect": {
+        "sales": {
+          "amount": 1850,
+          "business_date": "2026-11-08",
+          "transactions": 140
+        }
+      }
+    },
+    {
+      "message": "kal ki sale 1500 thi VAT ke baghair",
+      "routes": [
+        "sales_entry"
+      ],
+      "note": "roman urdu: yesterday's sales were 1500 without VAT",
+      "expect": {
+        "sales": {
+          "amount": 1500,
+          "basis": "net",
+          "business_date": "2026-11-08"
+        }
+      }
+    },
+    {
+      "message": "how did yesterday go?",
+      "routes": [
+        "insights"
+      ],
+      "note": "a question about sales is insights, not a figure",
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales were £1500 before VAT"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 before VAT. Save it?"
+        },
+        {
+          "from": "owner",
+          "text": "YES"
+        },
+        {
+          "from": "naila",
+          "text": "Sun 8 Nov: £1,500.00 before VAT. Saved. 👍"
+        }
+      ]
+    },
+    {
+      "message": "Thursday looks quiet",
+      "routes": [
+        "growth"
+      ],
+      "note": "the 9 Nov test: a new request while Insights' question about Sunday waits",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total.",
+          "minutes_ago": 3
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "yesterdays sales figure"
+        },
+        {
+          "from": "naila",
+          "text": "❓ No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total."
+        }
+      ]
+    },
+    {
+      "message": "No I want a deal for thursday.",
+      "routes": [
+        "growth"
+      ],
+      "note": "the 9 Nov test: a deal, not an answer to the Sunday question",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total.",
+          "minutes_ago": 3
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "yesterdays sales figure"
+        },
+        {
+          "from": "naila",
+          "text": "❓ No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total."
+        },
+        {
+          "from": "owner",
+          "text": "Thursday looks quiet"
+        },
+        {
+          "from": "naila",
+          "text": "❓ Thursday doesn't change the Sunday check."
+        }
+      ]
+    },
+    {
+      "message": "Thursday looks quiet",
+      "routes": [
+        "growth"
+      ],
+      "note": "a new request while a sales figure waits for a yes",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ]
+    },
+    {
+      "message": "Thursday looks quiet",
+      "routes": [
+        "growth"
+      ],
+      "note": "after the sales were saved",
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales were £1500 before VAT"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 before VAT. Save it?"
+        },
+        {
+          "from": "owner",
+          "text": "YES"
+        },
+        {
+          "from": "naila",
+          "text": "Sun 8 Nov: £1,500.00 before VAT. Saved. 👍"
+        }
+      ]
+    },
+    {
+      "message": "thursday",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "a one-word answer to Growth's question",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Growth asked: Which day would you like the offer for?",
+          "minutes_ago": 2
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "can we do an offer this week"
+        },
+        {
+          "from": "naila",
+          "text": "❓ Which day would you like the offer for?"
+        }
+      ],
+      "expect": {
+        "open_item": "question"
+      }
+    },
+    {
+      "message": "go for 15% off",
+      "routes": [
+        "answer_open"
+      ],
+      "note": "an answer to Growth's question about the discount",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Growth asked: What discount would you like to offer on Thursday?",
+          "minutes_ago": 2
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "thursday dead"
+        },
+        {
+          "from": "naila",
+          "text": "❓ What discount would you like to offer on Thursday?"
+        }
+      ],
+      "expect": {
+        "open_item": "question"
+      }
+    },
+    {
+      "message": "ill send the z report later",
+      "routes": [
+        "answer_open",
+        "chat"
+      ],
+      "note": "about the question, but not a figure",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total.",
+          "minutes_ago": 3
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "yesterdays sales figure"
+        },
+        {
+          "from": "naila",
+          "text": "❓ No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total."
+        }
+      ]
+    },
+    {
+      "message": "1500",
+      "routes": [
+        "answer_open",
+        "sales_entry"
+      ],
+      "note": "a bare figure answering 'what were yesterday's sales?'",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: What were yesterday's (Sunday 8 November) total sales?",
+          "minutes_ago": 2
+        }
+      ],
+      "recent": [
+        {
+          "from": "naila",
+          "text": "❓ What were yesterday's (Sunday 8 November) total sales?"
+        }
+      ]
+    },
+    {
+      "message": "sorry ignore that, can you reply to the 2 star review",
+      "routes": [
+        "reputation"
+      ],
+      "note": "a change of topic while a sales figure waits",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ]
+    },
+    {
+      "message": "what time do we close on friday",
+      "routes": [
+        "profile_question"
+      ],
+      "note": "a profile question while a sales figure waits",
+      "open": [
+        {
+          "ref": "sales",
+          "kind": "sales_confirm",
+          "asks": "Sun 8 Nov: £1,500.00 including VAT (about £1,250.00 before VAT), typed by the owner. Save it?",
+          "minutes_ago": 0
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales 1500£"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 including VAT (about £1,250.00 before VAT). Save it?\nReply *YES* to save it. If £1,500.00 was before VAT, or it's for a different day, just say so."
+        }
+      ]
+    },
+    {
+      "message": "post this weeks special on google",
+      "routes": [
+        "visibility"
+      ],
+      "note": "a new request while Insights' question waits",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total.",
+          "minutes_ago": 3
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "yesterdays sales figure"
+        },
+        {
+          "from": "naila",
+          "text": "❓ No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total."
+        }
+      ]
+    },
+    {
+      "message": "lamb chops are £15 now",
+      "routes": [
+        "profile_fact"
+      ],
+      "note": "a price change while Insights' question waits",
+      "open": [
+        {
+          "ref": "question",
+          "kind": "agent_question",
+          "asks": "Insights asked: No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total.",
+          "minutes_ago": 3
+        }
+      ],
+      "recent": [
+        {
+          "from": "owner",
+          "text": "yesterdays sales figure"
+        },
+        {
+          "from": "naila",
+          "text": "❓ No sales data is recorded for yesterday (Sunday 8 November), so I can't give you net sales yet. Please send a photo of the Z-report, or type the day's total."
+        }
+      ]
+    },
+    {
+      "message": "thanks",
+      "routes": [
+        "chat"
+      ],
+      "note": "thanks after saving",
+      "recent": [
+        {
+          "from": "owner",
+          "text": "Yesterdays sales were £1500 before VAT"
+        },
+        {
+          "from": "naila",
+          "text": "🧾 *Sun 8 Nov*: £1,500.00 before VAT. Save it?"
+        },
+        {
+          "from": "owner",
+          "text": "YES"
+        },
+        {
+          "from": "naila",
+          "text": "Sun 8 Nov: £1,500.00 before VAT. Saved. 👍"
+        }
+      ]
+    },
+    {
+      "message": "make it a bit shorter",
+      "routes": [
+        "edit"
+      ],
+      "note": "an edit with a post on screen",
+      "recent": [
+        {
+          "from": "naila",
+          "text": "📍 Google post ready: Lamb chops are back this weekend, grilled over charcoal..."
+        }
+      ],
+      "on_screen": "google post for Google: \"Lamb chops are back this weekend, grilled over charcoal and served with mint yoghurt and fresh naan.\""
+    },
+    {
+      "message": "whats our rating on google",
+      "routes": [
+        "chat",
+        "visibility",
+        "insights"
+      ],
+      "note": "a look-up after tapping Edit on a post: not an edit",
+      "recent": [
+        {
+          "from": "naila",
+          "text": "What should I change?"
+        }
+      ],
+      "on_screen": "google post for Google: \"Lamb chops are back this weekend.\" (the owner tapped Edit and was asked what to change)"
+    }
+  ],
+  "recorded": {
+    "results": [
+      {
+        "key": "Before CAT|the 9 Nov test: autocorrect for 'before VAT', right after a sales figure",
+        "output": {
+          "route": "answer_open",
+          "request": "Sunday 8 November's sales of £1,500 were before VAT, not including VAT. Save it on that basis.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "sorry i meant before VAT|the 9 Nov test: corrects the last message",
+        "output": {
+          "route": "answer_open",
+          "request": "Change Sunday 8 November's sales of £1,500 to be before VAT, then save it",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "before vat|lower case, nothing else",
+        "output": {
+          "route": "answer_open",
+          "request": "The £1,500 for Sunday 8 November was before VAT, so save it as £1,500 net.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "thats ex vat|another way to say net",
+        "output": {
+          "route": "answer_open",
+          "request": "The £1,500 for Sunday 8 November was before VAT (ex VAT), not including VAT. Save it on that basis.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "1500 was net mate|net, casual",
+        "output": {
+          "route": "answer_open",
+          "request": "Change Sunday 8 November's sales to £1,500 before VAT (net) and save it",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "yep save it|a yes in other words",
+        "output": {
+          "route": "answer_open",
+          "request": "Yes, save Sunday 8 November's sales as £1,500 including VAT",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": null,
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "no dont save that|a no",
+        "output": {
+          "route": "answer_open",
+          "request": "Do not save Sunday 8 November's sales of £1,500 including VAT.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "no",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": null,
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "no it was saturday|a different day",
+        "output": {
+          "route": "answer_open",
+          "request": "Do not save as Sunday 8 November; the £1,500 sales figure was for Saturday 7 November instead",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-07",
+            "amount": null,
+            "basis": null,
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "actually it was 1650|a different amount",
+        "output": {
+          "route": "answer_open",
+          "request": "Change Sunday 8 November's sales figure to £1,650 (instead of £1,500) and save it",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": 1650,
+            "basis": null,
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "sorry i meant before VAT|with the 'which did you mean?' card also waiting: it answers the sales question",
+        "output": {
+          "route": "answer_open",
+          "request": "Change the Sunday 8 November sales figure of £1,500 to be before VAT, then save it",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "sales",
+          "decision": "yes",
+          "sales": {
+            "business_date": null,
+            "amount": null,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "it was 1500£ before VAT|the 9 Nov test: a figure after Insights said there's no data",
+        "output": {
+          "route": "sales_entry",
+          "request": "Save Sunday 8 November's sales as £1,500 before VAT",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-08",
+            "amount": 1500,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "Yesterdays sales were £1500 before VAT|a figure, nothing waiting",
+        "output": {
+          "route": "sales_entry",
+          "request": "Save Sunday 8 November's sales as £1,500 before VAT",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-08",
+            "amount": 1500,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "we did 2.3k on saturday|k and a weekday",
+        "output": {
+          "route": "sales_entry",
+          "request": "Save Saturday 7 November's sales as £2,300",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-07",
+            "amount": 2300,
+            "basis": null,
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "took 1850 last night, 140 orders|last night and orders",
+        "output": {
+          "route": "sales_entry",
+          "request": "Save Sunday 8 November's sales as £1,850 from 140 orders",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-08",
+            "amount": 1850,
+            "basis": "gross",
+            "transactions": 140
+          }
+        }
+      },
+      {
+        "key": "kal ki sale 1500 thi VAT ke baghair|roman urdu: yesterday's sales were 1500 without VAT",
+        "output": {
+          "route": "sales_entry",
+          "request": "Save Sunday 8 November's sales as £1,500 before VAT",
+          "language": "Roman Urdu",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-08",
+            "amount": 1500,
+            "basis": "net",
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "how did yesterday go?|a question about sales is insights, not a figure",
+        "output": {
+          "route": "insights",
+          "request": "Tell the owner how yesterday, Sunday 8 November, went for the restaurant (sales were saved as £1,500 before VAT)",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "Thursday looks quiet|the 9 Nov test: a new request while Insights' question about Sunday waits",
+        "output": {
+          "route": "growth",
+          "request": "Draft an offer to fill a quiet Thursday 12 November",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "No I want a deal for thursday.|the 9 Nov test: a deal, not an answer to the Sunday question",
+        "output": {
+          "route": "growth",
+          "request": "Draft an offer to fill a quiet Thursday 12 November",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "Thursday looks quiet|a new request while a sales figure waits for a yes",
+        "output": {
+          "route": "growth",
+          "request": "Draft an offer to fill a quiet Thursday 12 November",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "Thursday looks quiet|after the sales were saved",
+        "output": {
+          "route": "growth",
+          "request": "Draft an offer to fill the quiet Thursday 12 November",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "thursday|a one-word answer to Growth's question",
+        "output": {
+          "route": "answer_open",
+          "request": "Draft an offer for Thursday 12 November (answering Growth's question: which day would you like the offer for?)",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "question",
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "go for 15% off|an answer to Growth's question about the discount",
+        "output": {
+          "route": "answer_open",
+          "request": "Go with 15% off for the Thursday offer (answering Growth's question about what discount to offer on Thursday).",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": "question",
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "ill send the z report later|about the question, but not a figure",
+        "output": {
+          "route": "chat",
+          "request": "The owner says they will send the Z-report for Sunday 8 November later; no figure given yet.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "1500|a bare figure answering 'what were yesterday's sales?'",
+        "output": {
+          "route": "sales_entry",
+          "request": "Save Sunday 8 November's sales as £1,500",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": {
+            "business_date": "2026-11-08",
+            "amount": 1500,
+            "basis": null,
+            "transactions": null
+          }
+        }
+      },
+      {
+        "key": "sorry ignore that, can you reply to the 2 star review|a change of topic while a sales figure waits",
+        "output": {
+          "route": "reputation",
+          "request": "Draft a reply to the 2 star review. Do not save the Sunday 8 November sales figure of £1,500.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "what time do we close on friday|a profile question while a sales figure waits",
+        "output": {
+          "route": "profile_question",
+          "request": "What time does the restaurant close on Friday?",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "post this weeks special on google|a new request while Insights' question waits",
+        "output": {
+          "route": "visibility",
+          "request": "Draft a Google post announcing this week's special",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "lamb chops are £15 now|a price change while Insights' question waits",
+        "output": {
+          "route": "profile_fact",
+          "request": "Update the menu price: lamb chops are now £15",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "thanks|thanks after saving",
+        "output": {
+          "route": "chat",
+          "request": "Owner is thanking Naila after Sunday 8 November's sales were saved.",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "make it a bit shorter|an edit with a post on screen",
+        "output": {
+          "route": "edit",
+          "request": "Make the Google post about lamb chops being back this weekend a bit shorter",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      },
+      {
+        "key": "whats our rating on google|a look-up after tapping Edit on a post: not an edit",
+        "output": {
+          "route": "chat",
+          "request": "Tell the owner what the restaurant's current Google rating is",
+          "language": "English",
+          "question": null,
+          "options": [],
+          "pasted_review": null,
+          "open_item": null,
+          "decision": null,
+          "sales": null
+        }
+      }
+    ],
+    "recorded_at": "2026-11-09T16:42:40.072Z"
+  }
+}

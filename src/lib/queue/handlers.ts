@@ -143,7 +143,10 @@ const feedback: JobHandler = {
     // Customers imported at setup: their confirm emails, a few each hour (guide/import.ts).
     const { runImportConfirms } = await import("@/lib/onboarding/guide/import");
     const imports = await runImportConfirms(r, new Date()).catch((err) => (console.error("Import confirm emails failed", err), { sent: 0, error: String(err) }));
-    return { ...s, imports };
+    // Customer lists imported any time (064): the welcome emails the owner approved, in daily batches.
+    const { runImportWelcomes } = await import("@/lib/customer-import");
+    const welcomes = await runImportWelcomes(r, new Date()).catch((err) => (console.error("Import welcome emails failed", err), { sent: 0, error: String(err) }));
+    return { ...s, imports, welcomes };
   },
 };
 

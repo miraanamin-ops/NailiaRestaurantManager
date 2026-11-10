@@ -19,7 +19,7 @@ export function BillingBanner({ r }: { r: Restaurant }) {
   );
 }
 
-// Recommend a restaurant: the owner's code and link (step 47). Shown to running
+// Recommend a restaurant: the owner's code and link (step 49). Shown to running
 // restaurants only. One month free for each one that becomes a paying customer.
 export async function ReferralCard({ r }: { r: Restaurant }) {
   if (!r.active) return null;

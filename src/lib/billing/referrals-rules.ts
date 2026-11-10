@@ -1,4 +1,4 @@
-// Owner referrals (step 47), as plain code (tests/referrals.test.ts). Each
+// Owner referrals (step 49), as plain code (tests/referrals.test.ts). Each
 // restaurant has a code like EMBER-7K2Q to share (or the link /start?ref=CODE).
 // A new restaurant that signs up with it records referred_by; once the new one
 // pays its first real invoice (after the free month), the recommending

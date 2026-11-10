@@ -15,6 +15,9 @@ export async function deleteCustomerData(customer: SignupCustomer, source: strin
   const supabase = getSupabase();
   const rid = customer.restaurant_id;
   const now = new Date();
+  // Never added back by an import (kept as a hash, not the address).
+  const { suppress } = await import("@/lib/customer-import/suppression");
+  await suppress(rid, customer.email, "deleted");
 
   check(
     await supabase

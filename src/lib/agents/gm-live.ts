@@ -15,8 +15,12 @@ import { getLearningContext } from "@/lib/drafts";
 import { customerSummary, lookUpCustomers, lookUpReviews, reviewSummary } from "@/lib/claude-data";
 import { assistantModeOf } from "./assistant-mode";
 import { composeChecked, gmProfile, routeMessage } from "./gm";
-import { buttonLabel, expectedLanguage, ON_IT_AFTER_MS, ON_IT_LINES, ROUTE_WORDS, SKIP_REASONS, type LanguageSeen, type Route, type RouterOutputType } from "./gm-rules";
+import { londonYmd } from "@/lib/clock";
+import { closeStaleQuestions, handleSalesRoute, openItemsFor, recentConversation } from "./gm-open";
+import { buttonLabel, expectedLanguage, ON_IT_AFTER_MS, ON_IT_LINES, ROUTE_WORDS, SKIP_REASONS, type LanguageSeen, type OwnerContext, type Route, type RouterOutputType } from "./gm-rules";
 import { asksAboutReviews, waitingReviewsText } from "./gm-review-rules";
+import { couldNotHelpReply, NOT_IN_GUIDE_SUFFIX, offTopicReply } from "./help-rules";
+import { emailSupport, logUnanswered } from "./unanswered";
 import { recordAgentRun } from "./jobs";
 import type { Usage } from "./usage";
 
@@ -62,28 +66,48 @@ export function oldAssistantRetired(r: Pick<Restaurant, "agent_modes">) {
 
 export type GmLiveResult = { handled: boolean; route: Route | null };
 
-// Routes the message and handles it if a live part of the system can. Not handled
-// (route null: the router failed or took too long): the caller falls back.
-export async function gmLive(turn: Turn, body: string, active: Draft | null, forcedRoute?: Route): Promise<GmLiveResult> {
+// Understands the message (with the conversation and everything waiting for an
+// answer) and handles it if a live part of the system can: an answer to a waiting
+// question goes to that question, a sales figure is shown back for a yes, anything
+// else goes to the specialist with the conversation and what the owner means. Not
+// handled (route null: the router failed or took too long): the caller falls back.
+export async function gmLive(turn: Turn, body: string, active: Draft | null): Promise<GmLiveResult> {
   const { ctx, owner, send } = turn;
   const r = ctx.restaurant;
   const language = expectedLanguage({ ownerMessage: body });
-  let route = forcedRoute ?? null;
-  let request = body;
-  let routed: RouterOutputType | null = null;
-  if (!route) {
-    const result = await routeMessage(r.id, owner, body, active);
-    if (!result) return { handled: false, route: null };
-    await logRoute(r, body, result.output.route, result.ms, result.usage);
-    routed = result.output;
-    route = routed.route;
-    request = routed.request || body;
-    if (route === "ambiguous") {
-      await choiceCard(r, body, routed.question ?? "What would you like me to do?", routed.options, send);
-      return { handled: true, route };
-    }
+  const [open, recent] = await Promise.all([openItemsFor(turn, active), recentConversation(r.id, owner).catch(() => [])]);
+  const result = await routeMessage(r.id, owner, body, active, { open: open.items, recent, today: londonYmd(ctx.now) });
+  if (!result) return { handled: false, route: null };
+  await logRoute(r, body, result.output.route, result.ms, result.usage);
+  const routed = result.output;
+  const route = routed.route;
+  const request = routed.request || body;
+  const context: OwnerContext = { meaning: request !== body ? request : null, conversation: recent };
+
+  // An answer to a sales question or a file layout, or a day's sales told in words.
+  if (await handleSalesRoute(turn, routed, open)) {
+    if (routed.route === "sales_entry") await closeStaleQuestions(open);
+    return { handled: true, route };
   }
-  return { handled: await dispatch(turn, body, request, route, language, { pasted: routed?.pasted_review ?? null, active }), route };
+  // The answer to a specialist's question: back to that specialist, with the conversation.
+  if (route === "answer_open" && routed.open_item === "question" && open.question) {
+    await answerAgentQuestion(turn, open.question, request, context);
+    return { handled: true, route };
+  }
+  // The owner has moved on: whatever was waiting (a specialist's question, "which
+  // did you mean?") stops waiting, so it can't catch a later message.
+  await closeStaleQuestions(open);
+  // After Edit, a message about something else: the draft waits for a decision again.
+  if (route !== "edit" && active?.waiting_for === "edit_instructions") await updateDraft(active.id, { waiting_for: "decision" }).catch(() => null);
+  if (route === "answer_open") {
+    // It named something that isn't waiting any more: treat it as a fresh message.
+    return { handled: await dispatch(turn, body, request, "chat", language, { active, context }), route: "chat" };
+  }
+  if (route === "ambiguous") {
+    await choiceCard(r, body, routed.question ?? "What would you like me to do?", routed.options, send);
+    return { handled: true, route };
+  }
+  return { handled: await dispatch(turn, body, request, route, language, { pasted: routed.pasted_review ?? null, active, context }), route };
 }
 
 // The agents couldn't answer and the old assistant is retired: one honest line to
@@ -95,14 +119,17 @@ export async function agentsCouldNotHelp(turn: Turn, body: string, route: Route 
     `gm-fallback:${r.id}`,
     `${r.name}: the agents couldn't answer an owner message (${why}): "${body.slice(0, 80)}". The old assistant is retired there; if this keeps happening, switch back with: node --env-file=.env.local scripts/assistant-mode.mjs ${r.slug} old`,
   ).catch(() => "");
-  await turn.send(COULD_NOT_HELP[expectedLanguage({ ownerMessage: body })]);
+  await logUnanswered({ restaurantId: r.id, sender: turn.owner, message: body, route, reason: route ? "could_not_help" : "router_failed", detail: why });
+  // A relevant suggestion for what they asked, never a bare "couldn't do that".
+  await turn.send(couldNotHelpReply(route, expectedLanguage({ ownerMessage: body })));
 }
 
-const COULD_NOT_HELP: Record<LanguageSeen, string> = {
-  English: "Sorry, I couldn't do that one just now. Try saying it another way, or ask me about reviews, offers, Google posts, your numbers, the rota or your details.",
-  "Roman Urdu": "Maaf kijiye, abhi yeh nahi ho saka. Dobara thore alag tareeqe se likhein, ya reviews, offers, Google posts, numbers, rota ya details ke baare mein poochein.",
-  Urdu: "معاف کیجیے، ابھی یہ نہیں ہو سکا۔ دوبارہ تھوڑا مختلف لکھیں، یا ریویوز، آفرز، گوگل پوسٹس، نمبرز، روٹا یا تفصیلات کے بارے میں پوچھیں۔",
-};
+// A reply the fact check didn't pass twice: logged, and a relevant suggestion instead.
+async function sendBlocked(turn: Turn, body: string, route: Route, reasons: string[], language: LanguageSeen) {
+  await logUnanswered({ restaurantId: turn.ctx.restaurantId, sender: turn.owner, message: body, route, reason: "blocked", detail: reasons.join("; ") });
+  await turn.send(couldNotHelpReply(route, language));
+  return true;
+}
 
 async function recordReply(r: Restaurant, kind: string, message: string, verdict: string | null, usage: Usage) {
   await recordAgentRun({ restaurantId: r.id, key: `gm:${kind}:${r.id}:${Date.now()}`, agent: "gm", kind: `gm_${kind}`, trigger: "owner_message", output: { message: message.slice(0, 120) }, agentVersion: "gm", verdict, usage }).catch(() => null);
@@ -110,11 +137,12 @@ async function recordReply(r: Restaurant, kind: string, message: string, verdict
 
 const ownerOf = (r: Restaurant) => ({ owner_name: r.owner_name, language: r.owner_language, restaurant: r.name });
 
-type DispatchExtra = { pasted?: RouterOutputType["pasted_review"]; active?: Draft | null };
+type DispatchExtra = { pasted?: RouterOutputType["pasted_review"]; active?: Draft | null; context?: OwnerContext | null };
 
 async function dispatch(turn: Turn, body: string, request: string, route: Route, language: LanguageSeen, extra: DispatchExtra = {}): Promise<boolean> {
   const { ctx, send } = turn;
   const r = ctx.restaurant;
+  const context = extra.context ?? null;
   // "Which reviews still need a reply?" (however it was routed): the list, from code.
   if (oldAssistantRetired(r) && ["chat", "profile_question", "reputation"].includes(route) && !extra.pasted && /\breview/i.test(body) && asksAboutReviews(body)) {
     await send(waitingReviewsText(ctx.reviews));
@@ -123,10 +151,10 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
   switch (route) {
     case "profile_question": {
       const profile = await gmProfile(r.id);
-      const reply = await composeChecked(r.id, { kind: "reply", owner: ownerOf(r), owner_message: body, profile: profile.fields }, "an owner question (live)");
+      const reply = await composeChecked(r.id, { kind: "reply", owner: ownerOf(r), owner_message: body, profile: profile.fields, conversation: context?.conversation ?? null, meaning: context?.meaning ?? null }, "an owner question (live)");
       await recordReply(r, "reply", reply.message, reply.verdict, reply.usage);
-      // A reply the checker didn't pass isn't sent.
-      if (reply.verdict && reply.verdict !== "pass") return false;
+      // A reply the checker didn't pass (after one retry) isn't sent.
+      if (reply.verdict && reply.verdict !== "pass") return oldAssistantRetired(r) ? sendBlocked(turn, body, route, reply.fails, language) : false;
       await send(reply.message);
       return true;
     }
@@ -142,9 +170,13 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
         customers: customerSummary(ctx.customers, ctx.now),
         birthdays_next_7_days: lookUpCustomers(ctx.customers, { birthday_within_days: 6 }, ctx.now).map((c) => c.name.split(/\s+/)[0]),
       };
-      const reply = await withOnIt(composeChecked(r.id, { kind: "reply", owner: ownerOf(r), owner_message: body, profile: profile.fields, lookups }, "an owner message (chat, live)"), send, language);
+      const reply = await withOnIt(
+        composeChecked(r.id, { kind: "reply", owner: ownerOf(r), owner_message: body, profile: profile.fields, lookups, conversation: context?.conversation ?? null, meaning: context?.meaning ?? null }, "an owner message (chat, live)"),
+        send,
+        language,
+      );
       await recordReply(r, "chat", reply.message, reply.verdict, reply.usage);
-      if (reply.verdict && reply.verdict !== "pass") return false;
+      if (reply.verdict && reply.verdict !== "pass") return sendBlocked(turn, body, route, reply.fails, language);
       await send(reply.message);
       return true;
     }
@@ -161,12 +193,12 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
     case "insights": {
       const { insightsMode, answerWithInsights } = await import("./insights");
       if ((await insightsMode(r)) !== "live") return false;
-      return withOnIt(answerWithInsights(r, body, ctx.now, send), send, language);
+      return withOnIt(answerWithInsights(r, body, ctx.now, send, context), send, language);
     }
     case "growth": {
       const { growthMode, liveGrowthRequest } = await import("./growth");
       if ((await growthMode(r)) !== "live") return false;
-      return withOnIt(liveGrowthRequest(r, body, ctx.now, send), send, language);
+      return withOnIt(liveGrowthRequest(r, body, ctx.now, send, context), send, language);
     }
     case "visibility": {
       const { visibilityMode, queueVisibilityLive } = await import("./visibility");
@@ -186,6 +218,40 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
       else return false;
       return true;
     }
+    // Ideas and advice: 3 ideas from this restaurant's figures (Insights), each with a button that starts it.
+    case "advice": {
+      const { insightsMode, adviseWithInsights } = await import("./insights");
+      if ((await insightsMode(r)) !== "live") return false;
+      const advice = await withOnIt(adviseWithInsights(r, body, ctx.now, context), send, language);
+      if (!advice) return false;
+      if (advice.kind === "question") await send(advice.text);
+      else await offerIdeas(turn, advice.text, advice.ideas);
+      return true;
+    }
+    // "How do I...?": from the owner help guide and their setup, checked.
+    case "how_to": {
+      const { answerHowTo } = await import("./gm-help");
+      const result = await withOnIt(answerHowTo(turn, body, context), send, language);
+      if (result.kind === "answered") {
+        if (result.action) await offerToDoIt(turn, result.message, result.action);
+        else await send(result.message);
+        return true;
+      }
+      if (result.kind === "not_covered") {
+        // Not in the guide: the team is asked, and the owner told so.
+        const emailed = await emailSupport(r, turn.owner, body);
+        await logUnanswered({ restaurantId: r.id, sender: turn.owner, message: body, route, reason: "not_in_guide", emailedSupport: emailed });
+        await send(emailed && !/team/i.test(result.message) ? `${result.message} ${NOT_IN_GUIDE_SUFFIX}` : result.message);
+        return true;
+      }
+      return sendBlocked(turn, body, route, result.reasons, language);
+    }
+    // Nothing to do with the restaurant or DinerAI: a fixed reply (no more AI), logged.
+    case "off_topic": {
+      await logUnanswered({ restaurantId: r.id, sender: turn.owner, message: body, route, reason: "off_topic" });
+      await send(offTopicReply(language, r.name));
+      return true;
+    }
     // The staff team and the rota, in the owner's own words.
     case "team": {
       const { handleTeamMessage } = await import("@/lib/rota/understand");
@@ -200,21 +266,67 @@ async function dispatch(turn: Turn, body: string, request: string, route: Route,
 
 // ---------- "Which did you mean?" ----------
 
-async function choiceCard(r: Restaurant, message: string, question: string, options: { label: string; route: Route }[], send: Send) {
-  const opts = options.slice(0, 3).map((o) => ({ label: buttonLabel(o.label), route: o.route }));
+// A button: a route for the original message, or (an offer to do something) its own
+// request to start, or "No thanks".
+export type ChoiceOption = { label: string; route: Route; request?: string | null; dismiss?: boolean };
+
+async function choiceCard(r: Restaurant, message: string, question: string, options: ChoiceOption[], send: Send) {
+  const opts = options.slice(0, 3).map((o) => ({ ...o, label: buttonLabel(o.label) }));
   const draft = await createDraft({ restaurantId: r.id, kind: "choice", content: question, audience: "you", request: message, checks: {}, mode: "present", actor: "gm", agentInput: { message, options: opts } });
   await send(question, { draftId: draft.id, buttons: "choice", options: opts.map((o) => o.label) });
 }
 
+// WhatsApp's button messages take about 1,000 characters of text.
+const CARD_TEXT_MAX = 1000;
+
+// "Want me to do that now?": the answer with Yes, do it / No thanks. Yes starts the
+// request as if the owner had typed it (understood and routed as usual).
+export async function offerToDoIt(turn: Turn, text: string, request: string) {
+  const r = turn.ctx.restaurant;
+  const options: ChoiceOption[] = [
+    { label: "Yes, do it", route: "chat", request },
+    { label: "No thanks", route: "chat", dismiss: true },
+  ];
+  if (text.length > CARD_TEXT_MAX) {
+    await turn.send(text);
+    return choiceCard(r, request, "Want me to do that for you now?", options, turn.send);
+  }
+  return choiceCard(r, request, text, options, turn.send);
+}
+
+// "1. Thursday offer" when the title fits a button (20 characters), else "Start idea 1".
+export const ideaLabel = (i: number, title: string) => (`${i + 1}. ${title.trim()}`.length <= 20 ? `${i + 1}. ${title.trim()}` : `Start idea ${i + 1}`);
+
+// Advice: the ideas with one button each ("1. Thursday offer"); a tap starts that
+// idea's request as if the owner had typed it.
+export async function offerIdeas(turn: Turn, text: string, ideas: { title: string; message: string }[]) {
+  const r = turn.ctx.restaurant;
+  const options: ChoiceOption[] = ideas.slice(0, 3).map((idea, i) => ({ label: ideaLabel(i, idea.title), route: "chat", request: idea.message }));
+  if (!options.length) return turn.send(text);
+  if (text.length > CARD_TEXT_MAX) {
+    await turn.send(text);
+    return choiceCard(r, ideas[0].message, "Which one shall I start?", options, turn.send);
+  }
+  return choiceCard(r, ideas[0].message, text, options, turn.send);
+}
+
 // The owner picked option n (a button, or a typed 1 to 3): carry on with the original message.
 export async function answerChoice(turn: Turn, draft: Draft, n: number) {
-  const input = (draft as Draft & { agent_input?: { message: string; options: { label: string; route: Route }[] } }).agent_input;
+  const input = (draft as Draft & { agent_input?: { message: string; options: ChoiceOption[] } }).agent_input;
   const option = input?.options[n - 1];
   if (!input || !option) {
     await turn.send(`Reply 1 to ${input?.options.length ?? 3}, or just tell me what you need.`);
     return { handled: true as const };
   }
   await updateDraft(draft.id, { status: "answered", waiting_for: null });
+  if (option.dismiss) {
+    await turn.send("👍 OK. Just ask whenever you need it.");
+    return { handled: true as const };
+  }
+  if (option.request) {
+    const live = await gmLive(turn, option.request, null);
+    return live.handled ? { handled: true as const } : { handled: false as const, message: option.request };
+  }
   const handled = await dispatch(turn, input.message, input.message, option.route, expectedLanguage({ ownerMessage: input.message }), { active: null });
   // Not handled live (chat, a specialist in shadow): today's assistant answers the original message.
   return handled ? { handled: true as const } : { handled: false as const, message: input.message };
@@ -227,7 +339,7 @@ export async function answerChoice(turn: Turn, draft: Draft, n: number) {
 // post is checked by the checker again before it can go out).
 async function editOnScreen(turn: Turn, body: string, active: Draft | null) {
   const { ctx, send } = turn;
-  if (!active || active.waiting_for !== "decision") return false;
+  if (!active || (active.waiting_for !== "decision" && active.waiting_for !== "edit_instructions")) return false;
   if (["review_question", "hours_question", "agent_question", "choice", "special_idea"].includes(active.kind)) return false;
   if (active.kind === "rota") {
     const { reviseRota } = await import("@/lib/rota/build");
@@ -305,8 +417,9 @@ export async function correctFact(turn: Turn, draft: Draft, correction: string) 
 
 // ---------- Questions from scheduled work, special ideas, skip reasons ----------
 
-// The owner answered a question an agent asked (typed, while it's on screen).
-export async function answerAgentQuestion(turn: Turn, draft: Draft, answer: string) {
+// The owner answered a question an agent asked (the GM decided the message is that
+// answer; `answer` is it restated with the question filled in).
+export async function answerAgentQuestion(turn: Turn, draft: Draft, answer: string, context: OwnerContext | null = null) {
   const input = (draft as Draft & { agent_input?: { agent?: string; job?: { request?: string | null } } }).agent_input ?? {};
   await updateDraft(draft.id, { status: "answered", waiting_for: null });
   await logAction({ restaurantId: draft.restaurant_id, draftId: draft.id, actor: "owner", action: "answered", detail: `Answered: "${answer.slice(0, 80)}"`, data: { question: draft.content, answer } });
@@ -314,7 +427,7 @@ export async function answerAgentQuestion(turn: Turn, draft: Draft, answer: stri
     const { growthMode, liveGrowthRequest } = await import("./growth");
     if ((await growthMode(turn.ctx.restaurant)) === "live") {
       const request = `${input.job?.request ? `${input.job.request}\n` : ""}You asked: ${draft.content}\nThe owner answered: ${answer}`;
-      await withOnIt(liveGrowthRequest(turn.ctx.restaurant, request, turn.ctx.now, turn.send), turn.send, expectedLanguage({ ownerMessage: answer }));
+      await withOnIt(liveGrowthRequest(turn.ctx.restaurant, request, turn.ctx.now, turn.send, context), turn.send, expectedLanguage({ ownerMessage: answer }));
       return;
     }
   }
@@ -322,7 +435,7 @@ export async function answerAgentQuestion(turn: Turn, draft: Draft, answer: stri
     const { insightsMode, answerWithInsights } = await import("./insights");
     if ((await insightsMode(turn.ctx.restaurant)) === "live") {
       const question = `You asked: ${draft.content}\nThe owner answered: ${answer}\nTake this into account and tell the owner briefly what it changes.`;
-      if (await withOnIt(answerWithInsights(turn.ctx.restaurant, question, turn.ctx.now, turn.send), turn.send, expectedLanguage({ ownerMessage: answer }))) return;
+      if (await withOnIt(answerWithInsights(turn.ctx.restaurant, question, turn.ctx.now, turn.send, context), turn.send, expectedLanguage({ ownerMessage: answer }))) return;
     }
   }
   await turn.send("👍 Thanks, noted.");

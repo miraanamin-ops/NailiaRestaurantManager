@@ -17,6 +17,7 @@ export type UndoPlan =
   | { type: "staff"; number: string; active: boolean } // ADD STAFF / REMOVE STAFF, reversed
   | { type: "rota_unpublish" } // an approved rota: back to a draft, its link switched off
   | { type: "rota_edit"; adjustments: unknown[] } // a rota edit: the edits as they were, re-filled
+  | { type: "remove_import"; importId: string } // a customer list import: the whole batch off the list
   | { type: "cannot"; reason: string };
 
 // Restaurant details (hours, menu, voice, phone, address, website) come from onboarding,
@@ -71,6 +72,10 @@ export function undoPlan(entry: UndoEntry, draft: UndoDraft | null, googleMode: 
     const number = typeof entry.data?.number === "string" ? entry.data.number : null;
     if (!number) return { type: "cannot", reason: "The number wasn't saved." };
     return { type: "staff", number, active: entry.action === "staff_removed" };
+  }
+  if (entry.action === "customers_imported") {
+    const importId = typeof entry.data?.import_id === "string" ? entry.data.import_id : null;
+    return importId ? { type: "remove_import", importId } : { type: "cannot", reason: "The import wasn't recorded." };
   }
   if (!draft) return { type: "cannot", reason: "That draft no longer exists." };
 

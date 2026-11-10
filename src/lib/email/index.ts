@@ -5,7 +5,7 @@ import { redirectEmails } from "@/lib/gate-rules";
 import { emailRedirectSwitch } from "@/lib/switches";
 import type { Restaurant } from "@/lib/supabase";
 import { brandFor } from "./brand";
-import { campaignContent, confirmContent, feedbackContent, welcomeContent, type EmailContent, type Links } from "./content";
+import { campaignContent, confirmContent, feedbackContent, welcomeContent, importWelcomeContent, type EmailContent, type Links } from "./content";
 import { fromHeader, isEmail, routeEmail, senderAddress } from "./route";
 import { renderEmail } from "./templates";
 
@@ -94,6 +94,18 @@ export function sendConfirmEmail(i: { restaurant: Restaurant; customer: Person &
     links: customerLinks(i.baseUrl, i.customer.unsubscribe_token),
   });
   return sendCustomerEmail({ restaurant: i.restaurant, to: i.customer.email, content, oneClickUrl: null });
+}
+
+// An imported contact's welcome (064): why they're on the list, the reward, one-click unsubscribe.
+export function sendImportWelcomeEmail(i: { restaurant: Restaurant; customer: Person; reason: string; reward: { token: string; reward: string } | null; baseUrl: string }) {
+  const content = importWelcomeContent(brandFor(i.restaurant), {
+    firstName: i.customer.name,
+    reason: i.reason,
+    reward: i.reward?.reward ?? null,
+    rewardUrl: i.reward ? `${i.baseUrl}/reward/${i.reward.token}` : null,
+    links: customerLinks(i.baseUrl, i.customer.unsubscribe_token),
+  });
+  return sendCustomerEmail({ restaurant: i.restaurant, to: i.customer.email, content, oneClickUrl: oneClick(i.baseUrl, i.customer) });
 }
 
 export function sendWelcomeEmail(i: { restaurant: Restaurant; customer: Person; reward: { token: string; reward: string }; baseUrl: string }) {

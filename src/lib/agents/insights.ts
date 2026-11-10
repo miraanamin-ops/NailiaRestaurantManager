@@ -8,7 +8,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { agentLiveAllowed, effectiveAgentMode } from "@/lib/switches";
 import { testToolsOn } from "@/lib/test-mode";
 import { londonToday } from "./checker-core";
-import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome } from "./insights-core";
+import { insightsLoop, REPORT_QUERIES, type InsightsInput, type InsightsOutcome, type OwnerContext } from "./insights-core";
 import type { MetricsData } from "./insights-metrics";
 import { insightsText, type InsightsOutput } from "./insights-rules";
 import { enqueueAgentJob, recordAgentRun, type AgentJob, type JobOutcome } from "./jobs";
@@ -162,14 +162,32 @@ async function themesFor(restaurantId: string, weekStart: string): Promise<Insig
   return { week: weekStart, praise: strip(data.praise), complaints: strip(data.complaints) };
 }
 
+// Advice: profit by dish from the owner's costs (as Growth sees it) and the UK
+// facts file, each a source the ideas may quote.
+async function adviceExtras(restaurant: Restaurant, items: { day: string; item: string; quantity: number }[], today: string): Promise<NonNullable<InsightsInput["extras"]>> {
+  const [{ menuProfitFor }, { numbersFrom }, { ukFacts }] = await Promise.all([import("./growth"), import("./gm-rules"), import("./help")]);
+  const extras: NonNullable<InsightsInput["extras"]> = [];
+  const profit = menuProfitFor(restaurant, items, today).menu_profit;
+  extras.push(
+    profit
+      ? { ref: "menu:profit", title: "Profit by dish (worked out by code from the owner's dish costs)", text: profit, numbers: numbersFrom(profit) }
+      : { ref: "menu:profit", title: "Profit by dish", text: "No dish costs yet, so profit by dish can't be worked out. The owner can add costs in setup, settings or the menu costs spreadsheet (SPREADSHEETS).", numbers: [] },
+  );
+  const facts = ukFacts();
+  extras.push({ ref: "facts:uk", title: "UK hospitality facts (general, dated)", text: facts, numbers: numbersFrom(facts) });
+  return extras;
+}
+
 export type InsightsJob = {
-  task: "answer" | "report";
+  task: "answer" | "report" | "advice";
   question?: string | null;
   // "YYYY-MM-DD": the restaurant's date the question was asked (or the report's Monday).
   today: string;
   // What today's assistant said (answers), or wrote in the report (sentence and actions).
   legacy_text?: string | null;
   report_id?: string | null;
+  // Answers to the owner (live): the conversation and what they mean (the GM's words).
+  context?: OwnerContext | null;
 };
 
 export async function runInsightsFor(restaurant: Restaurant, job: InsightsJob, label: string) {
@@ -185,8 +203,10 @@ export async function runInsightsFor(restaurant: Restaurant, job: InsightsJob, l
     profile,
     data,
     prepared: job.task === "report" ? REPORT_QUERIES : [],
-    themes: job.task === "report" ? await themesFor(restaurant.id, weekStart) : null,
+    themes: job.task === "report" || job.task === "advice" ? await themesFor(restaurant.id, weekStart) : null,
     today: londonToday(new Date(`${job.today}T12:00:00Z`)),
+    context: job.context ?? null,
+    extras: job.task === "advice" ? await adviceExtras(restaurant, data.sales_items, job.today) : undefined,
   };
   const started = Date.now();
   const outcome = await insightsLoop(input, { resolve: (refs) => callTool("checker", "resolve_sources", restaurant.id, { refs }), checkerProfile }, label);
@@ -260,8 +280,8 @@ export function answerText(outcome: InsightsOutcome) {
 
 // Live (see insightsMode): Insights answers the owner's number question straight
 // away. Returns false if it couldn't (today's assistant answers instead).
-export async function answerWithInsights(restaurant: Restaurant, question: string, now: Date, send: (text: string) => Promise<unknown>) {
-  const job: InsightsJob = { task: "answer", question, today: londonYmd(now) };
+export async function answerWithInsights(restaurant: Restaurant, question: string, now: Date, send: (text: string) => Promise<unknown>, context: OwnerContext | null = null) {
+  const job: InsightsJob = { task: "answer", question, today: londonYmd(now), context };
   try {
     const { outcome, ms } = await runInsightsFor(restaurant, job, "an owner question (live)");
     // A question back (with the GM live): on screen, so the answer comes back here.
@@ -291,6 +311,40 @@ export async function answerWithInsights(restaurant: Restaurant, question: strin
   } catch (err) {
     console.error("Insights couldn't answer; today's assistant answers instead", err);
     return false;
+  }
+}
+
+// ---------- Advice: 3 ideas from the restaurant's own figures ----------
+
+export type AdviceResult = { kind: "ideas"; text: string; ideas: { title: string; message: string }[] } | { kind: "question"; text: string };
+
+// What the owner reads: the headline, the 3 ideas (title and why), the note.
+export function adviceText(out: InsightsOutput) {
+  return [
+    `💡 ${out.content.headline.trim()}`,
+    out.content.actions.map((a, i) => `${i + 1}. *${a.title.trim()}*: ${a.why.trim()}`).join("\n"),
+    out.content.body.trim(),
+    "Want me to start one? Tap it below, or just tell me.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+// Live (Insights live): ideas for the owner's question. null if it couldn't (the caller says so).
+export async function adviseWithInsights(restaurant: Restaurant, question: string, now: Date, context: OwnerContext | null = null): Promise<AdviceResult | null> {
+  const job: InsightsJob = { task: "advice", question, today: londonYmd(now), context };
+  try {
+    const { outcome, ms } = await runInsightsFor(restaurant, job, "advice for the owner (live)");
+    if (outcome.kind === "question" && (await gmIsLive(restaurant))) await askOwnerNow(restaurant, "insights", outcome.question, { question });
+    const key = `insights:advice:${Date.now()}`;
+    const verdict = outcome.kind === "reply" ? outcome.checker.verdict : "question";
+    const jobId = await recordAgentRun({ restaurantId: restaurant.id, key, agent: "insights", kind: "insights_live", trigger: "owner_question", output: { task: "advice", outcome: outcome.kind, revisions: outcome.revisions, steps: outcome.steps, ms, question }, agentVersion: outcome.agentVersion, verdict, usage: outcome.usage });
+    await logAction({ restaurantId: restaurant.id, actor: "insights", action: "agent_drafted", detail: `Insights (live, v${outcome.agentVersion}) gave ideas for "${question.slice(0, 80)}": ${insightsOutcomeLine(outcome).replace(/^would /, "")}`, data: { job_key: key, kind: "insights_live" }, job: { jobId, agent: "insights", agentVersion: outcome.agentVersion, verdict } });
+    if (outcome.kind === "question") return { kind: "question", text: `❓ ${outcome.question}` };
+    return { kind: "ideas", text: adviceText(outcome.output), ideas: outcome.output.content.actions.map((a) => ({ title: a.title, message: a.message })) };
+  } catch (err) {
+    console.error("Insights couldn't give ideas", err);
+    return null;
   }
 }
 

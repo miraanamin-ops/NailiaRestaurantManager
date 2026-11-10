@@ -109,6 +109,12 @@ async function undoOne(entry: AuditEntry, restaurant: Restaurant, now: Date): Pr
       return { text: `↩️ Put back the previous version of the ${name}.`, done: true };
     }
 
+    case "remove_import": {
+      const { removeImport } = await import("@/lib/customer-import");
+      const result = await removeImport(restaurant.id, plan.importId);
+      return { text: result.ok ? `↩️ ${result.text.replace(/^🗑️ /, "")}` : `❌ ${result.text}`, done: result.ok };
+    }
+
     case "staff": {
       const ok = await setStaffActive(restaurant.id, plan.number, plan.active);
       if (!ok) return { text: `❌ Can't put ${showNumber(plan.number)} back: it's staff for another restaurant now.`, done: false };

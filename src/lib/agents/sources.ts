@@ -14,6 +14,8 @@ export const SOURCE_KINDS = [
   "post", // a past Google post (the date it went out, YYYY-MM-DD)
   "themes", // Reputation's weekly themes
   "decision", // an owner decision (approve, edit, skip)
+  "menu", // menu:profit, profit by dish worked out by code from the owner's costs (advice)
+  "facts", // facts:uk, the dated UK hospitality facts file (advice)
 ] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
 export type SourceRef = { kind: SourceKind; id: string };

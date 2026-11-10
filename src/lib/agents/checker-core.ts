@@ -31,11 +31,17 @@ export type CheckerInput = {
   preview: { media_type: "image/png"; data: string } | null;
   // "Saturday 11 October 2026"
   today: string;
+  // A long reference the draft must agree with (the owner help guide for a "how do
+  // I" answer): sent first and cached, and a source like the others.
+  reference?: { title: string; text: string } | null;
 };
 
 export function checkerContent(input: CheckerInput) {
   const { applicable, skipped } = applicableChecks(audienceOf(input.draft.type), Boolean(input.preview));
   const content: Anthropic.Beta.BetaContentBlockParam[] = [
+    ...(input.reference
+      ? [{ type: "text" as const, text: `Reference: ${input.reference.title} (a source like the resolved sources below; the draft may state what it says, and nothing it contradicts):\n\n${input.reference.text}`, cache_control: { type: "ephemeral" as const } }]
+      : []),
     {
       type: "text",
       text: [

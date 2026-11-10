@@ -1,4 +1,4 @@
-// Owner referrals (step 47) and the paid trial (one calendar month, FOUNDER on
+// Owner referrals (step 49) and the paid trial (one calendar month, FOUNDER on
 // Stripe's page): codes are tidy and stable, nobody refers themselves, and a
 // recommended restaurant's first real payment gives its recommender one £99
 // credit, once, through the signed Stripe webhook.

@@ -6,7 +6,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { readZReport, type ZImage } from "./ai";
 import { addDays, dayLabel } from "./format";
 import { saveDayFromZ, saveSalesFile } from "./store";
-import { TYPED_DISCARDED, typedConfirmQuestion, typedRead, typedSavedLine, type BestSalesData, type TypedTakings } from "./typed";
+import { applySalesChange, changesSomething, TYPED_DISCARDED, typedConfirmQuestion, typedRead, typedSavedLine, typedSummary, type BestSalesData, type SalesChange, type TypedTakings } from "./typed";
 import {
   alreadySavedLine,
   checkZReport,
@@ -289,6 +289,40 @@ export async function answerZReport(sender: SalesSender, row: ZRow, reply: Sales
     }
   }
   return false;
+}
+
+// The owner's answer to a waiting sales question, however they put it, as the GM
+// understood it: a yes or no, and/or what they changed ("it was before VAT", "no,
+// Saturday", "actually £1,650"). A change is shown back for a yes again (never saved
+// straight away). false: it doesn't fit this question (the caller says so).
+export async function answerSalesInWords(sender: SalesSender, row: ZRow, answer: { decision: "yes" | "no" | null; change: SalesChange | null }, now: Date) {
+  const today = londonYmd(now);
+  if (!changesSomething(answer.change)) {
+    if (!answer.decision) return false;
+    const yes = answer.decision === "yes";
+    const kind = row.status === "needs_replace" ? (yes ? "replace" : "keep") : yes ? "yes" : "no";
+    return (await answerZReport(sender, row, { kind } as SalesReply, now)) !== false;
+  }
+  const base: ZRead =
+    (row.read as ZRead | null) ??
+    typedRead({ business_date: row.business_date ?? today, amount: Number(row.gross_sales ?? row.net_sales ?? 0), basis: row.gross_sales === null ? "net" : "gross", transactions: row.transactions });
+  const read = applySalesChange(base, answer.change);
+  const result = checkZReport(read, today);
+  if (result.status !== "ok" && result.status !== "needs_confirm") return false;
+  const problems = result.status === "needs_confirm" ? result.problems : [];
+  await update(row, { ...figureColumns(result.figures), read, problems, status: "needs_confirm" });
+  await sender.reply(isTyped(row) ? typedConfirmQuestion(result.figures, problems, today, await bestSalesData(row.restaurant_id, today)) : confirmQuestion(result.figures, problems, today));
+  return true;
+}
+
+// The waiting question in a line, for the GM ("Sun 8 Nov: £1,500 including VAT (about £1,250 before VAT), typed by the owner. Save it?").
+export function pendingSalesText(row: ZRow, today: string) {
+  const f = figuresOf(row);
+  const day = f.business_date ? dayLabel(f.business_date, Number(today.slice(0, 4))) : "a day not yet known";
+  const what = isTyped(row) ? typedSummary(f) : summary(f);
+  if (row.status === "needs_date") return `A till report (${what}): which day is it for?`;
+  if (row.status === "needs_replace") return `${day} already has sales saved. Replace them with ${what}?`;
+  return `${day}: ${what}, ${isTyped(row) ? "typed by the owner" : "read from a till report photo"}. Save it?`;
 }
 
 // ---------- Morning brief ----------

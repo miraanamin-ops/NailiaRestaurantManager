@@ -1,10 +1,22 @@
-// The GM, live: the router (Haiku) on the 40 routing cases, and the composer
+// The GM, live: the router (Sonnet) on the routing cases and the conversation cases, and the composer
 // (Sonnet) on each composer case, with real Claude. Every route must be right, and
 // every message must pass its case. Reply times are printed (and saved with the
 // recorded answers). Same commands as the others (npm run test:agents / test:agents:record).
 import { describe, expect, test, vi } from "vitest";
 import { addUsage, dollars, totals, type Usage } from "@/lib/agents/usage";
-import { composerData, judgeComposer, loadComposerCases, loadRouting, routingProblems, saveComposerRecorded, saveRoutingRecorded } from "../agents/support/gm-cases";
+import {
+  composerData,
+  conversationKey,
+  conversationProblems,
+  judgeComposer,
+  loadComposerCases,
+  loadConversations,
+  loadRouting,
+  routingProblems,
+  saveComposerRecorded,
+  saveConversationsRecorded,
+  saveRoutingRecorded,
+} from "../agents/support/gm-cases";
 import { hasKey, RECORD } from "./support";
 
 vi.mock("@/lib/builder-alerts", () => ({ alertBuilder: async () => "test run: not sent" }));
@@ -35,6 +47,36 @@ describe.skipIf(!hasKey)("gm (live)", () => {
     console.log(`router: ${routing.cases.length - wrong.length} of ${routing.cases.length} right; ${dollars(t.cost / routing.cases.length)} a message; typical ${sorted[Math.floor(sorted.length / 2)]}ms, slowest ${sorted.at(-1)}ms`);
     for (const w of wrong) console.log(`  wrong: ${w}`);
     if (RECORD) saveRoutingRecorded({ results, recorded_at: new Date().toISOString() });
+    expect(wrong).toEqual([]);
+  });
+
+  // Messages in the middle of a conversation (the 9 Nov test and variations): the
+  // router reads the conversation and what's waiting, and must understand each one.
+  test("the router: every conversation case", async () => {
+    const { runRouter } = await import("@/lib/agents/gm-core");
+    const file = loadConversations();
+    const results: { key: string; output: Awaited<ReturnType<typeof runRouter>>["output"] }[] = [];
+    const wrong: string[] = [];
+    const usages: Usage[] = [];
+    const times: number[] = [];
+    for (const c of file.cases) {
+      const started = Date.now();
+      const r = await runRouter({ message: c.message, recent: c.recent ?? [], onScreen: c.on_screen ?? null, open: c.open ?? [], today: file.today }, `conversation "${c.message}"`).catch((err: Error) => {
+        wrong.push(`"${c.message}" (${c.note}): invalid output (${err.message.slice(0, 160)})`);
+        return null;
+      });
+      times.push(Date.now() - started);
+      if (!r) continue;
+      usages.push(r.usage);
+      results.push({ key: conversationKey(c), output: r.output });
+      const problems = conversationProblems(c, r.output, file.today);
+      if (problems.length) wrong.push(`"${c.message}" (${c.note}): ${problems.join("; ")}`);
+    }
+    const t = totals(addUsage(...usages));
+    const sorted = [...times].sort((a, b) => a - b);
+    console.log(`conversations: ${file.cases.length - wrong.length} of ${file.cases.length} right; ${dollars(t.cost / file.cases.length)} a message; typical ${sorted[Math.floor(sorted.length / 2)]}ms, slowest ${sorted.at(-1)}ms`);
+    for (const w of wrong) console.log(`  wrong: ${w}`);
+    if (RECORD) saveConversationsRecorded({ results, recorded_at: new Date().toISOString() });
     expect(wrong).toEqual([]);
   });
 
