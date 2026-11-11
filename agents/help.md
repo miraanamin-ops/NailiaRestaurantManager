@@ -27,6 +27,24 @@ DinerAI is your restaurant's assistant. You run it from WhatsApp; the web app at
   edit or setting change, where possible. Send **PAUSE** to stop all sending, **RESUME**
   to start again.
 
+## The DinerAI phone app (in testing)
+
+A DinerAI app for iPhone and Android is being tested now and isn't in the App Store or
+Google Play yet. Until it is, keep using WhatsApp and the web app.
+
+- **Chat tab**: the same conversation as WhatsApp. Everything you'd write on WhatsApp works
+  there too: your own words ("Thursday is quiet"), commands like PAUSE, UNDO or STATUS,
+  and answering questions. Choices come as buttons to tap, and drafts come as cards with
+  Approve, Edit and Skip.
+- **Photos and files in Chat**: the camera button for a photo of a dish (it becomes a Google
+  post) or of your till report (it's read in as that day's sales); the photo button to pick
+  one you've taken; the paperclip for files (a menu PDF, a till export as CSV or Excel, or
+  our spreadsheets filled in). Photos up to 5 MB, files up to 16 MB.
+- **Inbox tab**: drafts waiting for you. A question for you (about a review, or your
+  hours on a bank holiday) has an **Answer in Chat** button.
+- **Not yet in the app**: setup with Dina, sign-up and paying, and the full reports
+  (use WhatsApp or the web app for those for now).
+
 ## Getting started (setup with Dina)
 
 Dina takes you through setup, on WhatsApp or in the web app (app.dinerai.co.uk/onboarding). You can switch between the two at any step without losing progress.

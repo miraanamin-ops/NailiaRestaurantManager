@@ -130,3 +130,46 @@ export const undoLast = (r: string | null) => api<{ message: string }>(`/api/app
 
 // The /api/app/me answer.
 export type Me = { email: string; firstName: string | null; isBuilder: boolean; restaurants: { id: string; name: string; active: boolean }[] };
+
+// ---------- Chat (phase 3) ----------
+// The same conversation as WhatsApp, on the bot's own engine (/api/app/chat).
+
+export type ChatButton = { id: string; title: string };
+export type ChatEntry = {
+  id: string;
+  from: 'owner' | 'dinerai';
+  text: string;
+  at: string;
+  channel: 'app' | 'whatsapp';
+  buttons: ChatButton[]; // quick replies (only on DinerAI's latest messages)
+  draftId: string | null;
+  card: InboxCard | null; // the draft this message shows, while it's still waiting
+  imageUrl: string | null; // a picture DinerAI sent, or the owner's photo
+  file: { name: string; photo: boolean } | null; // what the owner sent
+};
+export type ChatState = { restaurantId: string; messages: ChatEntry[]; hasMore: boolean; duplicate?: boolean; refused?: string };
+export type ChatFile = { path: string; name: string; contentType: string };
+
+export const getChat = (r: string | null, before?: string) =>
+  api<ChatState>(`/api/app/chat${q(r)}${before ? `${r ? '&' : '?'}before=${encodeURIComponent(before)}` : ''}`);
+export const sendChat = (r: string | null, body: { text?: string; payload?: string; clientId: string; file?: ChatFile }) =>
+  api<ChatState>(`/api/app/chat${q(r)}`, { method: 'POST', body });
+export const focusChat = (r: string | null, draftId: string) => api<ChatState>(`/api/app/chat/focus${q(r)}`, { method: 'POST', body: { draftId } });
+
+// An id for one message, so a resend after a lost connection is answered once.
+export const newClientId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
+// A photo or file for the chat: the server checks it and hands back a one-time link,
+// the phone puts the file straight into DinerAI's private storage, and the chat
+// message then carries it. Returns the file, or the reason it was refused.
+export async function uploadChatFile(r: string | null, f: { uri: string; name: string; mimeType: string | null; size: number }): Promise<ChatFile | { refused: string }> {
+  const { File } = await import('expo-file-system');
+  const link = await api<{ path: string; uploadUrl: string; contentType: string; name: string } | { refused: string }>(`/api/app/chat/upload${q(r)}`, {
+    method: 'POST',
+    body: { name: f.name, contentType: f.mimeType, size: f.size },
+  });
+  if ('refused' in link) return link;
+  const res = await new File(f.uri).upload(link.uploadUrl, { httpMethod: 'PUT', mimeType: link.contentType, headers: { 'x-upsert': 'false' } });
+  if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, 'upload_failed');
+  return { path: link.path, name: link.name, contentType: link.contentType };
+}

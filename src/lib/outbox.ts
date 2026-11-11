@@ -26,6 +26,8 @@ async function lastInboundAt(r: Pick<Restaurant, "id" | "owner_whatsapp">) {
       .eq("restaurant_id", r.id)
       .eq("direction", "inbound")
       .eq("from_number", r.owner_whatsapp)
+      // App chat messages (to "app") don't open WhatsApp's window.
+      .neq("to_number", "app")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle<{ created_at: string }>(),

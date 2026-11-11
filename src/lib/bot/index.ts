@@ -4,7 +4,8 @@ import { londonWeekday } from "@/lib/clock";
 import { releaseQueue } from "@/lib/followups";
 import type { Send } from "@/lib/google-jobs";
 import { deliverWaitingBrief } from "@/lib/morning";
-import { messageOwner, type OwnerChannel } from "@/lib/notify";
+import { messageOwner, type AppSink, type OwnerChannel } from "@/lib/notify";
+import { APP_CHANNEL_TO } from "@/lib/app/chat-rules";
 import { OPENER_SHOW_ID } from "@/lib/openers";
 import { runCommand } from "./commands";
 import { handleConversation } from "./conversation";
@@ -32,20 +33,24 @@ export async function handleMessage(input: {
   body: string;
   buttonPayload: string | undefined;
   media?: { url: string; contentType: string } | null;
+  // The app's Chat tab (lib/app/chat.ts): every reply goes into this, never to WhatsApp.
+  // The app's login has already checked the owner, so the number check is skipped.
+  app?: AppSink;
 }) {
   const { owner, sandbox, body, restaurantId } = input;
   let ctx = await loadRestaurantContext(restaurantId);
   // Belt and braces: only this restaurant's own owner can act on it.
-  if (ctx.restaurant.owner_whatsapp !== owner) {
+  if (!input.app && ctx.restaurant.owner_whatsapp !== owner) {
     console.error("handleMessage: the sender isn't this restaurant's owner; ignoring");
     return;
   }
-  const channel: OwnerChannel = { restaurantId: ctx.restaurantId, from: sandbox, to: owner };
+  // In the app, `to` is a placeholder number: anything that slipped past the sink reaches nobody.
+  const channel: OwnerChannel = input.app ? { restaurantId: ctx.restaurantId, from: sandbox, to: APP_CHANNEL_TO, app: input.app } : { restaurantId: ctx.restaurantId, from: sandbox, to: owner };
   const send: Send = (text, withButtons = false, mediaUrl = null) => messageOwner(channel, text, withButtons, { mediaUrl });
 
   try {
     // The owner number itself is a fixed setting; just remember which of our numbers they're talking to.
-    if (ctx.restaurant.whatsapp_from !== sandbox) {
+    if (!input.app && ctx.restaurant.whatsapp_from !== sandbox) {
       await updateRestaurant(ctx.restaurantId, { whatsapp_from: sandbox });
       ctx = await loadRestaurantContext(restaurantId);
     }

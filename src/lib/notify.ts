@@ -3,8 +3,12 @@ import { getSupabase } from "@/lib/supabase";
 import type { OpenerRequest } from "@/lib/openers";
 import { isPlaceholderNumber } from "@/lib/switches";
 import { sendImage, sendText, sendWithApprovalButtons, type ButtonTarget } from "@/lib/whatsapp";
+import { APP_ADDRESS, chatButtons, chatDraftId, type ChatButton, type ChatMessage, type ChatMeta } from "@/lib/app/chat-rules";
 
-export type OwnerChannel = { restaurantId: string; from: string; to: string };
+// The app's Chat tab (lib/app/chat.ts): every message to the owner is collected here
+// and logged, never sent to WhatsApp. owner = the number the conversation is logged under.
+export type AppSink = { owner: string; messages: ChatMessage[] };
+export type OwnerChannel = { restaurantId: string; from: string; to: string; app?: AppSink };
 
 // Sends a WhatsApp message to the owner and records it in the messages table.
 // (Messages to the owner aren't customer sends, so the safety rules don't apply.)
@@ -23,6 +27,10 @@ export async function messageOwner(
     opener,
   }: { mediaUrl?: string | null; mediaCaption?: string; opener?: OpenerRequest } = {},
 ) {
+  if (channel.app) {
+    const onScreen = withButtons === true ? ((await (await import("@/lib/drafts")).getActiveDraft(channel.restaurantId))?.id ?? null) : null;
+    return toApp(channel, channel.app, text, { buttons: chatButtons(withButtons), draftId: chatDraftId(withButtons, onScreen), image: mediaUrl }).catch((err) => console.error("Failed to log an app message", err));
+  }
   // The owner has the app: a notification instead of WhatsApp (the draft itself is in
   // the app's Inbox). If Expo can't be reached, WhatsApp carries on as before.
   if (opener && text && !isPlaceholderNumber(channel.to)) {
@@ -46,8 +54,33 @@ export async function messageOwner(
   );
 }
 
+// A message for the app's chat: collected for the answer, and logged with what it carries.
+async function toApp(channel: OwnerChannel, sink: AppSink, text: string, meta: ChatMeta) {
+  if (!text && !meta.image) return;
+  sink.messages.push({ text, ...meta });
+  await logAppMessage(channel.restaurantId, {
+    direction: "outbound",
+    from_number: APP_ADDRESS,
+    to_number: sink.owner,
+    body: text || "[image]",
+    twilio_sid: `app-${crypto.randomUUID()}`,
+    status: "sent",
+    app: meta,
+  });
+}
+
+// Logs an app message. Before migration 066 there's no app column: logged without it.
+export async function logAppMessage(restaurantId: string, row: Record<string, unknown>) {
+  const supabase = getSupabase();
+  let { error } = await supabase.from("messages").insert({ ...row, restaurant_id: restaurantId });
+  if (error?.code === "42703") ({ error } = await supabase.from("messages").insert({ ...row, restaurant_id: restaurantId, app: undefined }));
+  if (error) throw Object.assign(new Error(error.message), { code: error.code });
+}
+
 // Sends one message to the owner (deliver does the Twilio call) and logs it, sent or failed.
-export async function sendAndLog(channel: OwnerChannel, deliver: () => Promise<{ sid: string; body: string }>, text: string) {
+// In the app (channel.app) nothing is delivered: the words, with appButtons as quick replies, go to the chat.
+export async function sendAndLog(channel: OwnerChannel, deliver: () => Promise<{ sid: string; body: string }>, text: string, appButtons: ChatButton[] = []) {
+  if (channel.app) return toApp(channel, channel.app, text, { buttons: appButtons }).catch((err) => console.error("Failed to log an app message", err));
   let sid: string | null = null;
   let sentBody = text;
   let error: string | null = null;

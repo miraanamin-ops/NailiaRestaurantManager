@@ -49,6 +49,14 @@
       ],
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow DinerAI to use your photos, so you can send dish photos and till reports in Chat.",
+          "cameraPermission": "Allow DinerAI to use the camera, so you can photograph dishes and till reports in Chat.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#c8f03c"

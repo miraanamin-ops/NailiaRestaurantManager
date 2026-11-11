@@ -8,6 +8,7 @@ import { google } from "@/lib/google";
 import type { OwnerChannel } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { undoLast } from "@/lib/undo";
+import { APP_CHANNEL_TO } from "./chat-rules";
 import { sortCards, takingsLine, toCard, waitingSummary, type CardReview, type InboxCard } from "./cards";
 
 // The app's Today and Inbox (step 50, phase 1): the same drafts the morning brief
@@ -16,9 +17,8 @@ import { sortCards, takingsLine, toCard, waitingSummary, type CardReview, type I
 // rule and check applies unchanged. The bot's replies are collected and returned
 // for the app to show, never sent to WhatsApp.
 
-// A channel no message can reach: a placeholder number (lib/switches.ts), so if a
+// The channel is a placeholder number no message can reach (APP_CHANNEL_TO), so if a
 // decision path tries to message the owner (a rota PDF), nothing is sent anywhere.
-const APP_CHANNEL_TO = "whatsapp:+447700900489";
 
 export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
   const drafts = await waitingDrafts(restaurantId);

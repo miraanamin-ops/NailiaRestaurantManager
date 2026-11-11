@@ -12,10 +12,12 @@ export function isSupportedImage(contentType: string | undefined): contentType i
   return (SUPPORTED_IMAGE_TYPES as readonly string[]).includes(contentType ?? "");
 }
 
-// Downloads a photo the owner sent on WhatsApp. Twilio media links need the account login.
+// Downloads a photo the owner sent on WhatsApp. Twilio media links need the account login;
+// a photo sent in the app is a short-lived signed storage link, which gets no login.
 export async function downloadTwilioMedia(url: string) {
   const auth = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64");
-  const res = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+  const twilioHost = /(^|\.)twilio\.com$/i.test(new URL(url).hostname);
+  const res = await fetch(url, twilioHost ? { headers: { Authorization: `Basic ${auth}` } } : {});
   if (!res.ok) throw new Error(`Couldn't download the photo from Twilio (${res.status})`);
   const bytes = Buffer.from(await res.arrayBuffer());
   if (bytes.length > MAX_BYTES) throw new Error("That photo is too large (over 5 MB)");

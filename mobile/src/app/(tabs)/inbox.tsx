@@ -188,8 +188,9 @@ export default function Inbox() {
             <>
               <DraftCardBody card={current} />
               <Card>
-                <T>This one’s a question for you. Answering in the app comes with Chat, very soon. For now you can answer it on WhatsApp or the website.</T>
-                <Button label="Next" kind="plain" onPress={() => setCards((list) => (list ? [...list.slice(1), list[0]] : list))} />
+                <T>This one’s a question for you: answer it in Chat, with a tap or in your own words.</T>
+                <Button label="Answer in Chat" onPress={() => router.navigate({ pathname: '/chat', params: { question: current.id } })} />
+                <Button label="Later" kind="plain" onPress={() => setCards((list) => (list ? [...list.slice(1), list[0]] : list))} />
               </Card>
             </>
           ) : (

@@ -29,7 +29,7 @@ export type Via = "session" | "template" | "waiting";
 export const goButtonId = (reviewId: string) => `${FLOW_PREFIX}${reviewId}:go`;
 
 export async function sendReviewMessage(channel: OwnerChannel, reviewId: string, message: string) {
-  await sendAndLog(channel, () => sendDinaChoices(channel.from, channel.to, { kind: "buttons", body: message, options: [{ id: goButtonId(reviewId), title: "Let's go", description: "" }] }), message);
+  await sendAndLog(channel, () => sendDinaChoices(channel.from, channel.to, { kind: "buttons", body: message, options: [{ id: goButtonId(reviewId), title: "Let's go", description: "" }] }), message, [{ id: goButtonId(reviewId), title: "Let's go" }]);
 }
 
 export async function deliverReview(r: Restaurant, review: Pick<BusinessReview, "id">, message: string, now: Date): Promise<Via> {

@@ -240,6 +240,8 @@ export async function canMessageFreely(restaurant: Restaurant, now: Date) {
     .eq("restaurant_id", restaurant.id)
     .eq("direction", "inbound")
     .eq("from_number", restaurant.owner_whatsapp)
+    // App chat messages (to "app") don't open WhatsApp's window.
+    .neq("to_number", "app")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle<{ created_at: string }>();

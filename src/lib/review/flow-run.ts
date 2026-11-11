@@ -75,6 +75,7 @@ function ctxFor(turn: Turn, review: BusinessReview): FlowCtx {
       turn.channel,
       () => sendDinaChoices(turn.channel.from, turn.channel.to, { kind: list ? "list" : "buttons", body: text, button: "See the options", options: buttons.slice(0, 10).map((b) => ({ id: b.id, title: b.title, description: list ? "Tap to choose" : "" })) }),
       text,
+      buttons.slice(0, 10).map((b) => ({ id: b.id, title: b.title })),
     );
   };
   const setState = async (patch: Partial<FlowState>) => {
