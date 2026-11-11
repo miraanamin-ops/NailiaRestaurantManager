@@ -49,8 +49,8 @@ beforeEach(() => {
   process.env.SUPABASE_URL = "https://db.test";
   process.env.SUPABASE_PUBLISHABLE_KEY = "pk";
   process.env.VERCEL_ENV = "preview";
-  delete process.env.ONBOARDING_REQUIRES_PAYMENT;
-  delete process.env.REVENUECAT_WEBHOOK_SECRET;
+  // The tests set these switches themselves; Vercel's build has its own values.
+  for (const k of ["ONBOARDING_REQUIRES_PAYMENT", "REVENUECAT_WEBHOOK_SECRET", "PUBLIC_SIGNUP", "STRIPE_SECRET_KEY", "STRIPE_PRICE_ID", "TURNSTILE_SECRET_KEY"]) delete process.env[k];
   vi.doMock("@/lib/supabase", async (orig) => ({ ...(await orig<object>()), getSupabase: () => db.client }));
   vi.doMock("@/lib/audit", () => ({ logAction: async () => {} }));
   vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => limited }));
