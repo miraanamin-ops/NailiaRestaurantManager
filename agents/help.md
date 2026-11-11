@@ -61,8 +61,18 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
   Sending stops at once; you have 24 hours to tap **Keep my account**; then we email you a
   copy of your data and delete everything. It doesn't cancel an App Store or Google Play
   subscription: cancel that in your phone's settings too.
-- **Not yet in the app**: the full reports, customers and settings (use the web app for
-  those for now).
+- **Reports tab**: your weekly report (every Monday) and monthly report (early each month),
+  with charts. Tap **Start in Chat** on one of the 3 next actions to get it going, or
+  **Share the PDF** to send it to someone.
+- **More tab**: **Customers** (your list, search, your sign-up QR code, **Print the QR pack**,
+  **Import a list in Chat**, **Download my list (CSV)**); **Settings** (opening hours, offers
+  and the discount cap, how replies sound, your brief time, sending hours, quiet hours, and
+  which notifications you get); **Recommend a restaurant** (shares your code); **Help**
+  (this guide, and **Talk to a person** by email); and the **Sending is on** switch to pause
+  everything at once. Changes are in your activity log, and UNDO in Chat puts the last one
+  back.
+- **Not yet in the app**: the activity log, the sales and team pages, and Google settings
+  (use the web app for those for now).
 
 ## Getting started (setup with Dina)
 

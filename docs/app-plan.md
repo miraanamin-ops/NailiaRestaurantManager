@@ -92,3 +92,7 @@ Phase 4 (sign-up, setup with Dina, paying in the app, Delete account) built on b
 set-up in `docs/app-store-setup.md` before anyone can pay in the app (until then app
 sign-ups need an invite code, as on the website). Real purchases and Google sign-in need
 a development build.
+
+Phase 5 (Reports and More) built on branch `app-phase5` (12 Nov 2026): reports with charts,
+the PDF and the 3 actions into Chat; customers, settings, notifications per kind, Recommend a
+restaurant, Help and Talk to a person, Pause. Needs migration 068 on live before merging.

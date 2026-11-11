@@ -1,4 +1,5 @@
 import "server-only";
+import { alertKindOf, alertPrefs } from "@/lib/app/settings-rules";
 import { londonMinutes } from "@/lib/clock";
 import { check } from "@/lib/drafts";
 import type { OpenerRequest } from "@/lib/openers";
@@ -77,11 +78,14 @@ export async function pushToOwner(r: Pick<Restaurant, "id" | "owner_email" | "qu
 // the app and got it as a notification, so WhatsApp is skipped.
 export async function pushInsteadOfWhatsApp(restaurantId: string, text: string, request: OpenerRequest) {
   const r = check(
-    await getSupabase().from("restaurants").select("id, owner_email, quiet_hours_start, quiet_hours_end").eq("id", restaurantId).maybeSingle<Pick<Restaurant, "id" | "owner_email" | "quiet_hours_start" | "quiet_hours_end">>(),
+    await getSupabase().from("restaurants").select("*").eq("id", restaurantId).maybeSingle<Pick<Restaurant, "id" | "owner_email" | "quiet_hours_start" | "quiet_hours_end"> & { app_alerts?: unknown }>(),
   );
   if (!r || !(await devicesFor(r.owner_email)).length) return false;
   // A redeemed reward or offer doesn't buzz the phone: it's in Today's "done for you".
   if (request === "none") return true;
+  // A kind the owner switched off in the app (More > Settings > Notifications): no buzz,
+  // and no WhatsApp instead; it waits in the app.
+  if (!alertPrefs(r.app_alerts)[alertKindOf(request)]) return true;
   return (await pushToOwner(r, pushFor(request, text))) > 0;
 }
 
@@ -90,6 +94,8 @@ export async function pushInsteadOfWhatsApp(restaurantId: string, text: string, 
 // True if it went to at least one phone.
 export async function pushBrief(r: Restaurant, now: Date) {
   if (!(await devicesFor(r.owner_email)).length) return false;
+  // Switched off in the app: the brief's items wait in the Inbox, with no buzz.
+  if (!alertPrefs((r as { app_alerts?: unknown }).app_alerts).brief) return true;
   const { waitingDrafts } = await import("@/lib/brief");
   const { londonYmd } = await import("@/lib/clock");
   const { takingsLine } = await import("@/lib/app/cards");
@@ -135,6 +141,8 @@ export async function sendNudges(now = new Date()) {
       const rs = check(await getSupabase().from("restaurants").select("*").eq("owner_email", email).eq("active", true).returns<Restaurant[]>()) ?? [];
       const r = rs[0];
       if (!r) continue;
+      // Reminders switched off in the app.
+      if (!alertPrefs((r as { app_alerts?: unknown }).app_alerts).nudge) continue;
       const pending = check(
         await getSupabase().from("drafts").select("kind, content").eq("restaurant_id", r.id).eq("status", "pending").returns<{ kind: string; content: string }[]>(),
       ) ?? [];

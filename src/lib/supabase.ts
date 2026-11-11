@@ -114,6 +114,8 @@ export type Restaurant = {
   store_event_at?: string | null;
   // Uses the DinerAI app (067): without WhatsApp, its messages go to the app.
   app_since?: string | null;
+  // Which app notifications the owner wants (068; lib/app/settings-rules.ts alertPrefs).
+  app_alerts?: Record<string, boolean> | null;
   billing_exempt?: boolean;
   pilot_invite_code?: string | null;
   terms_accepted_at?: string | null;

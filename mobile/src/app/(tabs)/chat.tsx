@@ -27,7 +27,9 @@ type Pending = { clientId: string; text: string; file: string | null };
 export default function Chat() {
   const c = usePalette();
   const { restaurantId, signOut } = useSession();
-  const { question } = useLocalSearchParams<{ question?: string }>();
+  // question: "Answer in Chat" from the Inbox; prefill: a report's next action ("Start in
+  // Chat"), put in the box to send or change; attach: "Import a list" from Customers.
+  const { question, prefill, attach } = useLocalSearchParams<{ question?: string; prefill?: string; attach?: string }>();
   const [messages, setMessages] = useState<ChatEntry[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -83,6 +85,24 @@ export default function Chat() {
         busy.current = false;
       });
   }, [question, restaurantId, take, fail]);
+
+  useEffect(() => {
+    if (!prefill) return;
+    router.setParams({ prefill: undefined });
+    // Next tick, not inside the effect itself (React's rule against cascading renders).
+    queueMicrotask(() => setText(prefill));
+  }, [prefill]);
+
+  useEffect(() => {
+    if (attach !== 'file') return;
+    router.setParams({ attach: undefined });
+    queueMicrotask(() => {
+      setNote('Choose your customer list (CSV or Excel). I’ll ask how they agreed to hear from you before anyone is emailed.');
+      pickFile();
+    });
+    // pickFile is the same function every time it matters; only a new "attach" should run this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attach]);
 
   async function send(body: { text?: string; payload?: string; file?: ChatFile }, shown: Pending) {
     busy.current = true;

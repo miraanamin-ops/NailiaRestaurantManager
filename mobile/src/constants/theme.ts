@@ -37,4 +37,4 @@ export const Space = { xs: 4, s: 8, m: 16, l: 24, xl: 32 } as const;
 // Thumb-sized: at least 44 points (Apple) / 48 dp (Google).
 export const TapHeight = Platform.select({ ios: 50, default: 52 });
 
-export const MaxWidth = 560; // phones fill the width; tablets get a centred column
+export const MaxWidth = 640; // phones fill the width; tablets get the phone layout, centred and a little wider

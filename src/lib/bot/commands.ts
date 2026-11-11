@@ -116,18 +116,17 @@ export async function runCommand(command: Command, turn: Turn) {
       return send(testToolsOn(r) ? `${HELP_TEXT}\n\n${TEST_HELP_TEXT}` : HELP_TEXT);
     case "status":
       return send(await statusText(r));
-    case "pause":
-      if (r.paused) return send("⏸️ Sending is already *paused*. Text RESUME to restart it.");
-      await updateRestaurant(r.id, { paused: true, paused_at: new Date().toISOString() });
-      await logSetting(r.id, "paused", false, true, "Paused all sending");
+    case "pause": {
+      const { pauseSending } = await import("@/lib/pause");
+      if (!(await pauseSending(r)).changed) return send("⏸️ Sending is already *paused*. Text RESUME to restart it.");
       return send("⏸️ *Paused.* Nothing will be sent until you text *RESUME*. Approved drafts will be held.");
+    }
     case "resume": {
       if (!r.paused) return send("▶️ Sending is already on. (Text PAUSE to stop it.)");
-      const resumed = await updateRestaurant(r.id, { paused: false, paused_at: null });
-      await logSetting(r.id, "paused", true, false, "Resumed sending");
       await send("▶️ *Resumed.* Sending is back on.");
-      const results = await releaseQueue(resumed, restaurantNow(resumed));
-      if (!results.length) await send("There was nothing held, so nothing went out.");
+      const { resumeSending } = await import("@/lib/pause");
+      const { released } = await resumeSending(r, restaurantNow(r));
+      if (!released.length) await send("There was nothing held, so nothing went out.");
       return;
     }
     case "cap":

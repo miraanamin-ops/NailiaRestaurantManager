@@ -304,3 +304,84 @@ export const getClosing = (r: string) => api<{ closing: { closesAt: string | nul
 export const deleteAccount = (r: string, typedName: string) =>
   api<{ closesAt: string; now: boolean; storeNote: string | null } | { refused: string }>('/api/app/account/delete', { method: 'POST', body: { r, typedName } });
 export const cancelDelete = (r: string) => api<{ cancelled: boolean } | { refused: string }>(`/api/app/account/delete${q(r)}`, { method: 'DELETE' });
+
+// ---------- Reports and More (phase 5) ----------
+
+export type ReportItem = { token: string; kind: 'weekly' | 'monthly'; label: string; createdAt: string };
+export const getReports = (r: string | null) => api<{ restaurantId: string; reports: ReportItem[] }>(`/api/app/reports${q(r)}`);
+
+// A report's saved snapshot, as the website draws it (types in the web app's lib/report/).
+export type Compare = { now: number; before: number };
+export type Daily = { days: string[]; values: number[] };
+export type ReportStat = { label: string; value: Compare; format: 'rating' | 'count' | 'money' };
+export type ReportAction = { title: string; why: string; message: string };
+export type WeeklySection = { id: string; [k: string]: unknown };
+export type WeeklyData = { version: 1; restaurant: { name: string; brandColor: string }; period: { start: string; end: string; label: string; prevLabel: string }; sections: WeeklySection[]; simulated?: string | null };
+export type MonthlyData = {
+  kind: 'monthly';
+  restaurant: { name: string; brandColor: string };
+  figures: {
+    label: string;
+    net: number;
+    traded: number;
+    days: number;
+    orders: number | null;
+    avgOrder: number | null;
+    daily: { day: string; net: number | null }[];
+    vsLastMonth: { label: string; net: number; likeForLike: number | null } | null;
+    vsLastYear: { label: string; net: number; likeForLike: number | null } | null;
+    weekdays: { weekday: string; avg: number | null }[];
+    dishes: { top: { item: string; amount: number }[]; rising: { item: string; change: number }[]; falling: { item: string; change: number }[] } | null;
+    labour: { cost: number; pct: number; target: number | null } | null;
+    reviews: { count: number; average: number | null } | null;
+    missing: string[];
+  };
+  words: { headline: string; summary?: string; highlights?: { title: string; detail: string }[]; actions: ReportAction[] };
+  benchmark?: { radiusMiles: number; restaurants: number; rows: { label: string; you: string; nearby: string; position: string }[] } | null;
+  simulated?: string | null;
+};
+export type Report = { token: string; kind: 'weekly' | 'monthly'; data: WeeklyData | MonthlyData; pdfUrl: string; webUrl: string | null };
+export const getReport = (r: string | null, token: string) => api<Report>(`/api/app/reports/${encodeURIComponent(token)}${q(r)}`);
+
+export type Customers = {
+  total: number;
+  subscribed: number;
+  matching: number;
+  page: number;
+  pageSize: number;
+  customers: { id: string; name: string | null; email: string | null; joined: string; status: string }[];
+  signupUrl: string;
+  qrSvg: string;
+  qrPackUrl: string;
+};
+export const getCustomers = (r: string | null, search: string, page = 0) =>
+  api<Customers>(`/api/app/customers${q(r)}${r ? '&' : '?'}q=${encodeURIComponent(search)}&page=${page}`);
+export const exportCustomers = (r: string | null) => api<{ url: string }>(`/api/app/customers/export${q(r)}`, { method: 'POST' });
+
+export type AlertKind = 'brief' | 'urgent' | 'updates' | 'reports' | 'nudge';
+export type Settings = {
+  hours: { day: string; value: string }[];
+  signupReward: string;
+  discountCap: number;
+  sendWindow: { start: string; end: string };
+  quietHours: { start: string; end: string };
+  briefHour: number;
+  voice: { signOffName: string; greeting: string; wordsToAvoid: string; emoji: { reviewReplies: number; posts: number; campaigns: number } };
+  paused: boolean;
+  alerts: Record<AlertKind, boolean>;
+};
+export type SettingsChange = Partial<{
+  hours: { day: string; value: string }[];
+  signupReward: string;
+  discountCap: number;
+  sendWindow: { start: string; end: string };
+  quietHours: { start: string; end: string };
+  briefHour: number;
+  voice: Partial<{ signOffName: string; greeting: string; wordsToAvoid: string; emoji: Partial<Settings['voice']['emoji']> }>;
+  alerts: Partial<Record<AlertKind, boolean>>;
+}>;
+export const getSettings = (r: string | null) => api<Settings>(`/api/app/settings${q(r)}`);
+export const saveSettings = (r: string | null, change: SettingsChange) => api<Settings | { problem: string }>(`/api/app/settings${q(r)}`, { method: 'POST', body: change });
+export const setPaused = (r: string | null, paused: boolean) => api<{ paused: boolean; released: number }>(`/api/app/pause${q(r)}`, { method: 'POST', body: { paused } });
+export const getReferral = (r: string | null) => api<{ code: string; link: string }>(`/api/app/refer${q(r)}`);
+export const getHelp = () => api<{ markdown: string; supportEmail: string }>('/api/app/help');

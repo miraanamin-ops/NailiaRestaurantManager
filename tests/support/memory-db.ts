@@ -34,6 +34,8 @@ function condition(col: string, op: string, raw: string): Pred {
       return (r) => cmp(r[col], v) >= 0;
     case "like":
       return likePred(col, v);
+    case "ilike":
+      return (r) => likeRegex(v, "i").test(String(r[col] ?? ""));
     default:
       throw new Error(`memory-db: unsupported filter ${op}`);
   }

@@ -32,3 +32,12 @@ export async function withOwner(req: Pick<NextRequest, "headers">, run: (owner: 
 export function restaurantFor(owner: Owner, requested: string | null) {
   return requested && owner.restaurantIds.includes(requested) ? requested : (owner.restaurantIds[0] ?? null);
 }
+
+// The restaurant a call is about, as a row: restaurantFor's choice, or null.
+export async function ownedRestaurant(owner: Owner, requested: string | null) {
+  const id = restaurantFor(owner, requested);
+  if (!id) return null;
+  const { getSupabase } = await import("@/lib/supabase");
+  const { check } = await import("@/lib/drafts");
+  return check(await getSupabase().from("restaurants").select("*").eq("id", id).maybeSingle<import("@/lib/supabase").Restaurant>());
+}

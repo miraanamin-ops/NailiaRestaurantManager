@@ -59,6 +59,11 @@ function RootNavigator() {
         <Stack.Protected guard={signedIn && stage !== 'pay' && stage !== 'setup'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
+          {/* Phase 5: More's screens and a report, with a header and back button. */}
+          <Stack.Screen name="customers" options={{ headerShown: true, title: 'Customers', headerBackTitle: 'More' }} />
+          <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings', headerBackTitle: 'More' }} />
+          <Stack.Screen name="help" options={{ headerShown: true, title: 'Help', headerBackTitle: 'More' }} />
+          <Stack.Screen name="report/[token]" options={{ headerShown: true, title: 'Report', headerBackTitle: 'Reports' }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && stage === 'pay'}>
           <Stack.Screen name="subscribe" />
