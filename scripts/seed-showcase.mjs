@@ -460,7 +460,13 @@ pending.push({
   kind: "email_campaign", audience: `Birthdays in the next 7 days (${birthdayCount} customers)`, created_at: at(0, 4),
   content: "*Happy birthday from Dina's*\n*Subject:* A birthday treat, on us 🎂\n\nHi {first_name},\n\nHappy birthday from all of us at the grill! Come in this week and your künefe is on the house.\n\n🎁 *Offer:* Free künefe in your birthday week",
 });
-const pendingRows = pending.map((p, i) => ({ restaurant_id: rid, status: "pending", request: TAG, version: 1, brief_number: i + 1, updated_at: p.created_at, ...p }));
+// Passed checks, as a real draft carries them (the app's "Approve all" only takes checked ones);
+// a draft with a flag note gets a flagged tone check.
+const passed = (flags = []) => {
+  const r = (status, fl = []) => ({ status, fixes: [], flags: fl, at: new Date().toISOString() });
+  return { tone: flags.length ? r("flagged", flags) : r("pass"), facts: r("pass"), compliance: r("pass"), money: r("pass") };
+};
+const pendingRows = pending.map((p, i) => ({ restaurant_id: rid, status: "pending", request: TAG, version: 1, brief_number: i + 1, updated_at: p.created_at, checks: passed(p.check_notes?.flags), ...p }));
 const pendingDrafts = ok(await s.from("drafts").insert(pendingRows).select("id, kind, created_at"), "pending drafts");
 const birthdayDraft = pendingDrafts.find((d) => d.kind === "email_campaign");
 ok(
