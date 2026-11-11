@@ -83,6 +83,6 @@ the worktree C:\Users\miraa\dev\naila-v3, one branch per phase, test on Ember & 
 copied to the owner's clipboard, the Expo token in mobile/.env.expo.local never printed,
 and `npx expo start --lan --clear < /dev/null` (never CI=1) for testing in Expo Go.
 
-Phase 3 (Chat) built on branch `app-phase3` (11 Nov 2026): the Chat tab on the WhatsApp bot's
-own engine, photos and files, quick replies, drafts as Inbox cards, "Answer in Chat" from the
-Inbox. Needs migration 066 (`messages.app`, the `app-uploads` bucket) on live before merging.
+Phase 3 (Chat) is live (11 Nov 2026, main df72cce, migration 066), tested by the owner on
+Ember & Spice: the Chat tab on the WhatsApp bot's own engine, photos and files, quick replies,
+drafts as Inbox cards, "Answer in Chat" from the Inbox. Cosmetic changes wait for phase 6.
