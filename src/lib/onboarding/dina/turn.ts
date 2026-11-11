@@ -337,7 +337,9 @@ async function endOfSetup(id: string, messages: DinaReply["messages"], channel: 
   const summary = has("summary") ? [] : [{ text: outcome.finished ? "Here's everything we've set up together." : "Here's where setup stands.", component: { type: "summary" as const } }];
   if (outcome.finished) {
     // Finished on the web: the same closing line on WhatsApp, where they'll hear from us next.
-    const withReview = (c: "web" | "whatsapp") => (outcome.reviewStarted ? `${outcome.allSet} ${reviewLine(c)}` : outcome.allSet);
+    const withReview = (c: "web" | "whatsapp" | "app") => (outcome.reviewStarted ? `${outcome.allSet} ${reviewLine(c)}` : outcome.allSet);
+    // An app owner with no WhatsApp: everything comes in the app.
+    if (outcome.reach === "app") return [...summary, { text: withReview("app"), component: null }];
     if (channel === "web") await whatsAppLine(id, withReview("whatsapp")).catch((err) => console.error("Couldn't send the all-set line on WhatsApp", err));
     return [...summary, { text: withReview(channel === "web" ? "web" : "whatsapp"), component: null }];
   }

@@ -31,6 +31,16 @@ export async function messageOwner(
     const onScreen = withButtons === true ? ((await (await import("@/lib/drafts")).getActiveDraft(channel.restaurantId))?.id ?? null) : null;
     return toApp(channel, channel.app, text, { buttons: chatButtons(withButtons), draftId: chatDraftId(withButtons, onScreen), image: mediaUrl }).catch((err) => console.error("Failed to log an app message", err));
   }
+  // An owner with no WhatsApp, on the app (followups.ownerChannel): logged in the app's
+  // Chat, with a notification for anything DinerAI sends on its own. Never Twilio.
+  if (channel.to === APP_ADDRESS) {
+    if (opener && text) {
+      const { pushInsteadOfWhatsApp } = await import("@/lib/push");
+      await pushInsteadOfWhatsApp(channel.restaurantId, text, opener).catch((err) => console.error("App notification failed", err));
+    }
+    const onScreen = withButtons === true ? ((await (await import("@/lib/drafts")).getActiveDraft(channel.restaurantId))?.id ?? null) : null;
+    return toApp(channel, { owner: APP_ADDRESS, messages: [] }, text, { buttons: chatButtons(withButtons), draftId: chatDraftId(withButtons, onScreen), image: mediaUrl }).catch((err) => console.error("Failed to log an app message", err));
+  }
   // The owner has the app: a notification instead of WhatsApp (the draft itself is in
   // the app's Inbox). If Expo can't be reached, WhatsApp carries on as before.
   if (opener && text && !isPlaceholderNumber(channel.to)) {
@@ -80,7 +90,9 @@ export async function logAppMessage(restaurantId: string, row: Record<string, un
 // Sends one message to the owner (deliver does the Twilio call) and logs it, sent or failed.
 // In the app (channel.app) nothing is delivered: the words, with appButtons as quick replies, go to the chat.
 export async function sendAndLog(channel: OwnerChannel, deliver: () => Promise<{ sid: string; body: string }>, text: string, appButtons: ChatButton[] = []) {
-  if (channel.app) return toApp(channel, channel.app, text, { buttons: appButtons }).catch((err) => console.error("Failed to log an app message", err));
+  if (channel.app || channel.to === APP_ADDRESS) {
+    return toApp(channel, channel.app ?? { owner: APP_ADDRESS, messages: [] }, text, { buttons: appButtons }).catch((err) => console.error("Failed to log an app message", err));
+  }
   let sid: string | null = null;
   let sentBody = text;
   let error: string | null = null;

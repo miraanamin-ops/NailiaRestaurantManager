@@ -29,7 +29,8 @@ import { getRestaurant, updateRestaurantFields } from "../store";
 
 // allSet: the closing line ("You're all set up..."), for the chat and WhatsApp.
 // reviewStarted: the business review (lib/review) is on its way; Dina says so (reviewLine).
-export type FinishOutcome = { finished: true; active: boolean; allSet: string; reviewStarted: boolean } | { finished: false; needsWhatsapp: boolean };
+// reach: where they'll hear from us next: WhatsApp, or the app (no WhatsApp; step 50, phase 4).
+export type FinishOutcome = { finished: true; active: boolean; allSet: string; reviewStarted: boolean; reach: "whatsapp" | "app" } | { finished: false; needsWhatsapp: boolean };
 
 // The agents' modes once setup finishes: every agent live, apart from any the
 // builder had already set (kept as they are). Plain code, unit-tested.
@@ -48,8 +49,8 @@ const hourText = (h: number) => (h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `$
 // The first brief is the morning after setup finishes (the summary says so too).
 export const allSetLine = (briefHour: number) => `You're all set up. You'll next hear from me tomorrow morning at ${hourText(briefHour)} with your first brief.`;
 // Added when the business review has started: "here" on WhatsApp, where it arrives.
-export const reviewLine = (channel: "web" | "whatsapp") =>
-  `Give me about 5 minutes to review your business. I'll message you ${channel === "whatsapp" ? "here" : "on WhatsApp"}.`;
+export const reviewLine = (channel: "web" | "whatsapp" | "app") =>
+  `Give me about 5 minutes to review your business. I'll message you ${channel === "whatsapp" ? "here" : channel === "app" ? "in the DinerAI app" : "on WhatsApp"}.`;
 
 export async function finishIfDone(restaurantId: string): Promise<FinishOutcome | null> {
   const session = await getSession(restaurantId);
@@ -57,7 +58,8 @@ export async function finishIfDone(restaurantId: string): Promise<FinishOutcome 
   const { state } = await loadFlow(restaurantId);
   if (currentStep(state) !== null) return null;
   const r = await getRestaurant(restaurantId);
-  if (!r.owner_whatsapp) return { finished: false, needsWhatsapp: true };
+  // WhatsApp linked, or the owner uses the app (their brief and alerts go there).
+  if (!r.owner_whatsapp && !r.app_since) return { finished: false, needsWhatsapp: true };
 
   const now = new Date().toISOString();
   const supabase = getSupabase();
@@ -92,5 +94,5 @@ export async function finishIfDone(restaurantId: string): Promise<FinishOutcome 
   }
   // The business review: once per restaurant, never in the way of finishing.
   const reviewStarted = await startAfterOnboarding(restaurantId);
-  return { finished: true, active, allSet: allSetLine(r.brief_hour ?? 9), reviewStarted };
+  return { finished: true, active, allSet: allSetLine(r.brief_hour ?? 9), reviewStarted, reach: r.owner_whatsapp ? "whatsapp" : "app" };
 }

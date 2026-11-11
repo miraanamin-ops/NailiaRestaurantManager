@@ -71,3 +71,22 @@ export function publicSignupOpen(env: Record<string, string | undefined> = proce
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_ID) return false;
   return env.VERCEL_ENV !== "production" || env.PUBLIC_SIGNUP === "true";
 }
+
+// The app (step 50, phase 4): paying is an App Store / Google Play subscription
+// through RevenueCat (decision A). Same £99 a month and first month free, set up in
+// the stores; FOUNDER is an Apple offer code and a Google developer offer.
+//   REVENUECAT_WEBHOOK_SECRET  the webhook's HMAC signing secret (RevenueCat > Integrations > Webhooks)
+//   REVENUECAT_ENTITLEMENT     the entitlement that means "paid" (default "dinerai")
+export const APP_ENTITLEMENT = (env: Record<string, string | undefined> = process.env) => env.REVENUECAT_ENTITLEMENT || "dinerai";
+
+export function storeBillingConfigured(env: Record<string, string | undefined> = process.env) {
+  return Boolean(env.REVENUECAT_WEBHOOK_SECRET);
+}
+
+// Can someone sign up in the app without an invite code? The same rule as the
+// website, with the store subscription in place of Stripe.
+export function appSignupOpen(env: Record<string, string | undefined> = process.env) {
+  if (!onboardingRequiresPayment(env)) return false;
+  if (!storeBillingConfigured(env)) return false;
+  return env.VERCEL_ENV !== "production" || env.PUBLIC_SIGNUP === "true";
+}

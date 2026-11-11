@@ -129,7 +129,10 @@ export const decide = (draftId: string, body: DecideBody) => api<DecideResult>(`
 export const undoLast = (r: string | null) => api<{ message: string }>(`/api/app/undo${q(r)}`, { method: 'POST' });
 
 // The /api/app/me answer.
-export type Me = { email: string; firstName: string | null; isBuilder: boolean; restaurants: { id: string; name: string; active: boolean }[] };
+// stage: pay (start the free month), setup (Dina) or ready (the tabs); billing for More.
+export type Stage = 'pay' | 'setup' | 'ready';
+export type AppBilling = { standing: string; viaStore: boolean; platform: string | null; renewsOrEnds: string | null; cancelled: boolean };
+export type Me = { email: string; firstName: string | null; isBuilder: boolean; restaurants: { id: string; name: string; active: boolean; stage: Stage; billing: AppBilling }[] };
 
 // ---------- Chat (phase 3) ----------
 // The same conversation as WhatsApp, on the bot's own engine (/api/app/chat).
@@ -173,3 +176,131 @@ export async function uploadChatFile(r: string | null, f: { uri: string; name: s
   if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, 'upload_failed');
   return { path: link.path, name: link.name, contentType: link.contentType };
 }
+
+// ---------- Sign-up, setup and paying (phase 4) ----------
+
+// A login from Sign in with Apple / Google for someone who hasn't signed up yet: kept
+// in memory only (never saved) until the sign-up form is sent.
+let pendingSocial: Tokens | null = null;
+export const hasPendingSocial = () => Boolean(pendingSocial);
+export const dropPendingSocial = () => {
+  pendingSocial = null;
+};
+
+export type SocialResult = { known: true } | { known: false; email: string; name: string | null };
+export async function socialLogin(provider: 'apple' | 'google', idToken: string, extra: { nonce?: string; name?: string | null } = {}): Promise<SocialResult> {
+  const out = await post<{ known: boolean; tokens: Tokens; email?: string; name?: string | null }>('/api/app/login/social', { provider, idToken, ...extra });
+  if (out.known) {
+    pendingSocial = null;
+    await saveTokens(out.tokens);
+    return { known: true };
+  }
+  pendingSocial = out.tokens;
+  return { known: false, email: out.email ?? '', name: out.name ?? null };
+}
+
+export type SignUpBody = { ownerName: string; restaurantName: string; email: string; password?: string; whatsapp: string; terms: boolean; invite?: string; referral?: string };
+// Signs up and logs in. A sign-up after Apple / Google sends that login, with no password.
+export async function signUp(body: SignUpBody): Promise<{ restaurantId: string; next: 'setup' | 'pay' }> {
+  const social = pendingSocial;
+  const res = await fetch(`${API_URL}/api/app/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(social ? { Authorization: `Bearer ${social.access_token}` } : {}) },
+    body: JSON.stringify(social ? { ...body, password: undefined } : body),
+  });
+  const json = (await res.json().catch(() => ({}))) as { error?: string; restaurantId?: string; next?: 'setup' | 'pay'; tokens?: Tokens };
+  if (!res.ok) throw new ApiError(res.status, json.error ?? 'failed');
+  await saveTokens(social ?? json.tokens!);
+  pendingSocial = null;
+  return { restaurantId: json.restaurantId!, next: json.next! };
+}
+
+// Setup with Dina: the website's chat, the same messages and cards (types from the web app).
+export type SetupOption = { id: string; label: string; short?: string };
+export type QuestionOption = { id: string; label: string; short?: string; body?: string; swatches?: string[] };
+export type GridData = { columns: { id: string; label: string; short: string }[]; rows: { id: string; label: string; section: string; marked: string[]; suggested: boolean; unsure: boolean }[] };
+export type QuestionData = {
+  q: string;
+  options: QuestionOption[];
+  multi: boolean;
+  confirm: boolean;
+  skip: boolean;
+  layout: 'buttons' | 'cards' | 'swatches';
+  quote?: { author: string; rating: number; text: string; real: boolean };
+  image?: string | null;
+  input?: { optionId: string; placeholder: string } | null;
+  upload?: { accept: 'photo' | 'document' | 'spreadsheet' | 'any'; multiple: boolean; label: string } | null;
+  selected?: string[];
+  grid?: GridData | null;
+  link?: { label: string; href: string } | null;
+};
+export type ConfirmationData = { title: string; fields: { key: string; label: string; value: string | null; multiline?: boolean; colour?: string }[]; image?: string | null };
+export type SummaryData = {
+  done: number;
+  total: number;
+  items: { key: string; title: string; status: string; detail: string }[];
+  locked: { key: string; title: string; unlock: string }[];
+  next: string[];
+  dashboardHref?: string | null;
+  agents?: { key: string; name: string; ready: boolean; needs: string[] }[];
+};
+export type RecapData = { chapter: string; title: string; rows: { q: string; label: string; value: string; status: string; swatches?: string[] }[]; next: string | null };
+export type SetupComponent =
+  | { type: 'quick_replies'; options: SetupOption[] }
+  | { type: 'choice_cards'; cards: { id: string; title: string; body: string }[]; quote?: QuestionData['quote'] }
+  | { type: 'steps'; title: string; steps: { n: number; text: string; copy?: string; link?: { label: string; href: string } }[]; note: string; actions: SetupOption[] }
+  | { type: 'forward'; intro: string; text: string }
+  | { type: 'link'; label: string; href: string; hint: string | null; continueLabel?: string | null }
+  | { type: 'dish_check'; dish: string; section: string; suggested: string[]; position: number; total: number; actions: SetupOption[] }
+  | { type: 'upload'; accept: 'photo' | 'document' | 'spreadsheet' | 'any'; multiple: boolean; label: string }
+  | { type: 'confirmation'; card: ConfirmationData }
+  | { type: 'summary'; summary: SummaryData }
+  | { type: 'question'; card: QuestionData }
+  | { type: 'recap'; recap: RecapData };
+export type SetupMessage = { id: string; role: 'dina' | 'owner'; text: string; component?: SetupComponent | null; answered?: boolean };
+export type SetupProgress = {
+  position: number;
+  total: number;
+  chapters?: { key: string; title: string; status: string; left: string[] }[];
+  chapter?: { n: number; total: number; title: string; key: string } | null;
+};
+export type SetupState = { restaurantId: string; restaurantName: string; messages: SetupMessage[]; chosen: Record<string, string>; progress: SetupProgress; skippable: boolean; needsStart: boolean };
+export type SetupAction =
+  | { kind: 'start' }
+  | { kind: 'message'; text: string }
+  | { kind: 'answer'; messageId: string; choiceId: string; label: string }
+  | { kind: 'pick'; messageId: string; choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | 'unsure'> }
+  | { kind: 'confirm'; messageId: string; changes: Record<string, string> }
+  | { kind: 'skip' }
+  | { kind: 'jump'; step: string }
+  | { kind: 'files'; paths: string[] };
+export type SetupTurn = { messages: SetupMessage[]; progress: SetupProgress | null; skippable: boolean; error: string | null };
+
+export const getSetup = (r: string) => api<SetupState>(`/api/app/setup${q(r)}`);
+export async function setupAction(r: string, action: SetupAction) {
+  const { randomUUID } = await import('expo-crypto');
+  return api<SetupTurn>('/api/app/setup', { method: 'POST', body: { r, action: action.kind === 'start' ? action : { ...action, clientId: randomUUID() } } });
+}
+// Files for Dina (menu photos, a PDF, a till export): straight into private storage, then their paths.
+export async function setupUpload(r: string, files: { uri: string; name: string; type: string; size: number }[]): Promise<string[] | { refused: string }> {
+  const { File } = await import('expo-file-system');
+  const out = await api<{ targets: { path: string; url: string }[] } | { refused: string }>('/api/app/setup/upload', {
+    method: 'POST',
+    body: { r, files: files.map((f) => ({ name: f.name, size: Math.max(1, f.size), type: f.type })) },
+  });
+  if ('refused' in out) return out;
+  for (const [i, t] of out.targets.entries()) {
+    const res = await new File(files[i].uri).upload(t.url, { httpMethod: 'PUT', mimeType: files[i].type, headers: { 'x-upsert': 'false' } });
+    if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, 'upload_failed');
+  }
+  return out.targets.map((t) => t.path);
+}
+
+// FOUNDER on Android (Google Play has no discount codes): checked here first.
+export const founderCode = (r: string, code: string) => api<{ ok: true; offer: string } | { ok: false; reason: string }>('/api/app/billing/founder', { method: 'POST', body: { r, code } });
+
+// Delete account (Apple's rule): the website's close-account flow.
+export const getClosing = (r: string) => api<{ closing: { closesAt: string | null; status: string } | null }>(`/api/app/account/delete${q(r)}`);
+export const deleteAccount = (r: string, typedName: string) =>
+  api<{ closesAt: string; now: boolean; storeNote: string | null } | { refused: string }>('/api/app/account/delete', { method: 'POST', body: { r, typedName } });
+export const cancelDelete = (r: string) => api<{ cancelled: boolean } | { refused: string }>(`/api/app/account/delete${q(r)}`, { method: 'DELETE' });

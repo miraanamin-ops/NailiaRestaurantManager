@@ -35,7 +35,7 @@ export class ClosureError extends Error {}
 
 export const EXPORT_BUCKET = "account-exports";
 // The restaurant's own folders in storage (as scripts/delete-restaurants.mjs).
-const RESTAURANT_BUCKETS = ["post-photos", "sales-files", "onboarding-uploads"];
+const RESTAURANT_BUCKETS = ["post-photos", "sales-files", "onboarding-uploads", "app-uploads"];
 const MISSING = new Set(["42P01", "PGRST205"]);
 
 export type Closure = {
@@ -72,11 +72,13 @@ async function closure(id: string) {
 }
 
 const update = async (id: string, fields: Partial<Closure>) => check(await getSupabase().from("account_closures").update(fields).eq("id", id));
-const audit = (restaurantId: string | null, detail: string, data: Record<string, unknown> = {}) => logAction({ restaurantId, actor: "builder", action: "closure", detail, data });
+// Who asked: the builder (admin console) or the owner themselves (the app's Delete account).
+type By = "builder" | "owner";
+const audit = (restaurantId: string | null, detail: string, data: Record<string, unknown> = {}, actor: By = "builder") => logAction({ restaurantId, actor, action: "closure", detail, data });
 
 // ---------- Ask 1: request ----------
 
-export async function requestClosure(restaurantId: string, typedName: string, builderEmail: string) {
+export async function requestClosure(restaurantId: string, typedName: string, builderEmail: string, by: By = "builder") {
   const r = await restaurant(restaurantId);
   const refused = closeRefused(r);
   if (refused) throw new ClosureError(refused);
@@ -85,13 +87,13 @@ export async function requestClosure(restaurantId: string, typedName: string, bu
   if (open?.length) throw new ClosureError(`${r.name} already has a closure in progress.`);
   const ref = closureRef(randomBytes(6));
   const row = check(await getSupabase().from("account_closures").insert({ ref, restaurant_id: r.id, kind: closureKind(r), status: "requested" }).select("*").single<Closure>())!;
-  await audit(r.id, `Closing the account requested (${ref}) by ${builderEmail}: nothing changes until it's confirmed`, { ref });
+  await audit(r.id, `Closing the account requested (${ref}) by ${builderEmail}: nothing changes until it's confirmed`, { ref }, by);
   return row;
 }
 
 // ---------- Ask 2: confirm (the cooling-off starts) ----------
 
-export async function confirmClosure(input: { closureId: string; typedName: string; understood: boolean; skipCoolingOff: boolean; builderEmail: string }) {
+export async function confirmClosure(input: { closureId: string; typedName: string; understood: boolean; skipCoolingOff: boolean; builderEmail: string; by?: By }) {
   const c = await closure(input.closureId);
   if (c.status !== "requested" || !c.restaurant_id) throw new ClosureError(`That closure is ${c.status}, so it can't be confirmed.`);
   const r = await restaurant(c.restaurant_id);
@@ -107,19 +109,19 @@ export async function confirmClosure(input: { closureId: string; typedName: stri
   const mail = confirmEmail({ restaurant: r.name, closesAt: formatLondon(when), coolingOff: !input.skipCoolingOff });
   const delivery = await sendOwnerEmail(r, { ...mail, html: textHtml(mail.text) }).catch((err: unknown) => ({ delivery: "failed", reason: err instanceof Error ? err.message : String(err) }));
   await update(c.id, { steps: { ...c.steps, confirm_email: delivery.delivery } });
-  await audit(r.id, `Closing the account confirmed (${c.ref}) by ${input.builderEmail}: ${input.skipCoolingOff ? "closing now (cooling-off skipped)" : `closes ${formatLondon(when)}`}; sending paused`, { ref: c.ref });
+  await audit(r.id, `Closing the account confirmed (${c.ref}) by ${input.builderEmail}: ${input.skipCoolingOff ? "closing now (cooling-off skipped)" : `closes ${formatLondon(when)}`}; sending paused`, { ref: c.ref }, input.by);
   if (input.skipCoolingOff) await queueClosing(c.id);
   return { closesAt: when };
 }
 
 // ---------- Cancel (until it's closing) ----------
 
-export async function cancelClosure(closureId: string, builderEmail: string) {
+export async function cancelClosure(closureId: string, builderEmail: string, by: By = "builder") {
   const c = await closure(closureId);
   if (c.status !== "requested" && c.status !== "scheduled" && c.status !== "failed") throw new ClosureError(`That closure is ${c.status}, so it can't be cancelled.`);
   await update(c.id, { status: "cancelled", cancelled_at: new Date().toISOString() });
   if (c.restaurant_id && c.paused_before === false) check(await getSupabase().from("restaurants").update({ paused: false, paused_at: null }).eq("id", c.restaurant_id));
-  await audit(c.restaurant_id, `Closing the account cancelled (${c.ref}) by ${builderEmail}${c.paused_before === false ? "; sending back on" : ""}`, { ref: c.ref });
+  await audit(c.restaurant_id, `Closing the account cancelled (${c.ref}) by ${builderEmail}${c.paused_before === false ? "; sending back on" : ""}`, { ref: c.ref }, by);
 }
 
 // A closure whose job failed: try again now.
@@ -354,4 +356,20 @@ function textHtml(text: string) {
     .split("\n\n")
     .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
     .join("")}</div>`;
+}
+
+// The closure in progress for a restaurant (asked for, waiting out the cooling-off, or
+// closing), if any: the app's Delete account shows it with Cancel.
+export async function openClosureFor(restaurantId: string) {
+  const { data, error } = await getSupabase()
+    .from("account_closures")
+    .select("*")
+    .eq("restaurant_id", restaurantId)
+    .in("status", ["requested", "scheduled", "closing"])
+    .order("requested_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<Closure>();
+  if (error && MISSING.has(error.code ?? "")) return null;
+  if (error) throw new Error(error.message);
+  return data;
 }

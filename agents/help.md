@@ -42,12 +42,30 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
   our spreadsheets filled in). Photos up to 5 MB, files up to 16 MB.
 - **Inbox tab**: drafts waiting for you. A question for you (about a review, or your
   hours on a bank holiday) has an **Answer in Chat** button.
-- **Not yet in the app**: setup with Dina, sign-up and paying, and the full reports
-  (use WhatsApp or the web app for those for now).
+- **Signing up in the app**: tap **Create an account** (your name, the restaurant's name,
+  email, a password, your mobile, and tick the terms), or **Continue with Apple** /
+  **Continue with Google**. Got a recommendation or invite code? Tap **I have a code**.
+- **Paying in the app**: **Start your free month** uses your App Store or Google Play
+  account: the first month is free, then it renews monthly at the price shown, until you
+  cancel. Cancel or change it in your phone's settings (iPhone: Settings > your name >
+  Subscriptions; Android: Google Play > Payments & subscriptions), or from **More >
+  Manage in the App Store / Google Play**. Have the FOUNDER code? Tap **I have an offer
+  code**. Signed up on the website? You keep paying there (Manage billing in settings).
+- **Setup with Dina in the app**: the same setup as on the website, chapter by chapter.
+  Tap **Chapters** to jump to one; take photos of your menu with the camera button. At the
+  end you're asked to turn on alerts (your morning brief, and anything urgent).
+- **No WhatsApp?** If you use the app and haven't linked WhatsApp, your brief and alerts
+  come to the app (a notification, and the message in Chat).
+- **Delete your account**: More > **Delete account**, then type the restaurant's name.
+  Sending stops at once; you have 24 hours to tap **Keep my account**; then we email you a
+  copy of your data and delete everything. It doesn't cancel an App Store or Google Play
+  subscription: cancel that in your phone's settings too.
+- **Not yet in the app**: the full reports, customers and settings (use the web app for
+  those for now).
 
 ## Getting started (setup with Dina)
 
-Dina takes you through setup, on WhatsApp or in the web app (app.dinerai.co.uk/onboarding). You can switch between the two at any step without losing progress.
+Dina takes you through setup, on WhatsApp, in the web app (app.dinerai.co.uk/onboarding) or in the DinerAI phone app. You can switch between them at any step without losing progress.
 Every step can be skipped and finished later from **Settings** (**Your setup, chapter by
 chapter**).
 

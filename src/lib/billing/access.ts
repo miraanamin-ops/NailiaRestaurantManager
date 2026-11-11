@@ -4,7 +4,9 @@
 // is finished AND one of:
 //   - it's billing-exempt (every restaurant from before billing),
 //   - it signed up with a pilot invite code,
-//   - its Stripe subscription is trialing or active.
+//   - its Stripe subscription is trialing or active,
+//   - or its App Store / Google Play subscription is (the app, RevenueCat; 067):
+//     paid either way, a restaurant is treated the same.
 // A failed payment (past_due) keeps it running: the builder is alerted and settings
 // shows a banner, but the owner isn't cut off. Cancelled, unpaid or never-finished
 // subscriptions don't count.
@@ -17,6 +19,9 @@ export type BillingFields = {
   cancel_at_period_end?: boolean | null;
   trial_ends_at?: string | null;
   current_period_end?: string | null;
+  store_status?: string | null;
+  store_period_end?: string | null;
+  store_cancel_at_period_end?: boolean | null;
 };
 
 export type Standing = "exempt" | "pilot" | "trialing" | "active" | "past_due" | "none" | "ended";
@@ -28,7 +33,9 @@ export function billingStanding(r: BillingFields): { ok: boolean; standing: Stan
   if (r.pilot_invite_code) return { ok: true, standing: "pilot" };
   const s = r.subscription_status ?? null;
   if (s && GOOD.has(s)) return { ok: true, standing: s as Standing };
-  return { ok: false, standing: s ? "ended" : "none" };
+  const store = r.store_status ?? null;
+  if (store && GOOD.has(store)) return { ok: true, standing: store as Standing };
+  return { ok: false, standing: s || store ? "ended" : "none" };
 }
 
 export function shouldBeActive(onboardingFinished: boolean, r: BillingFields) {
@@ -38,8 +45,22 @@ export function shouldBeActive(onboardingFinished: boolean, r: BillingFields) {
 // What the settings page says about billing, if anything needs saying.
 export type BillingNotice = { tone: "warn" | "info"; text: string } | null;
 
+// Paying through the App Store or Google Play (not Stripe): the store, not Manage
+// billing, is where they change it.
+export function paysThroughStore(r: BillingFields) {
+  return !GOOD.has(r.subscription_status ?? "") && Boolean(r.store_status) && !r.billing_exempt && !r.pilot_invite_code;
+}
+
 export function billingNotice(r: BillingFields, fmt: (iso: string) => string): BillingNotice {
   const { standing } = billingStanding(r);
+  if (paysThroughStore(r)) {
+    const where = "your phone's App Store or Google Play subscriptions";
+    if (standing === "past_due") return { tone: "warn", text: `Your last payment didn't go through. Please update your payment details in ${where}. DinerAI keeps running in the meantime.` };
+    if (standing === "ended") return { tone: "warn", text: "Your subscription has ended, so DinerAI is paused. Start it again any time in the DinerAI app." };
+    if (r.store_cancel_at_period_end && r.store_period_end) return { tone: "info", text: `Your subscription is cancelled and ends on ${fmt(r.store_period_end)}.` };
+    if (standing === "trialing" && r.store_period_end) return { tone: "info", text: `Free month until ${fmt(r.store_period_end)}. You can manage it in ${where}.` };
+    return null;
+  }
   if (standing === "past_due") {
     return { tone: "warn", text: "Your last payment didn't go through. Please update your card in Manage billing. DinerAI keeps running in the meantime." };
   }

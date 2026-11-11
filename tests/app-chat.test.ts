@@ -308,3 +308,30 @@ describe("chat routes", () => {
     expect((await ok.json()).messages.at(-1)).toMatchObject({ draftId: D, card: { id: D } });
   });
 });
+
+// ---------- An owner with no WhatsApp, on the app (step 50, phase 4) ----------
+
+describe("the app channel (no WhatsApp)", () => {
+  test("their channel is the app; an alert is a notification and a Chat message, never WhatsApp", async () => {
+    const pushed: string[] = [];
+    vi.doMock("@/lib/push", () => ({ pushInsteadOfWhatsApp: async (_r: string, text: string) => (pushed.push(text), true) }));
+    const r = { id: A, name: "Rose & Thyme", owner_whatsapp: null, whatsapp_from: null, app_since: "2026-11-12T10:00:00Z" } as never;
+    const { ownerChannel } = await import("@/lib/followups");
+    const channel = ownerChannel(r)!;
+    expect(channel).toMatchObject({ to: "app", from: "app" });
+    // Without the app, there's still no channel.
+    expect(ownerChannel({ ...(r as object), app_since: null } as never)).toBeNull();
+
+    const { messageOwner } = await import("@/lib/notify");
+    await messageOwner(channel, "⭐ A 2-star review just came in", { draftId: D, buttons: "question" }, { opener: "alert" });
+    await messageOwner(channel, "Noted.");
+    expect(pushed).toEqual(["⭐ A 2-star review just came in"]); // only what DinerAI sends on its own buzzes
+    expect(twilioSends).toEqual([]);
+    expect(logged().map((m) => [m.from_number, m.to_number, m.body])).toEqual([
+      ["app", "app", "⭐ A 2-star review just came in"],
+      ["app", "app", "Noted."],
+    ]);
+    expect(logged()[0].app).toMatchObject({ draftId: D, buttons: [{ id: `public:${D}` }, { id: `private:${D}` }, { id: `both:${D}` }] });
+    vi.doUnmock("@/lib/push");
+  });
+});

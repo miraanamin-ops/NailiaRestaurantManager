@@ -11,7 +11,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { AppState } from 'react-native';
 
-import { api, clearTokens, hasTokens, logIn, LoginNeeded, type Me } from '@/lib/api';
+import { api, clearTokens, dropPendingSocial, hasTokens, logIn, LoginNeeded, type Me, type Stage } from '@/lib/api';
 import { registerForAlerts, unregisterAlerts } from '@/lib/notifications';
 
 const LOCK_AFTER_MS = 5 * 60 * 1000;
@@ -27,6 +27,10 @@ type Session = {
   reloadMe: () => Promise<void>;
   // The restaurant the screens show: the owner's own, or (the builder) the one picked in More.
   restaurantId: string | null;
+  // Where that restaurant is: pay (start the free month), setup (Dina) or ready (the tabs).
+  stage: Stage | null;
+  // After sign-up or Sign in with Apple / Google has saved the login: carry on as logged in.
+  startSession: (restaurantId?: string) => Promise<void>;
   setRestaurantId: (id: string) => void;
 };
 
@@ -59,7 +63,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
   // A remembered pick only counts if this login can still see it.
   const restaurantId = me ? (me.restaurants.find((r) => r.id === picked)?.id ?? me.restaurants[0]?.id ?? null) : null;
 
+  const stage = me ? (me.restaurants.find((r) => r.id === restaurantId)?.stage ?? null) : null;
+
   const signOut = useCallback(async () => {
+    dropPendingSocial();
     await unregisterAlerts();
     await clearTokens();
     setMe(null);
@@ -114,11 +121,21 @@ export function SessionProvider({ children }: PropsWithChildren) {
     [reloadMe],
   );
 
+  const startSession = useCallback(
+    async (restaurantId?: string) => {
+      if (restaurantId) setRestaurantId(restaurantId);
+      setSignedIn(true);
+      setLocked(false);
+      await reloadMe();
+    },
+    [reloadMe, setRestaurantId],
+  );
+
   const unlock = useCallback(async () => {
     const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock DinerAI', cancelLabel: 'Cancel' });
     if (result.success) setLocked(false);
     return result.success;
   }, []);
 
-  return <SessionContext value={{ loading, signedIn, me, locked, signIn, signOut, unlock, reloadMe, restaurantId, setRestaurantId }}>{children}</SessionContext>;
+  return <SessionContext value={{ loading, signedIn, me, locked, signIn, signOut, unlock, reloadMe, restaurantId, setRestaurantId, stage, startSession }}>{children}</SessionContext>;
 }

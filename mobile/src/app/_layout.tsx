@@ -1,5 +1,6 @@
-// The app's frame: logged in → the five tabs; not logged in → the login screen
-// (Expo Router's protected screens). The splash screen stays up until we know
+// The app's frame (Expo Router's protected screens): not logged in → log in or sign
+// up; logged in → where the restaurant is: "Start your free month" (pay), setup with
+// Dina (setup), or the five tabs (ready). The splash screen stays up until we know
 // which, and a locked app shows the unlock screen over everything.
 import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -31,7 +32,7 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { loading, signedIn, locked, me, setRestaurantId } = useSession();
+  const { loading, signedIn, locked, me, setRestaurantId, stage } = useSession();
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
@@ -55,11 +56,19 @@ function RootNavigator() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Protected guard={signedIn}>
+        <Stack.Protected guard={signedIn && stage !== 'pay' && stage !== 'setup'}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn && stage === 'pay'}>
+          <Stack.Screen name="subscribe" />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn && stage === 'setup'}>
+          <Stack.Screen name="setup" />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="sign-in" />
+          <Stack.Screen name="sign-up" />
         </Stack.Protected>
       </Stack>
       {signedIn && locked && <LockScreen />}

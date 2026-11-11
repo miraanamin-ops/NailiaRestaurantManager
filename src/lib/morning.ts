@@ -1,4 +1,5 @@
 import "server-only";
+import { APP_ADDRESS } from "@/lib/app/chat-rules";
 import { loadRestaurantContext } from "@/lib/assistant";
 import { proposeBirthdayCampaign } from "@/lib/bot/flows";
 import { canMessageFreely, markBriefWaiting, sendBrief, waitingDrafts } from "@/lib/brief";
@@ -164,7 +165,7 @@ export async function runMorningStep(
         brief = "sent to the app";
       }
       // WhatsApp's 24-hour rule is about real time, whatever the simulated date.
-      else if (channel && !(await canMessageFreely(fresh, simulating ? new Date() : now))) {
+      else if (channel && channel.to !== APP_ADDRESS && !(await canMessageFreely(fresh, simulating ? new Date() : now))) {
         await markBriefWaiting(fresh, now);
         // On a real WhatsApp sender, an approved template opens the chat ("Show me").
         const { sendBriefOpener } = await import("@/lib/outbox");

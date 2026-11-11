@@ -92,7 +92,7 @@ function who(actor: string) {
   if (actor === "customer") return "Customer";
   if (actor === "staff") return "Staff";
   if (actor === "safety rules" || actor === "checker") return "Safety rules";
-  if (actor === "hourly job" || actor === "scheduled job" || actor === "system" || actor === "stripe") return "Automatic";
+  if (actor === "hourly job" || actor === "scheduled job" || actor === "system" || actor === "stripe" || actor === "app store") return "Automatic";
   if (actor === "builder") return "DinerAI";
   return "Dina";
 }

@@ -43,7 +43,8 @@ export async function findReferrer(typed: string): Promise<Referral | null> {
 // free (a £99 credit on their Stripe balance), once. Called by the webhook on
 // invoice.paid. A recommender with no Stripe billing (exempt or pilot) can't get
 // a credit automatically: the builder is told to sort it out by hand.
-export async function creditReferralIfDue(r: Restaurant & { referred_by?: string | null; referral_credited_at?: string | null }, invoice: Stripe.Invoice) {
+// The app's store subscriptions (billing/store-webhook.ts) pass their first paid month the same way.
+export async function creditReferralIfDue(r: Restaurant & { referred_by?: string | null; referral_credited_at?: string | null }, invoice: Pick<Stripe.Invoice, "id" | "amount_paid" | "status">) {
   if (!earnsReferralCredit(invoice, r)) return "not_due" as const;
   const db = getSupabase();
   // Claimed first, so a repeated or parallel event can't credit twice.

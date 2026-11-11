@@ -86,3 +86,9 @@ and `npx expo start --lan --clear < /dev/null` (never CI=1) for testing in Expo 
 Phase 3 (Chat) is live (11 Nov 2026, main df72cce, migration 066), tested by the owner on
 Ember & Spice: the Chat tab on the WhatsApp bot's own engine, photos and files, quick replies,
 drafts as Inbox cards, "Answer in Chat" from the Inbox. Cosmetic changes wait for phase 6.
+
+Phase 4 (sign-up, setup with Dina, paying in the app, Delete account) built on branch
+`app-phase4` (12 Nov 2026). Needs migration 067 on live before merging, and the store
+set-up in `docs/app-store-setup.md` before anyone can pay in the app (until then app
+sign-ups need an invite code, as on the website). Real purchases and Google sign-in need
+a development build.

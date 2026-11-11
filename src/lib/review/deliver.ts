@@ -1,4 +1,5 @@
 import "server-only";
+import { APP_ADDRESS } from "@/lib/app/chat-rules";
 import { canMessageFreely } from "@/lib/brief";
 import { check } from "@/lib/drafts";
 import { sendOwnerEmail } from "@/lib/email";
@@ -35,7 +36,8 @@ export async function sendReviewMessage(channel: OwnerChannel, reviewId: string,
 export async function deliverReview(r: Restaurant, review: Pick<BusinessReview, "id">, message: string, now: Date): Promise<Via> {
   const channel = ownerChannel(r);
   if (!channel) throw new PermanentJobError("The owner's WhatsApp isn't linked");
-  if (await canMessageFreely(r, now)) {
+  // The app (no WhatsApp): straight into its Chat, like a message inside the window.
+  if (channel.to === APP_ADDRESS || (await canMessageFreely(r, now))) {
     await sendReviewMessage(channel, review.id, message);
     return "session";
   }

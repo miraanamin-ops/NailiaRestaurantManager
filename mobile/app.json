@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -48,6 +49,7 @@
         }
       ],
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {

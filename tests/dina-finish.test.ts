@@ -125,8 +125,22 @@ describe("finishing setup", () => {
     finishLastStep();
     Object.assign(r(), { owner_whatsapp: "whatsapp:+447700900111", billing_exempt: false });
     const { finishIfDone } = await import("@/lib/onboarding/dina/finish");
-    expect(await finishIfDone(R)).toEqual({ finished: true, active: false, allSet: expect.stringMatching(/^You're all set up\./), reviewStarted: false });
+    expect(await finishIfDone(R)).toEqual({ finished: true, active: false, allSet: expect.stringMatching(/^You're all set up\./), reviewStarted: false, reach: "whatsapp" });
     expect(r().active).toBe(false);
+  });
+
+  test("an owner on the app with no WhatsApp finishes too, and is told everything comes in the app (step 50, phase 4)", async () => {
+    finishLastStep();
+    Object.assign(r(), { owner_whatsapp: null, app_since: "2026-11-12T10:00:00Z" });
+    callDina.mockResolvedValue(answer("All done!", { type: "summary" }));
+    const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "ok", externalId: "c" });
+    expect(session().completed_at).toEqual(expect.any(String));
+    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual(["summary", null]);
+    expect(out.duplicate === false && out.messages[1].text).not.toMatch(/WhatsApp/);
+    // Without the app either, it still waits for WhatsApp.
+    const { reviewLine } = await import("@/lib/onboarding/dina/finish");
+    expect(reviewLine("app")).toMatch(/in the DinerAI app/);
   });
 
   test("not finished while a step is still open", async () => {

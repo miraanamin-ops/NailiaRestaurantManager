@@ -104,6 +104,16 @@ export type Restaurant = {
   cancel_at_period_end?: boolean;
   payment_failed_at?: string | null;
   billing_event_at?: string | null;
+  // An App Store / Google Play subscription, from RevenueCat (067, lib/billing/store-events.ts).
+  store_status?: string | null;
+  store_platform?: string | null;
+  store_product_id?: string | null;
+  store_period_end?: string | null;
+  store_cancel_at_period_end?: boolean | null;
+  store_environment?: string | null;
+  store_event_at?: string | null;
+  // Uses the DinerAI app (067): without WhatsApp, its messages go to the app.
+  app_since?: string | null;
   billing_exempt?: boolean;
   pilot_invite_code?: string | null;
   terms_accepted_at?: string | null;

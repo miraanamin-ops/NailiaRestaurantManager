@@ -97,7 +97,8 @@ export type NewAccount = { ok: true } | { ok: false; reason: "not_configured" | 
 // account only ever sees the restaurant it signed up (lib/auth-rules.ts signupScope)
 // until they open a password link we email. An email that already has a login
 // account isn't touched: "existing_user", and they log in (or reset) as usual.
-export async function createPasswordAccount(email: string, password: string, restaurantId: string): Promise<NewAccount> {
+// { logIn: false }: only make it (the app logs in with tokens, not cookies).
+export async function createPasswordAccount(email: string, password: string, restaurantId: string, { logIn = true }: { logIn?: boolean } = {}): Promise<NewAccount> {
   if (!authConfigured()) return { ok: false, reason: "not_configured" };
   const { error } = await getSupabase().auth.admin.createUser({
     email,
@@ -110,7 +111,23 @@ export async function createPasswordAccount(email: string, password: string, res
     console.error("Couldn't make the login account", error.message);
     return { ok: false, reason: "failed" };
   }
+  if (!logIn) return { ok: true };
   return (await logInWithPassword(email, password)) ? { ok: true } : { ok: false, reason: "failed" };
+}
+
+// Who a login token belongs to, before any restaurant check: for a sign-up with
+// Apple or Google, whose login exists before their restaurant does. Only an email
+// the provider vouched for counts.
+export async function verifiedUserFromToken(token: string, client: Pick<ReturnType<typeof tokenClient>, "auth"> = tokenClient()) {
+  if (!authConfigured() || !token) return null;
+  const { data } = await client.auth.getUser(token);
+  const u = data.user;
+  if (!u?.email) return null;
+  const meta = (u.app_metadata ?? {}) as { provider?: string; providers?: string[] };
+  const providers = meta.providers ?? [meta.provider ?? "email"];
+  const provider = providers.find((p) => p === "apple" || p === "google") ?? meta.provider ?? "email";
+  const verified = Boolean(u.email_confirmed_at) && (provider === "apple" || provider === "google");
+  return verified ? { email: u.email.toLowerCase(), provider, name: (u.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name ?? null } : null;
 }
 
 // Logs in with email and password (sets the login cookies). True if Supabase accepted them.
