@@ -1,13 +1,14 @@
-// More (phases 4 and 5): customers, settings, recommending a restaurant, help, pausing
-// all sending, the restaurant switcher (the builder), the subscription, logging out and
-// deleting the account. Everything the website's dashboard does.
+// More: the owner's hub for everything that isn't a daily task. Customers, settings,
+// recommending a restaurant, help, pausing all sending, the restaurant switcher (the
+// builder), the subscription, logging out and deleting the account.
 import Constants from 'expo-constants';
-import { router, useFocusEffect, type Href } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Share, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Card, Screen, T, usePalette } from '@/components/ui';
-import { Brand, Space } from '@/constants/theme';
+import { Avatar, Button, Card, Icon, IconTile, ListRow, Pill, T, TabHeader, usePalette } from '@/components/ui';
+import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { getReferral, getSettings, setPaused } from '@/lib/api';
 import { useSession } from '@/lib/session';
 
@@ -61,116 +62,115 @@ export default function More() {
   }
 
   return (
-    <Screen>
-      <T kind="title">More</T>
-      <Card>
-        <T kind="label" quiet>
-          Logged in as
-        </T>
-        <T>{me?.email ?? '…'}</T>
-        {me && me.restaurants.length === 1 && (
-          <T kind="small" quiet>
-            {me.restaurants[0].name}
-            {me.restaurants[0].active ? '' : ' (not running yet)'}
-          </T>
-        )}
-      </Card>
-      {me && me.restaurants.length > 1 && (
+    <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
+      <TabHeader restaurant={restaurant?.name ?? null} />
+      <ScrollView contentContainerStyle={styles.list}>
+        <T kind="title">More</T>
+
         <Card>
-          <T kind="label" quiet>
-            Restaurant shown
-          </T>
-          {me.restaurants.map((r) => (
-            <Button key={r.id} kind={r.id === restaurantId ? 'main' : 'plain'} label={`${r.name}${r.active ? '' : ' (not running)'}`} onPress={() => setRestaurantId(r.id)} />
-          ))}
-        </Card>
-      )}
-
-      <Card>
-        <Row label="Customers" detail="Your list, QR codes, import and export" to="/customers" />
-        <Row label="Settings" detail="Hours, offers, how replies sound, timing, notifications" to="/settings" />
-        <Row label="Recommend a restaurant" detail="Get a free month for each one that joins" onPress={recommend} />
-        <Row label="Help" detail="How everything works, and talk to a person" to="/help" last />
-      </Card>
-
-      <Card accent={paused === true}>
-        <View style={styles.switchRow}>
-          <View style={{ flex: 1 }}>
-            <T style={{ fontWeight: '600' }}>{paused ? 'Sending is paused' : 'Sending is on'}</T>
-            <T kind="small" quiet>
-              {paused ? 'Nothing goes out to customers or Google until you turn it back on.' : 'Turn off to pause everything at once.'}
-            </T>
+          <View style={styles.row}>
+            <Avatar name={me?.firstName ?? me?.email ?? null} size={46} />
+            <View style={{ flex: 1 }}>
+              <T style={{ fontWeight: '600' }} numberOfLines={1}>
+                {restaurant?.name ?? '…'}
+              </T>
+              <T kind="small" quiet numberOfLines={1}>
+                {me?.email ?? ''}
+              </T>
+            </View>
+            {restaurant && !restaurant.active && <Pill label="Not running yet" tone="amber" />}
           </View>
-          <Switch value={paused === false} disabled={paused === null} onValueChange={(on) => togglePause(!on)} trackColor={{ true: Brand.signal }} accessibilityLabel="Sending on" />
-        </View>
-      </Card>
-      {note && (
-        <Card>
-          <T>{note}</T>
         </Card>
-      )}
 
-      {billing?.viaStore && (
+        {me && me.restaurants.length > 1 && (
+          <Card>
+            <T kind="label" quiet>
+              Restaurant shown
+            </T>
+            {me.restaurants.map((r, i) => (
+              <ListRow
+                key={r.id}
+                title={r.name}
+                sub={r.active ? null : 'Not running'}
+                last={i === me.restaurants.length - 1}
+                onPress={() => setRestaurantId(r.id)}
+                right={r.id === restaurantId ? <Icon name="checkmark-circle" color={c.tint} /> : <View />}
+              />
+            ))}
+          </Card>
+        )}
+
         <Card>
-          <T kind="label" quiet>
-            Your subscription
-          </T>
-          <T>
-            {billing.standing === 'trialing'
-              ? `Free month${day(billing.renewsOrEnds) ? ` until ${day(billing.renewsOrEnds)}` : ''}`
-              : billing.cancelled
-                ? `Cancelled: runs until ${day(billing.renewsOrEnds) ?? 'the end of the month'}`
-                : billing.standing === 'past_due'
-                  ? 'A payment didn’t go through: please check your payment details'
-                  : `Renews ${day(billing.renewsOrEnds) ?? 'monthly'}`}
-          </T>
-          <Button
-            label={`Manage in ${billing.platform === 'play_store' ? 'Google Play' : 'the App Store'}`}
-            kind="plain"
-            onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions')}
-          />
+          <ListRow title="Customers" sub="Your list, QR codes, import and export" lead={<IconTile name="people-outline" />} onPress={() => router.push('/customers')} />
+          <ListRow title="Settings" sub="Hours, offers, how replies sound, timing, alerts" lead={<IconTile name="options-outline" />} onPress={() => router.push('/settings')} />
+          <ListRow title="Recommend a restaurant" sub="A free month for each one that joins" lead={<IconTile name="gift-outline" tone="signal" />} onPress={recommend} />
+          <ListRow title="Help" sub="How everything works, and talk to a person" lead={<IconTile name="help-buoy-outline" />} onPress={() => router.push('/help')} last />
         </Card>
-      )}
 
-      <Button
-        label="Log out"
-        kind="danger"
-        onPress={() =>
-          Alert.alert('Log out of DinerAI?', 'You can log back in with your email and password.', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Log out', style: 'destructive', onPress: signOut },
-          ])
-        }
-      />
-      <Button label="Delete account" kind="plain" onPress={() => router.push('/delete-account')} />
-      <T kind="small" quiet style={{ color: c.textSecondary }}>
-        DinerAI {Constants.expoConfig?.version ?? ''}
-      </T>
-    </Screen>
-  );
-}
+        <Card tone={paused ? 'ember' : undefined}>
+          <View style={styles.row}>
+            <IconTile name={paused ? 'pause-circle-outline' : 'paper-plane-outline'} tone={paused ? 'ember' : 'signal'} />
+            <View style={{ flex: 1 }}>
+              <T style={{ fontWeight: '600' }}>{paused ? 'Sending is paused' : 'Sending is on'}</T>
+              <T kind="small" quiet>
+                {paused ? 'Nothing goes to customers or Google until you turn it back on.' : 'Switch off to pause everything at once.'}
+              </T>
+            </View>
+            <Switch value={paused === false} disabled={paused === null} onValueChange={(on) => togglePause(!on)} trackColor={{ true: Brand.signal }} accessibilityLabel="Sending on" />
+          </View>
+        </Card>
+        {note && (
+          <Card>
+            <T kind="small">{note}</T>
+          </Card>
+        )}
 
-function Row({ label, detail, to, onPress, last }: { label: string; detail: string; to?: Href; onPress?: () => void; last?: boolean }) {
-  const c = usePalette();
-  return (
-    <Pressable
-      onPress={() => (to ? router.push(to) : onPress?.())}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={detail}
-      style={({ pressed }) => [styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.border }, { opacity: pressed ? 0.7 : 1 }]}>
-      <View style={{ flex: 1 }}>
-        <T style={{ fontWeight: '600' }}>{label}</T>
-        <T kind="small" quiet>
-          {detail}
+        {billing?.viaStore && (
+          <Card>
+            <T kind="label" quiet>
+              Your subscription
+            </T>
+            <T style={{ fontWeight: '600' }}>
+              {billing.standing === 'trialing'
+                ? `Free month${day(billing.renewsOrEnds) ? ` until ${day(billing.renewsOrEnds)}` : ''}`
+                : billing.cancelled
+                  ? `Cancelled: runs until ${day(billing.renewsOrEnds) ?? 'the end of the month'}`
+                  : billing.standing === 'past_due'
+                    ? 'A payment didn’t go through: please check your payment details'
+                    : `Renews ${day(billing.renewsOrEnds) ?? 'monthly'}`}
+            </T>
+            <Button
+              label={`Manage in ${billing.platform === 'play_store' ? 'Google Play' : 'the App Store'}`}
+              kind="plain"
+              small
+              icon="open-outline"
+              onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions')}
+            />
+          </Card>
+        )}
+
+        <Button
+          label="Log out"
+          kind="plain"
+          icon="log-out-outline"
+          onPress={() =>
+            Alert.alert('Log out of DinerAI?', 'You can log back in with your email and password.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Log out', style: 'destructive', onPress: signOut },
+            ])
+          }
+        />
+        <Button label="Delete account" kind="quiet" onPress={() => router.push('/delete-account')} />
+        <T kind="mono" quiet style={{ textAlign: 'center' }}>
+          DinerAI {Constants.expoConfig?.version ?? ''}
         </T>
-      </View>
-      <T quiet>›</T>
-    </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingVertical: Space.s + 2, minHeight: 56 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: Space.m },
+  fill: { flex: 1 },
+  list: { gap: Space.m, padding: Space.m, paddingTop: Space.xs, paddingBottom: Space.xl * 2, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Space.m - 4 },
 });

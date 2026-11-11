@@ -3,7 +3,7 @@
 // decision runs through the bot's own code.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { cardChecks, cardTitle, sortCards, takingsLine, toCard, waitingSummary, type InboxCard } from "@/lib/app/cards";
+import { cardChecks, cardTitle, sortCards, takingsLine, tierOf, toCard, waitingSummary, type InboxCard } from "@/lib/app/cards";
 import type { Draft } from "@/lib/drafts";
 
 const draft = (fields: Partial<Draft> = {}): Draft =>
@@ -41,9 +41,23 @@ describe("cards", () => {
     expect(cardChecks(null)).toEqual([]);
   });
 
-  test("urgent first, then flagged, then oldest", () => {
-    const c = (id: string, urgent: boolean, flagged: boolean, at: string) => ({ id, urgent, flagged, waitingSince: at }) as InboxCard;
-    expect(sortCards([c("old", false, false, "1"), c("flag", false, true, "3"), c("urgent", true, false, "4"), c("new", false, false, "2")]).map((x) => x.id)).toEqual(["urgent", "flag", "old", "new"]);
+  test("urgent first, then the ones to open (flagged first), then the simple ones; oldest first in each", () => {
+    const c = (id: string, tier: InboxCard["tier"], flagged: boolean, at: string) => ({ id, tier, urgent: tier === "urgent", flagged, waitingSince: at }) as InboxCard;
+    expect(sortCards([c("old", "look", false, "1"), c("easy", "simple", false, "0"), c("flag", "look", true, "3"), c("urgent", "urgent", false, "4"), c("new", "look", false, "2")]).map((x) => x.id)).toEqual(["urgent", "flag", "old", "new", "easy"]);
+  });
+
+  test("only clean 4 to 5 star replies and Google posts are simple (one tap from the list)", () => {
+    const pass = [{ name: "brand", label: "Brand", status: "pass" as const, notes: [] }, { name: "facts", label: "Facts", status: "fixed" as const, notes: [] }];
+    const base = { urgent: false, flagged: false, checks: pass, review: null, actions: ["approve", "edit", "skip"] as InboxCard["actions"] };
+    expect(tierOf({ ...base, kind: "review_reply", review: { author: "A", rating: 5, text: "x" } })).toBe("simple");
+    expect(tierOf({ ...base, kind: "google_post" })).toBe("simple");
+    expect(tierOf({ ...base, kind: "review_reply", review: { author: "A", rating: 2, text: "x" }, urgent: true })).toBe("urgent");
+    expect(tierOf({ ...base, kind: "email_campaign" })).toBe("look"); // customers and a discount: always opened first
+    expect(tierOf({ ...base, kind: "rota" })).toBe("look");
+    expect(tierOf({ ...base, kind: "google_post", flagged: true })).toBe("look");
+    expect(tierOf({ ...base, kind: "google_post", checks: [{ ...pass[0], status: "flagged" }] })).toBe("look");
+    expect(tierOf({ ...base, kind: "google_post", checks: [] })).toBe("look"); // never checked: open it
+    expect(tierOf({ ...base, kind: "review_question", actions: "answer" })).toBe("look");
   });
 
   test("summary and takings in plain words", () => {

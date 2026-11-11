@@ -8,8 +8,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, TextInput, View } from 'react-native';
 
-import { Button, Card, Screen, T, usePalette } from '@/components/ui';
-import { Brand, Space, TapHeight } from '@/constants/theme';
+import { Button, Card, IconTile, ListRow, Logo, Pill, Screen, T, usePalette } from '@/components/ui';
+import { Space, TapHeight } from '@/constants/theme';
 import { API_URL, founderCode } from '@/lib/api';
 import { buy, monthlyPlan, purchasesReady, restore, type Plan } from '@/lib/purchases';
 import { useSession } from '@/lib/session';
@@ -103,15 +103,23 @@ export default function Subscribe() {
   const page = (path: string) => () => WebBrowser.openBrowserAsync(`${API_URL}${path}`);
   return (
     <Screen>
+      <View style={styles.top}>
+        <Logo size={24} />
+        <Pill label="First month free" tone="signal" dot />
+      </View>
       <T kind="title">Start your free month</T>
-      <T quiet>DinerAI for {name}: reviews answered, Google kept fresh, offers that bring people back, and a forecast every morning. You approve everything.</T>
+      <T quiet>Your manager for {name}: reviews answered, Google kept fresh, offers that bring people back, and a forecast every morning. You approve everything.</T>
 
       <Card>
-        {['Your first month is free', 'Set up with Dina in about 15 minutes', 'Cancel any time in your phone’s settings'].map((line) => (
-          <View key={line} style={styles.row}>
-            <T style={{ color: Brand.signal }}>✓</T>
-            <T style={{ flex: 1 }}>{line}</T>
-          </View>
+        {(
+          [
+            ['gift-outline', 'Your first month is free', 'Nothing to pay today'],
+            ['chatbubbles-outline', 'Set up with Dina', 'About 15 minutes, mostly taps'],
+            ['shield-checkmark-outline', 'Nothing goes out without you', 'Every reply, post and offer waits for your approval'],
+            ['close-circle-outline', 'Cancel any time', 'In your phone’s settings, in a few taps'],
+          ] as const
+        ).map(([icon, title, sub], i, all) => (
+          <ListRow key={title} title={title} sub={sub} lead={<IconTile name={icon} tone="signal" />} last={i === all.length - 1} />
         ))}
       </Card>
 
@@ -183,7 +191,7 @@ export default function Subscribe() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: Space.s, alignItems: 'flex-start' },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Space.s },
   center: { textAlign: 'center' },
   input: { minHeight: TapHeight, borderWidth: 1, borderRadius: 12, paddingHorizontal: Space.m, fontSize: 17 },
   links: { flexDirection: 'row', justifyContent: 'center', gap: Space.s },

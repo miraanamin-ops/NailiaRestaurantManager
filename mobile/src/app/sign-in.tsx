@@ -6,8 +6,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 
-import { Button, Card, Screen, T, usePalette } from '@/components/ui';
-import { Brand, Space, TapHeight } from '@/constants/theme';
+import { Button, Card, Logo, Screen, T, usePalette } from '@/components/ui';
+import { Space, TapHeight } from '@/constants/theme';
 import { API_URL, ApiError } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { appleAvailable, googleAvailable, signInWithApple, signInWithGoogle } from '@/lib/social';
@@ -65,10 +65,10 @@ export default function SignIn() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
         <View style={styles.brand}>
-          <View style={styles.dot} />
-          <T kind="title">DinerAI</T>
+          <Logo size={30} />
         </View>
-        <T quiet>Your restaurant’s AI manager. Log in with your DinerAI email and password.</T>
+        <T kind="title">Your restaurant’s AI manager.</T>
+        <T quiet>Reviews answered, Google kept fresh, offers that bring people back. You approve everything.</T>
         <Card>
           <T kind="small" quiet>
             Email
@@ -129,8 +129,7 @@ export default function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  brand: { flexDirection: 'row', alignItems: 'center', gap: Space.s, marginTop: Space.xl },
-  dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: Brand.signal },
+  brand: { marginTop: Space.xl, marginBottom: Space.s },
   input: { minHeight: TapHeight, borderWidth: 1, borderRadius: 12, paddingHorizontal: Space.m, fontSize: 17 },
   center: { textAlign: 'center' },
   apple: { width: '100%', height: TapHeight },

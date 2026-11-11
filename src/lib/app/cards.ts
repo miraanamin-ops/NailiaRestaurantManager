@@ -24,6 +24,9 @@ export type InboxCard = {
   actions: ("approve" | "edit" | "skip")[] | "answer";
   // What Approve does, in the owner's words ("Posts the reply on Google").
   approveHint: string;
+  // The Inbox's groups (tierOf): urgent (1 to 3 stars), look (open it first: emails,
+  // anything flagged, rotas, hours, questions) or simple (one tap from the list).
+  tier: "urgent" | "look" | "simple";
   waitingSince: string;
 };
 
@@ -77,7 +80,7 @@ export function toCard(
   extra: { review: CardReview | null; campaignName?: string | null; previewImageUrl?: string | null; body: string },
 ): InboxCard {
   const checks = cardChecks(d.checks);
-  return {
+  const card: Omit<InboxCard, "tier"> = {
     id: d.id,
     kind: d.kind,
     kindLabel: KIND_LABELS[d.kind] ?? "Draft",
@@ -93,11 +96,24 @@ export function toCard(
     approveHint: approveHint(d.kind),
     waitingSince: d.created_at,
   };
+  return { ...card, tier: tierOf(card) };
 }
 
-// Urgent first (bad reviews), then flagged, then oldest first: the order an owner should clear them in.
+// Which group a card goes in. Only SIMPLE ones can be approved straight from the list
+// (or all at once): replies to 4 or 5 star reviews and Google posts whose every check
+// passed or was fixed. Everything else is opened first: customer emails (a discount, a
+// list of people), anything urgent or flagged, rotas, hours and menu changes, questions.
+export function tierOf(c: Pick<InboxCard, "kind" | "urgent" | "flagged" | "checks" | "review" | "actions">): InboxCard["tier"] {
+  if (c.urgent) return "urgent";
+  const clean = c.checks.length > 0 && c.checks.every((x) => x.status === "pass" || x.status === "fixed");
+  const simpleKind = (c.kind === "review_reply" && (c.review?.rating ?? 0) >= 4) || c.kind === "google_post";
+  return simpleKind && clean && !c.flagged && c.actions !== "answer" ? "simple" : "look";
+}
+
+// Urgent first (bad reviews), then the ones to open (flagged first), then the simple
+// ones; oldest first in each: the order an owner should clear them in.
 export function sortCards(cards: InboxCard[]) {
-  const rank = (c: InboxCard) => (c.urgent ? 0 : c.flagged ? 1 : 2);
+  const rank = (c: InboxCard) => (c.tier === "urgent" ? 0 : c.tier === "look" ? (c.flagged ? 1 : 2) : 3);
   return [...cards].sort((a, b) => rank(a) - rank(b) || a.waitingSince.localeCompare(b.waitingSince));
 }
 

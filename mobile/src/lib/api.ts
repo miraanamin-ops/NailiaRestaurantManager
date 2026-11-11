@@ -112,6 +112,8 @@ export type InboxCard = {
   actions: ('approve' | 'edit' | 'skip')[] | 'answer';
   approveHint: string;
   waitingSince: string;
+  // urgent (1 to 3 stars), look (open it first) or simple (one tap from the list); set by the server.
+  tier?: 'urgent' | 'look' | 'simple';
 };
 export type Today = {
   restaurant: { id: string; name: string; paused: boolean };
@@ -127,6 +129,7 @@ const q = (r: string | null) => (r ? `?r=${encodeURIComponent(r)}` : '');
 export const getToday = (r: string | null) => api<Today>(`/api/app/today${q(r)}`);
 export const getInbox = (r: string | null) => api<{ restaurantId: string; cards: InboxCard[] }>(`/api/app/inbox${q(r)}`);
 export const decide = (draftId: string, body: DecideBody) => api<DecideResult>(`/api/app/drafts/${draftId}`, { method: 'POST', body });
+export const approveSimple = (r: string | null) => api<{ approved: number; total: number; notes: string[] }>(`/api/app/inbox/approve-simple${q(r)}`, { method: 'POST' });
 export const undoLast = (r: string | null) => api<{ message: string }>(`/api/app/undo${q(r)}`, { method: 'POST' });
 
 // The /api/app/me answer.

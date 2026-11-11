@@ -61,7 +61,7 @@ export default function CustomersScreen() {
       ) : (
         <>
           <Card>
-            <T kind="title">{data.total}</T>
+            <T kind="metric">{data.total}</T>
             <T quiet>
               customers on your list · {data.subscribed} confirmed and getting your emails
             </T>

@@ -13,7 +13,7 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Pressable, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DraftCardBody } from '@/components/draft-card';
-import { T, usePalette } from '@/components/ui';
+import { Icon, IconTile, T, TabHeader, usePalette, type IconName } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { ApiError, focusChat, getChat, LoginNeeded, newClientId, sendChat, uploadChatFile, type ChatButton, type ChatEntry, type ChatFile, type ChatState } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -26,7 +26,7 @@ type Pending = { clientId: string; text: string; file: string | null };
 
 export default function Chat() {
   const c = usePalette();
-  const { restaurantId, signOut } = useSession();
+  const { me, restaurantId, signOut } = useSession();
   // question: "Answer in Chat" from the Inbox; prefill: a report's next action ("Start in
   // Chat"), put in the box to send or change; attach: "Import a list" from Customers.
   const { question, prefill, attach } = useLocalSearchParams<{ question?: string; prefill?: string; attach?: string }>();
@@ -206,11 +206,17 @@ export default function Chat() {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.fill} behavior="padding">
-        <View style={[styles.header, { borderColor: c.border }]}>
-          <T kind="heading">Chat</T>
-          <T kind="small" quiet>
-            The same conversation as WhatsApp. Ask in your own words, or send a photo or file.
-          </T>
+        <View style={[styles.headerWrap, { borderColor: c.border }]}>
+          <TabHeader restaurant={me?.restaurants.find((r) => r.id === restaurantId)?.name ?? null} />
+          <View style={styles.header}>
+            <IconTile name="sparkles" tone="signal" />
+            <View style={{ flex: 1 }}>
+              <T style={{ fontWeight: '600' }}>DinerAI</T>
+              <T kind="caption" quiet>
+                Your manager. Ask in your own words, or send a photo or file.
+              </T>
+            </View>
+          </View>
         </View>
 
         {messages === null ? (
@@ -243,9 +249,9 @@ export default function Chat() {
         )}
 
         <View style={[styles.bar, { borderColor: c.border, backgroundColor: c.background }]}>
-          <IconButton label="Take a photo" icon="📷" onPress={() => takePhoto('camera')} disabled={Boolean(pending)} />
-          <IconButton label="Choose a photo" icon="🖼️" onPress={() => takePhoto('library')} disabled={Boolean(pending)} />
-          <IconButton label="Send a file" icon="📎" onPress={pickFile} disabled={Boolean(pending)} />
+          <IconButton label="Take a photo" icon="camera-outline" onPress={() => takePhoto('camera')} disabled={Boolean(pending)} />
+          <IconButton label="Choose a photo" icon="image-outline" onPress={() => takePhoto('library')} disabled={Boolean(pending)} />
+          <IconButton label="Send a file" icon="attach-outline" onPress={pickFile} disabled={Boolean(pending)} />
           <TextInput
             value={text}
             onChangeText={setText}
@@ -263,9 +269,7 @@ export default function Chat() {
             accessibilityRole="button"
             accessibilityLabel="Send"
             style={({ pressed }) => [styles.send, { opacity: !text.trim() || pending ? 0.4 : pressed ? 0.8 : 1 }]}>
-            <T style={{ color: Brand.onSignal, fontWeight: '700' }} maxFontSizeMultiplier={1.3}>
-              ↑
-            </T>
+            <Icon name="arrow-up" size={22} color={Brand.onSignal} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -381,17 +385,19 @@ function Empty() {
   );
 }
 
-function IconButton({ label, icon, onPress, disabled }: { label: string; icon: string; onPress: () => void; disabled: boolean }) {
+function IconButton({ label, icon, onPress, disabled }: { label: string; icon: IconName; onPress: () => void; disabled: boolean }) {
+  const c = usePalette();
   return (
     <Pressable onPress={onPress} disabled={disabled} hitSlop={6} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.icon, { opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}>
-      <T maxFontSizeMultiplier={1.3}>{icon}</T>
+      <Icon name={icon} size={23} color={c.textSecondary} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  header: { paddingHorizontal: Space.m, paddingBottom: Space.s, borderBottomWidth: StyleSheet.hairlineWidth, gap: 2, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
+  headerWrap: { borderBottomWidth: StyleSheet.hairlineWidth },
+  header: { flexDirection: 'row', alignItems: 'center', gap: Space.s + 2, paddingHorizontal: Space.m, paddingBottom: Space.s + 2, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
   list: { padding: Space.m, gap: Space.s, width: '100%', maxWidth: MaxWidth, alignSelf: 'center', flexGrow: 1 },
   item: { gap: Space.xs + 2 },
   bubble: { maxWidth: '85%', borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: Space.m - 2, paddingVertical: Space.s + 1, gap: 4 },

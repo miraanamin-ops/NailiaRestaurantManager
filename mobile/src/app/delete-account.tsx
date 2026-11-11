@@ -5,9 +5,9 @@
 // settings: the screen says so.
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, TextInput } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, TextInput, View } from 'react-native';
 
-import { Button, Card, Screen, T, usePalette } from '@/components/ui';
+import { Button, Card, IconTile, Screen, T, usePalette } from '@/components/ui';
 import { Space, TapHeight } from '@/constants/theme';
 import { cancelDelete, deleteAccount, getClosing } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -67,7 +67,10 @@ export default function DeleteAccount() {
 
   return (
     <Screen>
-      <T kind="title">Delete account</T>
+      <View style={{ gap: Space.s, marginTop: Space.s }}>
+        <IconTile name="trash-outline" tone="ember" />
+        <T kind="title">Delete account</T>
+      </View>
       {closing === undefined ? (
         <ActivityIndicator />
       ) : closing ? (

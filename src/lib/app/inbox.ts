@@ -116,3 +116,20 @@ export async function decideFromApp(restaurantId: string, draftId: string, decis
 export async function undoFromApp(restaurant: Restaurant) {
   return plainReply(await undoLast(restaurant, new Date()));
 }
+
+// "Approve N simple items": every card that is simple NOW (worked out again here, never
+// taken from the phone), each approved through the bot's own decision code like one tap,
+// so every send-time check still runs. Returns how many went, and anything held back.
+export async function approveSimple(restaurantId: string) {
+  const simple = (await inboxCards(restaurantId)).filter((c) => c.tier === "simple");
+  let approved = 0;
+  const notes: string[] = [];
+  for (const c of simple) {
+    const out = await decideFromApp(restaurantId, c.id, { action: "approve" });
+    if (out.ok) approved++;
+    // A reply that says it was held or blocked (sending hours, paused): passed on.
+    const held = out.ok ? out.replies.find((r) => /held|blocked|paused|not sent|won't/i.test(r)) : null;
+    if (held) notes.push(held);
+  }
+  return { approved, total: simple.length, notes: [...new Set(notes)].slice(0, 3) };
+}

@@ -9,7 +9,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RotaWeek } from '@/components/rota-week';
-import { Card, T, usePalette } from '@/components/ui';
+import { Card, Icon, IconTile, T, TabHeader, usePalette } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { getReports, getRota, LoginNeeded, type AppRotaWeek, type ReportItem } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -23,14 +23,14 @@ const VIEWS: { key: View3; label: string }[] = [
 
 export default function Reports() {
   const c = usePalette();
-  const { restaurantId, signOut } = useSession();
+  const { me, restaurantId, signOut } = useSession();
   // "See the week's rota" on Today opens this with view=rota.
   const params = useLocalSearchParams<{ view?: string }>();
   const [picked, setPicked] = useState<View3 | null>(null);
   const asked: View3 | null = params.view === 'rota' || params.view === 'monthly' || params.view === 'weekly' ? params.view : null;
   const view: View3 = asked ?? picked ?? 'weekly';
   const [reports, setReports] = useState<ReportItem[] | null>(null);
-  const [rota, setRota] = useState<{ thisWeek: AppRotaWeek; nextWeek: AppRotaWeek } | null>(null);
+  const [rota, setRota] = useState<{ today: string; thisWeek: AppRotaWeek; nextWeek: AppRotaWeek } | null>(null);
   const [whichWeek, setWhichWeek] = useState<'this' | 'next'>('this');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,6 +60,7 @@ export default function Reports() {
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
+      <TabHeader restaurant={me?.restaurants.find((r) => r.id === restaurantId)?.name ?? null} onRestaurant={(me?.restaurants.length ?? 0) > 1 ? () => router.navigate('/more') : undefined} />
       <ScrollView
         contentContainerStyle={styles.list}
         refreshControl={
@@ -92,10 +93,7 @@ export default function Reports() {
               ]}
               small
             />
-            <T kind="small" quiet>
-              {(whichWeek === 'this' ? rota.thisWeek : rota.nextWeek).label}
-            </T>
-            <RotaWeek week={whichWeek === 'this' ? rota.thisWeek : rota.nextWeek} next={whichWeek === 'next'} />
+            <RotaWeek key={whichWeek} week={whichWeek === 'this' ? rota.thisWeek : rota.nextWeek} next={whichWeek === 'next'} today={rota.today} />
           </>
         )}
 
@@ -113,13 +111,14 @@ export default function Reports() {
               accessibilityRole="button"
               accessibilityLabel={`${r.kind === 'monthly' ? 'Monthly' : 'Weekly'} report, ${r.label}`}
               style={({ pressed }) => [styles.row, { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.8 : 1 }]}>
+              <IconTile name={r.kind === 'monthly' ? 'calendar-outline' : 'bar-chart-outline'} tone="signal" />
               <View style={{ flex: 1 }}>
                 <T kind="label" quiet>
                   {r.kind === 'monthly' ? 'Monthly report' : 'Weekly report'}
                 </T>
                 <T style={{ fontWeight: '600' }}>{r.label}</T>
               </View>
-              <T quiet>›</T>
+              <Icon name="chevron-forward" size={18} color={c.textSecondary} />
             </Pressable>
           ))}
       </ScrollView>
@@ -152,8 +151,8 @@ function Segments<K extends string>({ value, onChange, options, small }: { value
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  list: { padding: Space.m, gap: Space.s, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderRadius: 16, padding: Space.m, gap: Space.s },
+  list: { padding: Space.m, paddingTop: Space.xs, paddingBottom: Space.xl * 2, gap: Space.s + 2, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderRadius: 18, padding: Space.m - 2, gap: Space.m - 4 },
   segments: { flexDirection: 'row', borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, padding: 3 },
   segment: { flex: 1, minHeight: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   segmentSmall: { minHeight: 34 },

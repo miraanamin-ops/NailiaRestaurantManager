@@ -10,7 +10,7 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, St
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SetupCard, type CardHandlers } from '@/components/setup-cards';
-import { Button, Card, T, usePalette } from '@/components/ui';
+import { Avatar, Button, Card, T, usePalette } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { getSetup, LoginNeeded, setupAction, setupUpload, type SetupAction, type SetupMessage, type SetupProgress } from '@/lib/api';
 import { registerForAlerts } from '@/lib/notifications';
@@ -144,19 +144,29 @@ export default function Setup() {
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right', 'bottom']}>
       <KeyboardAvoidingView style={styles.fill} behavior="padding">
         <View style={[styles.header, { borderColor: c.border }]}>
-          <View style={{ flex: 1 }}>
-            <T kind="heading">Setup with Dina</T>
-            {progress?.chapter ? (
-              <T kind="small" quiet>
-                Chapter {progress.chapter.n} of {progress.chapter.total}: {progress.chapter.title}
-              </T>
-            ) : progress ? (
-              <T kind="small" quiet>
-                Step {progress.position} of {progress.total}
-              </T>
-            ) : null}
+          <View style={styles.headerRow}>
+            <Avatar name="Dina" size={40} />
+            <View style={{ flex: 1 }}>
+              <T style={{ fontWeight: '600' }}>Setup with Dina</T>
+              {progress?.chapter ? (
+                <T kind="mono" quiet numberOfLines={1}>
+                  Chapter {progress.chapter.n} of {progress.chapter.total} · {progress.chapter.title}
+                </T>
+              ) : progress ? (
+                <T kind="mono" quiet>
+                  Step {progress.position} of {progress.total}
+                </T>
+              ) : null}
+            </View>
+            {progress?.chapters?.length ? <Button label="Chapters" kind="plain" small icon="list-outline" onPress={() => setChapters(true)} /> : null}
           </View>
-          {progress?.chapters?.length ? <Button label="Chapters" kind="plain" onPress={() => setChapters(true)} /> : null}
+          {progress?.chapters?.length ? (
+            <View style={styles.steps} accessible accessibilityLabel={`${progress.chapters.filter((ch) => ch.status === 'done').length} of ${progress.chapters.length} chapters done`}>
+              {progress.chapters.map((ch) => (
+                <View key={ch.key} style={[styles.step, { backgroundColor: ch.status === 'done' ? c.tint : ch.key === progress.chapter?.key ? c.textSecondary : c.border }]} />
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {messages === null ? (
@@ -289,7 +299,10 @@ function Bubble({ owner, text }: { owner: boolean; text: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Space.m, paddingBottom: Space.s, borderBottomWidth: StyleSheet.hairlineWidth, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
+  header: { paddingHorizontal: Space.m, paddingBottom: Space.s + 2, borderBottomWidth: StyleSheet.hairlineWidth, width: '100%', maxWidth: MaxWidth, alignSelf: 'center', gap: Space.s + 2 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: Space.s + 2 },
+  steps: { flexDirection: 'row', gap: 4 },
+  step: { flex: 1, height: 4, borderRadius: 2 },
   list: { padding: Space.m, gap: Space.s, width: '100%', maxWidth: MaxWidth, alignSelf: 'center', flexGrow: 1 },
   item: { gap: Space.s },
   bubble: { maxWidth: '88%', borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: Space.m - 2, paddingVertical: Space.s + 1 },

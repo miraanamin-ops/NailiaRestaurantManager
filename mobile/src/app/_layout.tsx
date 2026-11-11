@@ -2,6 +2,13 @@
 // up; logged in → where the restaurant is: "Start your free month" (pay), setup with
 // Dina (setup), or the five tabs (ready). The splash screen stays up until we know
 // which, and a locked app shows the unlock screen over everything.
+import { Geist_400Regular } from '@expo-google-fonts/geist/400Regular';
+import { Geist_500Medium } from '@expo-google-fonts/geist/500Medium';
+import { Geist_600SemiBold } from '@expo-google-fonts/geist/600SemiBold';
+import { Geist_700Bold } from '@expo-google-fonts/geist/700Bold';
+import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono/500Medium';
+import { GeistMono_600SemiBold } from '@expo-google-fonts/geist-mono/600SemiBold';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -33,9 +40,12 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { loading, signedIn, locked, me, setRestaurantId, stage } = useSession();
+  // Geist and Geist Mono (the brand's type): the splash stays up until they're in.
+  const [fontsLoaded, fontError] = useFonts({ Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold, GeistMono_500Medium, GeistMono_600SemiBold });
+  const ready = !loading && (fontsLoaded || Boolean(fontError));
   useEffect(() => {
-    if (!loading) SplashScreen.hideAsync();
-  }, [loading]);
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
 
   // A tap on a notification: open the right screen (and restaurant). "Approve" has
   // already asked for Face ID / the passcode on the lock screen, so it's approved here.
@@ -52,7 +62,7 @@ function RootNavigator() {
       router.navigate(tap.screen === 'inbox' || note ? { pathname: '/inbox', params: note ? { note } : {} } : '/');
     });
   }, [signedIn, me, setRestaurantId]);
-  if (loading) return null;
+  if (!ready) return null;
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
