@@ -141,6 +141,8 @@ beforeEach(() => {
   }));
   // The bot stand-in answers the way the real one does: through messageOwner on its channel.
   bot = async (input) => {
+    // A real reply always comes after the message (the stand-in database stamps rows to the millisecond).
+    await new Promise((res) => setTimeout(res, 5));
     const { messageOwner } = await import("@/lib/notify");
     const channel = { restaurantId: input.restaurantId, from: "x", to: "whatsapp:+447700900489", app: input.app as never };
     await messageOwner(channel, "Here's an *offer* for Thursday", { draftId: D, buttons: "question" });
