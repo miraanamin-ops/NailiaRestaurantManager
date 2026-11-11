@@ -61,8 +61,15 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
   Sending stops at once; you have 24 hours to tap **Keep my account**; then we email you a
   copy of your data and delete everything. It doesn't cancel an App Store or Google Play
   subscription: cancel that in your phone's settings too.
-- **Reports tab**: your weekly report (every Monday) and monthly report (early each month),
-  with charts. Tap **Start in Chat** on one of the 3 next actions to get it going, or
+- **Today tab**: yesterday's takings, what's waiting, and **Who's on today** from this
+  week's rota.
+- **Reports tab**: three sections at the top: **Weekly**, **Monthly** and **Rota**. Rota shows
+  this week and next: who works when, the hours, the staff cost and how it compares with
+  your labour target. A suggested rota says **Review in Inbox** (approve it there); an
+  approved one has **Share with your team** (their link has no pay or costs). To change
+  it, say so in Chat ("Ali can't do Friday").
+- **Weekly and monthly reports**: your weekly report (every Monday) and monthly report
+  (early each month), with charts. Tap **Start in Chat** on one of the 3 next actions to get it going, or
   **Share the PDF** to send it to someone.
 - **More tab**: **Customers** (your list, search, your sign-up QR code, **Print the QR pack**,
   **Import a list in Chat**, **Download my list (CSV)**); **Settings** (opening hours, offers
@@ -71,8 +78,8 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
   (this guide, and **Talk to a person** by email); and the **Sending is on** switch to pause
   everything at once. Changes are in your activity log, and UNDO in Chat puts the last one
   back.
-- **Not yet in the app**: the activity log, the sales and team pages, and Google settings
-  (use the web app for those for now).
+- **Not yet in the app**: the activity log, the sales page, adding or editing your team
+  (say it in Chat, or use the web app's Team page), and Google settings.
 
 ## Getting started (setup with Dina)
 

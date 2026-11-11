@@ -47,7 +47,8 @@ export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
 
 export async function todayFor(restaurant: Restaurant, now = new Date()) {
   const day = (offset: number) => londonYmd(new Date(now.getTime() - offset * 86_400_000));
-  const [cards, sales, done] = await Promise.all([
+  const { rotaToday } = await import("./rota");
+  const [cards, sales, done, rota] = await Promise.all([
     inboxCards(restaurant.id),
     getSupabase()
       .from("sales_days")
@@ -57,6 +58,8 @@ export async function todayFor(restaurant: Restaurant, now = new Date()) {
       .returns<{ day: string; net_sales: number }[]>()
       .then((res) => check(res) ?? []),
     doneTally(restaurant.id, new Date(now.getTime() - 86_400_000), now),
+    // Who's on today (this week's rota), for Today's card; never in the way of the rest.
+    rotaToday(restaurant).catch((err) => (console.error("Today's rota failed", err), null)),
   ]);
   const amount = (d: string) => {
     const row = sales.find((s) => s.day === d);
@@ -67,6 +70,7 @@ export async function todayFor(restaurant: Restaurant, now = new Date()) {
     takings: takingsLine(amount(day(1)), amount(day(8))),
     waiting: { ...waitingSummary(cards), next: cards.slice(0, 3).map((c) => ({ id: c.id, title: c.title, urgent: c.urgent })) },
     done,
+    rota,
   };
 }
 

@@ -118,6 +118,7 @@ export type Today = {
   takings: { amount: string; change: string | null } | null;
   waiting: { count: number; line: string; next: { id: string; title: string; urgent: boolean }[] };
   done: string[];
+  rota?: TodayRota; // who's on today, from this week's rota
 };
 export type DecideBody = { action: 'approve' | 'skip' } | { action: 'edit'; instructions: string } | { action: 'reason'; reason: string };
 export type DecideResult = { ok: true; replies: string[]; card: InboxCard | null };
@@ -385,3 +386,21 @@ export const saveSettings = (r: string | null, change: SettingsChange) => api<Se
 export const setPaused = (r: string | null, paused: boolean) => api<{ paused: boolean; released: number }>(`/api/app/pause${q(r)}`, { method: 'POST', body: { paused } });
 export const getReferral = (r: string | null) => api<{ code: string; link: string }>(`/api/app/refer${q(r)}`);
 export const getHelp = () => api<{ markdown: string; supportEmail: string }>('/api/app/help');
+
+// ---------- The rota (Reports > Rota, and Today) ----------
+
+export type AppShift = { name: string | null; role: string; time: string; hours: number };
+export type AppRotaDay = { date: string; label: string; closed: boolean; shifts: AppShift[]; hours: number; costPence: number; labourPct: number | null };
+export type AppRotaWeek = {
+  weekStart: string;
+  label: string;
+  status: 'approved' | 'waiting' | 'none';
+  draftId: string | null;
+  days: AppRotaDay[];
+  totals: { hours: number; costPence: number; labourPct: number | null; target: number | null; overTarget: boolean } | null;
+  flags: string[];
+  openShifts: number;
+  shareUrl: string | null;
+};
+export type TodayRota = { date: string; closed: boolean; suggested: boolean; shifts: AppShift[] } | null;
+export const getRota = (r: string | null) => api<{ today: string; thisWeek: AppRotaWeek; nextWeek: AppRotaWeek }>(`/api/app/rota${q(r)}`);

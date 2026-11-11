@@ -99,7 +99,7 @@ export default function Today() {
                 {data.takings.change && <T quiet>{data.takings.change}</T>}
               </>
             ) : (
-              <T quiet>No takings recorded for yesterday yet. Send your till report in Chat (coming soon) or on WhatsApp.</T>
+              <T quiet>No takings recorded for yesterday yet. Send a photo of your till report in Chat, or type what you took.</T>
             )}
           </Card>
         )}
@@ -127,6 +127,29 @@ export default function Today() {
           </Card>
         )}
 
+        {data?.rota && (
+          <Card>
+            <T kind="label" quiet>
+              Who’s on today{data.rota.suggested ? ' (suggested, not approved yet)' : ''}
+            </T>
+            {data.rota.closed ? (
+              <T quiet>You’re closed today.</T>
+            ) : data.rota.shifts.length ? (
+              data.rota.shifts.map((s, i) => (
+                <View key={i} style={styles.shift}>
+                  <T style={[{ flex: 1, fontWeight: '600' }, !s.name && { color: Brand.ember }]}>{s.name ?? 'Nobody yet'}</T>
+                  <T kind="small" quiet>
+                    {s.role} · {s.time}
+                  </T>
+                </View>
+              ))
+            ) : (
+              <T quiet>Nobody on the rota today.</T>
+            )}
+            <Button label="See the week’s rota" kind="plain" onPress={() => router.navigate({ pathname: '/reports', params: { view: 'rota' } })} />
+          </Card>
+        )}
+
         {data && done.length > 0 && (
           <Card>
             <T kind="label" quiet>
@@ -151,5 +174,6 @@ export default function Today() {
 }
 
 const styles = StyleSheet.create({
+  shift: { flexDirection: 'row', alignItems: 'center', gap: Space.s, minHeight: 32 },
   list: { gap: Space.m, paddingBottom: Space.xl },
 });

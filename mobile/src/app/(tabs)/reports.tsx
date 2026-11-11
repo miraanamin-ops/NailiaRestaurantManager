@@ -1,26 +1,46 @@
-// Reports (phase 5): the weekly report (every Monday) and the monthly report (early
-// each month), newest first. Tap one for its charts, the next 3 actions and the PDF.
-import { router, useFocusEffect } from 'expo-router';
+// Reports (phase 5, plus the rota): three sections, chosen at the top.
+//   Weekly   the Monday report, newest first
+//   Monthly  the report early each month
+//   Rota     this week's and next week's rota (who works when, cost, approved or waiting)
+// Tap a report for its charts, the next 3 actions and the PDF.
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RotaWeek } from '@/components/rota-week';
 import { Card, T, usePalette } from '@/components/ui';
-import { MaxWidth, Space } from '@/constants/theme';
-import { getReports, LoginNeeded, type ReportItem } from '@/lib/api';
+import { Brand, MaxWidth, Space } from '@/constants/theme';
+import { getReports, getRota, LoginNeeded, type AppRotaWeek, type ReportItem } from '@/lib/api';
 import { useSession } from '@/lib/session';
+
+type View3 = 'weekly' | 'monthly' | 'rota';
+const VIEWS: { key: View3; label: string }[] = [
+  { key: 'weekly', label: 'Weekly' },
+  { key: 'monthly', label: 'Monthly' },
+  { key: 'rota', label: 'Rota' },
+];
 
 export default function Reports() {
   const c = usePalette();
   const { restaurantId, signOut } = useSession();
+  // "See the week's rota" on Today opens this with view=rota.
+  const params = useLocalSearchParams<{ view?: string }>();
+  const [picked, setPicked] = useState<View3 | null>(null);
+  const asked: View3 | null = params.view === 'rota' || params.view === 'monthly' || params.view === 'weekly' ? params.view : null;
+  const view: View3 = asked ?? picked ?? 'weekly';
   const [reports, setReports] = useState<ReportItem[] | null>(null);
+  const [rota, setRota] = useState<{ thisWeek: AppRotaWeek; nextWeek: AppRotaWeek } | null>(null);
+  const [whichWeek, setWhichWeek] = useState<'this' | 'next'>('this');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      setReports((await getReports(restaurantId)).reports);
+      const [r, w] = await Promise.all([getReports(restaurantId), getRota(restaurantId)]);
+      setReports(r.reports);
+      setRota(w);
     } catch (err) {
       if (err instanceof LoginNeeded) return signOut();
       setError("Can't reach DinerAI. Pull down to try again.");
@@ -31,6 +51,12 @@ export default function Reports() {
       load();
     }, [load]),
   );
+
+  const choose = (v: View3) => {
+    setPicked(v);
+    if (params.view) router.setParams({ view: undefined });
+  };
+  const shown = (reports ?? []).filter((r) => r.kind === view);
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
@@ -47,36 +73,80 @@ export default function Reports() {
           />
         }>
         <T kind="title">Reports</T>
+        <Segments value={view} onChange={choose} options={VIEWS} />
         {error && (
           <Card>
             <T>{error}</T>
           </Card>
         )}
         {!reports && !error && <ActivityIndicator />}
-        {reports && reports.length === 0 && (
+
+        {view === 'rota' && rota && (
+          <>
+            <Segments
+              value={whichWeek}
+              onChange={setWhichWeek}
+              options={[
+                { key: 'this', label: `This week` },
+                { key: 'next', label: `Next week` },
+              ]}
+              small
+            />
+            <T kind="small" quiet>
+              {(whichWeek === 'this' ? rota.thisWeek : rota.nextWeek).label}
+            </T>
+            <RotaWeek week={whichWeek === 'this' ? rota.thisWeek : rota.nextWeek} next={whichWeek === 'next'} />
+          </>
+        )}
+
+        {view !== 'rota' && reports && shown.length === 0 && (
           <Card>
-            <T kind="heading">No reports yet</T>
-            <T quiet>Your first weekly report arrives on Monday morning, and a monthly one early each month once your sales are in.</T>
+            <T kind="heading">No {view} reports yet</T>
+            <T quiet>{view === 'weekly' ? 'Your first weekly report arrives on Monday morning.' : 'Your monthly report arrives early each month, once your sales are in.'}</T>
           </Card>
         )}
-        {reports?.map((r) => (
-          <Pressable
-            key={r.token}
-            onPress={() => router.push({ pathname: '/report/[token]', params: { token: r.token } })}
-            accessibilityRole="button"
-            accessibilityLabel={`${r.kind === 'monthly' ? 'Monthly' : 'Weekly'} report, ${r.label}`}
-            style={({ pressed }) => [styles.row, { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.8 : 1 }]}>
-            <View style={{ flex: 1 }}>
-              <T kind="label" quiet>
-                {r.kind === 'monthly' ? 'Monthly report' : 'Weekly report'}
-              </T>
-              <T style={{ fontWeight: '600' }}>{r.label}</T>
-            </View>
-            <T quiet>›</T>
-          </Pressable>
-        ))}
+        {view !== 'rota' &&
+          shown.map((r) => (
+            <Pressable
+              key={r.token}
+              onPress={() => router.push({ pathname: '/report/[token]', params: { token: r.token } })}
+              accessibilityRole="button"
+              accessibilityLabel={`${r.kind === 'monthly' ? 'Monthly' : 'Weekly'} report, ${r.label}`}
+              style={({ pressed }) => [styles.row, { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.8 : 1 }]}>
+              <View style={{ flex: 1 }}>
+                <T kind="label" quiet>
+                  {r.kind === 'monthly' ? 'Monthly report' : 'Weekly report'}
+                </T>
+                <T style={{ fontWeight: '600' }}>{r.label}</T>
+              </View>
+              <T quiet>›</T>
+            </Pressable>
+          ))}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function Segments<K extends string>({ value, onChange, options, small }: { value: K; onChange: (k: K) => void; options: { key: K; label: string }[]; small?: boolean }) {
+  const c = usePalette();
+  return (
+    <View style={[styles.segments, { backgroundColor: c.card, borderColor: c.border }]} accessibilityRole="tablist">
+      {options.map((o) => {
+        const on = o.key === value;
+        return (
+          <Pressable
+            key={o.key}
+            onPress={() => onChange(o.key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            style={[styles.segment, small && styles.segmentSmall, on && { backgroundColor: Brand.signal }]}>
+            <T kind="small" style={{ fontWeight: '600', color: on ? Brand.onSignal : c.text }} maxFontSizeMultiplier={1.5}>
+              {o.label}
+            </T>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -84,4 +154,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   list: { padding: Space.m, gap: Space.s, width: '100%', maxWidth: MaxWidth, alignSelf: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth, borderRadius: 16, padding: Space.m, gap: Space.s },
+  segments: { flexDirection: 'row', borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, padding: 3 },
+  segment: { flex: 1, minHeight: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  segmentSmall: { minHeight: 34 },
 });
