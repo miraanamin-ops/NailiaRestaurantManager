@@ -96,3 +96,6 @@ a development build.
 Phase 5 (Reports and More) built on branch `app-phase5` (12 Nov 2026): reports with charts,
 the PDF and the 3 actions into Chat; customers, settings, notifications per kind, Recommend a
 restaurant, Help and Talk to a person, Pause. Needs migration 068 on live before merging.
+
+The rota in the app (Reports > Rota, Today's "Who's on today") and the visual pass from the
+owner's Stitch designs (with the Inbox as a grouped list) are live (12 Nov 2026).
