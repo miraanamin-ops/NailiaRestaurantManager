@@ -70,3 +70,15 @@ by mid-December.
 - Keep rules as pure, unit-tested functions, as in the rest of the codebase; the app gets Maestro flows.
 - Multi-restaurant rules apply to every app API endpoint (filter by restaurant, `pickRestaurantId`).
 - Update CLAUDE.md "Built so far" at the end of each phase.
+
+## Status and the next chats (11 Nov 2026)
+
+Phases 0, 1 and 2 are live on main (phase 2, notifications, still to be tested on a
+development build once Apple approves the developer account). The owner starts a new
+Claude Code chat for each remaining step, using the ready-made prompts in the Claude Doc's
+"Prompts for new chats" section: Step A (the development build: test notifications and
+Face ID), then Phases 3 to 7. Each prompt says where everything is and the working rules:
+the worktree C:\Users\miraa\dev\naila-v3, one branch per phase, test on Ember & Spice only
+(never Maison Noor or another real restaurant), ask before merging to main, migrations
+copied to the owner's clipboard, the Expo token in mobile/.env.expo.local never printed,
+and `npx expo start --lan --clear < /dev/null` (never CI=1) for testing in Expo Go.
