@@ -49,8 +49,9 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
   account: the first month is free, then it renews monthly at the price shown, until you
   cancel. Cancel or change it in your phone's settings (iPhone: Settings > your name >
   Subscriptions; Android: Google Play > Payments & subscriptions), or from **More >
-  Manage in the App Store / Google Play**. Have the FOUNDER code? Tap **I have an offer
-  code**. Signed up on the website? You keep paying there (Manage billing in settings).
+  Manage in the App Store / Google Play**. On Android, have the FOUNDER code? Tap **I
+  have an offer code** (there's no offer code on iPhone: the free month, then the monthly
+  price). Signed up on the website? You keep paying there (Manage billing in settings).
 - **Setup with Dina in the app**: the same setup as on the website, chapter by chapter.
   Tap **Chapters** to jump to one; take photos of your menu with the camera button. At the
   end you're asked to turn on alerts (your morning brief, and anything urgent).

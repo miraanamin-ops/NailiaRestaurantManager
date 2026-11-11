@@ -55,14 +55,8 @@ Same subscription > Subscription Prices > **View all Subscription Pricing** >
 **Introductory Offers** > Set up Introductory Offer > all countries > start today, no end
 date > **Free** > Duration **1 month** > Confirm.
 
-**1f. FOUNDER (offer code)**
-Same subscription > Subscription Prices > **+** > **Create Offer Codes** > Reference name
-`FOUNDER` > auto-renew ticked > Eligibility **New subscribers** > all countries >
-**Pay as you go** > £50.00 for **3 months** > Confirm >
-View all Subscription Pricing > **Offer Codes** > FOUNDER > **Create Custom Codes** >
-code `FOUNDER`, redemption limit **50**, expiry No End Date (or a date) > Create.
-Apple can't put an offer code on top of the free month: someone who redeems FOUNDER gets
-its terms instead (see "Decision needed" at the bottom).
+**1f. No offer code on iPhone** (your call, 12 Nov 2026): FOUNDER isn't offered on
+iPhone. Everyone gets the free month, then £99 a month. Nothing to set up here.
 
 **1g. The 15% rate (Small Business Program)**
 developer.apple.com/app-store/small-business-program > **Enroll** (Account Holder only) >
@@ -205,11 +199,9 @@ login that opens Ember & Spice (billing-exempt, so no purchase is needed), and t
 "Sign-up and the subscription can be tested with a sandbox account; Delete account is in
 More (the demo restaurant itself can't be deleted)."
 
-## Decision needed: FOUNDER on iPhone
+## FOUNDER in the app (decided 12 Nov 2026)
 
-Apple can't combine an offer code with the free month. Closest choices:
-1. **£50 a month for 3 months, no free month** (recommended: same £150 total over the
-   first 3 months as Stripe's FOUNDER after its free month; simplest).
-2. Free month, then full price: FOUNDER would do nothing extra on iPhone.
-3. Pay as you go £37.50 for 4 months (£150 over 4 months, the same total as Stripe's).
-On Android, FOUNDER matches Stripe exactly (free month, then 3 months at £50).
+iPhone: no offer code; the free month, then £99 a month (Apple can't combine an offer
+code with the free month, and owners don't see whether they were among the first 50).
+Android: FOUNDER works as on the website (free month, then 3 months at £50), through
+Google's developer-determined offer (2d). Say if Android should drop it too.

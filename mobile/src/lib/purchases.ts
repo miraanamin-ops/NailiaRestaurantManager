@@ -62,9 +62,3 @@ export async function restore(restaurantId: string) {
   const info = await (await purchasesFor(restaurantId)).restorePurchases();
   return Boolean(info.entitlements.active[ENTITLEMENT]);
 }
-
-// iPhone: Apple's own sheet for offer codes (FOUNDER). Afterwards the purchase arrives
-// through the webhook like any other.
-export async function redeemAppleCode(restaurantId: string) {
-  await (await purchasesFor(restaurantId)).presentCodeRedemptionSheet();
-}

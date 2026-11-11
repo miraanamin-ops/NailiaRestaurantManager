@@ -1,8 +1,8 @@
 // "Start your free month" (phase 4): the App Store / Google Play subscription. First
 // month free, then the store's monthly price (shown, as Apple and Google require; the
-// website's prices and payment are never shown or linked here). FOUNDER: Apple's offer
-// code sheet on iPhone; on Android our server checks the code, then Google's founder
-// offer is bought. Once the store tells our server (a few seconds), the restaurant
+// website's prices and payment are never shown or linked here). On iPhone that's all (no
+// offer code: the owner's call, 12 Nov); on Android FOUNDER is checked by our server,
+// then Google's founder offer is bought. Once the store tells our server (a few seconds), the restaurant
 // moves on to setup with Dina by itself.
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,7 +11,7 @@ import { ActivityIndicator, Platform, StyleSheet, TextInput, View } from 'react-
 import { Button, Card, Screen, T, usePalette } from '@/components/ui';
 import { Brand, Space, TapHeight } from '@/constants/theme';
 import { API_URL, founderCode } from '@/lib/api';
-import { buy, monthlyPlan, purchasesReady, redeemAppleCode, restore, type Plan } from '@/lib/purchases';
+import { buy, monthlyPlan, purchasesReady, restore, type Plan } from '@/lib/purchases';
 import { useSession } from '@/lib/session';
 
 const WAIT_MS = 45_000;
@@ -70,12 +70,9 @@ export default function Subscribe() {
     }
   }
 
+  // Android only: our server checks FOUNDER, then Google's founder offer is bought.
   async function useCode() {
     if (!restaurantId) return;
-    if (Platform.OS === 'ios') {
-      await redeemAppleCode(restaurantId).catch(() => setNote('Apple’s code sheet didn’t open. Please try again.'));
-      return waitForServer();
-    }
     setBusy(true);
     try {
       const out = await founderCode(restaurantId, code);
@@ -151,27 +148,27 @@ export default function Subscribe() {
 
       {purchasesReady() && !waiting && (
         <>
-          {Platform.OS === 'ios' ? (
-            <Button label="I have an offer code" kind="plain" onPress={useCode} disabled={busy} />
-          ) : showCode ? (
-            <Card>
-              <T kind="small" quiet>
-                Your code
-              </T>
-              <TextInput
-                value={code}
-                onChangeText={setCode}
-                autoCapitalize="characters"
-                placeholder="FOUNDER"
-                placeholderTextColor={c.textSecondary}
-                style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.card }]}
-                accessibilityLabel="Offer code"
-              />
-              <Button label="Use this code" onPress={useCode} busy={busy} disabled={!code.trim()} />
-            </Card>
-          ) : (
-            <Button label="I have an offer code" kind="plain" onPress={() => setShowCode(true)} />
-          )}
+          {/* FOUNDER is Android only: on iPhone it's the free month, then the monthly price (the owner's call, 12 Nov). */}
+          {Platform.OS === 'android' &&
+            (showCode ? (
+              <Card>
+                <T kind="small" quiet>
+                  Your code
+                </T>
+                <TextInput
+                  value={code}
+                  onChangeText={setCode}
+                  autoCapitalize="characters"
+                  placeholder="FOUNDER"
+                  placeholderTextColor={c.textSecondary}
+                  style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.card }]}
+                  accessibilityLabel="Offer code"
+                />
+                <Button label="Use this code" onPress={useCode} busy={busy} disabled={!code.trim()} />
+              </Card>
+            ) : (
+              <Button label="I have an offer code" kind="plain" onPress={() => setShowCode(true)} />
+            ))}
           <Button label="Restore a purchase" kind="plain" onPress={restoreIt} disabled={busy} />
         </>
       )}
