@@ -23,6 +23,16 @@ export async function messageOwner(
     opener,
   }: { mediaUrl?: string | null; mediaCaption?: string; opener?: OpenerRequest } = {},
 ) {
+  // The owner has the app: a notification instead of WhatsApp (the draft itself is in
+  // the app's Inbox). If Expo can't be reached, WhatsApp carries on as before.
+  if (opener && text && !isPlaceholderNumber(channel.to)) {
+    const { pushInsteadOfWhatsApp } = await import("@/lib/push");
+    const pushed = await pushInsteadOfWhatsApp(channel.restaurantId, text, opener).catch((err) => {
+      console.error("App notification failed; using WhatsApp", err);
+      return false;
+    });
+    if (pushed) return;
+  }
   if (opener && (text || mediaUrl) && !isPlaceholderNumber(channel.to)) {
     const { sendOrHold } = await import("@/lib/outbox");
     if (!(await sendOrHold(channel, { text, withButtons, mediaUrl, mediaCaption }, opener))) return;

@@ -76,7 +76,7 @@ async function accessToken() {
 }
 
 // A logged-in call. Throws LoginNeeded when the login has ended (the app then shows the login screen).
-export async function api<T>(path: string, init: { method?: 'GET' | 'POST'; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown } = {}): Promise<T> {
   const call = async (token: string) =>
     fetch(`${API_URL}${path}`, {
       method: init.method ?? 'GET',

@@ -8,6 +8,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, Screen, T } from '@/components/ui';
 import { Brand, Space } from '@/constants/theme';
 import { getToday, LoginNeeded, type Today as TodayData } from '@/lib/api';
+import { alertsState, registerForAlerts, type AlertsState } from '@/lib/notifications';
 import { useSession } from '@/lib/session';
 
 function greeting(now = new Date()) {
@@ -20,6 +21,7 @@ export default function Today() {
   const [data, setData] = useState<TodayData | null>(null);
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [alerts, setAlerts] = useState<AlertsState | null>(null);
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const load = useCallback(async () => {
@@ -27,6 +29,7 @@ export default function Today() {
     try {
       setError(false);
       setData(await getToday(restaurantId));
+      setAlerts(await alertsState());
     } catch (err) {
       if (err instanceof LoginNeeded) return signOut();
       setError(true);
@@ -63,6 +66,19 @@ export default function Today() {
         {error && (
           <Card>
             <T>Can’t reach DinerAI. Pull down to try again.</T>
+          </Card>
+        )}
+
+        {alerts === 'ask' && (
+          <Card accent>
+            <T kind="heading">Turn on alerts</T>
+            <T quiet>Get your morning brief and urgent alerts (like a bad review) as notifications, with Approve right on them.</T>
+            <Button label="Turn on alerts" onPress={async () => setAlerts(await registerForAlerts(true))} />
+          </Card>
+        )}
+        {alerts === 'off' && (
+          <Card>
+            <T quiet>Alerts are off for DinerAI. To get your brief and urgent alerts, turn them on in your phone’s Settings → DinerAI → Notifications.</T>
           </Card>
         )}
 

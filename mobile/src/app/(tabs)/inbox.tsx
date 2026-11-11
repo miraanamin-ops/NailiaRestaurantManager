@@ -3,7 +3,7 @@
 // safety check. Skip: asks why in one tap (optional). Edit: type what to change;
 // the draft comes back rewritten and checked, for a decision.
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -11,6 +11,7 @@ import { DraftCardBody, SwipeableCard } from '@/components/draft-card';
 import { Button, Card, Screen, T, usePalette } from '@/components/ui';
 import { Brand, Space, TapHeight } from '@/constants/theme';
 import { decide, getInbox, LoginNeeded, undoLast, type InboxCard } from '@/lib/api';
+import { setBadge } from '@/lib/notifications';
 import { useSession } from '@/lib/session';
 
 const UNDO_SECONDS = 5;
@@ -21,6 +22,8 @@ type Pending = { card: InboxCard; timer: ReturnType<typeof setTimeout> };
 export default function Inbox() {
   const c = usePalette();
   const { restaurantId, signOut } = useSession();
+  // Set when a notification's Approve button brought the owner here.
+  const { note } = useLocalSearchParams<{ note?: string }>();
   const [cards, setCards] = useState<InboxCard[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +43,9 @@ export default function Inbox() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      setCards((await getInbox(restaurantId)).cards);
+      const list = (await getInbox(restaurantId)).cards;
+      setCards(list);
+      setBadge(list.length);
     } catch (err) {
       if (err instanceof LoginNeeded) return signOut();
       setError("Can't reach DinerAI. Pull down to try again.");
@@ -158,6 +163,12 @@ export default function Inbox() {
           )}
         </View>
 
+        {note ? (
+          <Card accent>
+            <T>{note}</T>
+            <Button label="OK" kind="plain" onPress={() => router.setParams({ note: undefined })} />
+          </Card>
+        ) : null}
         {error && (
           <Card>
             <T>{error}</T>

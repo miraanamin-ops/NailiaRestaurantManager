@@ -39,6 +39,11 @@ async function recordedRun(job: Job) {
     await checkJobHealth(job, now);
     const summary = await dispatch(job, now);
     if (job === "hourly") await clearOldRateLimits(now);
+    // The app's "haven't seen you in a while" nudge (lib/push.ts). Never stops the run.
+    if (job === "hourly") {
+      const { sendNudges } = await import("@/lib/push");
+      await sendNudges(now).catch((err) => console.error("App nudges failed", err));
+    }
     // The queue's own health, and (after 9:30) any brief that still hasn't gone.
     // Never stops the run.
     try {

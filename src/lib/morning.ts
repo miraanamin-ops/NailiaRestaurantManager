@@ -153,8 +153,18 @@ export async function runMorningStep(
       if (fresh.last_brief_on === today) return { done: "brief: already sent today", carry };
       const channel = ownerChannel(fresh);
       let brief: unknown = "no owner WhatsApp yet";
+      // The owner has the app: the brief is one notification and the items wait in
+      // the app's Inbox (lib/push.ts). Not for a simulated day.
+      const { pushBrief } = await import("@/lib/push");
+      const pushed = simulating ? false : await pushBrief(fresh, now).catch((err) => {
+        console.error("App brief notification failed; using WhatsApp", err);
+        return false;
+      });
+      if (pushed) {
+        brief = "sent to the app";
+      }
       // WhatsApp's 24-hour rule is about real time, whatever the simulated date.
-      if (channel && !(await canMessageFreely(fresh, simulating ? new Date() : now))) {
+      else if (channel && !(await canMessageFreely(fresh, simulating ? new Date() : now))) {
         await markBriefWaiting(fresh, now);
         // On a real WhatsApp sender, an approved template opens the chat ("Show me").
         const { sendBriefOpener } = await import("@/lib/outbox");

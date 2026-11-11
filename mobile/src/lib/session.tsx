@@ -12,6 +12,7 @@ import { createContext, use, useCallback, useEffect, useRef, useState, type Prop
 import { AppState } from 'react-native';
 
 import { api, clearTokens, hasTokens, logIn, LoginNeeded, type Me } from '@/lib/api';
+import { registerForAlerts, unregisterAlerts } from '@/lib/notifications';
 
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
@@ -59,6 +60,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const restaurantId = me ? (me.restaurants.find((r) => r.id === picked)?.id ?? me.restaurants[0]?.id ?? null) : null;
 
   const signOut = useCallback(async () => {
+    await unregisterAlerts();
     await clearTokens();
     setMe(null);
     setLocked(false);
@@ -82,6 +84,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
         setSignedIn(true);
         setLocked(await canLock().catch(() => false));
         reloadMe();
+        // "Still here": keeps this phone's notifications pointed at this login (no prompt).
+        registerForAlerts(false);
       }
       setLoading(false);
     })();
@@ -105,6 +109,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       setSignedIn(true);
       setLocked(false);
       await reloadMe();
+      registerForAlerts(false);
     },
     [reloadMe],
   );
