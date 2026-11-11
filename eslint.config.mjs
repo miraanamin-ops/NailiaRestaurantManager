@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "analytics/generator/.venv/**",
     "analytics/generator/output/**",
     "analytics/service/.venv/**",
+    // The mobile app has its own tooling (mobile/, step 50).
+    "mobile/**",
   ]),
 ]);
 

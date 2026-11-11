@@ -58,6 +58,19 @@ export async function currentOwner(): Promise<Owner | null> {
   const client = await authClient();
   const token = (await client.auth.getSession()).data.session?.access_token;
   if (!token) return null;
+  return ownerFromToken(token, client);
+}
+
+// A Supabase client with no cookies, for logins that carry their own token (the app).
+export function tokenClient() {
+  assertNotLiveByAccident();
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+// The allowed person a login token belongs to, or null: the website's cookie login
+// and the app's "Authorization: Bearer" login both end here, so the same rules apply.
+export async function ownerFromToken(token: string, client: Pick<ReturnType<typeof tokenClient>, "auth"> = tokenClient()): Promise<Owner | null> {
+  if (!authConfigured() || !token) return null;
   // Supabase checks this exact token; only then is its session id read from it.
   const { data } = await client.auth.getUser(token);
   if (!data.user?.email) return null;
