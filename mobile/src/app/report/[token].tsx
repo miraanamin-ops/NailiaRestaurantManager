@@ -46,7 +46,7 @@ export default function ReportScreen() {
 
   const title = report ? (report.kind === 'monthly' ? (report.data as MonthlyData).figures.label : (report.data as WeeklyData).period.label) : 'Report';
   return (
-    <Screen>
+    <Screen kind="pushed">
       <Stack.Screen options={{ title }} />
       {error && (
         <Card accent>

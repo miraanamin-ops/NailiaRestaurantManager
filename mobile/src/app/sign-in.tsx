@@ -129,7 +129,7 @@ export default function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  brand: { marginTop: Space.xl, marginBottom: Space.s },
+  brand: { marginTop: Space.xl * 1.5, marginBottom: Space.m },
   input: { minHeight: TapHeight, borderWidth: 1, borderRadius: 12, paddingHorizontal: Space.m, fontSize: 17 },
   center: { textAlign: 'center' },
   apple: { width: '100%', height: TapHeight },

@@ -3,17 +3,22 @@
 // Google, a till report) and files (menus, till exports, spreadsheets) all go to the
 // WhatsApp bot's own engine on the server. DinerAI's choices come back as quick
 // replies; a draft comes back as the same card as the Inbox, with its buttons.
-// Newest at the bottom (an inverted list), and the keyboard never covers the input.
+// Newest at the bottom (an inverted list). The message bar sits above the tab bar while
+// the keyboard is closed and rides on top of the keyboard while it's open, moving with it
+// frame by frame as one piece (Reanimated's keyboard tracking, which also runs in Expo Go;
+// the KeyboardAvoidingView it replaces jumped and left a dark band). Your message shows at
+// once, and DinerAI's reply is a bouncing-dots bubble with a line saying it's working.
 import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, FlatList, Linking, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import Animated, { FadeIn, FadeInUp, useAnimatedKeyboard, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DraftCardBody } from '@/components/draft-card';
-import { Icon, IconTile, T, TabHeader, usePalette, type IconName } from '@/components/ui';
+import { Icon, IconTile, T, TabHeader, usePalette, useTabBarSpace, type IconName } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { ApiError, focusChat, getChat, LoginNeeded, newClientId, sendChat, uploadChatFile, type ChatButton, type ChatEntry, type ChatFile, type ChatState } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -38,6 +43,20 @@ export default function Chat() {
   const [loadingOlder, setLoadingOlder] = useState(false);
   // True while a message is on its way, so the 15-second refresh doesn't overwrite it.
   const busy = useRef(false);
+
+  // Room under the bar: above the floating tab bar when the keyboard is closed, on top of
+  // the keyboard when it's open (the tab bar is hidden behind it then).
+  const keyboard = useAnimatedKeyboard();
+  const insets = useSafeAreaInsets();
+  const tabSpace = useTabBarSpace();
+  const closedRoom = Platform.OS === 'ios' ? tabSpace - 30 : 0;
+  // Android's tab bar sits under the screen rather than over it, so the keyboard covers
+  // it as well as the screen: take its height off.
+  const androidBar = insets.bottom + 64;
+  const room = useAnimatedStyle(() => {
+    const kb = keyboard.height.value;
+    return { paddingBottom: Platform.OS === 'ios' ? Math.max(kb, closedRoom) : Math.max(kb - androidBar, 0) };
+  });
 
   const fail = useCallback(
     (err: unknown, words: string) => {
@@ -205,7 +224,7 @@ export default function Chat() {
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView style={styles.fill} behavior="padding">
+      <Animated.View style={[styles.fill, { backgroundColor: c.background }, room]}>
         <View style={[styles.headerWrap, { borderColor: c.border }]}>
           <TabHeader restaurant={me?.restaurants.find((r) => r.id === restaurantId)?.name ?? null} />
           <View style={styles.header}>
@@ -248,7 +267,7 @@ export default function Chat() {
           </Pressable>
         )}
 
-        <View style={[styles.bar, { borderColor: c.border, backgroundColor: c.background }]}>
+        <View style={[styles.bar, { backgroundColor: c.background }]}>
           <IconButton label="Take a photo" icon="camera-outline" onPress={() => takePhoto('camera')} disabled={Boolean(pending)} />
           <IconButton label="Choose a photo" icon="image-outline" onPress={() => takePhoto('library')} disabled={Boolean(pending)} />
           <IconButton label="Send a file" icon="attach-outline" onPress={pickFile} disabled={Boolean(pending)} />
@@ -272,7 +291,7 @@ export default function Chat() {
             <Icon name="arrow-up" size={22} color={Brand.onSignal} />
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -290,14 +309,20 @@ type Row = { key: string; kind: 'typing' } | { key: string; kind: 'pending'; pen
 
 function ChatRow({ row, onTap, disabled }: { row: Row; onTap: (b: ChatButton) => void; disabled: boolean }) {
   if (row.kind === 'typing') return <Typing />;
-  if (row.kind === 'pending') return <Bubble owner text={row.pending.text} file={row.pending.file} imageUrl={null} faded />;
+  if (row.kind === 'pending')
+    return (
+      // The list is upside down, so "up" here rises from below on screen.
+      <Animated.View entering={FadeInUp.duration(220)}>
+        <Bubble owner text={row.pending.text} file={row.pending.file} imageUrl={null} />
+      </Animated.View>
+    );
   const m = row.m;
   const owner = m.from === 'owner';
   // A draft shows as its Inbox card; the bot's words go above it only when they add
   // something (they usually repeat the draft).
   const intro = m.card && m.text && !m.text.includes(m.card.body.slice(0, 40)) ? m.text : null;
   return (
-    <View style={styles.item}>
+    <Animated.View style={styles.item} entering={FadeIn.duration(250)}>
       {m.card ? (
         <>
           {intro ? <Bubble owner={false} text={intro} file={null} imageUrl={null} /> : null}
@@ -307,7 +332,7 @@ function ChatRow({ row, onTap, disabled }: { row: Row; onTap: (b: ChatButton) =>
         <Bubble owner={owner} text={m.text} file={m.file && !m.file.photo ? `📄 ${m.file.name}` : null} imageUrl={m.imageUrl} via={m.channel === 'whatsapp' ? 'WhatsApp' : null} />
       )}
       {m.buttons.length > 0 && <QuickReplies buttons={m.buttons} onTap={onTap} disabled={disabled} />}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -363,16 +388,50 @@ function QuickReplies({ buttons, onTap, disabled }: { buttons: ChatButton[]; onT
   );
 }
 
+// What DinerAI is doing while it works: bouncing dots and a line that moves on with
+// time (a quick command is back before the first change; a draft or a sum takes longer).
+const WORKING = [
+  { after: 0, line: 'Reading your message' },
+  { after: 4000, line: 'Working on it' },
+  { after: 12000, line: 'Nearly there, a bigger job' },
+  { after: 30000, line: 'Still going, thanks for waiting' },
+];
+
 function Typing() {
   const c = usePalette();
+  const [line, setLine] = useState(WORKING[0].line);
+  useEffect(() => {
+    const timers = WORKING.slice(1).map((w) => setTimeout(() => setLine(w.line), w.after));
+    return () => timers.forEach(clearTimeout);
+  }, []);
   return (
-    <View style={[styles.bubble, styles.theirs, styles.typing, { backgroundColor: c.card, borderColor: c.border }]} accessibilityLiveRegion="polite" accessibilityLabel="DinerAI is typing">
-      <ActivityIndicator size="small" />
-      <T kind="small" quiet>
-        DinerAI is typing…
-      </T>
-    </View>
+    <Animated.View
+      entering={FadeInUp.duration(220).delay(120)}
+      style={[styles.bubble, styles.theirs, styles.typing, { backgroundColor: c.card, borderColor: c.border }]}
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={`DinerAI: ${line}`}>
+      <View style={styles.dots}>
+        {[0, 1, 2].map((i) => (
+          <Dot key={i} delay={i * 150} />
+        ))}
+      </View>
+      <Animated.View key={line} entering={FadeIn.duration(300)}>
+        <T kind="small" quiet>
+          {line}…
+        </T>
+      </Animated.View>
+    </Animated.View>
   );
+}
+
+function Dot({ delay }: { delay: number }) {
+  const c = usePalette();
+  const y = useSharedValue(0);
+  useEffect(() => {
+    y.value = withDelay(delay, withRepeat(withSequence(withTiming(-5, { duration: 280 }), withTiming(0, { duration: 280 })), -1));
+  }, [delay, y]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }], opacity: 0.55 + (-y.value / 5) * 0.45 }));
+  return <Animated.View style={[styles.dot, { backgroundColor: c.tint }, style]} />;
 }
 
 function Empty() {
@@ -403,13 +462,15 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '85%', borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: Space.m - 2, paddingVertical: Space.s + 1, gap: 4 },
   mine: { alignSelf: 'flex-end', borderBottomRightRadius: 6 },
   theirs: { alignSelf: 'flex-start', borderBottomLeftRadius: 6 },
-  typing: { flexDirection: 'row', alignItems: 'center', gap: Space.s },
+  typing: { flexDirection: 'row', alignItems: 'center', gap: Space.s + 2 },
+  dots: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 18 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
   photo: { width: 220, maxWidth: '100%', aspectRatio: 1, borderRadius: 12 },
   replies: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.s },
   reply: { borderWidth: 1, borderRadius: 999, paddingHorizontal: Space.m, paddingVertical: Space.s + 2, minHeight: 44, justifyContent: 'center' },
   empty: { gap: Space.s, paddingVertical: Space.xl },
   note: { marginHorizontal: Space.m, marginBottom: Space.s, borderWidth: 1, borderRadius: 12, padding: Space.s + 4, flexDirection: 'row', gap: Space.s, alignItems: 'flex-start' },
-  bar: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, paddingHorizontal: Space.s, paddingVertical: Space.s, borderTopWidth: StyleSheet.hairlineWidth },
+  bar: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, paddingHorizontal: Space.s, paddingVertical: Space.s },
   icon: { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
   input: { flex: 1, minHeight: 44, maxHeight: 140, borderWidth: 1, borderRadius: 22, paddingHorizontal: Space.m - 2, paddingTop: 11, paddingBottom: 11, fontSize: 17 },
   send: { width: 44, height: 44, borderRadius: 22, backgroundColor: Brand.signal, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },

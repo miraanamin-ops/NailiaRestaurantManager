@@ -1,15 +1,16 @@
 // Today: the owner's day at a glance (a calm morning briefing). Yesterday's takings
-// against the same day last week, what's waiting (urgent first) with one button to clear
-// it, who's on today from the rota, and what DinerAI did for them since yesterday.
+// against the same day last week, what's waiting as one tile per type of message (with
+// its count, coloured by how urgent it is; a tap opens the Inbox at that type), who's on
+// today from the rota, and what DinerAI did for them since yesterday.
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, Card, Icon, IconTile, Pill, T, TabHeader, usePalette } from '@/components/ui';
+import { Avatar, Button, Card, Icon, IconTile, Pill, T, Skeleton, TabHeader, usePalette, useTabBarSpace } from '@/components/ui';
 import { MaxWidth, Space } from '@/constants/theme';
 import { getToday, LoginNeeded, type Today as TodayData } from '@/lib/api';
-import { titleIcon } from '@/lib/kinds';
+import { CATEGORIES, titleIcon, typeIcon } from '@/lib/kinds';
 import { alertsState, registerForAlerts, type AlertsState } from '@/lib/notifications';
 import { useSession } from '@/lib/session';
 
@@ -20,6 +21,7 @@ function greeting(now = new Date()) {
 
 export default function Today() {
   const c = usePalette();
+  const tabSpace = useTabBarSpace();
   const { me, restaurantId, reloadMe, signOut } = useSession();
   const [data, setData] = useState<TodayData | null>(null);
   const [error, setError] = useState(false);
@@ -57,7 +59,7 @@ export default function Today() {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
       <TabHeader restaurant={restaurant} onRestaurant={many ? () => router.navigate('/more') : undefined} />
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />} contentContainerStyle={styles.list}>
+      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />} contentContainerStyle={[styles.list, { paddingBottom: tabSpace }]}>
         <View style={styles.hello}>
           <View style={styles.helloTop}>
             <Pill label={data?.restaurant.paused ? 'Sending paused' : 'DinerAI is on'} tone={data?.restaurant.paused ? 'ember' : 'signal'} dot />
@@ -129,27 +131,54 @@ export default function Today() {
           <Card accent={data.waiting.count > 0}>
             <View style={styles.between}>
               <T kind="heading">Waiting for you</T>
-              {data.waiting.count > 0 && <Pill label={`${data.waiting.count} to approve`} tone={data.waiting.next.some((n) => n.urgent) ? 'ember' : 'signal'} />}
+              {data.waiting.count > 0 && <Pill label={`${data.waiting.count} to approve`} tone={(data.waiting.tiles ?? []).some((t) => t.category === 'urgent') || data.waiting.next.some((n) => n.urgent) ? 'ember' : 'signal'} />}
             </View>
             {data.waiting.count > 0 ? (
               <>
                 <T kind="small" quiet>
                   {data.waiting.line}
                 </T>
-                {data.waiting.next.map((n) => (
-                  <Pressable
-                    key={n.id}
-                    onPress={() => router.navigate('/inbox')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${n.urgent ? 'Urgent: ' : ''}${n.title}`}
-                    style={[styles.item, { borderColor: n.urgent ? c.ember : c.border, backgroundColor: n.urgent ? c.emberSoft : c.panel }]}>
-                    <IconTile name={titleIcon(n.title)} tone={n.urgent ? 'ember' : 'neutral'} />
-                    <T style={{ flex: 1 }} numberOfLines={2}>
-                      {n.title}
-                    </T>
-                    {n.urgent && <Pill label="Urgent" tone="ember" />}
-                  </Pressable>
-                ))}
+                {data.waiting.tiles?.length ? (
+                  <View style={styles.tiles}>
+                    {data.waiting.tiles.map((t) => {
+                      const tone = CATEGORIES[t.category].tone;
+                      const colour = tone === 'ember' ? c.ember : tone === 'amber' ? c.amber : tone === 'signal' ? c.tint : c.textSecondary;
+                      return (
+                        <Pressable
+                          key={t.key}
+                          onPress={() => router.navigate({ pathname: '/inbox', params: { type: t.key } })}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t.count} ${t.label}. ${CATEGORIES[t.category].title}`}
+                          style={({ pressed }) => [styles.tile, { borderColor: c.border, borderLeftColor: colour, backgroundColor: t.category === 'urgent' ? c.emberSoft : c.panel, transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
+                          <View style={styles.between}>
+                            <Icon name={typeIcon(t.key)} size={20} color={colour} />
+                            <T kind="metric" style={{ fontSize: 26, lineHeight: 30 }}>
+                              {t.count}
+                            </T>
+                          </View>
+                          <T kind="small" numberOfLines={2}>
+                            {t.label}
+                          </T>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  data.waiting.next.map((n) => (
+                    <Pressable
+                      key={n.id}
+                      onPress={() => router.navigate('/inbox')}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${n.urgent ? 'Urgent: ' : ''}${n.title}`}
+                      style={[styles.item, { borderColor: n.urgent ? c.ember : c.border, backgroundColor: n.urgent ? c.emberSoft : c.panel }]}>
+                      <IconTile name={titleIcon(n.title)} tone={n.urgent ? 'ember' : 'neutral'} />
+                      <T style={{ flex: 1 }} numberOfLines={2}>
+                        {n.title}
+                      </T>
+                      {n.urgent && <Pill label="Urgent" tone="ember" />}
+                    </Pressable>
+                  ))
+                )}
                 <Button label={`Review now (${data.waiting.count})`} icon="arrow-forward" onPress={() => router.navigate('/inbox')} />
               </>
             ) : (
@@ -216,11 +245,7 @@ export default function Today() {
           </Card>
         )}
 
-        {!data && !error && (
-          <Card>
-            <T quiet>Loading your day…</T>
-          </Card>
-        )}
+        {!data && !error && <Skeleton lines={3} />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -233,5 +258,7 @@ const styles = StyleSheet.create({
   helloTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.s },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.s },
   row: { flexDirection: 'row', alignItems: 'center', gap: Space.s + 2 },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.s },
+  tile: { flexGrow: 1, flexBasis: '45%', gap: Space.s, borderWidth: StyleSheet.hairlineWidth, borderLeftWidth: 3, borderRadius: 14, padding: Space.s + 4 },
   item: { flexDirection: 'row', alignItems: 'center', gap: Space.m - 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: 14, padding: Space.s + 4 },
 });

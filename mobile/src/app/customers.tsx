@@ -55,7 +55,7 @@ export default function CustomersScreen() {
   }
 
   return (
-    <Screen>
+    <Screen kind="pushed">
       {!data ? (
         <ActivityIndicator />
       ) : (

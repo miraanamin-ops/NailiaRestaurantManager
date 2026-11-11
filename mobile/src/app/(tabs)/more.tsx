@@ -7,13 +7,14 @@ import { useCallback, useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, Card, Icon, IconTile, ListRow, Pill, T, TabHeader, usePalette } from '@/components/ui';
+import { Avatar, Button, Card, Icon, IconTile, ListRow, Pill, T, TabHeader, usePalette, useTabBarSpace } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { getReferral, getSettings, setPaused } from '@/lib/api';
 import { useSession } from '@/lib/session';
 
 export default function More() {
   const c = usePalette();
+  const tabSpace = useTabBarSpace();
   const { me, signOut, restaurantId, setRestaurantId } = useSession();
   const restaurant = me?.restaurants.find((r) => r.id === restaurantId);
   const billing = restaurant?.billing;
@@ -64,7 +65,7 @@ export default function More() {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
       <TabHeader restaurant={restaurant?.name ?? null} />
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabSpace }]}>
         <T kind="title">More</T>
 
         <Card>

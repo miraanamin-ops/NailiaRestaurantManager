@@ -112,13 +112,19 @@ export type InboxCard = {
   actions: ('approve' | 'edit' | 'skip')[] | 'answer';
   approveHint: string;
   waitingSince: string;
-  // urgent (1 to 3 stars), look (open it first) or simple (one tap from the list); set by the server.
-  tier?: 'urgent' | 'look' | 'simple';
+  // Set by the server (lib/app/cards.ts): the message type the owner sees it under, its
+  // category (urgent, look = open it to check, later = not urgent, simple = a tick and
+  // "Approve all") and whether "Approve all" may take it (simple with every check passed).
+  type: { key: string; label: string };
+  category: Category;
+  bulk: boolean;
 };
+export type Category = 'urgent' | 'look' | 'later' | 'simple';
+export type TypeTile = { key: string; label: string; category: Category; count: number };
 export type Today = {
   restaurant: { id: string; name: string; paused: boolean };
   takings: { amount: string; change: string | null } | null;
-  waiting: { count: number; line: string; next: { id: string; title: string; urgent: boolean }[] };
+  waiting: { count: number; line: string; next: { id: string; title: string; urgent: boolean }[]; tiles?: TypeTile[] };
   done: string[];
   rota?: TodayRota; // who's on today, from this week's rota
 };

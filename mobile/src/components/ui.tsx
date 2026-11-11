@@ -2,10 +2,12 @@
 // Stitch designs): screens with safe-area spacing and a centred column on tablets, cards,
 // text styles (Geist, and Geist Mono for numbers and labels), buttons, pills, initials,
 // section titles, the logo and the header. Colours follow the phone's light or dark setting.
+import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Brand, Colors, Fonts, MaxWidth, Radius, Space, TapHeight, type Palette } from '@/constants/theme';
 
@@ -13,18 +15,33 @@ export function usePalette(): Palette {
   return Colors[useColorScheme() === 'dark' ? 'dark' : 'light'];
 }
 
-export function Screen({ children, scroll = true, header }: PropsWithChildren<{ scroll?: boolean; header?: ReactNode }>) {
+// The room a scrolling tab screen leaves at the bottom so nothing ends under the floating
+// tab bar (on iPhone it floats over the content; Android's sits below it).
+export function useTabBarSpace() {
+  const insets = useSafeAreaInsets();
+  return Platform.OS === 'ios' ? insets.bottom + 84 : Space.xl;
+}
+
+// A screen. kind:
+//   tab     one of the five tabs: room above the floating tab bar at the bottom
+//   pushed  opened from a tab with a native header and back button (Customers, a report):
+//           it starts below that header (iOS adjusts for it), never underneath it
+//   plain   no tab bar and no header (login, sign-up): extra room at the top
+export function Screen({ children, scroll = true, header, kind = 'plain' }: PropsWithChildren<{ scroll?: boolean; header?: ReactNode; kind?: 'tab' | 'pushed' | 'plain' }>) {
   const c = usePalette();
+  const tabSpace = useTabBarSpace();
   const inner = <View style={styles.column}>{children}</View>;
+  const bottom = { paddingBottom: kind === 'tab' ? tabSpace : Space.xl * 2 };
+  const top = kind === 'plain' ? { paddingTop: Space.l } : kind === 'pushed' ? { paddingTop: Space.m } : null;
   return (
-    <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={kind === 'pushed' ? ['left', 'right'] : ['top', 'left', 'right']}>
       {header}
       {scroll ? (
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.scroll, top, bottom]} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior={kind === 'pushed' ? 'automatic' : 'never'}>
           {inner}
         </ScrollView>
       ) : (
-        <View style={[styles.fill, styles.scroll]}>{inner}</View>
+        <View style={[styles.fill, styles.scroll, top, bottom]}>{inner}</View>
       )}
     </SafeAreaView>
   );
@@ -115,8 +132,10 @@ export function Button({
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || busy, busy }}
       onPress={onPress}
+      // A light tap you can feel as the button goes down, and it gives a little.
+      onPressIn={() => Haptics.selectionAsync().catch(() => {})}
       disabled={disabled || busy}
-      style={({ pressed }) => [styles.button, small && styles.buttonSmall, { backgroundColor: bg, borderColor: border, opacity: disabled ? 0.45 : pressed ? 0.82 : 1 }]}>
+      style={({ pressed }) => [styles.button, small && styles.buttonSmall, { backgroundColor: bg, borderColor: border, opacity: disabled ? 0.45 : pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
       {busy ? (
         <ActivityIndicator color={ink} />
       ) : (
@@ -293,3 +312,20 @@ const text = StyleSheet.create({
   buttonSmall: { fontSize: 15 },
   pill: { fontSize: 12, lineHeight: 16 },
 });
+
+// Grey blocks that gently pulse where content is about to appear (instead of a spinner).
+export function Skeleton({ lines = 3, height = 96 }: { lines?: number; height?: number }) {
+  const c = usePalette();
+  const pulse = useSharedValue(0.5);
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 750 }), -1, true);
+  }, [pulse]);
+  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  return (
+    <View style={{ gap: Space.m }} accessibilityLabel="Loading" accessible>
+      {Array.from({ length: lines }, (_, i) => (
+        <Animated.View key={i} style={[{ height: i === 0 ? height * 0.6 : height, borderRadius: Radius.card, backgroundColor: c.card, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }, style]} />
+      ))}
+    </View>
+  );
+}

@@ -40,13 +40,21 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
   post) or of your till report (it's read in as that day's sales); the photo button to pick
   one you've taken; the paperclip for files (a menu PDF, a till export as CSV or Excel, or
   our spreadsheets filled in). Photos up to 5 MB, files up to 16 MB.
-- **Inbox tab**: everything waiting for you, as a list in three groups: **Urgent** (1 to 3
-  star reviews), **Needs a look** (emails to customers, anything a check flagged, rotas,
-  hours and questions: tap to open them first) and **Simple** (replies to 4 and 5 star
-  reviews and Google posts whose checks all passed: **Approve** right on the row, or
-  **Approve N simple items** at the top). Tap any item to see it in full with Approve,
-  Edit and Skip. After Approve you have 5 seconds to tap **Undo**; **Undo** at the top
-  reverses your last decision. A question for you has an **Answer in Chat** button.
+- **Inbox tab**: everything waiting for you, in four colour-coded groups, each split by
+  type of message: **Urgent** (your rota, questions from DinerAI, "which did you mean?"),
+  **Needs a look** (replies to 1 to 3 star reviews, review questions, email offers,
+  welcome emails for an imported list, hours and menu updates, bank holiday hours,
+  Google profile fixes, facts to save, and anything a check flagged), **Not urgent**
+  (Google posts, special ideas) and **Simple** (replies to 4 and 5 star reviews,
+  birthday emails). On a closed item, the tick approves it straight away (simple and not
+  urgent ones), the eye opens it to read first (urgent and needs a look), and the pencil
+  asks what to change; the arrow at the bottom opens it in full with **Approve**,
+  **Edit** and **Delete** (the app's word for Skip). **Approve all** at the top takes
+  only simple items whose checks all passed. After Approve or Delete you have 5 seconds
+  to tap **Undo**; **Undo** at the top reverses your last decision. After a Delete you
+  can tap why it didn't work (optional). A question for you has an **Answer in Chat**
+  button. On the **Today** tab, **Waiting for you** shows one tile per type with its
+  count: tap a tile to open the Inbox at that type.
 - **Signing up in the app**: tap **Create an account** (your name, the restaurant's name,
   email, a password, your mobile, and tick the terms), or **Continue with Apple** /
   **Continue with Google**. Got a recommendation or invite code? Tap **I have a code**.

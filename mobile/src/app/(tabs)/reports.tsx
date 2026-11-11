@@ -9,7 +9,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RotaWeek } from '@/components/rota-week';
-import { Card, Icon, IconTile, T, TabHeader, usePalette } from '@/components/ui';
+import { Card, Icon, IconTile, T, TabHeader, usePalette, useTabBarSpace } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { getReports, getRota, LoginNeeded, type AppRotaWeek, type ReportItem } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -23,6 +23,7 @@ const VIEWS: { key: View3; label: string }[] = [
 
 export default function Reports() {
   const c = usePalette();
+  const tabSpace = useTabBarSpace();
   const { me, restaurantId, signOut } = useSession();
   // "See the week's rota" on Today opens this with view=rota.
   const params = useLocalSearchParams<{ view?: string }>();
@@ -62,7 +63,7 @@ export default function Reports() {
     <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
       <TabHeader restaurant={me?.restaurants.find((r) => r.id === restaurantId)?.name ?? null} onRestaurant={(me?.restaurants.length ?? 0) > 1 ? () => router.navigate('/more') : undefined} />
       <ScrollView
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabSpace }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

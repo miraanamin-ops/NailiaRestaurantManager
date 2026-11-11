@@ -3,7 +3,7 @@
 // decision runs through the bot's own code.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { cardChecks, cardTitle, sortCards, takingsLine, tierOf, toCard, waitingSummary, type InboxCard } from "@/lib/app/cards";
+import { approveAllEligible, cardChecks, cardTitle, categoryOf, messageType, sortCards, takingsLine, toCard, typeTiles, waitingSummary, type InboxCard } from "@/lib/app/cards";
 import type { Draft } from "@/lib/drafts";
 
 const draft = (fields: Partial<Draft> = {}): Draft =>
@@ -18,9 +18,10 @@ describe("cards", () => {
     expect(cardTitle(draft({ kind: "review_question" }), review)).toBe("Your call on Sam K's 2-star review");
   });
 
-  test("a bad review is urgent; a question is answered, not approved", () => {
-    expect(toCard(draft(), { review, body: "x" }).urgent).toBe(true);
-    expect(toCard(draft(), { review: { ...review, rating: 5 }, body: "x" }).urgent).toBe(false);
+  test("a bad review needs a look, a good one is simple (the owner's table); a question is answered, not approved", () => {
+    expect(toCard(draft(), { review, body: "x" })).toMatchObject({ category: "look", type: { key: "review_poor" }, urgent: false });
+    expect(toCard(draft(), { review: { ...review, rating: 5 }, body: "x" })).toMatchObject({ category: "simple", type: { key: "review_good" } });
+    expect(toCard(draft({ kind: "rota" }), { review: null, body: "x" })).toMatchObject({ category: "urgent", urgent: true });
     expect(toCard(draft({ kind: "review_question" }), { review, body: "x" }).actions).toBe("answer");
     expect(toCard(draft({ kind: "special_idea" }), { review: null, body: "x" }).actions).toEqual(["approve", "skip"]);
     expect(toCard(draft({ kind: "google_post" }), { review: null, body: "x" }).approveHint).toBe("Publishes this post on Google");
@@ -41,23 +42,60 @@ describe("cards", () => {
     expect(cardChecks(null)).toEqual([]);
   });
 
-  test("urgent first, then the ones to open (flagged first), then the simple ones; oldest first in each", () => {
-    const c = (id: string, tier: InboxCard["tier"], flagged: boolean, at: string) => ({ id, tier, urgent: tier === "urgent", flagged, waitingSince: at }) as InboxCard;
-    expect(sortCards([c("old", "look", false, "1"), c("easy", "simple", false, "0"), c("flag", "look", true, "3"), c("urgent", "urgent", false, "4"), c("new", "look", false, "2")]).map((x) => x.id)).toEqual(["urgent", "flag", "old", "new", "easy"]);
+  test("sorted by category (urgent, needs a look, not urgent, simple), then type, then oldest", () => {
+    const c = (id: string, category: InboxCard["category"], key: InboxCard["type"]["key"], at: string) => ({ id, category, type: { key, label: key }, waitingSince: at }) as InboxCard;
+    expect(
+      sortCards([c("good", "simple", "review_good", "0"), c("post", "later", "google_post", "1"), c("offer", "look", "email_offer", "3"), c("rota", "urgent", "rota", "4"), c("poor", "look", "review_poor", "2")]).map((x) => x.id),
+    ).toEqual(["rota", "poor", "offer", "post", "good"]);
   });
 
-  test("only clean 4 to 5 star replies and Google posts are simple (one tap from the list)", () => {
-    const pass = [{ name: "brand", label: "Brand", status: "pass" as const, notes: [] }, { name: "facts", label: "Facts", status: "fixed" as const, notes: [] }];
-    const base = { urgent: false, flagged: false, checks: pass, review: null, actions: ["approve", "edit", "skip"] as InboxCard["actions"] };
-    expect(tierOf({ ...base, kind: "review_reply", review: { author: "A", rating: 5, text: "x" } })).toBe("simple");
-    expect(tierOf({ ...base, kind: "google_post" })).toBe("simple");
-    expect(tierOf({ ...base, kind: "review_reply", review: { author: "A", rating: 2, text: "x" }, urgent: true })).toBe("urgent");
-    expect(tierOf({ ...base, kind: "email_campaign" })).toBe("look"); // customers and a discount: always opened first
-    expect(tierOf({ ...base, kind: "rota" })).toBe("look");
-    expect(tierOf({ ...base, kind: "google_post", flagged: true })).toBe("look");
-    expect(tierOf({ ...base, kind: "google_post", checks: [{ ...pass[0], status: "flagged" }] })).toBe("look");
-    expect(tierOf({ ...base, kind: "google_post", checks: [] })).toBe("look"); // never checked: open it
-    expect(tierOf({ ...base, kind: "review_question", actions: "answer" })).toBe("look");
+  test("the owner's categories for every message type (12 Nov)", () => {
+    expect(messageType("review_reply", 5, false).key).toBe("review_good");
+    expect(messageType("review_reply", 4, false).key).toBe("review_good");
+    expect(messageType("review_reply", 3, false).key).toBe("review_poor");
+    expect(messageType("email_campaign", null, true)).toEqual({ key: "birthday_email", label: "Birthday emails" });
+    expect(messageType("email_campaign", null, false).key).toBe("email_offer");
+    expect(messageType("made_up_kind", null, false).key).toBe("other");
+    const table: Record<string, InboxCard["category"]> = {
+      review_good: "simple",
+      review_poor: "look",
+      review_question: "look",
+      google_post: "later",
+      email_offer: "look",
+      birthday_email: "simple",
+      import_welcome: "look",
+      rota: "urgent",
+      hours_update: "look",
+      menu_update: "look",
+      hours_question: "look",
+      profile_fix: "look",
+      profile_change: "look",
+      agent_question: "urgent",
+      choice: "urgent",
+      special_idea: "later",
+    };
+    for (const [key, category] of Object.entries(table)) expect(categoryOf(key as InboxCard["type"]["key"], false), key).toBe(category);
+  });
+
+  test("a flagged draft always needs a look (urgent stays urgent); Approve all only takes simple ones with every check passed", () => {
+    expect(categoryOf("review_good", true)).toBe("look");
+    expect(categoryOf("google_post", true)).toBe("look");
+    expect(categoryOf("rota", true)).toBe("urgent");
+    const pass = [{ status: "pass" as const }, { status: "fixed" as const }];
+    expect(approveAllEligible("simple", pass)).toBe(true);
+    expect(approveAllEligible("simple", [{ status: "held" as const }])).toBe(false);
+    expect(approveAllEligible("simple", [])).toBe(false); // never checked: not in Approve all
+    expect(approveAllEligible("later", pass)).toBe(false); // not urgent: a tick each, never all at once
+  });
+
+  test("Today's tiles: one per type with its count, none at zero, a flagged one marking its tile", () => {
+    const card = (key: InboxCard["type"]["key"], category: InboxCard["category"]) => ({ type: { key, label: key }, category });
+    expect(typeTiles([card("review_good", "simple"), card("review_good", "simple"), card("review_good", "look"), card("rota", "urgent"), card("google_post", "later")])).toEqual([
+      { key: "rota", label: "rota", category: "urgent", count: 1 },
+      { key: "review_good", label: "review_good", category: "look", count: 3 },
+      { key: "google_post", label: "google_post", category: "later", count: 1 },
+    ]);
+    expect(typeTiles([])).toEqual([]);
   });
 
   test("summary and takings in plain words", () => {

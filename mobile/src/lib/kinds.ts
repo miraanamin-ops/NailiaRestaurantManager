@@ -29,3 +29,21 @@ export function titleIcon(title: string): IconName {
   if (/hours/i.test(title)) return 'time-outline';
   return 'document-text-outline';
 }
+
+// By the message type the Inbox groups under (lib/app/cards.ts MESSAGE_TYPES).
+const BY_TYPE: Record<string, IconName> = {
+  review_good: 'star-outline',
+  review_poor: 'star-half-outline',
+  birthday_email: 'gift-outline',
+  email_offer: 'mail-outline',
+};
+export const typeIcon = (key: string): IconName => BY_TYPE[key] ?? BY_KIND[key] ?? 'document-text-outline';
+
+// Each category's colour and words, the same on Today's tiles and the Inbox.
+export const CATEGORIES = {
+  urgent: { title: 'Urgent', tone: 'ember' },
+  look: { title: 'Needs a look', tone: 'amber' },
+  later: { title: 'Not urgent', tone: 'neutral' },
+  simple: { title: 'Simple', tone: 'signal' },
+} as const;
+export const CATEGORY_ORDER = ['urgent', 'look', 'later', 'simple'] as const;

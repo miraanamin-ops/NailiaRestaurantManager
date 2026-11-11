@@ -9,7 +9,7 @@ import type { OwnerChannel } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { undoLast } from "@/lib/undo";
 import { APP_CHANNEL_TO } from "./chat-rules";
-import { sortCards, takingsLine, toCard, waitingSummary, type CardReview, type InboxCard } from "./cards";
+import { sortCards, takingsLine, toCard, typeTiles, waitingSummary, type CardReview, type InboxCard } from "./cards";
 
 // The app's Today and Inbox (step 50, phase 1): the same drafts the morning brief
 // lists, as cards; and Approve / Edit / Skip / Undo through exactly the code the
@@ -29,10 +29,11 @@ export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
   const campaignIds = drafts.filter((d) => d.kind === "email_campaign").map((d) => d.id);
   const campaigns = campaignIds.length
     ? (check(
-        await getSupabase().from("campaigns").select("draft_id, name").eq("restaurant_id", restaurantId).in("draft_id", campaignIds).returns<{ draft_id: string; name: string }[]>(),
+        await getSupabase().from("campaigns").select("draft_id, name, segment").eq("restaurant_id", restaurantId).in("draft_id", campaignIds).returns<{ draft_id: string; name: string; segment: string | null }[]>(),
       ) ?? [])
     : [];
   const campaignName = new Map(campaigns.map((c) => [c.draft_id, c.name]));
+  const birthdays = new Set(campaigns.filter((c) => c.segment === "birthdays_7d").map((c) => c.draft_id));
   return sortCards(
     drafts.map((d) =>
       toCard(d, {
@@ -40,6 +41,7 @@ export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
         campaignName: campaignName.get(d.id) ?? null,
         previewImageUrl: draftPreviewUrl(d),
         body: d.content,
+        birthday: birthdays.has(d.id),
       }),
     ),
   );
@@ -68,7 +70,7 @@ export async function todayFor(restaurant: Restaurant, now = new Date()) {
   return {
     restaurant: { id: restaurant.id, name: restaurant.name, paused: Boolean(restaurant.paused) },
     takings: takingsLine(amount(day(1)), amount(day(8))),
-    waiting: { ...waitingSummary(cards), next: cards.slice(0, 3).map((c) => ({ id: c.id, title: c.title, urgent: c.urgent })) },
+    waiting: { ...waitingSummary(cards), next: cards.slice(0, 3).map((c) => ({ id: c.id, title: c.title, urgent: c.urgent })), tiles: typeTiles(cards) },
     done,
     rota,
   };
@@ -121,7 +123,7 @@ export async function undoFromApp(restaurant: Restaurant) {
 // taken from the phone), each approved through the bot's own decision code like one tap,
 // so every send-time check still runs. Returns how many went, and anything held back.
 export async function approveSimple(restaurantId: string) {
-  const simple = (await inboxCards(restaurantId)).filter((c) => c.tier === "simple");
+  const simple = (await inboxCards(restaurantId)).filter((c) => c.bulk);
   let approved = 0;
   const notes: string[] = [];
   for (const c of simple) {

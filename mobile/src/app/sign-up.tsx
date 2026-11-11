@@ -8,7 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
-import { Button, Card, Screen, T, usePalette } from '@/components/ui';
+import { Button, Card, Icon, Screen, T, usePalette } from '@/components/ui';
 import { Brand, Space, TapHeight } from '@/constants/theme';
 import { API_URL, ApiError, dropPendingSocial, hasPendingSocial, signUp } from '@/lib/api';
 import { useSession } from '@/lib/session';
@@ -72,9 +72,18 @@ export default function SignUp() {
   }
 
   const page = (path: string) => () => WebBrowser.openBrowserAsync(`${API_URL}${path}`);
+  const backToLogin = () => {
+    dropPendingSocial();
+    if (router.canGoBack()) router.back();
+    else router.replace('/sign-in');
+  };
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Screen>
+        <Pressable onPress={backToLogin} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back to log in" style={styles.back}>
+          <Icon name="chevron-back" size={20} color={c.tint} />
+          <T style={{ color: c.tint, fontWeight: '600' }}>Log in</T>
+        </Pressable>
         <T kind="title">Create your account</T>
         <T quiet>About a minute. Then Dina helps you set up, and DinerAI starts working for your restaurant.</T>
         <Card>
@@ -132,14 +141,7 @@ export default function SignUp() {
           </Card>
         )}
         <Button label="Create my account" onPress={submit} busy={busy} />
-        <Button
-          label="I already have an account"
-          kind="plain"
-          onPress={() => {
-            dropPendingSocial();
-            router.back();
-          }}
-        />
+        <Button label="I already have an account" kind="plain" onPress={backToLogin} />
       </Screen>
     </KeyboardAvoidingView>
   );
@@ -179,6 +181,7 @@ function Link({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', marginTop: Space.m, marginBottom: Space.s, minHeight: 44 },
   input: { minHeight: TapHeight, borderWidth: 1, borderRadius: 12, paddingHorizontal: Space.m, fontSize: 17 },
   tick: { flexDirection: 'row', alignItems: 'center', gap: Space.s, minHeight: 44 },
   box: { width: 28, height: 28, borderRadius: 8, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },

@@ -49,10 +49,10 @@ export default function SettingsScreen() {
   }
 
   if (!s) {
-    return <Screen>{note ? <T>{note.text}</T> : <ActivityIndicator />}</Screen>;
+    return <Screen kind="pushed">{note ? <T>{note.text}</T> : <ActivityIndicator />}</Screen>;
   }
   return (
-    <Screen>
+    <Screen kind="pushed">
       {note && (
         <Card accent={!note.ok}>
           <T>{note.text}</T>
