@@ -23,6 +23,17 @@ import type { Turn } from "./turn";
 // How many earlier messages Claude sees, so it can follow the conversation.
 const HISTORY_LIMIT = 20;
 
+// The owner's change to a draft (after Edit), in their words: the draft is rewritten,
+// checked again and shown back for a decision. Used by WhatsApp and by the app.
+export async function editWithInstructions(turn: Turn, draft: Draft, instruction: string, learning?: Awaited<ReturnType<typeof getLearningContext>>) {
+  const { ctx, send } = turn;
+  if (draft.kind === "rota") return void (await reviseRota(ctx.restaurant, draft, instruction, { now: ctx.now, send, useClaude: true }));
+  if (draft.kind === "profile_change") return correctFact(turn, draft, instruction);
+  if (draft.kind === "email_campaign") return reviseCampaignAndSend(ctx, draft, instruction, send);
+  const rewritten = await rewriteDraft(ctx, learning ?? (await getLearningContext(ctx.restaurantId)), draft, instruction);
+  return reviseAndSend(ctx, draft, instruction, rewritten, send);
+}
+
 // Anything that isn't a command: a decision, an edit, a skip reason, or a chat with Claude.
 export async function handleConversation(turn: Turn, body: string, buttonPayload: string | undefined) {
   const { ctx, owner, send } = turn;
@@ -74,13 +85,7 @@ export async function handleConversation(turn: Turn, body: string, buttonPayload
   // The owner is telling us what to change (after tapping Edit). With the GM live it
   // reads the message first: a change to the draft comes back as an edit; anything
   // else (a new topic) is handled as that, and the draft waits for a decision again.
-  const editFromInstructions = async (draft: Draft) => {
-    if (draft.kind === "rota") return void (await reviseRota(ctx.restaurant, draft, body, { now: ctx.now, send, useClaude: true }));
-    if (draft.kind === "profile_change") return correctFact(turn, draft, body);
-    if (draft.kind === "email_campaign") return reviseCampaignAndSend(ctx, draft, body, send);
-    const rewritten = await rewriteDraft(ctx, learning, draft, body);
-    return reviseAndSend(ctx, draft, body, rewritten, send);
-  };
+  const editFromInstructions = (draft: Draft) => editWithInstructions(turn, draft, body, learning);
   if (active?.waiting_for === "edit_instructions" && (!gmOn || buttonPayload)) return editFromInstructions(active);
 
   // A rota on screen: "Ali can't do Friday" typed straight away is an edit (plain

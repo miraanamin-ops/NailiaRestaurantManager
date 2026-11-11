@@ -7,6 +7,7 @@
 // passcode). Phones without either are never locked. "Use my password instead"
 // logs out.
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { AppState } from 'react-native';
 
@@ -23,6 +24,9 @@ type Session = {
   signOut: () => Promise<void>;
   unlock: () => Promise<boolean>;
   reloadMe: () => Promise<void>;
+  // The restaurant the screens show: the owner's own, or (the builder) the one picked in More.
+  restaurantId: string | null;
+  setRestaurantId: (id: string) => void;
 };
 
 const SessionContext = createContext<Session | null>(null);
@@ -43,6 +47,16 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [me, setMe] = useState<Me | null>(null);
   const [locked, setLocked] = useState(false);
   const backgroundAt = useRef<number | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => {
+    SecureStore.getItemAsync('dinerai.restaurant').then(setPicked).catch(() => {});
+  }, []);
+  const setRestaurantId = useCallback((id: string) => {
+    setPicked(id);
+    SecureStore.setItemAsync('dinerai.restaurant', id).catch(() => {});
+  }, []);
+  // A remembered pick only counts if this login can still see it.
+  const restaurantId = me ? (me.restaurants.find((r) => r.id === picked)?.id ?? me.restaurants[0]?.id ?? null) : null;
 
   const signOut = useCallback(async () => {
     await clearTokens();
@@ -101,5 +115,5 @@ export function SessionProvider({ children }: PropsWithChildren) {
     return result.success;
   }, []);
 
-  return <SessionContext value={{ loading, signedIn, me, locked, signIn, signOut, unlock, reloadMe }}>{children}</SessionContext>;
+  return <SessionContext value={{ loading, signedIn, me, locked, signIn, signOut, unlock, reloadMe, restaurantId, setRestaurantId }}>{children}</SessionContext>;
 }

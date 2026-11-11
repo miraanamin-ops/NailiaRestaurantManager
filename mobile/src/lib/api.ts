@@ -94,5 +94,39 @@ export async function api<T>(path: string, init: { method?: 'GET' | 'POST'; body
   return json as T;
 }
 
+// ---------- Today and Inbox (phase 1) ----------
+
+export type CardCheck = { name: string; label: string; status: 'pass' | 'fixed' | 'flagged' | 'failed' | 'held' | 'blocked'; notes: string[] };
+export type InboxCard = {
+  id: string;
+  kind: string;
+  kindLabel: string;
+  title: string;
+  body: string;
+  audience: string | null;
+  review: { author: string; rating: number; text: string | null } | null;
+  previewImageUrl: string | null;
+  checks: CardCheck[];
+  flagged: boolean;
+  urgent: boolean;
+  actions: ('approve' | 'edit' | 'skip')[] | 'answer';
+  approveHint: string;
+  waitingSince: string;
+};
+export type Today = {
+  restaurant: { id: string; name: string; paused: boolean };
+  takings: { amount: string; change: string | null } | null;
+  waiting: { count: number; line: string; next: { id: string; title: string; urgent: boolean }[] };
+  done: string[];
+};
+export type DecideBody = { action: 'approve' | 'skip' } | { action: 'edit'; instructions: string } | { action: 'reason'; reason: string };
+export type DecideResult = { ok: true; replies: string[]; card: InboxCard | null };
+
+const q = (r: string | null) => (r ? `?r=${encodeURIComponent(r)}` : '');
+export const getToday = (r: string | null) => api<Today>(`/api/app/today${q(r)}`);
+export const getInbox = (r: string | null) => api<{ restaurantId: string; cards: InboxCard[] }>(`/api/app/inbox${q(r)}`);
+export const decide = (draftId: string, body: DecideBody) => api<DecideResult>(`/api/app/drafts/${draftId}`, { method: 'POST', body });
+export const undoLast = (r: string | null) => api<{ message: string }>(`/api/app/undo${q(r)}`, { method: 'POST' });
+
 // The /api/app/me answer.
 export type Me = { email: string; firstName: string | null; isBuilder: boolean; restaurants: { id: string; name: string; active: boolean }[] };

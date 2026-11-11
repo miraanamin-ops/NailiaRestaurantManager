@@ -8,7 +8,7 @@ import { API_URL } from '@/lib/api';
 import { useSession } from '@/lib/session';
 
 export default function More() {
-  const { me, signOut } = useSession();
+  const { me, signOut, restaurantId, setRestaurantId } = useSession();
   return (
     <Screen>
       <T kind="title">More</T>
@@ -17,13 +17,28 @@ export default function More() {
           Logged in as
         </T>
         <T>{me?.email ?? '…'}</T>
-        {me?.restaurants.map((r) => (
-          <T key={r.id} kind="small" quiet>
-            {r.name}
-            {r.active ? '' : ' (not running yet)'}
+        {me && me.restaurants.length === 1 && (
+          <T kind="small" quiet>
+            {me.restaurants[0].name}
+            {me.restaurants[0].active ? '' : ' (not running yet)'}
           </T>
-        ))}
+        )}
       </Card>
+      {me && me.restaurants.length > 1 && (
+        <Card>
+          <T kind="label" quiet>
+            Restaurant shown
+          </T>
+          {me.restaurants.map((r) => (
+            <Button
+              key={r.id}
+              kind={r.id === restaurantId ? 'main' : 'plain'}
+              label={`${r.name}${r.active ? '' : ' (not running)'}`}
+              onPress={() => setRestaurantId(r.id)}
+            />
+          ))}
+        </Card>
+      )}
       <Card>
         <T>Customers, settings, recommending a restaurant and help are coming to the app soon. Until then they’re on the website.</T>
         <Button label="Open DinerAI on the web" kind="plain" onPress={() => WebBrowser.openBrowserAsync(API_URL)} />
