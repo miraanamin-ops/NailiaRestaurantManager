@@ -10,11 +10,11 @@ import { Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, T, usePalette } from '@/components/ui';
 import { Brand, Space, TapHeight } from '@/constants/theme';
-import { API_URL, type ConfirmationData, type GridData, type QuestionData, type RecapData, type SetupComponent, type SetupOption, type SummaryData } from '@/lib/api';
+import { API_URL, type ConfirmationData, type GridData, type QuestionData, type RecapData, type SetupComponent, type SetupOption, type StaffingAnswer, type StaffingData, type SummaryData } from '@/lib/api';
 
 export type CardHandlers = {
   answer: (choiceId: string, label: string) => void; // a button (quick reply, card, step action)
-  pick: (a: { choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | 'unsure'> }) => void; // a question card or recap
+  pick: (a: { choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | 'unsure'>; staffing?: StaffingAnswer }) => void; // a question card or recap
   confirm: (changes: Record<string, string>) => void; // "Looks right" / changes
   upload: (mode: 'camera' | 'photos' | 'files', accept: 'photo' | 'document' | 'spreadsheet' | 'any') => void; // camera, photos or a file
   finish: () => void; // the summary's "Go to DinerAI"
@@ -246,9 +246,12 @@ function Question({ data, done, onPick, onUpload }: { data: QuestionData; done: 
   const [picked, setPicked] = useState<string[]>(data.selected ?? []);
   const [text, setText] = useState('');
   const [grid, setGrid] = useState<Record<string, string[] | 'unsure'>>(() => (data.grid ? Object.fromEntries(data.grid.rows.map((r) => [r.id, r.unsure ? 'unsure' : [...r.marked]])) : {}));
+  const [staffing, setStaffing] = useState<StaffingAnswer>(() => (data.staffing ? Object.fromEntries(data.staffing.rows.map((r) => [r.role, { min: r.min, per: r.per }])) : {}));
+  // The staffing card changes with its own − and +; its typed choice is for WhatsApp.
+  const options = data.staffing ? data.options.filter((o) => o.id !== data.input?.optionId && o.id !== 'ok') : data.options;
   const wordsOnly = Boolean(data.input) && data.options.length === 0;
   const needsWords = Boolean(data.input) && (wordsOnly || picked.includes(data.input!.optionId));
-  const ready = data.grid ? true : (picked.length > 0 || wordsOnly) && (!needsWords || text.trim().length > 0);
+  const ready = data.grid || data.staffing ? true : (picked.length > 0 || wordsOnly) && (!needsWords || text.trim().length > 0);
   const labelOf = (ids: string[]) => (data.grid ? 'These are right' : needsWords ? text.trim() : ids.map((id) => data.options.find((o) => o.id === id)?.label ?? id).join(', '));
 
   const tap = (id: string, label: string) => {
@@ -261,6 +264,7 @@ function Question({ data, done, onPick, onUpload }: { data: QuestionData; done: 
   const confirm = () => {
     if (!ready) return;
     if (data.grid) return onPick({ choiceIds: [data.options[0]?.id ?? 'grid_ok'], grid, label: labelOf([]) });
+    if (data.staffing) return onPick({ choiceIds: ['ok'], staffing, label: 'Save these numbers' });
     const ids = wordsOnly ? [data.input!.optionId] : picked;
     onPick({ choiceIds: ids, ...(needsWords ? { text: text.trim() } : {}), label: labelOf(ids) });
   };
@@ -273,12 +277,14 @@ function Question({ data, done, onPick, onUpload }: { data: QuestionData; done: 
         </Card>
       ) : null}
       {data.quote && <Quote quote={data.quote} />}
+      {data.table ? <TableRows table={data.table} /> : null}
+      {data.staffing ? <StaffingRows data={data.staffing} value={staffing} onChange={setStaffing} disabled={done} /> : null}
       {data.grid ? (
         <AllergenRows grid={data.grid} value={grid} onChange={setGrid} disabled={done} />
       ) : data.layout === 'buttons' && !data.multi && !data.confirm ? (
-        <Choices options={data.options} done={done} chosen={picked[0]} onPick={(o) => tap(o.id, o.label)} />
+        <Choices options={options} done={done} chosen={picked[0]} onPick={(o) => tap(o.id, o.label)} />
       ) : (
-        data.options.map((o) => <OptionCard key={o.id} title={o.label} body={o.body} swatches={o.swatches} selected={picked.includes(o.id)} disabled={done} onPress={() => tap(o.id, o.label)} />)
+        options.map((o) => <OptionCard key={o.id} title={o.label} body={o.body} swatches={o.swatches} selected={picked.includes(o.id)} disabled={done} onPress={() => tap(o.id, o.label)} />)
       )}
       {needsWords && !done && (
         <TextInput
@@ -293,8 +299,98 @@ function Question({ data, done, onPick, onUpload }: { data: QuestionData; done: 
       )}
       {data.upload && !done ? <UploadButtons accept={data.upload.accept} label={data.upload.label} done={done} onUpload={onUpload} /> : null}
       {data.link ? <Button label={data.link.label} kind="plain" onPress={() => WebBrowser.openBrowserAsync(full(data.link!.href))} /> : null}
-      {!done && (data.confirm || data.multi || needsWords || data.grid) && <Button label={data.grid ? 'These are right' : 'Confirm'} onPress={confirm} disabled={!ready} />}
+      {!done && (data.confirm || data.multi || needsWords || data.grid || data.staffing) && <Button label={data.grid ? 'These are right' : data.staffing ? 'Save these numbers' : 'Confirm'} onPress={confirm} disabled={!ready} />}
       {!done && data.skip && <Button label="Skip this question" kind="plain" onPress={() => onPick({ choiceIds: ['skip_q'], label: 'Skip this question' })} />}
+    </View>
+  );
+}
+
+// The past rotas read at setup: one card per person (the website shows a table).
+function TableRows({ table }: { table: { columns: string[]; rows: string[][] } }) {
+  return (
+    <View style={styles.stack}>
+      {table.rows.map((row, i) => (
+        <Card key={i}>
+          <T style={{ fontWeight: '600' }}>{row[0]}</T>
+          <T kind="small" quiet>
+            {row
+              .slice(1)
+              .map((cell, j) => (cell ? `${table.columns[j + 1]}: ${cell}` : null))
+              .filter(Boolean)
+              .join(' · ')}
+          </T>
+        </Card>
+      ))}
+    </View>
+  );
+}
+
+// "How many people you need": one card per role, − and + for the minimum and for
+// "1 more per N orders an hour" (the same answer goes back as on the website).
+const PER_STEPS = [3, 4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 40, 50, 60, 80];
+const nextPer = (per: number | null, dir: 1 | -1): number | null => {
+  if (per === null) return dir === 1 ? PER_STEPS[0] : null;
+  if (dir === 1) return PER_STEPS.find((x) => x > per) ?? null;
+  return [...PER_STEPS].reverse().find((x) => x < per) ?? per;
+};
+function Stepper({ label, value, onDown, onUp, disabled }: { label: string; value: string; onDown: () => void; onUp: () => void; disabled: boolean }) {
+  const c = usePalette();
+  const btn = [styles.stepBtn, { borderColor: c.border }];
+  return (
+    <View style={styles.stepper}>
+      <Pressable onPress={onDown} disabled={disabled} accessibilityRole="button" accessibilityLabel={`Fewer: ${label}`} style={btn}>
+        <T>−</T>
+      </Pressable>
+      <T style={styles.stepValue} accessibilityLiveRegion="polite">
+        {value}
+      </T>
+      <Pressable onPress={onUp} disabled={disabled} accessibilityRole="button" accessibilityLabel={`More: ${label}`} style={btn}>
+        <T>+</T>
+      </Pressable>
+    </View>
+  );
+}
+function StaffingRows({ data, value, onChange, disabled }: { data: StaffingData; value: StaffingAnswer; onChange: (v: StaffingAnswer) => void; disabled: boolean }) {
+  const set = (role: string, v: { min: number; per: number | null }) => onChange({ ...value, [role]: v });
+  const words = (x: { min: number; per: number | null }) => `${x.min}${x.per ? `, +1 per ${x.per}` : ''}`;
+  return (
+    <View style={styles.stack}>
+      {data.rows.map((r) => {
+        const v = value[r.role] ?? { min: r.min, per: r.per };
+        const basis = [r.learned ? `Your rotas: ${words(r.learned)}${r.learned.estimate ? ' (estimate)' : ''}` : null, r.suggested ? `For your size: ${words(r.suggested)}` : null, r.edges].filter(Boolean).join(' · ');
+        return (
+          <Card key={r.role}>
+            <T style={{ fontWeight: '600' }}>{r.label}</T>
+            {r.hint ? (
+              <T kind="small" quiet>
+                {r.hint}
+              </T>
+            ) : null}
+            <T kind="small" quiet style={{ marginTop: Space.s }}>
+              At least, whenever open
+            </T>
+            <Stepper label={`${r.label} at least`} value={String(v.min)} disabled={disabled} onDown={() => set(r.role, { ...v, min: Math.max(0, v.min - 1) })} onUp={() => set(r.role, { ...v, min: Math.min(20, v.min + 1) })} />
+            {r.orders ? (
+              <>
+                <T kind="small" quiet style={{ marginTop: Space.s }}>
+                  1 more per … {r.orders} an hour
+                </T>
+                <Stepper label={`${r.label} 1 more per`} value={v.per ? String(v.per) : 'never'} disabled={disabled} onDown={() => set(r.role, { ...v, per: nextPer(v.per, -1) })} onUp={() => set(r.role, { ...v, per: nextPer(v.per, 1) })} />
+              </>
+            ) : null}
+            {basis ? (
+              <T kind="small" quiet style={{ marginTop: Space.s }}>
+                {basis}
+              </T>
+            ) : null}
+          </Card>
+        );
+      })}
+      {data.notes.slice(1).map((n) => (
+        <T key={n} kind="small" quiet>
+          {n}
+        </T>
+      ))}
     </View>
   );
 }
@@ -424,6 +520,9 @@ function Summary({ summary, onFinish }: { summary: SummaryData; onFinish: () => 
 }
 
 const styles = StyleSheet.create({
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: Space.s, marginTop: 4 },
+  stepBtn: { width: TapHeight, height: TapHeight, borderRadius: TapHeight / 2, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  stepValue: { minWidth: 64, textAlign: 'center', fontWeight: '600' },
   stack: { gap: Space.s },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.s },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: Space.m, paddingVertical: Space.s + 2, minHeight: 44, justifyContent: 'center' },

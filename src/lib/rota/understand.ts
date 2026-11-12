@@ -9,7 +9,7 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { applyToWeek, nextWeekStart, weekFor } from "./build";
 import { findStaff } from "./edits";
 import type { Adjustment } from "./fill";
-import { ROLE_LABELS, ROLES, type Role } from "./rules";
+import { pickRoleWords, ROLES, type Role } from "./rules";
 import { memberLine, removeStaff, saveStaff, team, type TeamMember } from "./staff";
 
 // Anything the owner says about their team or the rota, in their own words
@@ -29,7 +29,12 @@ const TeamReading = z.object({
       ),
       person: z.string().nullable().describe("The person's name as the owner wrote it (or as on the team list)"),
       other_person: z.string().nullable().describe("swap only: the other person"),
-      roles: z.array(z.enum(ROLES)).describe("save_person only: their role(s) if said: kitchen (chef, cook, KP), front (front of house, waiter, server, till), delivery (driver, rider), manager. Empty if not said"),
+      roles: z
+        .array(z.enum(ROLES))
+        .describe(
+          "save_person only: their role(s) if said, main role first, then any they can also do ('Sara is a server who can also do the bar' = [server, bar]). manager (or supervisor), head_chef, chef (cook, sous chef, grill, tandoor, pizza), kitchen_porter (KP, dishwasher, pot wash), server (waiter, waitress), host, bar (bartender, barista), runner (food runner), counter (till, cashier, takeaway counter, phones), driver (own delivery driver). Use kitchen or front only if they just say 'kitchen' or 'front of house'. Empty if not said. For 'X can also do Y' about someone on the team, give their current roles plus Y.",
+        ),
+      can_open_close: z.boolean().nullable().describe("save_person only: true if they can open up and lock up (a key holder), false if the owner says they can't, null if not said"),
       hourly_rate_pounds: z.number().nullable().describe("save_person only: pay per hour in pounds if said (e.g. 12.5)"),
       max_hours_week: z.number().nullable().describe("save_person only: the most hours a week, if said"),
       days: z.array(DAY).describe("Weekdays, Monday = 1 ... Sunday = 7. save_person: the days they're usually free (empty if not said). cant_work / can_work / swap: the days it's about (empty = the whole week for a swap)"),
@@ -66,7 +71,7 @@ export async function readTeamMessage(message: string, input: { team: Pick<TeamM
 }
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
-const roleWords = ROLES.map((r) => ROLE_LABELS[r].toLowerCase()).join(", ");
+const roleWords = pickRoleWords();
 
 async function recentMessages(restaurantId: string) {
   const { data } = await getSupabase().from("messages").select("direction, body").eq("restaurant_id", restaurantId).order("created_at", { ascending: false }).limit(6);
@@ -113,7 +118,7 @@ export async function handleTeamMessage(r: Restaurant, message: string, opts: { 
       const times = a.from && a.until && TIME.test(a.from) && (TIME.test(a.until) || a.until === "23:59") ? { starts: a.from, ends: a.until } : null;
       const { member, created } = await saveStaff(
         r.id,
-        { name, roles: a.roles as Role[], ratePence: rate, maxHours: max, days: a.days.length ? [...new Set(a.days)].sort() : null, starts: times?.starts ?? null, ends: times?.ends ?? null },
+        { name, roles: a.roles as Role[], ratePence: rate, maxHours: max, days: a.days.length ? [...new Set(a.days)].sort() : null, starts: times?.starts ?? null, ends: times?.ends ?? null, canOpenClose: a.can_open_close },
         { today, source: "owner_message", actor: "owner" },
       );
       replies.push(`${created ? "✅ Added to your rota team" : "✅ Updated"}:\n${memberLine(member)}${created && rate === null ? `\n_No hourly rate yet, so their hours won't be costed. Tell me it any time (e.g. "${name} is on £12.50")._` : ""}`);

@@ -12,12 +12,15 @@ import { whatsAppLink } from "@/lib/onboarding/steps";
 import { db, must } from "@/lib/ops/db";
 import { nextWeekStart, rotaUrl, type RotaWeek } from "@/lib/rota/build";
 import { weekLabel } from "@/lib/rota/message";
-import { DEFAULT_RULES, ROLE_LABELS, ROLES, roleKey, rotaSettings } from "@/lib/rota/rules";
+import { areaOf, DRIVER_WORDS, effectiveRules, isKnownRole, PICK_ROLES, ROLE_DEFS, ROLE_LABELS, roleKey, rotaSettings, type Driver } from "@/lib/rota/rules";
 import { availabilityText, team, type TeamMember } from "@/lib/rota/staff";
+import { suggestionFor } from "@/lib/rota/rules-store";
+import { ruleLine, SEAT_WORDS } from "@/lib/rota/presets";
+import type { RotaRule } from "@/lib/rota/types";
 import type { RotaRuleRow } from "@/lib/ops/types";
 import { gbp } from "@/lib/sales/format";
 import { button, input } from "../onboarding/ui";
-import { removeMember, saveMember, saveRules } from "./actions";
+import { removeMember, saveMember, saveRules, useSuggestedRules } from "./actions";
 
 export const metadata: Metadata = { title: "Team · DinerAI", robots: { index: false, follow: false } };
 
@@ -48,7 +51,19 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
   const saved = (must(rulesRes, "rota rules") ?? []) as RotaRuleRow[];
   const week = must(weekRes, "rota week") as RotaWeek | null;
   const settings = rotaSettings((restaurant as { rota_settings?: Record<string, unknown> | null }).rota_settings);
-  const rule = (role: string) => saved.find((x) => roleKey(x.role) === role) ?? null;
+  const rr = restaurant as typeof restaurant & { seats?: string | null; venue_types?: string[] | null };
+  const suggestion = suggestionFor(rr, members);
+  // The roles the rota fills: every saved rule, plus a default for any role on the team.
+  const savedRules: RotaRule[] = saved.map((x) => ({
+    role: x.role,
+    min_on_shift: x.min_on_shift,
+    orders_per_extra_staff: x.orders_per_extra_staff === null ? null : Number(x.orders_per_extra_staff),
+    driver: (x.driver ?? null) as RotaRule["driver"],
+    before_open_minutes: x.before_open_minutes ?? 0,
+    after_close_minutes: x.after_close_minutes ?? 0,
+    preset: x.preset ?? null,
+  }));
+  const shown = effectiveRules(savedRules, members.map((m) => ({ roles: m.roles })), suggestion?.rules ?? []);
   const label = "text-sm font-medium";
   const plan = week?.summary ?? null;
   const target = Number(restaurant.labour_target_pct ?? 0) || null;
@@ -133,7 +148,8 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
                                 shifts.map((x, i) => (
                                   <span
                                     key={i}
-                                    className={`rounded px-1 py-0.5 font-mono text-[10px] font-medium ${roleKey(x.role) === "kitchen" ? "bg-[#c8f03c]/15 text-[#c8f03c]" : "bg-[#bfe6ff]/12 text-[#bfe6ff]"}`}
+                                    className={`rounded px-1 py-0.5 font-mono text-[10px] font-medium ${areaOf(roleKey(x.role)) === "kitchen" ? "bg-[#c8f03c]/15 text-[#c8f03c]" : "bg-[#bfe6ff]/12 text-[#bfe6ff]"}`}
+                                    title={ROLE_LABELS[roleKey(x.role)] ?? x.role}
                                   >
                                     {hm(x.start)}–{hm(x.end)}
                                   </span>
@@ -192,9 +208,12 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-[14px] font-medium text-[#edefe8]">{m.name}</span>
-                            {m.roles.map((x) => (
-                              <Pill key={x}>{ROLE_LABELS[roleKey(x)] ?? x}</Pill>
+                            {m.roles.map((x, i) => (
+                              <Pill key={x}>
+                                {i === 0 ? (ROLE_LABELS[roleKey(x)] ?? x) : `also ${(ROLE_LABELS[roleKey(x)] ?? x).toLowerCase()}`}
+                              </Pill>
                             ))}
+                            {m.canOpenClose && <Pill tone="signal">keys</Pill>}
                           </div>
                           <div className="truncate text-[12px] text-[#a3a99d]">
                             {availabilityText(m.availability)}
@@ -229,31 +248,75 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
             </Panel>
           </Section>
 
-          <Section title="Rota rules">
+          <Section title="Who you need on shift">
             <Panel>
+              {suggestion && (
+                <form action={useSuggestedRules} className="mb-4 space-y-2 rounded-xl border border-[#2a2f25] p-3">
+                  <input type="hidden" name="r" value={restaurantId} />
+                  <p className="text-[13px] text-[#a3a99d]">For {SEAT_WORDS[suggestion.band]}, with your team, I&apos;d suggest:</p>
+                  <ul className="space-y-0.5 text-[13px] text-[#edefe8]">
+                    {suggestion.rules.map((x) => (
+                      <li key={x.role}>{ruleLine(x)}</li>
+                    ))}
+                  </ul>
+                  {suggestion.notes.map((n) => (
+                    <p key={n} className="text-[12px] text-[#ffb23d]">
+                      {n}
+                    </p>
+                  ))}
+                  <button className={btnSecondary}>Use these numbers</button>
+                </form>
+              )}
               <form action={saveRules} className="space-y-4">
                 <input type="hidden" name="r" value={restaurantId} />
+                <input type="hidden" name="roles" value={shown.map((x) => x.role).join(",")} />
                 <p className="text-[13px] text-[#a3a99d]">
-                  Whenever you&apos;re open: at least this many in each role, plus one more for every so many forecast orders in an hour (empty = never more).
+                  Whenever you&apos;re open: at least this many in each role, plus one more for every so many orders in an hour (empty = never more). Before opening and after closing: how long they start early or stay on.
                 </p>
-                <div className="space-y-2">
-                  {ROLES.map((role) => {
-                    const x = rule(role) ?? DEFAULT_RULES[role];
+                {shown.length === 0 && <p className="text-[13px] text-[#a3a99d]">Add your team first: a rule appears for each role on it.</p>}
+                <div className="space-y-3">
+                  {shown.map((x) => {
+                    const role = x.role;
+                    const driver = (x.driver ?? "all") as Driver;
                     return (
-                      <div key={role} className="grid grid-cols-[1fr_5rem_5rem] items-center gap-2">
-                        <span className={label}>{ROLE_LABELS[role]}</span>
-                        <label className="text-xs text-stone-500">
-                          At least
-                          <input name={`min_${role}`} type="number" min={0} max={20} defaultValue={x.min_on_shift} className={input} />
-                        </label>
-                        <label className="text-xs text-stone-500">
-                          +1 per orders/h
-                          <input name={`per_${role}`} type="number" min={1} step="0.5" defaultValue={x.orders_per_extra_staff ?? ""} className={input} />
-                        </label>
-                      </div>
+                      <fieldset key={role} className="space-y-2 rounded-xl border border-[#1e221b] p-3">
+                        <legend className={`${label} px-1`}>{ROLE_LABELS[role] ?? role}</legend>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          <label className="text-xs text-stone-500">
+                            At least
+                            <input name={`min_${role}`} type="number" min={0} max={20} defaultValue={x.min_on_shift} className={input} />
+                          </label>
+                          <label className="text-xs text-stone-500">
+                            +1 per … an hour
+                            <input name={`per_${role}`} type="number" min={1} step="0.5" defaultValue={x.orders_per_extra_staff ?? ""} className={input} />
+                          </label>
+                          <label className="text-xs text-stone-500">
+                            Counting
+                            <select name={`driver_${role}`} defaultValue={driver} className={input}>
+                              {(["all", "eat_in", "takeaway", "delivery", "none"] as Driver[]).map((d) => (
+                                <option key={d} value={d}>
+                                  {d === "none" ? "nothing (fixed)" : DRIVER_WORDS[d]}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-xs text-stone-500">
+                            Minutes before opening
+                            <input name={`before_${role}`} type="number" min={0} max={180} step={15} defaultValue={x.before_open_minutes ?? 0} className={input} />
+                          </label>
+                          <label className="text-xs text-stone-500">
+                            Minutes after closing
+                            <input name={`after_${role}`} type="number" min={0} max={180} step={15} defaultValue={x.after_close_minutes ?? 0} className={input} />
+                          </label>
+                        </div>
+                      </fieldset>
                     );
                   })}
                 </div>
+                <label className="flex items-center gap-2 text-[13px] text-[#edefe8]">
+                  <input type="checkbox" name="key_holder" value="yes" defaultChecked={settings.key_holder} />
+                  Someone who can open up and lock up on the first and last shift of each day (people marked &ldquo;can open and close&rdquo;)
+                </label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs text-stone-500">
                     Shortest shift (hours)
@@ -296,20 +359,41 @@ function hm(minutes: number) {
 
 function MemberForm({ restaurantId, member }: { restaurantId: string; member: TeamMember | null }) {
   const day = (wd: number) => member?.availability.find((a) => a.weekday === wd) ?? null;
+  const keys = (member?.roles ?? []).map(roleKey);
+  const main = keys[0] ?? null;
+  const also = keys.slice(1);
   return (
     <form action={saveMember} className="space-y-3">
       <input type="hidden" name="r" value={restaurantId} />
       {member && <input type="hidden" name="staff_id" value={member.id} />}
       <input name="name" placeholder="Name, e.g. Ali" defaultValue={member?.name ?? ""} className={input} required maxLength={40} />
-      <fieldset className="flex flex-wrap gap-3 text-sm">
-        <legend className="sr-only">Roles</legend>
-        {ROLES.map((role) => (
-          <label key={role} className="flex items-center gap-1.5">
-            <input type="checkbox" name={`role_${role}`} value="yes" defaultChecked={member ? member.roles.map(roleKey).includes(role) : role === "kitchen"} />
-            {ROLE_LABELS[role]}
-          </label>
-        ))}
+      <label className="block text-xs text-stone-500">
+        Main role
+        <select name="role_main" defaultValue={main ?? "chef"} className={input}>
+          {[...PICK_ROLES, "kitchen" as const, "front" as const].map((role) => (
+            <option key={role} value={role}>
+              {ROLE_LABELS[role]}
+              {role === "kitchen" || role === "front" ? " (all-round)" : ` (${ROLE_DEFS[role].hint})`}
+            </option>
+          ))}
+          {main && !isKnownRole(main) && <option value={main}>{main}</option>}
+        </select>
+      </label>
+      <fieldset className="text-sm">
+        <legend className="text-xs text-stone-500">Can also do</legend>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1.5">
+          {PICK_ROLES.map((role) => (
+            <label key={role} className="flex items-center gap-1.5">
+              <input type="checkbox" name={`also_${role}`} value="yes" defaultChecked={also.includes(role)} />
+              {ROLE_LABELS[role]}
+            </label>
+          ))}
+        </div>
       </fieldset>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="can_open_close" value="yes" defaultChecked={member?.canOpenClose ?? false} />
+        Can open up and lock up
+      </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="text-xs text-stone-500">
           Hourly rate (£)

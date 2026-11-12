@@ -119,7 +119,7 @@ export default function Setup() {
     },
     pick: (a) => {
       setChosen((x) => ({ ...x, [m.id]: a.choiceIds.join(',') }));
-      send({ kind: 'pick', messageId: m.id, choiceIds: a.choiceIds, ...(a.text ? { text: a.text } : {}), ...(a.grid ? { grid: a.grid } : {}), label: a.label.slice(0, 200) }, a.label);
+      send({ kind: 'pick', messageId: m.id, choiceIds: a.choiceIds, ...(a.text ? { text: a.text } : {}), ...(a.grid ? { grid: a.grid } : {}), ...(a.staffing ? { staffing: a.staffing } : {}), label: a.label.slice(0, 200) }, a.label);
     },
     confirm: (changes) => send({ kind: 'confirm', messageId: m.id, changes }, Object.keys(changes).length ? `Changes: ${Object.values(changes).join(', ')}` : 'Looks right'),
     upload,

@@ -243,7 +243,24 @@ export type QuestionData = {
   selected?: string[];
   grid?: GridData | null;
   link?: { label: string; href: string } | null;
+  // The past rotas read at setup, one row per person.
+  table?: { columns: string[]; rows: string[][] } | null;
+  // How many people are needed on shift: one row per role, with − and +.
+  staffing?: StaffingData | null;
 };
+export type StaffingRow = {
+  role: string;
+  label: string;
+  hint: string;
+  min: number;
+  per: number | null;
+  orders: string;
+  suggested: { min: number; per: number | null } | null;
+  learned: { min: number; per: number | null; estimate: boolean } | null;
+  edges: string | null;
+};
+export type StaffingData = { rows: StaffingRow[]; notes: string[]; source: 'learned' | 'suggested' | 'mixed' };
+export type StaffingAnswer = Record<string, { min: number; per: number | null }>;
 export type ConfirmationData = { title: string; fields: { key: string; label: string; value: string | null; multiline?: boolean; colour?: string }[]; image?: string | null };
 export type SummaryData = {
   done: number;
@@ -279,7 +296,7 @@ export type SetupAction =
   | { kind: 'start' }
   | { kind: 'message'; text: string }
   | { kind: 'answer'; messageId: string; choiceId: string; label: string }
-  | { kind: 'pick'; messageId: string; choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | 'unsure'> }
+  | { kind: 'pick'; messageId: string; choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | 'unsure'>; staffing?: StaffingAnswer }
   | { kind: 'confirm'; messageId: string; changes: Record<string, string> }
   | { kind: 'skip' }
   | { kind: 'jump'; step: string }

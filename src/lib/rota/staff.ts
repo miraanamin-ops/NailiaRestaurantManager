@@ -20,6 +20,7 @@ export type TeamMember = {
   ratePence: number | null;
   maxHours: number | null;
   availability: { weekday: number; starts: string; ends: string }[];
+  canOpenClose: boolean;
 };
 
 const DAY_SHORT = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -41,6 +42,7 @@ export async function team(restaurantId: string, today: string): Promise<TeamMem
       roles: p.roles,
       ratePence: valueOn(payRows.filter((r) => r.staff_id === p.id), today)?.hourly_pence ?? null,
       maxHours: p.max_hours_week === null ? null : Number(p.max_hours_week),
+      canOpenClose: Boolean(p.can_open_close),
       availability: spans
         .filter((s) => s.staff_id === p.id)
         .map((s) => ({ weekday: s.weekday, starts: s.starts.slice(0, 5), ends: s.ends.slice(0, 5) }))
@@ -66,8 +68,15 @@ export function availabilityText(a: TeamMember["availability"]) {
     .join("; ");
 }
 
+// "chef (also counter)"
+export function rolesText(roles: string[]) {
+  const [main, ...also] = roles.map((r) => roleLabel(roleKey(r)).toLowerCase());
+  if (!main) return "no role";
+  return also.length ? `${main} (also ${also.join(", ")})` : main;
+}
+
 export function memberLine(m: TeamMember) {
-  return `- *${m.name}*: ${m.roles.map((r) => roleLabel(roleKey(r)).toLowerCase()).join(", ") || "no role"}, ${m.ratePence !== null ? `${gbp(m.ratePence / 100, true)}/h` : "no rate"}${m.maxHours !== null ? `, max ${m.maxHours}h` : ""}; ${availabilityText(m.availability)}`;
+  return `- *${m.name}*: ${rolesText(m.roles)}${m.canOpenClose ? ", can open and lock up" : ""}, ${m.ratePence !== null ? `${gbp(m.ratePence / 100, true)}/h` : "no rate"}${m.maxHours !== null ? `, max ${m.maxHours}h` : ""}; ${availabilityText(m.availability)}`;
 }
 
 // Adds someone, or updates them if they're already on the team (same name).
@@ -109,6 +118,11 @@ export async function saveStaff(
       "add staff",
     ) as StaffRow;
     id = row.id;
+  }
+  if (typeof input.canOpenClose === "boolean" && input.canOpenClose !== existing?.canOpenClose) {
+    const res = await db().from("staff").update({ can_open_close: input.canOpenClose }).eq("restaurant_id", restaurantId).eq("id", id!);
+    // Before migration 069 there's no such column: the rest still saves.
+    if (res.error && !/can_open_close/.test(res.error.message)) must(res, "can open and close");
   }
   if (input.ratePence !== null && input.ratePence !== existing?.ratePence) {
     must(

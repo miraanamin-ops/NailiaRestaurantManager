@@ -168,13 +168,15 @@ export const TOOLS: DinaTool[] = [
     name: "save_team",
     status: "Saving your team…",
     description:
-      "Step 8: note the team once the owner has told you who works there (from chat or the staff list they sent) and their labour target; code shows it on the team card and saves it when they tap Looks right. staff: each person with a role (kitchen, front, delivery or manager), hourly rate in pounds and contracted hours a week if given (null if not), and their availability if given: days in their words (e.g. 'Fri-Sun', 'weekdays', 'Mon Wed Fri'; null = any day), times in their words (e.g. '5pm-11pm', 'evenings', 'lunchtimes'; null = any time), max_hours a week (null if not given). manager: who runs the site day to day (a name on the list, or 'me' for the owner), or null. cover_rules: the least of each role on every shift, as they answered when you asked (always ask; empty only if they said there are no fixed rules). labour_target_pct: their target as a % of sales, or null if they didn't pick one (code uses 30%, flagged). Only what they said: never guess a rate or availability.",
+      "Step 8: note the team once the owner has told you who works there (from chat, the staff list they sent, or the people on their rotas); code shows it on the team card and saves it when they tap Looks right. staff: each person with their main role (manager, head_chef, chef, kitchen_porter, server, host, bar, runner, counter, driver; kitchen or front only for someone who does a bit of everything there), also_roles: anything else they can do (empty if not said), hourly rate in pounds and contracted hours a week if given (null if not), their availability if given: days in their words (e.g. 'Fri-Sun', 'weekdays', 'Mon Wed Fri'; null = any day), times in their words (e.g. '5pm-11pm', 'evenings', 'lunchtimes'; null = any time), max_hours a week (null if not given), and can_open_close: true if they can open up and lock up (null if not said). manager: who runs the site day to day (a name on the list, or 'me' for the owner), or null. Only what they said or the rotas show: never guess a rate. How many people are needed on shift and the labour target are asked by code afterwards: don't ask them.",
     schema: z.object({
       staff: z
         .array(
           z.object({
             name: words(60),
             role: z.enum(STAFF_ROLES),
+            also_roles: z.array(z.enum(STAFF_ROLES)).max(4).optional(),
+            can_open_close: z.boolean().nullable().optional(),
             hourly_rate: z.number().nullable(),
             contracted_hours: z.number().nullable(),
             days: words(40).nullable(),
@@ -184,8 +186,6 @@ export const TOOLS: DinaTool[] = [
         )
         .max(40),
       manager: words(60).nullable(),
-      cover_rules: z.array(z.object({ role: z.enum(STAFF_ROLES), min_on_shift: z.number().int() })).max(4),
-      labour_target_pct: z.number().nullable(),
     }),
     async run(ctx, input) {
       const { saveTeam } = await import("./ops-step");

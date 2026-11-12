@@ -17,6 +17,7 @@ import { getRotaInputs } from "./inputs";
 import { publishedText, rotaDraftText, rotaWeekMessages, weekLabel, type Previous } from "./message";
 import { signLink } from "@/lib/signed-links";
 import { effectiveRules, openingFor, rotaSettings } from "./rules";
+import { sharesFor, suggestionFor } from "./rules-store";
 import type { RotaStaff, Weekday } from "./types";
 
 // The rota suggester, start to finish (docs/pilot-sprint.md, "Rota suggester"):
@@ -129,10 +130,12 @@ export async function planWeek(r: Restaurant, weekStart: string, now: Date, adju
   const hasHourly = ahead.days.some((d) => d.orders_by_hour.length);
   const basis = weeks >= MIN_HISTORY_WEEKS && hasHourly ? "forecast" : "minimum";
   const minimumReason = basis === "forecast" ? undefined : weeks < MIN_HISTORY_WEEKS ? ("history" as const) : ("hourly" as const);
-  const rr = r as Restaurant & { special_hours?: Record<string, { hours: string }> | null; rota_settings?: Record<string, unknown> | null };
+  const rr = r as Restaurant & { special_hours?: Record<string, { hours: string }> | null; rota_settings?: Record<string, unknown> | null; seats?: string | null; venue_types?: string[] | null };
   const input: FillInput = {
     staff: inputs.staff,
-    rules: effectiveRules(inputs.rules, inputs.staff),
+    // Saved rules first; for a role with none, the suggestion for the restaurant's size (when setup asked it), else the old defaults.
+    rules: effectiveRules(inputs.rules, inputs.staff, suggestionFor(rr, inputs.staff)?.rules ?? []),
+    shares: sharesFor(rr),
     settings: rotaSettings(rr.rota_settings),
     basis,
     adjustments,

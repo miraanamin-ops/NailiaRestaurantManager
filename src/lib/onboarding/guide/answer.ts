@@ -17,6 +17,7 @@ import { saveProfileFields } from "@/lib/profile-edits";
 import { dishKey } from "../dina/facts-content";
 import { DEFAULT_DISCOUNT_CAP, DEFAULT_SIGNUP_REWARD, rewardsProblems, timingProblems } from "../dina/ops-content";
 import type { MenuCategory } from "../profile-data";
+import type { StaffingAnswer } from "@/components/chat/types";
 import { isRecap, questionById, questionsFor, recapId, resolution, withReask, withRecord, withoutRecord } from "./questions";
 
 // Saving the owner's answer to one of code's questions (guide/questions.ts):
@@ -69,7 +70,7 @@ export function timeRange(text: string): [string, string] | null {
 
 export type GridAnswer = Record<string, string[] | "unsure">;
 
-export async function answerQuestion(input: { restaurantId: string; q: string; picked: string[]; typed?: string | null; channel: Channel; grid?: GridAnswer | null }): Promise<AnswerResult> {
+export async function answerQuestion(input: { restaurantId: string; q: string; picked: string[]; typed?: string | null; channel: Channel; grid?: GridAnswer | null; staffing?: StaffingAnswer | null }): Promise<AnswerResult> {
   const { restaurantId: id, q, channel } = input;
   const typed = input.typed?.trim() || null;
   const pick = input.picked[0] ?? (typed ? OWN_ID : null);
@@ -133,6 +134,40 @@ export async function answerQuestion(input: { restaurantId: string; q: string; p
     await saveProfileFields(r, { menu }, q === "menu.signature" ? "Signature dishes, with Dina at setup" : "Best and slowest sellers, with Dina at setup");
     await record(id, q, channel);
     return ok(input.picked.length ? "Got it, thanks." : "No problem.");
+  }
+
+  // Past rotas (owner's plan, 12 Nov 2026): none to send, or the reading checked.
+  if (q === "team.rotas") {
+    if (pick !== "none") return no("Send your rotas as photos, PDFs or a spreadsheet, or tap I don't have them.");
+    await record(id, q, channel);
+    return ok("No problem. I'll suggest numbers for your size instead, and learn from the rotas I make with you.");
+  }
+  if (q === "team.rotas_check") {
+    const { teamData, correctRotaImport } = await import("@/lib/rota/import");
+    const d = (await teamData(id)).rota_import;
+    if (!d?.shifts.length) return no("Send your rotas first.");
+    if (pick === OWN_ID) {
+      if (!typed) return no("Tell me what's wrong, for example: Sara is a server, not bar.");
+      const fixed = await correctRotaImport(id, typed);
+      return no(fixed.ok ? `${fixed.text} Have another look.` : fixed.text);
+    }
+    if (pick !== "ok") return no("Is the reading right? Tap That's right, or tell me what's wrong.");
+    await patchStepData(id, "team", { rota_import: { ...d, confirmed: true } });
+    await record(id, q, channel);
+    const { isOpenShift } = await import("@/lib/rota/learn");
+    const people = new Set(d.shifts.map((s) => s.name).filter((n) => !isOpenShift(n))).size;
+    return ok(`Great. I'll learn from those weeks, and I've got ${people} ${people === 1 ? "name" : "names"} to start your team with.`);
+  }
+  if (q === "team.staffing") return answerStaffing(id, pick, typed, input.staffing ?? null, channel);
+  if (q === "team.labour") {
+    const fromPick = pick?.startsWith("pct") ? Number(pick.slice(3)) : null;
+    const fromText = pick === OWN_ID && typed ? Number(typed.replace(/[^\d.]/g, "")) : null;
+    const pct = fromPick ?? fromText;
+    if (pct === null || !Number.isFinite(pct)) return no(pick === OWN_ID ? "Type it as a percentage, for example 28%." : "Pick a share, or type your own.");
+    if (pct < 10 || pct > 60) return no(`${pct}% would be unusual. Most UK independents aim for 25 to 35% of sales. Could you check the number?`);
+    await saveAndConfirmFields(r, { labour_target_pct: Math.round(pct) }, "Labour target, with Dina at setup");
+    await record(id, q, channel);
+    return ok(`Saved: I'll track staff costs against ${Math.round(pct)}% of sales, on each rota and in your Monday report.`);
   }
 
   // The team: typing it in the chat (a sheet or file sent on the card answers it too).
@@ -285,6 +320,43 @@ export async function skipChapter(restaurantId: string, chapter: ChapterKey, cha
   // Nothing left to check in it, so no recap either.
   await confirmRecap(restaurantId, chapter, channel);
   return skipped;
+}
+
+// "How many people you need": the card's numbers (as changed with + and −), or a
+// change in words ("2 chefs, a porter only when busy"), saved as the rota's rules;
+// then next week worked out with them, to say where the team falls short.
+async function answerStaffing(id: string, pick: string | null, typed: string | null, staffing: StaffingAnswer | null, channel: Channel): Promise<AnswerResult> {
+  const [{ staffingFor, coverageCheck, readStaffingWords }, { rulesFromCard, parseStaffingWords, staffingLine }, { saveRotaRules, savedRotaRules }] = await Promise.all([
+    import("@/lib/rota/import"),
+    import("@/lib/rota/import-rules"),
+    import("@/lib/rota/rules-store"),
+  ]);
+  const s = await staffingFor(id);
+  const card = (await loadFlow(id).then(({ state }) => stepState(state, "team").data.staffing_card as typeof s.card | undefined)) ?? s.card;
+  if (!card.rows.length) return no("There's nobody on your team yet, so there's nothing to staff. Tell me who works for you first.");
+  let answer: StaffingAnswer | null = staffing;
+  if (pick === OWN_ID) {
+    if (!typed) return no("Tell me what to change, for example: 2 chefs, a porter only when busy.");
+    const read = parseStaffingWords(typed, card.rows);
+    let changes = read.changes;
+    if (read.unread.length) {
+      const more = await readStaffingWords(typed, card.rows).catch(() => null);
+      if (more) changes = { ...more, ...changes };
+    }
+    if (!Object.keys(changes).length) return no(`I couldn't tell what to change there. Try something like "2 chefs" or "1 more server per 10 eat-in orders".`);
+    answer = changes;
+  } else if (pick !== "ok") return no("Tap Looks right, or tell me what to change.");
+  const { rules, problems } = rulesFromCard(card, answer, s.learned, s.suggestion);
+  if (problems.length) return no(problems.join(" "));
+  const before = await savedRotaRules(id).catch(() => []);
+  await saveRotaRules(id, rules, { source: "owner_message", actor: "owner", detail: "How many people are needed on shift, with Dina at setup", before });
+  const lines = rules.map((x) => staffingLine({ label: card.rows.find((row) => row.role === x.role)?.label ?? x.role, min: x.min_on_shift, per: x.orders_per_extra_staff, orders: card.rows.find((row) => row.role === x.role)?.orders ?? "" }));
+  // The card keeps what was saved, so a later change starts from it.
+  const savedCard = { ...card, rows: card.rows.map((row) => { const x = rules.find((y) => y.role === row.role); return x ? { ...row, min: x.min_on_shift, per: x.orders_per_extra_staff } : row; }) };
+  await patchStepData(id, "team", { staffing_saved: lines, staffing_card: savedCard });
+  await record(id, "team.staffing", channel);
+  const coverage = await coverageCheck(id).catch(() => null);
+  return ok(`Saved:\n${lines.map((l) => `• ${l}`).join("\n")}${coverage ? `\n\n${coverage}` : ""}`);
 }
 
 // What code says after a setting is saved.

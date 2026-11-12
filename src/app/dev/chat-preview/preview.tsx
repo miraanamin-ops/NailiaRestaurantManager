@@ -93,6 +93,73 @@ export const SCENES: Record<string, { progress: ProgressData; messages: ChatMess
       { id: "2", role: "dina", text: "Send me photos of each page, or a PDF if you have one.", component: { type: "upload", accept: "document", multiple: true, label: "Add menu photos or a PDF" } },
     ],
   },
+  team: {
+    progress: progress(["done", "done", "done", "done", "done", "in_progress"]),
+    typing: false,
+    skippable: true,
+    messages: [
+      {
+        id: "1",
+        role: "dina",
+        text: "I read 2 weeks (26 Oct to 8 Nov): 4 people and 47 shifts. Omar doesn't add up to the hours on your rota, so please check that row first. Is this right?",
+        component: {
+          type: "question",
+          card: {
+            q: "team.rotas_check",
+            options: [
+              { id: "ok", label: "That's right" },
+              { id: "own", label: "Something's wrong" },
+            ],
+            multi: false,
+            confirm: true,
+            skip: true,
+            layout: "buttons",
+            input: { optionId: "own", placeholder: "e.g. Sara is a server, not bar" },
+            upload: { accept: "any", multiple: true, label: "Send a clearer copy" },
+            table: {
+              columns: ["Name", "Role", "Shifts", "Usually"],
+              rows: [
+                ["Aisha", "Chef", "14", "Mon Tue Wed Thu Fri Sat Sun, 4:30pm to 11pm"],
+                ["Omar", "Server", "12", "Tue Wed Thu Fri Sat Sun, 5pm to 12am"],
+                ["Ravi", "Kitchen porter", "14", "Mon Tue Wed Thu Fri Sat Sun, 6pm to 11:30pm"],
+                ["Tomasz", "Chef", "4", "Fri Sat, 7pm to 10pm"],
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: "2",
+        role: "dina",
+        text: "How many people do you need on shift? I've filled this in from your rotas where I could, and from what restaurants with 30 to 60 seats usually need for the rest. Change anything that's not right for you, then confirm. I'll use it for every rota I suggest.",
+        component: {
+          type: "question",
+          card: {
+            q: "team.staffing",
+            options: [
+              { id: "ok", label: "Looks right" },
+              { id: "own", label: "Change something" },
+            ],
+            multi: false,
+            confirm: true,
+            skip: true,
+            layout: "buttons",
+            input: { optionId: "own", placeholder: "e.g. 2 chefs, a porter only when busy" },
+            staffing: {
+              rows: [
+                { role: "manager", label: "Manager", hint: "manager or supervisor who runs the shift", min: 1, per: null, orders: "", suggested: { min: 1, per: null }, learned: null, edges: "Starts 30 minutes before opening and stays 30 minutes after closing" },
+                { role: "chef", label: "Chef", hint: "chef, cook, sous chef, grill or tandoor", min: 1, per: 18, orders: "orders", suggested: { min: 2, per: 15 }, learned: { min: 1, per: 18, estimate: false }, edges: "Starts 30 minutes before opening" },
+                { role: "kitchen_porter", label: "Kitchen porter", hint: "washes up, cleans, helps with prep (KP, dishwasher)", min: 1, per: null, orders: "orders", suggested: { min: 1, per: null }, learned: { min: 1, per: null, estimate: false }, edges: "Stays 30 minutes after closing" },
+                { role: "server", label: "Server", hint: "waiter or waitress", min: 1, per: 8, orders: "eat-in orders", suggested: { min: 1, per: 8 }, learned: null, edges: "Starts 15 minutes before opening and stays 15 minutes after closing" },
+              ],
+              notes: [],
+              source: "mixed",
+            },
+          },
+        },
+      },
+    ],
+  },
   summary: {
     progress: progress(["done", "skipped", "done", "done", "done", "partial"]),
     typing: false,

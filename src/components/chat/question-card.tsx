@@ -4,6 +4,8 @@ import { card, primary, secondary } from "./styles";
 import type { QuestionCardData, QuestionOption } from "./types";
 import { UploadCard } from "./upload-card";
 import { AllergenGrid, initialGrid, type GridValue } from "./allergen-grid";
+import { DataTable, initialStaffing, StaffingEditor } from "./staffing-editor";
+import type { StaffingAnswer } from "./types";
 
 // One of setup's questions (lib/onboarding/guide/cards.ts). A tap selects (it's
 // highlighted); on a decision nothing is saved until Confirm, and the pick can be
@@ -11,7 +13,7 @@ import { AllergenGrid, initialGrid, type GridValue } from "./allergen-grid";
 // words ("Choose my own") opens a box. "Skip this question" moves to the next
 // question and never skips anything else. Once answered, it stays as a record.
 
-export type QuestionAnswer = { choiceIds: string[]; text?: string; label: string; grid?: GridValue };
+export type QuestionAnswer = { choiceIds: string[]; text?: string; label: string; grid?: GridValue; staffing?: StaffingAnswer };
 
 export function QuestionCard({
   data,
@@ -29,10 +31,13 @@ export function QuestionCard({
   const [picked, setPicked] = useState<string[]>(data.selected ?? []);
   const [text, setText] = useState("");
   const [grid, setGrid] = useState<GridValue>(() => (data.grid ? initialGrid(data.grid) : {}));
+  const [staffing, setStaffing] = useState<StaffingAnswer>(() => (data.staffing ? initialStaffing(data.staffing) : {}));
+  // The staffing card is changed with its own + and −; its typed choice is for WhatsApp.
+  const options = data.staffing ? data.options.filter((o) => o.id !== data.input?.optionId && o.id !== "ok") : data.options;
   // Only words to type (no choices): the box is always there.
   const wordsOnly = Boolean(data.input) && data.options.length === 0;
   const needsWords = data.input && (wordsOnly || picked.includes(data.input.optionId));
-  const ready = data.grid ? true : (picked.length > 0 || wordsOnly) && (!needsWords || text.trim().length > 0);
+  const ready = data.grid || data.staffing ? true : (picked.length > 0 || wordsOnly) && (!needsWords || text.trim().length > 0);
   const labelOf = (ids: string[]) => (data.grid ? "These are right" : needsWords ? text.trim() : ids.map((id) => data.options.find((o) => o.id === id)?.label ?? id).join(", "));
 
   const tap = (o: QuestionOption) => {
@@ -45,6 +50,7 @@ export function QuestionCard({
   const confirm = () => {
     if (!ready) return;
     if (data.grid) return onAnswer({ choiceIds: [data.options[0]?.id ?? "grid_ok"], grid, label: labelOf([]) });
+    if (data.staffing) return onAnswer({ choiceIds: ["ok"], staffing, label: "Save these numbers" });
     const ids = wordsOnly ? [data.input!.optionId] : picked;
     onAnswer({ choiceIds: ids, ...(needsWords ? { text: text.trim() } : {}), label: labelOf(ids) });
   };
@@ -72,6 +78,8 @@ export function QuestionCard({
       )}
 
       {data.grid && <AllergenGrid grid={data.grid} value={grid} onChange={setGrid} disabled={disabled} />}
+      {data.table && <DataTable table={data.table} />}
+      {data.staffing && <StaffingEditor data={data.staffing} value={staffing} onChange={setStaffing} disabled={disabled} />}
 
       {data.link && (
         <a href={data.link.href} target="_blank" rel="noreferrer" className={`${secondary} inline-flex items-center`}>
@@ -79,9 +87,9 @@ export function QuestionCard({
         </a>
       )}
 
-      {data.options.length > 0 && !data.grid && (
+      {options.length > 0 && !data.grid && (
         <div role={data.multi ? "group" : "radiogroup"} aria-label="Choices" className={data.layout === "cards" ? "grid gap-3 sm:grid-cols-2" : data.layout === "swatches" ? "grid gap-2 sm:grid-cols-2" : "flex flex-wrap gap-2"}>
-          {data.options.map((o) => {
+          {options.map((o) => {
             const on = picked.includes(o.id);
             if (data.layout === "buttons")
               return (
@@ -145,11 +153,11 @@ export function QuestionCard({
 
       {data.upload && onFiles && <UploadCard accept={data.upload.accept} multiple={data.upload.multiple} label={data.upload.label} disabled={disabled} status={uploadStatus} onFiles={onFiles} />}
 
-      {!disabled && (data.confirm || data.multi || needsWords || data.skip || data.grid) && (
+      {!disabled && (data.confirm || data.multi || needsWords || data.skip || data.grid || data.staffing) && (
         <div className="flex flex-wrap items-center gap-3">
-          {(data.confirm || data.multi || needsWords || data.grid) && (data.options.length > 0 || wordsOnly) && (
+          {(data.confirm || data.multi || needsWords || data.grid || data.staffing) && (data.options.length > 0 || wordsOnly) && (
             <button type="button" disabled={!ready} onClick={confirm} className={primary}>
-              {data.grid ? "These are right" : "Confirm"}
+              {data.grid ? "These are right" : data.staffing ? "Save these numbers" : "Confirm"}
             </button>
           )}
           {data.skip && (

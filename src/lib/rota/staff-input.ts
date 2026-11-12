@@ -12,6 +12,7 @@ export type StaffInput = {
   starts: string | null; // "HH:MM"; null = all day
   ends: string | null;
   maxHours: number | null;
+  canOpenClose?: boolean | null; // can open up and lock up (null or missing: unchanged)
 };
 
 export type StaffCommand =

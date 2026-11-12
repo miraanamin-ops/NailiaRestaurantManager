@@ -6,6 +6,7 @@ import type { DinaReply } from "../dina/reply";
 import { CHAPTER_SKIP } from "../dina/view";
 import { answerQuestion, confirmRecap, reaskFromRecap, skipChapter, skipQuestion, type GridAnswer } from "./answer";
 import { askFor, inputsFrom, pickedLabel, RECAP_OK, SKIP_ID } from "./cards";
+import type { StaffingAnswer } from "@/components/chat/types";
 import { availableChapters, CHAPTERS, chapterOf, type ChapterKey } from "./chapters";
 import { loadFacts } from "./next";
 import { questionById } from "./questions";
@@ -46,17 +47,17 @@ async function setPending(restaurantId: string, q: string, pending: Pending | nu
   if (question) await patchStepData(restaurantId, question.step, { pending_pick: pending });
 }
 
-async function answer(restaurantId: string, q: string, picked: string[], typed: string | null, channel: Channel, grid?: GridAnswer | null): Promise<GuideReply> {
+async function answer(restaurantId: string, q: string, picked: string[], typed: string | null, channel: Channel, grid?: GridAnswer | null, staffing?: StaffingAnswer | null): Promise<GuideReply> {
   if (picked.includes(SKIP_ID)) {
     await skipQuestion(restaurantId, q, channel);
     return say("No problem, we can come back to that later.");
   }
-  const result = await answerQuestion({ restaurantId, q, picked, typed, channel, grid });
+  const result = await answerQuestion({ restaurantId, q, picked, typed, channel, grid, staffing });
   return { messages: [{ text: result.said, component: (result.ok && result.component ? result.component : null) as never }] };
 }
 
 // A pick on one of code's question cards.
-export async function guidePick(input: { restaurantId: string; messageId: string; choiceIds: string[]; text?: string | null; channel: Channel; confirmed: boolean; grid?: GridAnswer | null }): Promise<GuideReply | null> {
+export async function guidePick(input: { restaurantId: string; messageId: string; choiceIds: string[]; text?: string | null; channel: Channel; confirmed: boolean; grid?: GridAnswer | null; staffing?: StaffingAnswer | null }): Promise<GuideReply | null> {
   const part = await partOf(input.restaurantId, input.messageId);
   if (!part?.type) return null;
   const typed = input.text?.trim() || null;
@@ -112,7 +113,7 @@ export async function guidePick(input: { restaurantId: string; messageId: string
       return { messages: [{ text: `You picked: ${label}. Shall I save that?`, component: { type: "pick_confirm", q: q.id } as never }] };
     }
   }
-  return answer(input.restaurantId, q.id, input.choiceIds, typed, input.channel, input.grid);
+  return answer(input.restaurantId, q.id, input.choiceIds, typed, input.channel, input.grid, input.staffing);
 }
 
 // A typed message while one of code's cards is on screen: the words it was
@@ -165,6 +166,28 @@ export async function guideFiles(input: { restaurantId: string; files: import(".
     const { readCustomerFile } = await import("./import");
     const read = await readCustomerFile(input.restaurantId, sheet);
     return say(read.ok ? `Thanks, I've read ${read.count} customers with an email address${read.skipped ? ` (${read.skipped} rows had no usable email, so I left them out)` : ""}.` : read.text);
+  }
+  // Past rotas (photos, PDFs, a spreadsheet or a rota app's export), read into the
+  // check card. Our own team sheet sent here by mistake goes to the team instead.
+  if (action.question.id === "team.rotas" || action.question.id === "team.rotas_check") {
+    const { recordQuestion } = await import("../sessions");
+    const { withRecord } = await import("./questions");
+    const sheet = input.files.find((f) => f.kind === "csv" || f.kind === "excel");
+    if (sheet) {
+      const [{ readOwnSheet }, { readSavedFile }] = await Promise.all([import("@/lib/templates/read-file"), import("../dina/uploads-store")]);
+      const own = await readOwnSheet(await readSavedFile(input.restaurantId, sheet.path)).catch(() => null);
+      if (own?.kind === "staff") {
+        await recordQuestion(input.restaurantId, "team", (d, now) => withRecord(withRecord(d, "team.rotas", "skipped", now), "team.method", "answered", now), { channel: input.channel });
+        await patchStepData(input.restaurantId, "team", { staff_files: [sheet] });
+        return null;
+      }
+    }
+    const { readRotaFiles } = await import("@/lib/rota/import");
+    const read = await readRotaFiles(input.restaurantId, input.files).catch((err) => (console.error("Reading the rotas failed", err), null));
+    if (!read) return say("I couldn't read those this time. Could you send them again?");
+    if (!read.ok) return say(read.text);
+    await recordQuestion(input.restaurantId, "team", (d, now) => withRecord(d, "team.rotas", "answered", now), { channel: input.channel });
+    return say(read.text);
   }
   // The team sheet (or their own list) sent on the team card: that answers how,
   // and Dina reads it (dina/whatsapp-turn.ts noteForFiles), so code steps aside.

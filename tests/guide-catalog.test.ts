@@ -144,6 +144,7 @@ describe("the owner's comments of 7 Nov", () => {
     const costs = askFor("menu.costs", facts({ menu }), inputs)!;
     expect(costs.card).toMatchObject({ link: { href: "https://app.test/t/costs" }, upload: { accept: "spreadsheet" } });
     expect(costs.card.options.map((o) => o.id)).toEqual(["pct25", "pct30", "pct35"]);
-    expect(QUESTIONS.filter((x) => x.step === "team").map((x) => x.id)).toEqual(["team.method", "team.base"]);
+    // Since 12 Nov 2026: past rotas first, then the team, then code's staffing and labour cards.
+    expect(QUESTIONS.filter((x) => x.step === "team").map((x) => x.id)).toEqual(["team.rotas", "team.rotas_check", "team.method", "team.base", "team.staffing", "team.labour"]);
   });
 });

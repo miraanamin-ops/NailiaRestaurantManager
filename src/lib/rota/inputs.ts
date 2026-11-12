@@ -5,7 +5,7 @@ import { activeOn, valueOn } from "@/lib/ops/history";
 import { listStaff } from "@/lib/ops/staff";
 import type { RotaRuleRow, StaffAvailabilityRow, StaffPayRateRow } from "@/lib/ops/types";
 import { isMonday } from "@/lib/forecast/week-ahead-rules";
-import { DUMMY_RULES, DUMMY_STAFF, hhmm, noAvailability, type RotaInputs, type Weekday } from "./types";
+import { DUMMY_RULES, DUMMY_STAFF, hhmm, noAvailability, type RotaInputs, type RotaRule, type Weekday } from "./types";
 
 // Everything the rota is built from for one week (docs/pilot-sprint.md): staff
 // employed that Monday, their pay and availability in force on it, and the
@@ -40,12 +40,17 @@ export async function getRotaInputs(restaurantId: string, weekStart: string): Pr
         hourly_rate_pence: valueOn(payRows.filter((r) => r.staff_id === p.id), weekStart)?.hourly_pence ?? null,
         max_hours_week: p.max_hours_week === null ? null : Number(p.max_hours_week),
         availability: a,
+        can_open_close: Boolean(p.can_open_close),
       };
     }),
     rules: ((must(rules, "rota rules") ?? []) as RotaRuleRow[]).map((r) => ({
       role: r.role,
       min_on_shift: r.min_on_shift,
       orders_per_extra_staff: r.orders_per_extra_staff === null ? null : Number(r.orders_per_extra_staff),
+      driver: (r.driver ?? null) as RotaRule["driver"],
+      before_open_minutes: r.before_open_minutes ?? 0,
+      after_close_minutes: r.after_close_minutes ?? 0,
+      preset: r.preset ?? null,
     })),
   };
 }

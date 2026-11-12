@@ -124,8 +124,12 @@ The chapters, in order:
    bookings...); your printable QR codes; and, if you have one, your existing customer
    list (see "Importing a customer list").
 7. **Sales and team** (Sales history, Team and labour): last year's till export (CSV or
-   Excel, up to 25 MB) or our daily takings spreadsheet, and who works for you (role, pay,
-   hours, usual days) plus your labour cost target.
+   Excel, up to 25 MB) or our daily takings spreadsheet; then, if you have them, your rotas
+   from the last 2 to 4 weeks (photos of the paper rota, PDFs, or your rota app's export),
+   which we check with you and learn from; who works for you (main role, anything else
+   they can cover, pay, hours, usual days, who can open and lock up); how many people you
+   need on shift (filled in for you from your rotas, or from what restaurants your size
+   usually need: change any number with − and +); and your labour cost target.
 8. **Your calendar** (Languages and key dates): your customers' languages and the dates
    that matter to you.
 9. **Working together** (Approvals and timing): what time your morning message arrives
@@ -317,15 +321,39 @@ profit. Send whatever you have; the more detail, the better:
 
 ## Team and rota
 
-- **Your team**: tell us in your own words ("add Ali, kitchen, £13, weekdays", "Sara's
-  going up to 13 quid", "Bilal's left") or use the **Team** page. **TEAM** lists everyone.
+- **Your team**: tell us in your own words ("add Ali, kitchen porter, £12.50, weekdays",
+  "Sara is a server who can also do the bar", "Mo can open and lock up", "Sara's going up
+  to 13 quid", "Bilal's left") or use the **Team** page (**More**, then **Team and rota**; **Team** in the side menu on a computer). **TEAM**
+  lists everyone.
+- **Roles**: manager (or supervisor), head chef, chef (cook, sous chef, grill, tandoor),
+  kitchen porter (KP, dishwasher), server (waiter or waitress), host, bar (or barista),
+  runner, counter (takeaway counter, till, phones) and driver (your own drivers, not
+  delivery app riders). Each person has a main role and can have others they can cover:
+  the rota only uses someone outside their main role when nobody whose job it is is free,
+  and says so. A head chef counts as a chef. Older teams set up as just "kitchen" and
+  "front of house" keep working as before. A role of your own (e.g. "shisha") is kept as
+  you wrote it.
+- **How many people you need**: for each role, the fewest on whenever you're open, and
+  one more for every so many orders an hour (servers count eat-in orders, counter staff
+  takeaway orders, drivers delivery orders, the kitchen all orders), plus how long before
+  opening each role starts and how long after closing it stays (e.g. chefs 30 minutes
+  early, the porter 30 minutes after). Change it on the **Team** page under **Who you need
+  on shift**; **Use these numbers** there puts in our suggestion for your size (from the
+  seats you gave at setup) and the roles on your team.
+- **Opening and locking up**: tick **Can open up and lock up** for anyone with keys (Team
+  page, or say "Mo can open and lock up"). The rota then puts one of them on the first and
+  last shift of every day, and warns you on a day it can't. Switch it off under **Who you
+  need on shift** if you don't want it.
+- **Your past rotas**: sent at setup, they're kept as past weeks so the rota knows who
+  usually works which day from the start. Not yet possible: sending past rotas after
+  setup; the rota learns from the ones it makes with you instead.
 - **Rota**: every Thursday at 10am we suggest next week's rota from your opening hours,
   the forecast and your rules, with labour cost against forecast sales and warnings (over
   48 hours, too little rest). **ROTA** shows it now. Change it in plain words ("Ali can't
   do Friday", "swap Sara and Bilal on Sunday"). After Approve you get a rota page and a PDF
   to forward to staff (without pay or costs).
-- **Labour target**: **LABOUR TARGET 28%** sets it; your brief and reports check the rota
-  against it.
+- **Labour target**: **LABOUR TARGET 28%** sets it (or at setup, where we show what your
+  past rotas ran at); your brief and reports check the rota against it.
 
 ## Menu, prices and profit
 

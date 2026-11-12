@@ -1,3 +1,4 @@
+import { ROLE_DEFS, ROLES, type Role } from "@/lib/rota/rules";
 import type { ConfirmationData } from "@/components/chat/types";
 import { parseDays, parseTimes } from "@/lib/rota/staff-input";
 import { offerProblems } from "./facts-content";
@@ -48,9 +49,11 @@ export const SALES_DETAIL_HINT =
 
 // ---------- 8. Team and labour ----------
 
-export const STAFF_ROLES = ["kitchen", "front", "delivery", "manager"] as const;
-export type StaffRole = (typeof STAFF_ROLES)[number];
-export const ROLE_WORDS: Record<StaffRole, string> = { kitchen: "kitchen", front: "front of house", delivery: "delivery", manager: "manager" };
+// The rota's roles (lib/rota/rules.ts ROLES): about ten everyday ones, plus the
+// all-round kitchen and front of house for anyone who does a bit of everything.
+export const STAFF_ROLES = ROLES;
+export type StaffRole = Role;
+export const ROLE_WORDS: Record<StaffRole, string> = Object.fromEntries(ROLES.map((r) => [r, ROLE_DEFS[r].label.toLowerCase()])) as Record<StaffRole, string>;
 
 export const DEFAULT_LABOUR_TARGET = 30;
 export const LABOUR_HINT = "Most UK independents aim for 25 to 35% of sales; 30% is a common target.";
@@ -60,7 +63,9 @@ export const LABOUR_HINT = "Most UK independents aim for 25 to 35% of sales; 30%
 // kitchen, £13, weekdays" WhatsApp line); null = any day / any time.
 export type StaffInputRow = {
   name: string;
-  role: StaffRole;
+  role: StaffRole; // their main role
+  also_roles?: StaffRole[] | null; // what else they can do ("can also do")
+  can_open_close?: boolean | null; // can open up and lock up
   hourly_rate: number | null;
   contracted_hours: number | null;
   days?: string | null;
@@ -68,7 +73,9 @@ export type StaffInputRow = {
   max_hours?: number | null;
 };
 export type CoverRule = { role: StaffRole; min_on_shift: number };
-export type TeamDraft = { staff: StaffInputRow[]; manager: string | null; cover_rules: CoverRule[]; labour_target_pct: number | null };
+// cover_rules and labour_target_pct: only on drafts from before 12 Nov 2026 (code's
+// staffing and labour cards ask them now; lib/onboarding/guide/cards.ts).
+export type TeamDraft = { staff: StaffInputRow[]; manager: string | null; cover_rules?: CoverRule[]; labour_target_pct?: number | null };
 
 // "Any time", "all day", "flexible" (as a staff sheet may say): no limit, the same as blank.
 const ANY_TIME = /^(any ?time|any|all day|all-day|flexible|whenever needed|n\/?a|-)$/i;
@@ -88,32 +95,28 @@ function daysWords(days: number[] | null) {
   if (run && days.length > 2) return `${DAY_SHORT[days[0]]} to ${DAY_SHORT[days.at(-1)!]}`;
   return days.map((d) => DAY_SHORT[d]).join(", ");
 }
-const ROLE_LABEL: Record<StaffRole, string> = { kitchen: "Kitchen", front: "Front of house", delivery: "Delivery", manager: "Manager" };
+const ROLE_LABEL = (r: StaffRole) => ROLE_DEFS[r]?.label ?? r;
 
 // "Your team": what save_team noted, for the owner to check before code saves it.
 // From the draft code holds, never from Dina's words.
 export function teamCard(d: TeamDraft): ConfirmationData {
   const people = d.staff.map((s) => {
     const a = availabilityOf(s);
+    const also = (s.also_roles ?? []).filter((x) => x !== s.role);
     const parts = [
-      ROLE_LABEL[s.role],
+      also.length ? `${ROLE_LABEL(s.role)} (also ${also.map((x) => ROLE_WORDS[x] ?? x).join(", ")})` : ROLE_LABEL(s.role),
       s.hourly_rate !== null ? `£${s.hourly_rate.toFixed(2)} an hour` : "rate not given",
       s.contracted_hours !== null ? `${s.contracted_hours}h contracted` : null,
       daysWords(a.days),
       a.starts && a.ends ? `${a.starts} to ${a.ends === "23:59" ? "close" : a.ends}` : null,
       a.maxHours !== null ? `max ${a.maxHours}h a week` : null,
+      s.can_open_close ? "opens and locks up" : null,
     ].filter(Boolean);
     return { key: `staff::${s.name.trim().toLowerCase()}`, label: s.name.trim(), value: parts.join(" · ") };
   });
-  const cover = d.cover_rules.map((c) => `at least ${c.min_on_shift} ${ROLE_WORDS[c.role]}`).join(", ");
   return {
     title: "Your team",
-    fields: [
-      ...people,
-      { key: "manager", label: "Site manager", value: d.manager },
-      { key: "cover", label: "On every shift", value: cover || null },
-      { key: "labour_target_pct", label: "Labour target", value: d.labour_target_pct !== null ? `${d.labour_target_pct}% of sales` : `${DEFAULT_LABOUR_TARGET}% (the usual default)` },
-    ],
+    fields: [...people, { key: "manager", label: "Site manager", value: d.manager }],
   };
 }
 
@@ -135,8 +138,8 @@ export function teamProblems(input: TeamDraft) {
   }
   if (input.manager && input.staff.length && !names.has(input.manager.trim().toLowerCase()) && !/\b(me|myself|i do|owner)\b/i.test(input.manager))
     problems.push(`The site manager, ${input.manager}, isn't on the staff list. Add them, or check the name.`);
-  for (const r of input.cover_rules) if (r.min_on_shift < 1 || r.min_on_shift > 20) problems.push(`At least ${r.min_on_shift} ${ROLE_WORDS[r.role]} on shift doesn't look right.`);
-  if (input.labour_target_pct !== null && (input.labour_target_pct < 10 || input.labour_target_pct > 60)) problems.push(`A labour target of ${input.labour_target_pct}% is unusual. ${LABOUR_HINT} Check the number with them.`);
+  for (const r of input.cover_rules ?? []) if (r.min_on_shift < 1 || r.min_on_shift > 20) problems.push(`At least ${r.min_on_shift} ${ROLE_WORDS[r.role]} on shift doesn't look right.`);
+  if (input.labour_target_pct != null && (input.labour_target_pct < 10 || input.labour_target_pct > 60)) problems.push(`A labour target of ${input.labour_target_pct}% is unusual. ${LABOUR_HINT} Check the number with them.`);
   return problems;
 }
 

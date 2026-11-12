@@ -61,6 +61,9 @@ const fromCatalog = (id: string): Question => {
 const code = (q: Omit<Question, "asker">): Question => ({ ...q, asker: "code" });
 const menuItems = (f: Facts) => ((f.r.menu ?? []) as { items?: { cost?: number | null; seller?: string | null; signature?: boolean; allergens_confirmed?: boolean }[] }[]).flatMap((c) => c.items ?? []);
 const hasMenu = (f: Facts) => menuItems(f).length > 0;
+const rotaImport = (f: Facts) => data(f, "team").rota_import as { shifts?: unknown[]; confirmed?: boolean } | null | undefined;
+// The team is saved (Looks right on the team card) with at least one person on it.
+const teamSaved = (f: Facts) => Number(data(f, "team").staff ?? 0) > 0;
 const menuSaved = (f: Facts) => {
   const s = stepState(f.state, "menu");
   return Boolean(s.data.saved_at) || Boolean(s.data._outcome) || Boolean(s.completedAt);
@@ -105,8 +108,18 @@ export const QUESTIONS: Question[] = [
   // Chapter 7: sales and team.
   base("sales", "Sales history", "their sales history"),
   ...["sales.target", "sales.quiet", "sales.busy"].map(fromCatalog),
+  // Their last few weeks of rotas first (owner's plan, 12 Nov 2026): learnt from against the same days' sales.
+  code({ id: "team.rotas", step: "team", level: "important", decision: false, label: "Your recent rotas", answered: (f) => Boolean(data(f, "team").rota_import) || Boolean(data(f, "team")._outcome) }),
+  code({ id: "team.rotas_check", step: "team", level: "important", decision: true, label: "Rotas read", answered: (f) => Boolean(rotaImport(f)?.confirmed), applies: (f) => Boolean(rotaImport(f)?.shifts?.length) }),
   code({ id: "team.method", step: "team", level: "important", decision: false, label: "How you'll send your team", answered: (f) => Boolean(data(f, "team").staff_files) || Boolean(data(f, "team").team_draft) || Boolean(data(f, "team")._outcome) }),
-  base("team", "Your team", "their team (from the sheet or file they sent, or in their own words: name, role, hourly rate, contracted hours and when each person can work), then the site manager, cover rules and labour target"),
+  base(
+    "team",
+    "Your team",
+    "their team (from the sheet or file they sent, the people on their rotas, or in their own words: name, main role, anything else they can do, hourly rate, contracted hours, when each person can work, and who can open up and lock up), then the site manager",
+  ),
+  // Then code's own: how many people they need (suggested for their size, or learnt from their rotas), and the labour target.
+  code({ id: "team.staffing", step: "team", level: "important", decision: true, label: "How many people you need", answered: () => false, applies: teamSaved }),
+  code({ id: "team.labour", step: "team", level: "important", decision: true, label: "Labour target", answered: () => false, applies: teamSaved }),
 
   // Chapter 8: your calendar.
   ...["calendar.languages", "calendar.dates", "calendar.closures"].map(fromCatalog),

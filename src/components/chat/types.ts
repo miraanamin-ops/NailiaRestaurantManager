@@ -57,7 +57,27 @@ export type QuestionCardData = {
   grid?: { columns: { id: string; label: string; short: string }[]; rows: { id: string; label: string; section: string; marked: string[]; suggested: boolean; unsure: boolean }[] } | null;
   // A link shown on the card (the costs spreadsheet).
   link?: { label: string; href: string } | null;
+  // A plain table to check (the past rotas read at setup: one row per person).
+  table?: { columns: string[]; rows: string[][] } | null;
+  // How many people are needed on shift (owner's plan, 12 Nov 2026): one row per
+  // role, with + and − for the minimum and for "1 more per N orders an hour".
+  staffing?: StaffingCardData | null;
 };
+
+export type StaffingRowData = {
+  role: string;
+  label: string;
+  hint: string;
+  min: number;
+  per: number | null;
+  orders: string; // which orders count, in words ("eat-in orders"); "" = none (no busy rule)
+  suggested: { min: number; per: number | null } | null;
+  learned: { min: number; per: number | null; estimate: boolean } | null;
+  edges: string | null;
+};
+export type StaffingCardData = { rows: StaffingRowData[]; notes: string[]; source: "learned" | "suggested" | "mixed" };
+// The owner's numbers, per role, sent with Confirm.
+export type StaffingAnswer = Record<string, { min: number; per: number | null }>;
 
 export type RecapRow = { q: string; label: string; value: string; status: "answered" | "skipped"; swatches?: string[] };
 export type RecapData = { chapter: string; title: string; rows: RecapRow[]; next: string | null };

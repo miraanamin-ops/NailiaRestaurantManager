@@ -112,7 +112,7 @@ describe("staff by WhatsApp", () => {
       input: { name: "Sara K", roles: ["front"], ratePence: 1250, days: [5, 6, 7], starts: "17:00", ends: "23:00", maxHours: 20 },
     });
     expect(parseStaffCommand("add Bilal, driver, 12.21ph, weekends evenings")?.name).toBe("add_rota_staff");
-    expect(parseStaffCommand("add Bilal, driver, 12.21ph, weekends evenings")).toMatchObject({ input: { roles: ["delivery"], ratePence: 1221, days: [6, 7], starts: "17:00", ends: "23:59" } });
+    expect(parseStaffCommand("add Bilal, driver, 12.21ph, weekends evenings")).toMatchObject({ input: { roles: ["driver"], ratePence: 1221, days: [6, 7], starts: "17:00", ends: "23:59" } });
     expect(parseStaffCommand("add Zara, manager/front, £15")).toMatchObject({ input: { roles: ["manager", "front"], ratePence: 1500, days: null } });
   });
 
@@ -156,14 +156,22 @@ describe("staff by WhatsApp", () => {
 
 describe("rota rules", () => {
   test("defaults for missing or odd settings", () => {
-    expect(rotaSettings(null)).toEqual({ min_shift_hours: 4, max_shift_hours: 10, flag_week_hours: 48, flag_rest_hours: 11 });
-    expect(rotaSettings({ min_shift_hours: 6, max_shift_hours: 3, flag_week_hours: "x" })).toEqual({ min_shift_hours: 3, max_shift_hours: 6, flag_week_hours: 48, flag_rest_hours: 11 });
+    expect(rotaSettings(null)).toEqual({ min_shift_hours: 4, max_shift_hours: 10, flag_week_hours: 48, flag_rest_hours: 11, key_holder: true });
+    expect(rotaSettings({ min_shift_hours: 6, max_shift_hours: 3, flag_week_hours: "x" })).toEqual({ min_shift_hours: 3, max_shift_hours: 6, flag_week_hours: 48, flag_rest_hours: 11, key_holder: true });
+    expect(rotaSettings({ key_holder: false }).key_holder).toBe(false);
   });
 
   test("saved rules win; defaults only for roles the team has", () => {
-    const rules = effectiveRules([{ role: "Chef", min_on_shift: 2, orders_per_extra_staff: 8 }], [{ roles: ["kitchen"] }, { roles: ["waiter"] }]);
+    const rules = effectiveRules([{ role: "Kitchen", min_on_shift: 2, orders_per_extra_staff: 8 }], [{ roles: ["kitchen"] }, { roles: ["front"] }]);
     expect(rules).toEqual([{ role: "kitchen", min_on_shift: 2, orders_per_extra_staff: 8 }, DEFAULT_RULES.front]);
-    expect(effectiveRules([], [{ roles: ["delivery"] }])).toEqual([DEFAULT_RULES.delivery]);
+    // A saved "delivery" rule from before is the driver rule; a driver with none gets the old default.
+    expect(effectiveRules([], [{ roles: ["delivery"] }])).toEqual([DEFAULT_RULES.driver]);
+    expect(effectiveRules([{ role: "delivery", min_on_shift: 1, orders_per_extra_staff: 10 }], [{ roles: ["driver"] }])).toEqual([{ role: "driver", min_on_shift: 1, orders_per_extra_staff: 10 }]);
+    // An all-round rule covers the specific roles of its area, and the other way round.
+    expect(effectiveRules([{ role: "kitchen", min_on_shift: 2, orders_per_extra_staff: 12 }], [{ roles: ["chef"] }, { roles: ["kitchen"] }]).map((r) => r.role)).toEqual(["kitchen"]);
+    expect(effectiveRules([{ role: "chef", min_on_shift: 2, orders_per_extra_staff: 12 }], [{ roles: ["chef"] }, { roles: ["kitchen"] }]).map((r) => r.role)).toEqual(["chef"]);
+    // A head chef is counted as a chef; a role of the owner's own gets no minimum.
+    expect(effectiveRules([], [{ roles: ["head chef"] }, { roles: ["barista"] }, { roles: ["shisha"] }]).map((r) => [r.role, r.min_on_shift])).toEqual([["chef", 1], ["bar", 0], ["shisha", 0]]);
   });
 
   test("minimum plus one per X orders an hour", () => {
@@ -192,8 +200,17 @@ describe("rota rules", () => {
 
   test("role words", () => {
     expect(roleKey("Front of House")).toBe("front");
-    expect(roleKey("chef")).toBe("kitchen");
-    expect(roleKey("rider")).toBe("delivery");
-    expect(roleKey("barista")).toBe("barista");
+    expect(roleKey("chef")).toBe("chef");
+    expect(roleKey("Sous Chef")).toBe("chef");
+    expect(roleKey("Head chef")).toBe("head_chef");
+    expect(roleKey("head_chef")).toBe("head_chef");
+    expect(roleKey("KP")).toBe("kitchen_porter");
+    expect(roleKey("dishwasher")).toBe("kitchen_porter");
+    expect(roleKey("waitress")).toBe("server");
+    expect(roleKey("rider")).toBe("driver");
+    expect(roleKey("delivery")).toBe("driver");
+    expect(roleKey("barista")).toBe("bar");
+    expect(roleKey("Cashier")).toBe("counter");
+    expect(roleKey("Shisha")).toBe("shisha");
   });
 });

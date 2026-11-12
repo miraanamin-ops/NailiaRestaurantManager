@@ -8,6 +8,10 @@ import { DEFAULT_PALETTE, type Palette } from "./palette";
 import { catalogById, catalogRecap, catalogSelected, type CatalogQuestion } from "./catalog";
 import { UK_ALLERGENS, type MenuCategory } from "../profile-data";
 import { dishKey } from "../dina/facts-content";
+import { learnFromRotas, type ImportedShift } from "@/lib/rota/learn";
+import { checkSummary, checkTable, staffingLine, staffingText, type StaffingCard } from "@/lib/rota/import-rules";
+import type { SeatBand } from "@/lib/rota/presets";
+import { LABOUR_HINT } from "../dina/ops-content";
 
 // What code says and shows for each of its questions, and each chapter's recap.
 // Plain code (tests/guide.test.ts): the words pass Dina's checks (one question,
@@ -52,6 +56,17 @@ export function inputsFrom(src: { restaurant: Record<string, unknown>; state: Fa
 }
 
 const voiceOf = (id: string): Voice => (id === "tone.complaint" ? "complaint" : "praise");
+
+// What the team step holds for code's cards (lib/rota/import.ts writes it).
+type TeamStepData = {
+  rota_import?: { shifts: ImportedShift[]; weeks?: number; assumed?: boolean; unplaced?: number; confirmed?: boolean; doubts?: string[] } | null;
+  staffing_card?: StaffingCard | null;
+  staffing_band?: string | null;
+  staffing_weeks?: number | null;
+  staffing_saved?: string[] | null;
+  rota_labour?: { pct: number; days: number } | null;
+};
+const teamStep = (f: Facts) => stepState(f.state, "team").data as TeamStepData;
 
 export function signOffChoices(ownerFirst: string | null, restaurant: string) {
   return [...new Set([ownerFirst ? `${ownerFirst}, ${restaurant}` : null, `The ${restaurant} team`, ownerFirst ? `${ownerFirst} and the team` : null].filter((x): x is string => Boolean(x)))];
@@ -149,9 +164,65 @@ export function askFor(id: string, f: Facts, inputs: CardInputs): AskedQuestion 
         upload: { accept: "spreadsheet", multiple: false, label: "Send back the filled-in sheet" },
       }),
     };
+  if (id === "team.rotas")
+    return {
+      text: "Now your team. Do you have your rotas from the last 2 to 4 weeks? Send photos of the paper rota, PDFs, or the export from your rota app. I'll set them against your sales for those days to learn how you staff a quiet day and a busy one, and start your team list from them.",
+      card: card(id, {
+        options: [{ id: "none", label: "I don't have them", short: "Don't have them" }],
+        confirm: false,
+        upload: { accept: "any", multiple: true, label: "Send your rotas" },
+      }),
+    };
+  if (id === "team.rotas_check") {
+    const d = teamStep(f).rota_import;
+    if (!d?.shifts?.length)
+      return { text: "Is this reading of your rotas right?", card: card(id, { options: [{ id: "ok", label: "That's right" }, { id: OWN_ID, label: "Something's wrong" }], input: { optionId: OWN_ID, placeholder: "e.g. Sara is a server, not bar" }, table: { columns: [], rows: [] } }) };
+    const people = learnFromRotas({ shifts: d.shifts, days: [], shares: null });
+    const unknownRoles = (people?.people ?? []).filter((p) => p.role === "unknown").length;
+    return {
+      text: checkSummary({ shifts: d.shifts, weeks: d.weeks ?? 1, assumed: Boolean(d.assumed), unplaced: d.unplaced ?? 0, unknownRoles, doubts: d.doubts ?? [] }),
+      card: card(id, {
+        options: [{ id: "ok", label: "That's right" }, { id: OWN_ID, label: "Something's wrong" }],
+        input: { optionId: OWN_ID, placeholder: "e.g. Sara is a server, not bar" },
+        upload: { accept: "any", multiple: true, label: "Send a clearer copy" },
+        table: checkTable(d.shifts, people),
+      }),
+    };
+  }
+  if (id === "team.staffing") {
+    const t = teamStep(f);
+    const sc = t.staffing_card ?? { rows: [], notes: [], source: "suggested" as const };
+    return {
+      text: staffingText(sc, (t.staffing_band ?? "30_60") as SeatBand, t.staffing_weeks ?? null) + (sc.notes.length ? ` ${sc.notes[0]}` : ""),
+      card: card(id, {
+        options: [{ id: "ok", label: "Looks right" }, { id: OWN_ID, label: "Change something" }],
+        input: { optionId: OWN_ID, placeholder: "e.g. 2 chefs, a porter only when busy" },
+        staffing: sc,
+      }),
+    };
+  }
+  if (id === "team.labour") {
+    const t = teamStep(f);
+    const fromRotas = t.rota_labour;
+    return {
+      text: `What would you like staff costs to be, as a share of sales (before VAT)? ${LABOUR_HINT}${fromRotas ? ` Your rotas ran at about ${fromRotas.pct}% over those weeks.` : ""}`,
+      card: card(id, {
+        options: [
+          ...(fromRotas && ![25, 30, 35].includes(Math.round(fromRotas.pct)) ? [{ id: `pct${Math.round(fromRotas.pct)}`, label: `${Math.round(fromRotas.pct)}% (what your rotas ran at)`, short: `${Math.round(fromRotas.pct)}% (as now)` }] : []),
+          { id: "pct25", label: "25%" },
+          { id: "pct30", label: "30%" },
+          { id: "pct35", label: "35%" },
+        ],
+        input: { optionId: OWN_ID, placeholder: "e.g. 28%" },
+        selected: typeof r.labour_target_pct === "number" && f.confirmed.has("labour_target_pct") ? [`pct${r.labour_target_pct}`] : undefined,
+      }),
+    };
+  }
   if (id === "team.method")
     return {
-      text: "Now your team. The quickest way is our team sheet: download it, fill it in, and send it back here. You can also send your own staff list, or just tell me who works for you.",
+      text: teamStep(f).rota_import?.confirmed
+        ? "I've got the names from your rotas. I still need each person's hourly pay, and anything the rota doesn't show. The quickest way is our team sheet: download it, fill it in, and send it back here. Or just tell me."
+        : "Now your team. The quickest way is our team sheet: download it, fill it in, and send it back here. You can also send your own staff list, or just tell me who works for you.",
       card: card(id, {
         options: [{ id: "type", label: "I'll tell you here", short: "Tell you here" }],
         confirm: false,
@@ -310,7 +381,7 @@ export function recapFor(chapter: ChapterKey, f: Facts, inputs: Pick<CardInputs,
   };
   for (const step of c.steps) {
     for (const q of questionsFor(step, f)) {
-      if (isRecap(q.id) || q.id === "team.method") continue;
+      if (isRecap(q.id) || q.id === "team.method" || q.id === "team.rotas_check") continue;
       const res = resolution(q, f);
       if (res === "open") continue;
       const skipped = res === "skipped";
@@ -344,7 +415,14 @@ export function recapFor(chapter: ChapterKey, f: Facts, inputs: Pick<CardInputs,
       else if (q.id === "customers.import" || q.id === "customers.consent") {
         const d = stepState(f.state, "customers_qr").data as { imported?: number; import_draft?: unknown };
         value = d.imported ? `${d.imported} customers added, each asked to confirm by email` : "No list added";
-      } else if (q.id === "working.window") value = `${String(r.send_window_start ?? "09:00").slice(0, 5)} to ${String(r.send_window_end ?? "21:00").slice(0, 5)}`;
+      } else if (q.id === "team.rotas") {
+        const d = teamStep(f).rota_import;
+        value = d?.confirmed ? `${d.weeks ?? 1} week${d.weeks === 1 ? "" : "s"} read, ${d.shifts.length} shifts` : "None sent";
+      } else if (q.id === "team.staffing") {
+        const t = teamStep(f);
+        value = t.staffing_saved?.length ? t.staffing_saved.join("; ") : (t.staffing_card?.rows.map((x) => staffingLine(x)).join("; ") ?? "Saved");
+      } else if (q.id === "team.labour") value = typeof r.labour_target_pct === "number" ? `${r.labour_target_pct}% of sales` : "30% (the usual)";
+      else if (q.id === "working.window") value = `${String(r.send_window_start ?? "09:00").slice(0, 5)} to ${String(r.send_window_end ?? "21:00").slice(0, 5)}`;
       else if (q.id === "working.quiet") value = `${String(r.quiet_hours_start ?? "23:00").slice(0, 5)} to ${String(r.quiet_hours_end ?? "09:00").slice(0, 5)}`;
       else value = stepDetail(q.step) ?? "Done";
       rows.push({ q: q.id, label: q.label, value, status: skipped ? "skipped" : "answered", ...(swatches?.length ? { swatches } : {}) });

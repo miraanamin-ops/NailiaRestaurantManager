@@ -8,7 +8,7 @@
 // nobody fits, the shift stays open. Then the owner's swaps, then cost, labour %
 // and anything to flag. No imports beyond ./rules and ./types: unit-tested
 // (tests/rota-fill.test.ts).
-import { ALL_DAY, availabilitySpan, needFor, roleKey, roleLabel, SLOT, span12, type RotaSettings, type Span } from "./rules";
+import { ALL_DAY, availabilitySpan, canDo, needFor, ordersFor, roleLabel, SLOT, span12, type ChannelShares, type RotaSettings, type Span } from "./rules";
 import type { RotaRule, RotaStaff, TimeSpan, Weekday } from "./types";
 
 // The owner's edits, kept on the rota week and applied on every re-fill.
@@ -35,6 +35,7 @@ export type FillInput = {
   adjustments?: Adjustment[];
   timeOff?: Record<string, string[]>; // staff id -> dates they're off (approved holiday, sickness)
   usual?: Record<string, Partial<Record<number, number>>>; // staff id -> weekday -> weeks they worked it lately
+  shares?: ChannelShares; // each channel's share of orders (rules.channelShares); null = every role counts all orders
 };
 
 export type PlannedShift = { staffId: string | null; role: string; date: string; start: number; end: number };
@@ -55,7 +56,7 @@ export type DayPlan = {
 };
 
 export type RotaFlag = {
-  kind: "over_week" | "over_cap" | "short_rest" | "open_shift" | "outside_availability" | "wrong_role" | "no_rate";
+  kind: "over_week" | "over_cap" | "short_rest" | "open_shift" | "outside_availability" | "wrong_role" | "no_rate" | "other_role" | "no_key_holder";
   text: string;
   staffId?: string;
   date?: string;
@@ -79,6 +80,12 @@ export const dayShort = (weekday: number) => DAY_SHORT[weekday];
 export const USUAL_BONUS_PENCE = 50;
 // Worked that weekday in at least this many of the recent weeks = "usually".
 export const USUAL_WEEKS = 2;
+// Someone covering a role that isn't their main one counts as this much dearer an
+// hour, so the rota only uses them for it when nobody whose job it is is free.
+export const OTHER_ROLE_PENCE = 300;
+// A key holder counts as this much cheaper for the first or last shift of a day
+// that has nobody to open or lock up yet.
+export const KEY_HOLDER_BONUS_PENCE = 400;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const hoursOf = (s: { start: number; end: number }) => (s.end - s.start) / 60;
@@ -102,7 +109,30 @@ export function availableOn(p: RotaStaff, day: Pick<FillDay, "date" | "weekday">
   return [...(p.availability[day.weekday] ?? []), ...extra].map(availabilitySpan);
 }
 
-const hasRole = (p: RotaStaff, role: string) => p.roles.some((r) => roleKey(r) === role);
+const hasRole = (p: RotaStaff, role: string) => canDo(p.roles, role) !== null;
+
+// The hours a rule needs people for on a day: the opening hours, stretched by its
+// time before opening and after closing (joined up where a split day's pieces meet).
+export function ruleSpans(open: Span[], rule: Pick<RotaRule, "before_open_minutes" | "after_close_minutes">): Span[] {
+  const before = Math.max(0, Math.min(180, rule.before_open_minutes ?? 0));
+  const after = Math.max(0, Math.min(180, rule.after_close_minutes ?? 0));
+  const out: Span[] = [];
+  for (const s of open) {
+    const x = { start: s.start - before, end: s.end + after };
+    const last = out[out.length - 1];
+    if (last && x.start <= last.end) last.end = Math.max(last.end, x.end);
+    else out.push(x);
+  }
+  return out;
+}
+
+// When a day's first shift starts and its last ends, over every rule.
+export function dayEdges(open: Span[], rules: RotaRule[]): Span | null {
+  if (!open.length) return null;
+  const spans = rules.flatMap((r) => ruleSpans(open, r));
+  if (!spans.length) return { start: open[0].start, end: open[open.length - 1].end };
+  return { start: Math.min(...spans.map((x) => x.start)), end: Math.max(...spans.map((x) => x.end)) };
+}
 
 export function fill(input: FillInput): PlannedShift[] {
   const { settings, staff } = input;
@@ -129,14 +159,34 @@ export function fill(input: FillInput): PlannedShift[] {
 
   // Busiest first (by forecast orders); without a forecast, Monday to Sunday.
   const days = input.basis === "forecast" ? [...input.days].sort((a, b) => (b.orders ?? 0) - (a.orders ?? 0) || a.date.localeCompare(b.date)) : input.days;
+  const keyHolders = settings.key_holder && staff.some((p) => p.can_open_close);
+  const isKey = new Set(staff.filter((p) => p.can_open_close).map((p) => p.id));
   for (const day of days) {
+    const edges = dayEdges(day.open, input.rules);
+    // Has a key holder got a shift from the start of the day, or to its end, yet?
+    const edgeCovered = (which: "start" | "end") =>
+      !edges || shifts.some((x) => x.date === day.date && x.staffId !== null && isKey.has(x.staffId) && (which === "start" ? x.start <= edges.start : x.end >= edges.end));
     for (const rule of input.rules) {
-      for (const span of day.open) {
+      for (const span of ruleSpans(day.open, rule)) {
         const n = Math.ceil((span.end - span.start) / SLOT);
         const slotAt = (i: number) => span.start + i * SLOT;
+        const hourNeed = (minutes: number) =>
+          needFor(rule, input.basis === "forecast" ? ordersFor(rule, day.ordersByHour[Math.floor(minutes / 60) % 24] ?? 0, input.shares ?? null) : 0);
+        // Inside opening hours: what the hour needs. Before opening and after closing
+        // (prep, close-down): what the nearest open half hour needs, but at least one
+        // when the role is always on, and never more than its minimum (or one).
+        const openNow = (m: number) => day.open.some((o) => m >= o.start && m < o.end);
+        const nearestOpen = (m: number) => {
+          let best = day.open[0].start;
+          for (const o of day.open) {
+            for (const c of [o.start, o.end - SLOT]) if (Math.abs(c - m) < Math.abs(best - m)) best = c;
+          }
+          return best;
+        };
         const need = Array.from({ length: n }, (_, i) => {
-          const hour = Math.floor(slotAt(i) / 60) % 24;
-          return needFor(rule, input.basis === "forecast" ? (day.ordersByHour[hour] ?? 0) : 0);
+          const m = slotAt(i);
+          if (openNow(m)) return hourNeed(m);
+          return Math.min(hourNeed(nearestOpen(m)), Math.max(1, rule.min_on_shift));
         });
         const covered = Array.from({ length: n }, () => 0);
         const cover = (w: Span) => {
@@ -202,7 +252,10 @@ export function fill(input: FillInput): PlannedShift[] {
             if (hours + hoursOf(w) > cap + 1e-9) return null;
             if (!restOk(p.id, day.date, w)) return null;
             const usual = (input.usual?.[p.id]?.[day.weekday] ?? 0) >= USUAL_WEEKS ? USUAL_BONUS_PENCE : 0;
-            return { p, w, full, score: (p.hourly_rate_pence ?? 1_000_000) - usual, hours };
+            const other = canDo(p.roles, rule.role) === "also" ? OTHER_ROLE_PENCE : 0;
+            const key =
+              keyHolders && p.can_open_close && edges && ((w.start <= edges.start && !edgeCovered("start")) || (w.end >= edges.end && !edgeCovered("end"))) ? KEY_HOLDER_BONUS_PENCE : 0;
+            return { p, w, full, score: (p.hourly_rate_pence ?? 1_000_000) - usual + other - key, hours };
           };
           const picks = staff.map(pickFor).filter((x): x is Pick => x !== null);
           picks.sort((x, y) => x.score - y.score || Number(y.full) - Number(x.full) || x.hours - y.hours || x.p.name.localeCompare(y.p.name));
@@ -352,11 +405,28 @@ export function flagsFor(shifts: CostedShift[], input: FillInput): RotaFlag[] {
     for (const s of mine) {
       const day = { date: s.date, weekday: weekday(s.date) as Weekday };
       if (!hasRole(p, s.role)) flags.push({ kind: "wrong_role", staffId: p.id, date: s.date, text: `${p.name} isn't set up for ${roleLabel(s.role).toLowerCase()} (${when(s)})` });
+      else if (canDo(p.roles, s.role) === "also") flags.push({ kind: "other_role", staffId: p.id, date: s.date, text: `${p.name} is covering ${roleLabel(s.role).toLowerCase()} ${when(s)} (not their main role)` });
       if (!availableOn(p, day, input).some((a) => a.start <= s.start && s.end <= a.end)) {
         flags.push({ kind: "outside_availability", staffId: p.id, date: s.date, text: `${p.name} isn't usually free ${when(s)}` });
       }
     }
     if (p.hourly_rate_pence === null) flags.push({ kind: "no_rate", staffId: p.id, text: `${p.name} has no hourly rate yet, so their hours aren't costed` });
+  }
+  // Somebody to open up and lock up, each day (only once anyone is marked as able to).
+  if (settings.key_holder && input.staff.some((p) => p.can_open_close)) {
+    const keys = new Set(input.staff.filter((p) => p.can_open_close).map((p) => p.id));
+    for (const d of input.days) {
+      const mine = shifts.filter((x) => x.date === d.date);
+      if (!mine.length) continue;
+      const first = Math.min(...mine.map((x) => x.start));
+      const last = Math.max(...mine.map((x) => x.end));
+      const opens = mine.some((x) => x.staffId !== null && keys.has(x.staffId) && x.start <= first);
+      const closes = mine.some((x) => x.staffId !== null && keys.has(x.staffId) && x.end >= last);
+      if (!opens || !closes) {
+        const what = !opens && !closes ? "open up or lock up" : !opens ? "open up" : "lock up";
+        flags.push({ kind: "no_key_holder", date: d.date, text: `${dayShort(d.weekday)}: nobody on the rota who can ${what}` });
+      }
+    }
   }
   return flags;
 }

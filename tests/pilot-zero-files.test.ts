@@ -167,7 +167,7 @@ describe("the staff sheet", () => {
 
   // What Dina's save_team gets from the sheet: every column as written.
   const sheetTeam = () => {
-    const roleOf = (r: string) => ({ Manager: "manager", Kitchen: "kitchen", "Front of house": "front", Delivery: "delivery" })[r] as StaffInputRow["role"];
+    const roleOf = (r: string) => ({ Manager: "manager", Kitchen: "kitchen", "Front of house": "front", Delivery: "driver" })[r] as StaffInputRow["role"];
     const staff: StaffInputRow[] = STAFF_ROWS().map((r) => ({
       name: r.Name,
       role: roleOf(r.Role),
@@ -191,10 +191,9 @@ describe("the staff sheet", () => {
 
   test("the team card shows everyone's availability for the owner to check", () => {
     const card = teamCard(sheetTeam());
-    expect(card.fields).toHaveLength(13); // 10 people, the manager, cover, the target
+    expect(card.fields).toHaveLength(11); // 10 people and the manager (staffing and the target are code's own cards since 12 Nov 2026)
     expect(card.fields.find((f) => f.label === "Aisha Patel")?.value).toBe("Front of house · £12.71 an hour · 20h contracted · Fri to Sun · 17:00 to 23:00 · max 20h a week");
     expect(card.fields.find((f) => f.label === "Farah Begum")?.value).toBe("Kitchen · £12.71 an hour · 16h contracted · Sat, Sun · max 20h a week"); // "Any time": no limit
-    expect(card.fields.find((f) => f.label === "On every shift")?.value).toBe("at least 1 manager, at least 2 kitchen, at least 2 front of house");
   });
 
   test("the sheet and the WhatsApp lines give each person the same availability (the lines stay a fallback)", () => {
@@ -218,7 +217,7 @@ describe("the staff sheet", () => {
     expect(by["Tomasz Nowak"]).toMatchObject({ days: [1, 2, 3, 4], starts: "12:00", ends: "18:00", maxHours: 25 });
     expect(by["Aisha Patel"]).toMatchObject({ roles: ["front"], ratePence: 1271, days: [5, 6, 7], starts: "17:00", ends: "23:00", maxHours: 20 });
     expect(by["Daniel Mensah"]).toMatchObject({ days: [1, 2, 3, 4, 5, 6, 7], starts: "11:00", ends: "17:00" });
-    expect(by["Hamza Siddiqui"]).toMatchObject({ roles: ["delivery"], ratePence: 1275, days: [4, 5, 6, 7] });
+    expect(by["Hamza Siddiqui"]).toMatchObject({ roles: ["driver"], ratePence: 1275, days: [4, 5, 6, 7] });
     expect(Object.values(by).every((s) => Number(s.ratePence) >= 1271)).toBe(true);
   });
 });

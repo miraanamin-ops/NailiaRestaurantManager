@@ -29,7 +29,7 @@ export type ChatHandlers = {
   onSkip: () => void;
   onJump: (stepKey: string) => void;
   // One of code's question cards or a recap, answered (guide): what was picked, any words typed.
-  onAnswer?: (messageId: string, answer: { choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | "unsure"> }) => void;
+  onAnswer?: (messageId: string, answer: { choiceIds: string[]; text?: string; label: string; grid?: Record<string, string[] | "unsure">; staffing?: Record<string, { min: number; per: number | null }> }) => void;
 };
 
 export function ChatLayout({

@@ -399,3 +399,43 @@ describe("chapters 5, 6 and 9, answered", () => {
     expect(db.tables.consents[0].confirmed_at ?? null).toBeNull();
   });
 });
+
+describe("chapter 7's team questions (12 Nov 2026)", () => {
+  const T2 = "2026-11-12T10:00:00.000Z";
+  const teamState = (data: Record<string, unknown>) => {
+    const s = enter(through2(), "team", T2);
+    return { ...s, team: { ...s.team, data } } as FlowState;
+  };
+  const ids = (f: Facts) => questionsFor("team", f).map((q) => q.id);
+
+  test("rotas first; the check only once something was read; staffing and labour only once the team is saved", () => {
+    expect(ids(facts(teamState({})))).toEqual(["team.rotas", "team.method", "team.base", "recap.sales_team"]);
+    const read = { rota_import: { shifts: [{ name: "Ali", role: "chef", date: "2026-11-02", start: 1020, end: 1380 }], weeks: 1, assumed: false, unplaced: 0 } };
+    expect(ids(facts(teamState(read)))).toEqual(["team.rotas", "team.rotas_check", "team.method", "team.base", "recap.sales_team"]);
+    const f = facts(teamState({ ...read, staff: 3, _outcome: "done" }));
+    expect(ids(f)).toEqual(["team.rotas", "team.rotas_check", "team.method", "team.base", "team.staffing", "team.labour", "recap.sales_team"]);
+    // The check isn't confirmed yet: it's the first open question.
+    expect(openQuestions("team", f)[0].id).toBe("team.rotas_check");
+  });
+
+  test("the check card shows a row per person; the staffing card carries its rows; the labour card offers what the rotas ran at", () => {
+    const f = facts(
+      teamState({
+        rota_import: { shifts: [{ name: "Ali", role: "chef", date: "2026-11-02", start: 1020, end: 1380 }], weeks: 1, assumed: true, unplaced: 0 },
+        staff: 1,
+        _outcome: "done",
+        staffing_card: { rows: [{ role: "chef", label: "Chef", hint: "", min: 2, per: 15, orders: "orders", suggested: { min: 2, per: 15 }, learned: null, edges: null }], notes: [], source: "suggested" },
+        staffing_band: "30_60",
+        rota_labour: { pct: 31.4, days: 12 },
+      }),
+    );
+    const check = askFor("team.rotas_check", f, inputs(f))!;
+    expect(check.text).toMatch(/^I read 1 week .*1 person and 1 shifts\. I couldn't see dates on it, so I've taken it as your last week\. Is this right\?$/);
+    expect(check.card.table).toEqual({ columns: ["Name", "Role", "Shifts", "Usually"], rows: [["Ali", "Chef", "1", "Mon, 5pm to 11pm"]] });
+    const staffing = askFor("team.staffing", f, inputs(f))!;
+    expect(staffing.card).toMatchObject({ confirm: true, skip: true, staffing: { rows: [{ role: "chef", min: 2 }] } });
+    expect(dinaReplyProblems({ messages: [{ text: staffing.text, component: null }] })).toEqual([]);
+    const labour = askFor("team.labour", f, inputs(f))!;
+    expect(labour.card.options.map((o) => o.label)).toEqual(["31% (what your rotas ran at)", "25%", "30%", "35%"]);
+  });
+});

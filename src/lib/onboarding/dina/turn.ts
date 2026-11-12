@@ -170,6 +170,8 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
   const places = step === "hello" ? await helloPlacesData(restaurant, state) : null;
   // (On the turn it arrives the sheet is already in input.data.)
   const sheet = step === "team" && !input.data?.length ? await staffSheetData(id, state) : null;
+  // ...and the people their past rotas show (names, roles, usual days; never pay), once the reading is checked.
+  const rotaPeople = step === "team" && stepState(state, "team").status !== "done" ? await import("@/lib/rota/import").then((m) => m.rotaPeopleData(id)).catch(() => null) : null;
   // What setup asks next (code decides: guide/questions.ts). If it's one of code's
   // own cards, she only answers the owner in a line: code asks right after her.
   const before = nextAction(await factsFor(id, state));
@@ -203,7 +205,7 @@ export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
     event: input.event,
     history,
     ownerText: input.text ?? null,
-    data: [...(input.data ?? []), ...(places ? [places] : []), ...(sheet ? [sheet] : [])],
+    data: [...(input.data ?? []), ...(places ? [places] : []), ...(sheet ? [sheet] : []), ...(rotaPeople ? [rotaPeople as DataBlock] : [])],
     note: input.note,
     guide: guideLine(before),
   });

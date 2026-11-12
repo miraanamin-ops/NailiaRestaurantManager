@@ -38,6 +38,13 @@ async function prepare(restaurantId: string, action: NextAction) {
     await prepareBrand(restaurantId).catch((err) => console.error("Couldn't prepare the brand choices", err));
     return true;
   }
+  // The staffing card (suggested for their size, or learnt from their rotas) and the labour target from their rotas.
+  if (action.step === "team" && (action.question.id === "team.staffing" || action.question.id === "team.labour")) {
+    const { prepareStaffing, prepareLabour } = await import("@/lib/rota/import");
+    if (action.question.id === "team.staffing") await prepareStaffing(restaurantId).catch((err) => console.error("Couldn't prepare the staffing card", err));
+    else await prepareLabour(restaurantId).catch((err) => console.error("Couldn't work out the labour from the rotas", err));
+    return false;
+  }
   if (action.step === "tone") {
     const { prepareToneOptions } = await import("../dina/tone-step");
     await prepareToneOptions(restaurantId).catch((err) => console.error("Couldn't prepare the tone choices", err));

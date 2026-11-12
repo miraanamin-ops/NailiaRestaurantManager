@@ -6,7 +6,7 @@ import { ChatPreview } from "./preview";
 
 export const metadata: Metadata = { title: "Chat preview · DinerAI", robots: { index: false, follow: false } };
 
-// The web chat's look, with sample conversations (?scene=hello|google|tone|menu|summary),
+// The web chat's look, with sample conversations (?scene=hello|google|tone|menu|team|summary),
 // for signing it off and for screenshots. Only on a copy running on this computer:
 // on Vercel (the live site and previews) it doesn't exist.
 export default function ChatPreviewPage({ searchParams }: PageProps<"/dev/chat-preview">) {

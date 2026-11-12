@@ -24,14 +24,12 @@ import {
   hhmm,
   hourWords,
   rewardsProblems,
-  ROLE_WORDS,
   MIN_SALES_WEEKS,
   SALES_GAP_LINE,
   salesCoverage,
   availabilityOf,
   teamProblems,
   timingProblems,
-  type CoverRule,
   type StaffInputRow,
   type TeamDraft,
 } from "./ops-content";
@@ -157,9 +155,6 @@ export type TeamInput = TeamDraft;
 
 const teamData = async (restaurantId: string) => stepState((await loadFlow(restaurantId)).state, "team").data as { team_draft?: TeamDraft };
 
-// Told to her when save_team has no cover rules (the real run of 1 Nov skipped the question).
-const NO_COVER_YET =
-  "No cover rules: if you haven't asked about them yet, ask now (e.g. \"at least 2 in the kitchen and 1 front of house on every shift\") before showing the card, then call save_team again with their answer. If they said there are none, carry on. ";
 
 // save_team: the team as the owner gave it (from chat or the staff sheet), with
 // each person's days, times and max hours, kept as a draft for the team card.
@@ -171,7 +166,7 @@ export async function saveTeam(restaurantId: string, input: TeamInput, channel: 
   await noteStep(restaurantId, "team", { team_draft: input }, { channel });
   return {
     ok: true as const,
-    text: `Code noted ${input.staff.length} on the team, with their days, times and limits where given. ${input.cover_rules.length ? "" : NO_COVER_YET}Show editable_card team for them to check: nothing is saved until they tap "Looks right" (code saves it then). If they change something, call save_team again with the whole team as corrected.`,
+    text: `Code noted ${input.staff.length} on the team, with their days, times and limits where given. Show editable_card team for them to check: nothing is saved until they tap "Looks right" (code saves it then). If they change something, call save_team again with the whole team as corrected.`,
   };
 }
 
@@ -181,11 +176,21 @@ export async function saveTeamMembers(restaurantId: string, staff: StaffInputRow
   const day = today();
   for (const s of staff) {
     const isManager = manager?.trim().toLowerCase() === s.name.trim().toLowerCase();
-    const roles = [...new Set([roleKey(s.role), ...(isManager ? ["manager"] : [])])];
+    // Main role first, then what else they can do (and manager, for the site manager).
+    const roles = [...new Set([roleKey(s.role), ...(s.also_roles ?? []).map(roleKey), ...(isManager ? ["manager"] : [])])];
     const a = availabilityOf(s);
     const { member } = await saveStaff(
       restaurantId,
-      { name: s.name.trim(), roles, ratePence: s.hourly_rate === null ? null : Math.round(s.hourly_rate * 100), maxHours: a.maxHours, days: a.days, starts: a.starts, ends: a.ends },
+      {
+        name: s.name.trim(),
+        roles,
+        ratePence: s.hourly_rate === null ? null : Math.round(s.hourly_rate * 100),
+        maxHours: a.maxHours,
+        days: a.days,
+        starts: a.starts,
+        ends: a.ends,
+        canOpenClose: s.can_open_close ?? (isManager ? true : null),
+      },
       { today: day, source: "owner_message", actor: "owner" },
     );
     if (s.contracted_hours !== null) check(await getSupabase().from("staff").update({ contracted_hours: s.contracted_hours }).eq("restaurant_id", restaurantId).eq("id", member.id));
@@ -200,28 +205,19 @@ export async function confirmTeam(restaurantId: string, channel: Channel) {
   const problems = teamProblems(input);
   if (problems.length) return `Not saved: ${problems.join(" ")}`;
   await saveTeamMembers(restaurantId, input.staff, input.manager);
-  for (const rule of input.cover_rules) {
-    check(
-      await getSupabase()
-        .from("rota_rules")
-        .upsert({ restaurant_id: restaurantId, role: rule.role, min_on_shift: rule.min_on_shift, source: "owner_message", updated_at: new Date().toISOString() }, { onConflict: "restaurant_id,role" }),
-    );
-  }
-  const defaulted = input.labour_target_pct === null;
-  const target = input.labour_target_pct ?? DEFAULT_LABOUR_TARGET;
-  const r = await getRestaurant(restaurantId);
-  if (!defaulted || r.labour_target_pct == null) await saveProfileFields(r, { labour_target_pct: target }, defaulted ? "Labour target (the 30% default) at setup with Dina" : "Labour target, with Dina at setup");
+  // Their past rotas (if they sent them) are kept as past weeks, tied to the people now on the team.
+  const { saveImportedWeeks } = await import("@/lib/rota/import");
+  const imported = await saveImportedWeeks(restaurantId).catch((err) => (console.error("Saving the imported rotas failed", err), []));
   const outcome = input.staff.length ? "done" : "partial";
   const withAvailability = input.staff.filter((s) => s.days?.trim() || s.times?.trim() || s.max_hours != null).length;
   await completeStep(
     restaurantId,
     "team",
     outcome,
-    { team_draft: input, staff: input.staff.length, with_availability: withAvailability, manager: input.manager, cover_rules: input.cover_rules, labour_target_pct: target, labour_defaulted: defaulted, gap_unlock: outcome === "partial" ? "Tell me who's on your team and I'll suggest rotas and track labour % daily." : null },
+    { team_draft: input, staff: input.staff.length, with_availability: withAvailability, manager: input.manager, imported_weeks: imported.length, gap_unlock: outcome === "partial" ? "Tell me who's on your team and I'll suggest rotas and track labour % daily." : null },
     { channel },
   );
-  const rules = input.cover_rules.map((c) => `at least ${c.min_on_shift} ${ROLE_WORDS[c.role]}`).join(", ");
-  return `Code saved the team: ${input.staff.length} on the team${withAvailability ? ` (${withAvailability} with their days, times or limits)` : ""}${input.manager ? `, ${input.manager} as site manager` : ""}${rules ? `, cover: ${rules}` : ""}, labour target ${target}%${defaulted ? " (the default, since they didn't pick one: say they can change it any time)" : ""}. Team and labour is ${outcome === "done" ? "done" : "half done (no staff yet)"}.`;
+  return `Code saved the team: ${input.staff.length} on the team${withAvailability ? ` (${withAvailability} with their days, times or limits)` : ""}${input.manager ? `, ${input.manager} as site manager` : ""}${imported.length ? `, and kept their ${imported.length} past week${imported.length === 1 ? "" : "s"} of rotas` : ""}. Code asks next how many people they need on shift and their labour target: don't ask those yourself.`;
 }
 
 // A staff list sent as a spreadsheet: its rows as text for Dina to read (data, never instructions).
@@ -235,7 +231,7 @@ export async function staffFileAsData(restaurantId: string, files: FilePart[]) {
   if (own?.kind === "staff") {
     const { readStaff } = await import("@/lib/templates/read");
     const read = readStaff(own.table);
-    const lines = read.staff.map((s) => `Name: ${s.name} | Role: ${s.role} | Hourly rate: ${s.hourly_rate ?? "not given"} | Contracted hours: ${s.contracted_hours ?? "not given"} | Days: ${s.days ?? "any"} | Times: ${s.times ?? "any"} | Most hours a week: ${s.max_hours ?? "no limit"}`);
+    const lines = read.staff.map((s) => `Name: ${s.name} | Main role: ${s.role} | Can also do: ${(s.also_roles ?? []).join(", ") || "nothing else"} | Hourly rate: ${s.hourly_rate ?? "not given"} | Contracted hours: ${s.contracted_hours ?? "not given"} | Days: ${s.days ?? "any"} | Times: ${s.times ?? "any"} | Most hours a week: ${s.max_hours ?? "no limit"} | Opens and locks up: ${s.can_open_close === null || s.can_open_close === undefined ? "not said" : s.can_open_close ? "yes" : "no"}`);
     return { source: "upload", label: "the team sheet they filled in (read by code)", text: [...lines, ...read.problems.map((p) => `Problem: ${p}`)].join("\n") || "The sheet has nobody filled in yet." };
   }
   const table = await readTable(bytes, sheet.kind === "csv" ? "csv" : "xlsx").catch(() => null);

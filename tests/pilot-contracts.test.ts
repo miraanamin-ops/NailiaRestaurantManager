@@ -202,9 +202,10 @@ describe("getRotaInputs", () => {
         hourly_rate_pence: 1650,
         max_hours_week: 45,
         availability: { 1: [], 2: [], 3: [], 4: [], 5: [{ starts: "11:00", ends: "15:00" }, { starts: "17:00", ends: "23:00" }], 6: [], 7: [] },
+        can_open_close: false,
       },
     ]);
-    expect(r.rules).toEqual([{ role: "kitchen", min_on_shift: 2, orders_per_extra_staff: 12 }]);
+    expect(r.rules).toEqual([{ role: "kitchen", min_on_shift: 2, orders_per_extra_staff: 12, driver: null, before_open_minutes: 0, after_close_minutes: 0, preset: null }]);
   });
 
   test("no staff: the dummy team in test mode, else an empty list", async () => {

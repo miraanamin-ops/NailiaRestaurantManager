@@ -35,9 +35,10 @@ describe("the files themselves", () => {
     await wb.xlsx.load((await buildWorkbook(staffSpec(restaurant))) as unknown as ArrayBuffer);
     expect(wb.worksheets.map((w) => w.name)).toEqual(["Your team", "How to fill this in"]);
     const ws = wb.getWorksheet("Your team")!;
-    expect(ws.getRow(1).values).toEqual([undefined, "Name", "Role", "Hourly rate (£)", "Contracted hours a week", "Days they can work", "Times they can work", "Most hours a week"]);
+    expect(ws.getRow(1).values).toEqual([undefined, "Name", "Role", "Can also do", "Hourly rate (£)", "Contracted hours a week", "Days they can work", "Times they can work", "Most hours a week", "Can open and close"]);
     expect((ws.getCell("A1").fill as ExcelJS.FillPattern).fgColor?.argb).toBe("FF7B1E3A");
-    expect(ws.getCell("B4").dataValidation).toMatchObject({ type: "list", formulae: ['"Kitchen,Front of house,Delivery,Manager"'] });
+    expect(ws.getCell("B5").dataValidation).toMatchObject({ type: "list", formulae: ['"Manager,Head chef,Chef,Kitchen porter,Server,Host,Bar,Runner,Counter,Driver,Kitchen (all-round),Front of house (all-round)"'] });
+    expect(ws.getCell("I5").dataValidation).toMatchObject({ type: "list", formulae: ['"Yes,No"'] });
     expect(ws.views[0]).toMatchObject({ state: "frozen", ySplit: 1 });
   });
 
@@ -97,18 +98,26 @@ describe("menu and costs", () => {
 describe("staff", () => {
   test("the example rows are ignored; roles in the owner's words; blanks mean any day or time", async () => {
     const filled = await fill(await buildWorkbook(staffSpec(restaurant)), "Your team", (ws) => {
-      ws.getRow(4).values = ["Bilal", "Kitchen", 12.5, 35, "Mon-Fri", "Evenings", null];
-      ws.getRow(5).values = ["Zara", "waitress", "£11.44", null, "Weekends", null, 16];
-      ws.getRow(6).values = ["Omar", "boss", 15, 40, null, null, null];
+      ws.getRow(5).values = ["Bilal", "Kitchen (all-round)", null, 12.5, 35, "Mon-Fri", "Evenings", null, "Yes"];
+      ws.getRow(6).values = ["Zara", "waitress", "Counter, bar", "£11.44", null, "Weekends", null, 16, "no"];
+      ws.getRow(7).values = ["Omar", "boss", null, 15, 40, null, null, null, null];
+      ws.getRow(8).values = ["Tomasz", "KP", null, 12.21, null, "Fri-Sun", null, null, null];
     });
     const read = readStaff((await readTemplateTable(filled, "Your team"))!);
     expect(read.staff).toEqual([
-      { name: "Bilal", role: "kitchen", hourly_rate: 12.5, contracted_hours: 35, days: "Mon-Fri", times: "Evenings", max_hours: null },
-      { name: "Zara", role: "front", hourly_rate: 11.44, contracted_hours: null, days: "Weekends", times: null, max_hours: 16 },
+      { name: "Bilal", role: "kitchen", also_roles: [], can_open_close: true, hourly_rate: 12.5, contracted_hours: 35, days: "Mon-Fri", times: "Evenings", max_hours: null },
+      { name: "Zara", role: "server", also_roles: ["counter", "bar"], can_open_close: false, hourly_rate: 11.44, contracted_hours: null, days: "Weekends", times: null, max_hours: 16 },
+      { name: "Tomasz", role: "kitchen_porter", also_roles: [], can_open_close: null, hourly_rate: 12.21, contracted_hours: null, days: "Fri-Sun", times: null, max_hours: null },
     ]);
-    expect(read.problems).toEqual(['Omar\'s role ("boss") isn\'t Kitchen, Front of house, Delivery or Manager']);
+    expect(read.problems).toEqual(['Omar\'s role ("boss") isn\'t one I know: pick from the list (Manager, Head chef, Chef, Kitchen porter, Server, Host, Bar, Runner, Counter or Driver)']);
     expect(roleFrom("Front of house")).toBe("front");
-    expect(roleFrom("Delivery driver")).toBe("delivery");
+    expect(roleFrom("Front of house (all-round)")).toBe("front");
+    expect(roleFrom("Delivery driver")).toBe("driver");
+    expect(roleFrom("Head chef")).toBe("head_chef");
+    expect(roleFrom("Pot washer")).toBe("kitchen_porter");
+    // A sheet downloaded before 12 Nov 2026 (no "Can also do" or "Can open and close" columns) still reads.
+    const old = readStaff({ headers: ["Name", "Role", "Hourly rate (£)", "Contracted hours a week", "Days they can work", "Times they can work", "Most hours a week"], rows: [["Sam", "Front of house", 11.44, null, "Weekends", "5pm-11pm", 16]] });
+    expect(old.staff).toEqual([{ name: "Sam", role: "front", also_roles: [], can_open_close: null, hourly_rate: 11.44, contracted_hours: null, days: "Weekends", times: "5pm-11pm", max_hours: 16 }]);
     const untouched = readStaff((await readTemplateTable(await buildWorkbook(staffSpec(restaurant)), "Your team"))!);
     expect(untouched).toEqual({ staff: [], problems: ["nobody was filled in yet (the grey example rows are ignored)"] });
   });

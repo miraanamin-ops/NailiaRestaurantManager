@@ -190,11 +190,27 @@ export function renderForWhatsApp(messages: ChatMessage[], opts: { skippable: bo
         }
         if (chunk) out.push({ kind: "text", body: chunk });
       }
-      const upload = card.upload ? `\n\n${card.upload.accept === "spreadsheet" ? "Send the CSV or Excel file here." : card.upload.multiple ? "Send the photos here." : "Send it here as a photo."}` : "";
+      // A table to check (the rotas read at setup): one person a line.
+      if (card.table) {
+        const rows = card.table.rows.map((r) => `*${r[0]}*: ${r.slice(1).filter(Boolean).join(", ")}`);
+        out.push({ kind: "text", body: clip(rows.join("\n"), WA.text) });
+      }
+      // How many people are needed: one role a line.
+      if (card.staffing) {
+        const rows = card.staffing.rows.map((r) => `*${r.label}*: at least ${r.min}${r.per && r.orders ? `, plus 1 more per ${r.per} ${r.orders} an hour` : ""}`);
+        out.push({ kind: "text", body: clip([...rows, ...card.staffing.notes.slice(1).map((n) => `_${n}_`)].join("\n"), WA.text) });
+      }
+      const upload = card.upload
+        ? `\n\n${card.upload.accept === "spreadsheet" ? "Send the CSV or Excel file here." : card.upload.accept === "any" ? "Send the photos or files here." : card.upload.multiple ? "Send the photos here." : "Send it here as a photo."}`
+        : "";
       const link = card.link ? `\n\n${card.link.label}: ${abs(card.link.href)}` : "";
       const words = card.input && card.options.length ? "\n\nOr type your own." : "";
       const several = card.multi ? "\n\nReply with all the numbers that apply, for example 1, 3." : "";
-      const gridHow = card.grid ? `\n\nTell me any changes in your own words, like "Lamb chops: add sesame", or check them on the web: ${opts.chatUrl}` : "";
+      const gridHow = card.grid
+        ? `\n\nTell me any changes in your own words, like "Lamb chops: add sesame", or check them on the web: ${opts.chatUrl}`
+        : card.staffing
+          ? `\n\nOr tell me any changes in your own words, like "2 chefs" or "1 more server per 10 eat-in orders".`
+          : "";
       if (choices.length) out.push(withChoices(`${m.text}${gridHow}${upload}${link}${words}${several}`, m.id, choices));
       else out.push({ kind: "text", body: clip(`${m.text}${upload}${link}`, WA.text) });
     } else if (c?.type === "recap") {

@@ -53,7 +53,7 @@ _You never need these: just tell me what you want in your own words. Not sure ho
 - *SALES*: last 7 days' sales and the sales page link
 - Ask *how busy will Saturday be?* or *why is Friday quiet?*: the forecast, with its reasons (once your forecast is ready)
 - *ADD STAFF +447700900123*: let a staff phone send till reports and sales files (nothing else) · *REMOVE STAFF* · *STAFF* to list them
-- *add Ali, kitchen, £13, weekdays*: add someone to the rota team (or change them; also e.g. _Fri-Sun, 5pm-11pm, max 20 hours_) · *remove Ali from the team* · *TEAM* to list everyone
+- *add Ali, chef, £13, weekdays*: add someone to the rota team (or change them; also e.g. _Fri-Sun, 5pm-11pm, max 20 hours_; roles: manager, head chef, chef, kitchen porter, server, host, bar, runner, counter, driver) · _Sara can also do the bar_ · _Mo can open and lock up_ · *remove Ali from the team* · *TEAM* to list everyone
 - *ROTA*: next week's rota (I suggest one every Thursday at 10am; tell me changes like _Ali can't do Friday_)`;
 
 // Only listed (and only working) with TEST_TOOLS on, for a demo restaurant.

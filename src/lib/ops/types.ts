@@ -83,6 +83,7 @@ export type StaffRow = Base & Confirmable & {
   skills: string[];
   contracted_hours: number | null;
   max_hours_week: number | null; // 043: the most hours a week they want (or may) work
+  can_open_close?: boolean; // 069: can open up and lock up
   employment_start: string | null;
   employment_end: string | null;
   age_band: AgeBand | null;
@@ -127,6 +128,10 @@ export type RotaRuleRow = Base & {
   role: string;
   min_on_shift: number;
   orders_per_extra_staff: number | null;
+  driver?: string | null; // 069: which orders count (empty = all)
+  before_open_minutes?: number; // 069
+  after_close_minutes?: number; // 069
+  preset?: string | null; // 069: seats:<band>, learned, owner
   source: OpsSource;
   updated_at: string;
 };

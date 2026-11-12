@@ -284,7 +284,7 @@ describe("anything the owner says about the team, read by Claude (stubbed here)"
     const { understand, staff } = await loadWithClaude();
     readings = [{ actions: [{ kind: "save_person", person: "Ali", hourly_rate_pounds: 12.5, days: [1, 2, 3, 4, 5] }], question: null }];
     expect(await understand.handleTeamMessage(restaurant as never, "add Ali, 12.50£ an hour, available monday to friday all day", { now: NOW, send })).toBe(true);
-    expect(sent.at(-1)!.text).toBe("What does Ali do: manager, kitchen, front of house, delivery? (Nothing's saved yet.)");
+    expect(sent.at(-1)!.text).toBe("What does Ali do: manager, head chef, chef, kitchen porter, server, host, bar, runner, counter, driver? (Nothing's saved yet.)");
     expect(rows("staff")).toEqual([]);
     // the owner answers "kitchen": Claude reads it with the recent messages
     readings = [{ actions: [{ kind: "save_person", person: "Ali", roles: ["kitchen"], hourly_rate_pounds: 12.5, days: [1, 2, 3, 4, 5] }], question: null }];

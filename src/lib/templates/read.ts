@@ -4,6 +4,7 @@
 // guess. Unit-tested (tests/templates.test.ts).
 import type { CostInput } from "@/lib/menu-engineering";
 import { STAFF_ROLES, type StaffInputRow, type StaffRole } from "@/lib/onboarding/dina/ops-content";
+import { roleKey } from "@/lib/rota/rules";
 import { parseDate, parseMoney, type Cell, type Table } from "@/lib/sales/pos-table";
 import { ALL_OTHER_DISHES, DAILY_TAKINGS_MAPPING, EXACTNESS, EXAMPLE_MARK, MENU_COLUMNS, STAFF_COLUMNS, TAKINGS_COLUMNS } from "./specs";
 
@@ -56,17 +57,46 @@ export function readMenuCosts(table: Table | null): MenuCostsRead {
 
 // ---------- Staff ----------
 
+// Loose words in someone's own sheet, after the exact role words (lib/rota/rules.ts roleKey).
 const ROLE_WORDS: [RegExp, StaffRole][] = [
+  [/head chef|kitchen manager/, "head_chef"],
   [/manager|supervisor|gm\b/, "manager"],
-  [/kitchen|chef|cook|kp|porter|grill|tandoor/, "kitchen"],
-  [/front|foh|wait|server|floor|bar|counter|cashier|host/, "front"],
-  [/deliver|driver|rider/, "delivery"],
+  [/porter|\bkp\b|dish|pot ?wash/, "kitchen_porter"],
+  [/chef|cook|grill|tandoor|pizza/, "chef"],
+  [/kitchen/, "kitchen"],
+  [/wait|server|floor/, "server"],
+  [/bar|barista/, "bar"],
+  [/host|greet/, "host"],
+  [/runner/, "runner"],
+  [/counter|cashier|till|phone/, "counter"],
+  [/deliver|driver|rider/, "driver"],
+  [/front|foh/, "front"],
 ];
 export function roleFrom(c: Cell | undefined): StaffRole | null {
-  const v = norm(c);
-  if ((STAFF_ROLES as readonly string[]).includes(v)) return v as StaffRole;
+  const v = norm(c).replace(/\s*\(all-round\)$/, "");
+  if (!v) return null;
+  const key = roleKey(v);
+  if ((STAFF_ROLES as readonly string[]).includes(key)) return key as StaffRole;
   return ROLE_WORDS.find(([re]) => re.test(v))?.[1] ?? null;
 }
+// "Counter, Bar" -> ["counter", "bar"]
+export function rolesFrom(c: Cell | undefined): StaffRole[] {
+  return [
+    ...new Set(
+      text(c)
+        .split(/,|\/|&|\band\b|;/i)
+        .map((x) => roleFrom(x.trim()))
+        .filter((x): x is StaffRole => x !== null),
+    ),
+  ];
+}
+const yesNo = (c: Cell | undefined) => {
+  const v = norm(c);
+  if (!v) return null;
+  if (/^(y|yes|true|1|x|✓|ok)$/.test(v)) return true;
+  if (/^(n|no|false|0)$/.test(v)) return false;
+  return null;
+};
 
 export type StaffRead = { staff: StaffInputRow[]; problems: string[] };
 
@@ -82,10 +112,20 @@ export function readStaff(table: Table | null): StaffRead {
     if (!name || name.toLowerCase().includes(EXAMPLE_MARK)) continue;
     const role = roleFrom(row[at.role]);
     if (!role) {
-      out.problems.push(`${name}'s role ("${text(row[at.role]) || "blank"}") isn't Kitchen, Front of house, Delivery or Manager`);
+      out.problems.push(`${name}'s role ("${text(row[at.role]) || "blank"}") isn't one I know: pick from the list (Manager, Head chef, Chef, Kitchen porter, Server, Host, Bar, Runner, Counter or Driver)`);
       continue;
     }
-    out.staff.push({ name, role, hourly_rate: num(row, at.rate), contracted_hours: num(row, at.contracted), days: opt(row, at.days), times: opt(row, at.times), max_hours: num(row, at.max) });
+    out.staff.push({
+      name,
+      role,
+      also_roles: at.also < 0 ? [] : rolesFrom(row[at.also]).filter((x) => x !== role),
+      can_open_close: at.keys < 0 ? null : yesNo(row[at.keys]),
+      hourly_rate: num(row, at.rate),
+      contracted_hours: num(row, at.contracted),
+      days: opt(row, at.days),
+      times: opt(row, at.times),
+      max_hours: num(row, at.max),
+    });
   }
   if (!out.staff.length && !out.problems.length) out.problems.push("nobody was filled in yet (the grey example rows are ignored)");
   return out;

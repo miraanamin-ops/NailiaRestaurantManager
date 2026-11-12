@@ -10,16 +10,23 @@ export type TimeSpan = { starts: string; ends: string }; // "HH:MM" London; an e
 export type RotaStaff = {
   id: string;
   name: string;
-  roles: string[]; // "kitchen", "front"...
+  roles: string[]; // the main role first ("chef"), then what they can also do ("counter")
   hourly_rate_pence: number | null; // on the week's Monday; null = not set yet
   max_hours_week: number | null; // null = no cap beyond the working time rules
   availability: Record<Weekday, TimeSpan[]>; // when they can work (available or preferred)
+  can_open_close?: boolean; // can open up and lock up (a key holder)
 };
 
 export type RotaRule = {
   role: string;
   min_on_shift: number; // always at least this many
   orders_per_extra_staff: number | null; // one more person per this many forecast orders an hour
+  // Which orders count (rules.ts DRIVERS); none saved = all orders, as before 12 Nov 2026.
+  driver?: "all" | "eat_in" | "takeaway" | "delivery" | "none" | null;
+  before_open_minutes?: number; // starts this long before opening (prep, setting up)
+  after_close_minutes?: number; // stays this long after closing (washing up, cashing up)
+  // Where the numbers came from: "seats:30_60" (the suggestion for that size), "learned" (their rotas), "owner".
+  preset?: string | null;
 };
 
 export type RotaInputs = {

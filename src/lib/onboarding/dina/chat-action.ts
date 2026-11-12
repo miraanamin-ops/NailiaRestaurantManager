@@ -38,6 +38,8 @@ export const Action = z.discriminatedUnion("kind", [
     label: z.string().min(1).max(200),
     // The allergen grid: each dish's ticks (allergens, and "diet:" tags), or "unsure".
     grid: z.record(z.string().max(200), z.union([z.array(z.string().max(60)).max(30), z.literal("unsure")])).optional(),
+    // The staffing card: each role's minimum and "1 more per N orders an hour".
+    staffing: z.record(z.string().max(40), z.object({ min: z.number().int().min(0).max(20), per: z.number().min(1).max(200).nullable() })).optional(),
     clientId: z.string().uuid(),
   }),
   z.object({ kind: z.literal("confirm"), messageId: z.string().uuid(), changes: z.record(z.string().max(40), z.string().max(300)), clientId: z.string().uuid() }),
@@ -114,7 +116,7 @@ async function turnFor(r: string, action: z.infer<typeof Action>): Promise<Turn 
       return { event: "message", text: action.text, externalId: action.clientId };
     }
     case "pick": {
-      const g = await guidePick({ restaurantId: r, messageId: action.messageId, choiceIds: action.choiceIds, text: action.text ?? null, channel: "web", confirmed: true, grid: action.grid ?? null });
+      const g = await guidePick({ restaurantId: r, messageId: action.messageId, choiceIds: action.choiceIds, text: action.text ?? null, channel: "web", confirmed: true, grid: action.grid ?? null, staffing: action.staffing ?? null });
       if (!g) return null;
       return { event: "message", text: action.label, externalId: action.clientId, ownerParts: [{ type: "answer", to: action.messageId, choice: action.choiceIds.join(",") }], codeReply: g.messages, note: g.note ?? null };
     }

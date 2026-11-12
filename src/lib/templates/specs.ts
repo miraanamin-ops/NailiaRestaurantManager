@@ -96,16 +96,21 @@ export function menuCostsSpec(r: { name: string; brand_color?: string | null; me
 
 // ---------- Staff ----------
 
+// "Role" keeps its old heading, so sheets downloaded before 12 Nov 2026 still read.
 export const STAFF_COLUMNS = {
   name: "Name",
   role: "Role",
+  also: "Can also do",
   rate: "Hourly rate (£)",
   contracted: "Contracted hours a week",
   days: "Days they can work",
   times: "Times they can work",
   max: "Most hours a week",
+  keys: "Can open and close",
 } as const;
-export const ROLE_CHOICES = ["Kitchen", "Front of house", "Delivery", "Manager"];
+// The roles to pick from (lib/rota/rules.ts), plus the all-round ones for anyone who does a bit of everything.
+export const ROLE_CHOICES = ["Manager", "Head chef", "Chef", "Kitchen porter", "Server", "Host", "Bar", "Runner", "Counter", "Driver", "Kitchen (all-round)", "Front of house (all-round)"];
+export const YES_NO = ["Yes", "No"];
 
 export function staffSpec(r: { name: string; brand_color?: string | null }): TemplateSpec {
   return {
@@ -115,27 +120,32 @@ export function staffSpec(r: { name: string; brand_color?: string | null }): Tem
     title: `${r.name}: your team`,
     columns: [
       { header: STAFF_COLUMNS.name, width: 22 },
-      { header: STAFF_COLUMNS.role, width: 16, choices: ROLE_CHOICES },
+      { header: STAFF_COLUMNS.role, width: 22, choices: ROLE_CHOICES, note: "Their main job. Kitchen porter = KP or dishwasher; Counter = takeaway counter, till or phones; Driver = your own drivers only." },
+      { header: STAFF_COLUMNS.also, width: 22, note: "Any other roles they can cover, e.g. Counter, Bar. Leave blank if none." },
       { header: STAFF_COLUMNS.rate, width: 15, format: "money" },
       { header: STAFF_COLUMNS.contracted, width: 14, format: "number", note: "Leave blank for zero-hours staff." },
       { header: STAFF_COLUMNS.days, width: 22, note: "In your words: Mon-Fri, weekends, Fri-Sun, Mon Wed Fri. Blank means any day." },
       { header: STAFF_COLUMNS.times, width: 22, note: "In your words: 5pm-11pm, evenings, lunchtimes. Blank means any time." },
       { header: STAFF_COLUMNS.max, width: 13, format: "number", note: "The most hours a week they want, if there's a limit (e.g. students)." },
+      { header: STAFF_COLUMNS.keys, width: 14, choices: YES_NO, note: "Yes if they can open up and lock up (they have keys). The rota puts one on every opening and closing shift." },
     ],
     rows: [
-      [`Aisha ${EXAMPLE_MARK}`, "Kitchen", 12.5, 30, "Mon-Fri", "Evenings", null],
-      [`Sam ${EXAMPLE_MARK}`, "Front of house", 11.44, null, "Weekends", "5pm-11pm", 16],
+      [`Aisha ${EXAMPLE_MARK}`, "Head chef", null, 14.5, 40, "Tue-Sat", null, null, "Yes"],
+      [`Tom ${EXAMPLE_MARK}`, "Kitchen porter", null, 12.21, null, "Fri-Sun", "5pm-11pm", 20, "No"],
+      [`Sam ${EXAMPLE_MARK}`, "Server", "Counter, Bar", 12.5, null, "Weekends", "Evenings", 16, "No"],
     ],
-    exampleRows: [0, 1],
+    exampleRows: [0, 1, 2],
     blankRows: 30,
     brandColor: r.brand_color || DEFAULT_COLOUR,
     instructions: [
-      "One row per person. The two grey rows are examples: type over them or leave them, they're ignored.",
-      "Role: Kitchen, Front of house, Delivery or Manager (pick from the list).",
+      "One row per person. The grey rows are examples: type over them or leave them, they're ignored.",
+      "Role: their main job, picked from the list. Manager (or supervisor); Head chef; Chef (cook, sous chef, grill, tandoor); Kitchen porter (KP, dishwasher, pot wash); Server (waiter or waitress); Host (greets and seats); Bar (drinks, barista); Runner (takes food to tables); Counter (takeaway counter, till, phones); Driver (your own delivery drivers, not app riders). Kitchen or Front of house (all-round) for someone who does a bit of everything.",
+      "Can also do: any other roles they can cover when you're short, e.g. Counter, Bar. The rota only uses them for it when nobody whose main job it is is free.",
       "Hourly rate: what you pay them an hour, in pounds.",
       "Contracted hours: their hours a week. Leave blank for zero-hours staff.",
       "Days and times they can work: in your own words, e.g. Mon-Fri, weekends, 5pm-11pm, evenings. Blank means any day or any time.",
       "Most hours a week: only if there's a limit (students, second jobs).",
+      "Can open and close: Yes for anyone with keys who can open up and lock up.",
       "When you're done, send this file back to me on WhatsApp or in the chat. I use it to suggest your rotas and track labour %.",
     ],
   };
