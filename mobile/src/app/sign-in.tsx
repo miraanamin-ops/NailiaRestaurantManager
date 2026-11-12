@@ -67,8 +67,8 @@ export default function SignIn() {
         <View style={styles.brand}>
           <Logo size={30} />
         </View>
-        <T kind="title">Your restaurant’s AI manager.</T>
-        <T quiet>Reviews answered, Google kept fresh, offers that bring people back. You approve everything.</T>
+        <T kind="title">Hours back every week, and more money in the till.</T>
+        <T quiet>Your AI manager runs your restaurant; you approve everything in one tap. Nothing goes out without you.</T>
         <Card>
           <T kind="small" quiet>
             Email
