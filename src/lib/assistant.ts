@@ -306,7 +306,7 @@ export async function campaignContext(ctx: RestaurantContext) {
 }
 
 async function writeCampaign(ctx: RestaurantContext, learning: Learning, request: string, fallbackSegment: Segment) {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("assistant").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -492,7 +492,7 @@ const ProfileChangesSchema = z.object({
 });
 
 export async function extractProfileChanges(ctx: RestaurantContext, message: string): Promise<ProfileChange[]> {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("assistant").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -595,7 +595,7 @@ export async function chat(
   // Claude may look things up first (a few rounds at most), then answer or draft.
   let response: Anthropic.Beta.BetaMessage | null = null;
   for (let round = 0; round < LOOKUP_ROUNDS; round++) {
-    response = await claude().beta.messages.create({
+    response = await claude("assistant").beta.messages.create({
       ...WITH_FALLBACK,
       model: MODEL,
       max_tokens: MAX_TOKENS,
@@ -693,7 +693,7 @@ export function forecastAnswer(text: string, found: { lines: string[]; unvalidat
 }
 
 async function writeOnly(ctx: RestaurantContext, learning: Learning, request: string) {
-  const response = await claude().beta.messages.create({
+  const response = await claude("assistant").beta.messages.create({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -744,7 +744,7 @@ const PostSchema = z.object({
 const POST_GUIDE = `Google posts appear on the restaurant's Google listing. Write 2 to 4 short sentences (under 600 characters) in the brand voice, about something concrete from the data: a dish with its price, an offer within the discount cap, or an event or occasion. End with a simple call to action like "Pop in tonight" or "See you this weekend". No hashtags, at most two emojis, no links.`;
 
 async function writePostFields(ctx: RestaurantContext, learning: Learning, content: Anthropic.Beta.BetaMessageParam["content"]) {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("assistant").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -806,7 +806,7 @@ export type ReportInsights = z.infer<typeof ReportInsightsSchema>;
 // The weekly report's words: summary sentence, review themes and next week's
 // actions. The numbers themselves are worked out in plain code and given here.
 export async function writeReportInsights(ctx: RestaurantContext, facts: string, reviewTexts: string[]) {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("assistant").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

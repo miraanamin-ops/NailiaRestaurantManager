@@ -1,4 +1,5 @@
 import "server-only";
+import { withAiContext } from "@/lib/ai-context";
 import { z } from "zod";
 import { FlowError, isFlowStep, STEP_DEFS } from "@/lib/onboarding/flow";
 import { afterSkip, answeredPart, handleAnswer } from "@/lib/onboarding/dina/answers";
@@ -64,7 +65,12 @@ export async function overTurnLimit(r: string, action: ChatAction) {
 }
 
 // gapMs: the pause between Dina's messages (the website shows them arriving one by one).
-export async function runChatAction(r: string, action: ChatAction, send: (event: ChatEvent) => void, { gapMs = MESSAGE_GAP_MS }: { gapMs?: number } = {}) {
+// Every Claude call it makes is counted against this restaurant (ai_usage).
+export function runChatAction(r: string, action: ChatAction, send: (event: ChatEvent) => void, opts: { gapMs?: number } = {}) {
+  return withAiContext({ restaurantId: r }, () => chatAction(r, action, send, opts));
+}
+
+async function chatAction(r: string, action: ChatAction, send: (event: ChatEvent) => void, { gapMs = MESSAGE_GAP_MS }: { gapMs?: number } = {}) {
   const limits = [{ key: limitKey("dina-turn", r), ...TURNS }];
   try {
     send({ type: "typing" });

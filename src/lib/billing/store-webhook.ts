@@ -6,7 +6,8 @@ import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { syncActive } from "./activation";
 import { APP_ENTITLEMENT } from "./config";
-import { isPaidMonth, parseSignature, restaurantIdsOf, SIGNATURE_TOLERANCE_S, storeChange, storeName, type StoreEvent } from "./store-events";
+import { recordPayment, recordStandingChange } from "@/lib/founder/billing-history";
+import { isPaidMonth, parseSignature, storePayment, restaurantIdsOf, SIGNATURE_TOLERANCE_S, storeChange, storeName, type StoreEvent } from "./store-events";
 
 // One App Store / Google Play event from RevenueCat (app/api/revenuecat/webhook),
 // handled like a Stripe event (billing/webhook.ts): its id is stored first so a
@@ -61,6 +62,14 @@ async function apply(event: StoreEvent): Promise<StoreWebhookResult> {
   if (!change) return "ignored";
 
   check(await db.from("restaurants").update(change.fields).eq("id", r.id).select("id"));
+  // The founder dashboard's history (lib/founder/billing-history.ts). Test purchases aren't real money.
+  if (event.environment !== "SANDBOX") {
+    const at = change.fields.store_event_at ?? new Date().toISOString();
+    const source = event.store === "PLAY_STORE" ? "play_store" : "app_store";
+    await recordStandingChange({ restaurantId: r.id, before: r, after: { ...r, ...change.fields }, source, at, detail: change.note, cancelReason: event.type === "CANCELLATION" ? (event.cancel_reason ?? null) : null, externalId: event.id });
+    const paid = storePayment(event);
+    if (paid) await recordPayment({ restaurantId: r.id, source, at, ...paid });
+  }
   const sandbox = event.environment === "SANDBOX";
   await logAction({ restaurantId: r.id, actor: "app store", action: "billing", detail: `${change.note}${sandbox ? " [test purchase]" : ""}`, data: { event: event.id, type: event.type, store: event.store ?? null, environment: event.environment ?? null } });
   // A test (sandbox) purchase on a real restaurant: probably App Review, or a mistake.

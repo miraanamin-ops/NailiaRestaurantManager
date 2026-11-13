@@ -24,7 +24,7 @@ const EditsSchema = z.object({
 
 export async function readEditsWithClaude(message: string, staff: Pick<RotaStaff, "id" | "name">[], weekStart: string): Promise<EditParse> {
   const out: EditParse = { adjustments: [], unread: [], unknownNames: [] };
-  const response = await claude().beta.messages.parse({
+  const response = await claude("rota").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

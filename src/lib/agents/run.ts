@@ -54,7 +54,7 @@ export async function callAgent<T>(call: AgentCall<T>): Promise<AgentResult<T>> 
     const retryNote: Anthropic.Beta.BetaContentBlockParam[] = problems.length
       ? [{ type: "text", text: `Your previous answer was rejected by the system for these reasons:\n${problems.map((p) => `- ${p}`).join("\n")}\nReturn a corrected answer.` }]
       : [];
-    const response = await claude().beta.messages.parse({
+    const response = await claude(`agent:${call.agent}`).beta.messages.parse({
       ...fallbackFor(agent.model),
       model: agent.modelId,
       max_tokens: MAX_TOKENS,
@@ -111,7 +111,7 @@ export async function callAgentWithTools<T>(call: AgentCall<T> & { tools: AgentT
   let rounds = 0;
   for (let attempt = 1; attempt <= 2; ) {
     const lastRound = rounds >= MAX_TOOL_ROUNDS;
-    const response = await claude().beta.messages.parse({
+    const response = await claude(`agent:${call.agent}`).beta.messages.parse({
       ...fallbackFor(agent.model),
       model: agent.modelId,
       max_tokens: MAX_TOKENS,

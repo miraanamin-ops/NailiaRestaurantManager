@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { scopeToSignup, sessionIdFromToken, signupScope } from "@/lib/auth-rules";
 import { builderEmails } from "@/lib/builder-emails";
+import { isFounderEmail } from "@/lib/founder/emails";
 import { assertNotLiveByAccident } from "@/lib/live-guard";
 import { check } from "@/lib/drafts";
 import { getSupabase } from "@/lib/supabase";
@@ -100,6 +101,9 @@ export type NewAccount = { ok: true } | { ok: false; reason: "not_configured" | 
 // { logIn: false }: only make it (the app logs in with tokens, not cookies).
 export async function createPasswordAccount(email: string, password: string, restaurantId: string, { logIn = true }: { logIn?: boolean } = {}): Promise<NewAccount> {
   if (!authConfigured()) return { ok: false, reason: "not_configured" };
+  // The founder's email never gets a sign-up login (it would open nothing, and must
+  // never be made by someone else): it logs in as usual instead.
+  if (isFounderEmail(email)) return { ok: false, reason: "existing_user" };
   const { error } = await getSupabase().auth.admin.createUser({
     email,
     password,
@@ -154,6 +158,17 @@ export async function requireOwner(nextPath: string): Promise<Owner> {
   const owner = await currentOwner();
   if (!owner) redirect(`/login?next=${encodeURIComponent(safeNext(nextPath))}`);
   return owner;
+}
+
+// Anyone who may be logged in at all: an owner or the builder, or the founder
+// (FOUNDER_EMAIL, the /admin dashboard). For the password page.
+export async function requireAccount(nextPath: string): Promise<{ email: string }> {
+  const owner = await currentOwner();
+  if (owner) return owner;
+  const { currentFounder } = await import("@/lib/founder/access");
+  const founder = await currentFounder();
+  if (founder) return founder;
+  redirect(`/login?next=${encodeURIComponent(safeNext(nextPath))}`);
 }
 
 // Which restaurant an owner page shows: the one asked for (?r=…) if this person

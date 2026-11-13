@@ -1,7 +1,8 @@
 "use server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { accessFor, authClient, emailPasswordLink, logInWithPassword, looksLikeEmail, requireOwner, safeNext } from "@/lib/auth";
+import { accessFor, authClient, emailPasswordLink, logInWithPassword, looksLikeEmail, requireAccount, safeNext } from "@/lib/auth";
+import { isFounderEmail } from "@/lib/founder/emails";
 import { passwordProblem } from "@/lib/auth-rules";
 import { clientIp, limitKey, MINUTE, overLimit } from "@/lib/rate-limit";
 import { baseUrlFrom } from "@/lib/supabase";
@@ -25,11 +26,14 @@ export async function logIn(form: FormData) {
   if (limited) back("slow");
 
   if (!(await logInWithPassword(email, password))) back("wrong");
-  if (!(await accessFor(email)).allowed) {
+  const access = await accessFor(email);
+  // The founder (FOUNDER_EMAIL) may log in for the dashboard (/admin) only.
+  const founderOnly = !access.allowed && isFounderEmail(email);
+  if (!access.allowed && !founderOnly) {
     await (await authClient()).auth.signOut({ scope: "local" });
     back("wrong");
   }
-  redirect(next);
+  redirect(founderOnly && !next.startsWith("/admin") && !next.startsWith("/account") ? "/admin" : next);
 }
 
 // "Forgot your password?": emails a link to set a new one, but only to an allowed
@@ -47,7 +51,7 @@ export async function sendPasswordLink(form: FormData) {
   ]);
   if (limited) back("error=wait");
 
-  if ((await accessFor(email)).allowed) {
+  if ((await accessFor(email)).allowed || isFounderEmail(email)) {
     const error = await emailPasswordLink(email, baseUrlFrom(requestHeaders));
     if (error) back(`error=${error}`);
   }
@@ -56,7 +60,7 @@ export async function sendPasswordLink(form: FormData) {
 
 // Setting a new password, while logged in (from the reset link, or the account menu).
 export async function setPassword(form: FormData) {
-  await requireOwner("/account/password");
+  await requireAccount("/account/password");
   const password = String(form.get("password") ?? "");
   const again = String(form.get("again") ?? "");
   const back = (error: string) => redirect(`/account/password?error=${error}`);

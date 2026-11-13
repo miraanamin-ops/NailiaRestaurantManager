@@ -108,3 +108,33 @@ export function planEvent(event: Stripe.Event, current: { billing_event_at?: str
       return null;
   }
 }
+
+// What the founder dashboard keeps from an event (lib/founder/billing-history.ts):
+// the owner's reason for cancelling (Stripe's Customer Portal asks, if switched on),
+// and a payment's amount, VAT and discount in pence.
+export function stripeHistory(event: Stripe.Event): {
+  cancelReason: string | null;
+  payment: { amountPence: number; taxPence: number | null; discountPence: number | null; currency: string; externalId: string } | null;
+} {
+  const o = event.data.object as unknown as Record<string, unknown>;
+  let cancelReason: string | null = null;
+  if (event.type.startsWith("customer.subscription.")) {
+    const d = o.cancellation_details as { feedback?: string | null; comment?: string | null; reason?: string | null } | null | undefined;
+    const parts = [d?.feedback?.replace(/_/g, " "), d?.comment].filter(Boolean);
+    const wanted = Boolean(o.cancel_at_period_end || o.cancel_at) || event.type === "customer.subscription.deleted";
+    cancelReason = wanted && parts.length ? parts.join(": ") : null;
+  }
+  if (event.type !== "invoice.paid" || !Number(o.amount_paid)) return { cancelReason, payment: null };
+  const sum = (list: unknown) => (Array.isArray(list) ? list.reduce((n: number, x: { amount?: number }) => n + (Number(x?.amount) || 0), 0) : null);
+  const tax = typeof o.tax === "number" ? o.tax : sum(o.total_taxes);
+  return {
+    cancelReason,
+    payment: {
+      amountPence: Number(o.amount_paid),
+      taxPence: tax,
+      discountPence: sum(o.total_discount_amounts),
+      currency: String(o.currency ?? "gbp"),
+      externalId: `stripe:${String(o.id ?? event.id)}`,
+    },
+  };
+}

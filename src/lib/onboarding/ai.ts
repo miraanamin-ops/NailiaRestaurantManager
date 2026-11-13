@@ -26,7 +26,7 @@ const MenuSchema = z.object({
 });
 
 async function parse<T extends z.ZodType>(schema: T, system: string, content: Parameters<ReturnType<typeof claude>["beta"]["messages"]["parse"]>[0]["messages"][number]["content"], effort: "low" | "medium" = "medium") {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("onboarding").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

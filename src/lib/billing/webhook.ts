@@ -5,7 +5,8 @@ import { alertBuilder } from "@/lib/builder-alerts";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { syncActive } from "./activation";
-import { eventCustomer, eventRestaurantId, planEvent } from "./events";
+import { recordPayment, recordStandingChange } from "@/lib/founder/billing-history";
+import { eventCustomer, eventRestaurantId, planEvent, stripeHistory } from "./events";
 
 // One Stripe event, already signature-checked by the route (app/api/stripe/webhook).
 // Each event is handled once: its id is stored first, and a repeat is skipped.
@@ -40,6 +41,11 @@ async function apply(event: Stripe.Event): Promise<WebhookResult> {
 
   const db = getSupabase();
   if (Object.keys(plan.fields).length) check(await db.from("restaurants").update(plan.fields).eq("id", r.id).select("id"));
+  // The founder dashboard's history: standing changes and payments (lib/founder/billing-history.ts).
+  const at = new Date(event.created * 1000).toISOString();
+  const { cancelReason, payment } = stripeHistory(event);
+  await recordStandingChange({ restaurantId: r.id, before: r, after: { ...r, ...plan.fields }, source: "stripe", at, detail: plan.detail, cancelReason, externalId: event.id });
+  if (payment) await recordPayment({ restaurantId: r.id, source: "stripe", at, ...payment });
   await db.from("stripe_events").update({ restaurant_id: r.id }).eq("id", event.id);
   await logAction({ restaurantId: r.id, actor: "stripe", action: "billing", detail: plan.detail, data: { event: event.id, type: event.type } });
   if (plan.alert) await alertBuilder(`billing:${event.type}:${r.id}`, `${r.name}: ${plan.alert}`);

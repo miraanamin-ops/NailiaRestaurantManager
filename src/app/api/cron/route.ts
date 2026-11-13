@@ -43,6 +43,9 @@ async function recordedRun(job: Job) {
     if (job === "hourly") {
       const { sendNudges } = await import("@/lib/push");
       await sendNudges(now).catch((err) => console.error("App nudges failed", err));
+      // The founder's Monday email (8am UK, once). Never stops the run.
+      const { sendFounderWeekly } = await import("@/lib/founder/weekly");
+      await sendFounderWeekly(now);
     }
     // The queue's own health, and (after 9:30) any brief that still hasn't gone.
     // Never stops the run.

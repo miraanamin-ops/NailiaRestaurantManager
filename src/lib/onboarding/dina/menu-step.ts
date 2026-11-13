@@ -59,7 +59,7 @@ export async function readMenuFiles(restaurantId: string, files: FilePart[]) {
     }),
   );
   const c = dinaConfig();
-  const response = await claude().beta.messages.parse({
+  const response = await claude("onboarding:dina").beta.messages.parse({
     ...WITH_FALLBACK,
     model: c.model,
     max_tokens: 16000,

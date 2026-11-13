@@ -23,7 +23,9 @@ export type StoreEvent = {
   environment?: string | null; // SANDBOX | PRODUCTION
   store?: string | null; // APP_STORE | PLAY_STORE | ...
   entitlement_ids?: string[] | null;
-  price?: number | null;
+  price?: number | null; // in US dollars
+  price_in_purchased_currency?: number | null;
+  currency?: string | null;
   offer_code?: string | null;
   cancel_reason?: string | null;
   expiration_reason?: string | null;
@@ -109,4 +111,18 @@ export function parseSignature(header: string | null): { t: number; v1: string[]
     else if (k === "v1" && v) v1.push(v);
   }
   return Number.isFinite(t) && v1.length ? { t, v1 } : null;
+}
+
+// The store's cut: 15% (the small business rate both stores give us).
+export const STORE_FEE = 0.15;
+
+// A paid month as money for the founder dashboard: what the owner paid, in pence of
+// their own currency (normally GBP), with the store's cut estimated.
+export function storePayment(e: Pick<StoreEvent, "id" | "type" | "period_type" | "price" | "price_in_purchased_currency" | "currency">) {
+  if (!isPaidMonth(e)) return null;
+  const paid = e.price_in_purchased_currency ?? e.price ?? 0;
+  const amountPence = Math.round(paid * 100);
+  if (!(amountPence > 0)) return null;
+  const currency = (e.price_in_purchased_currency != null ? (e.currency ?? "GBP") : "USD").toLowerCase();
+  return { amountPence, storeFeePence: Math.round(amountPence * STORE_FEE), currency, externalId: `store:${e.id}` };
 }

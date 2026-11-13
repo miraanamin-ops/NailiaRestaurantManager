@@ -1,4 +1,6 @@
 import "server-only";
+import { aiContext } from "@/lib/ai-context";
+import { alertRestaurantId } from "@/lib/builder-alerts-rules";
 import { sendBuilderEmail } from "@/lib/email";
 import { getSupabase } from "@/lib/supabase";
 import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
@@ -12,7 +14,7 @@ import { sendText } from "@/lib/whatsapp";
 const DEDUPE_HOURS = 6;
 const SANDBOX_NUMBER = ourWhatsAppNumber();
 
-export async function alertBuilder(key: string, message: string): Promise<string> {
+export async function alertBuilder(key: string, message: string, opts: { restaurantId?: string | null } = {}): Promise<string> {
   const supabase = getSupabase();
   try {
     const since = new Date(Date.now() - DEDUPE_HOURS * 60 * 60 * 1000).toISOString();
@@ -44,8 +46,14 @@ export async function alertBuilder(key: string, message: string): Promise<string
   } else results.push("no BUILDER_WHATSAPP set");
 
   const channels = results.join(", ");
-  const { error } = await supabase.from("builder_alerts").insert({ key, message, channels });
+  // Which restaurant it's about (the founder dashboard's problem list): given, or the
+  // restaurant id most alert keys carry, or the running job's restaurant.
+  const restaurantId = opts.restaurantId ?? alertRestaurantId(key) ?? aiContext().restaurantId ?? null;
+  let { error } = await supabase.from("builder_alerts").insert({ key, message, channels, restaurant_id: restaurantId });
+  // Before supabase/070 there's no restaurant_id column.
+  if (error && /restaurant_id/.test(error.message)) ({ error } = await supabase.from("builder_alerts").insert({ key, message, channels }));
   if (error) console.error("Couldn't record the builder alert", error);
   console.warn(`Builder alert (${channels}): ${message}`);
   return channels;
 }
+

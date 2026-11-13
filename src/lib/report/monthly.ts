@@ -41,7 +41,7 @@ const WordsSchema = z.object({
 });
 
 async function writeWords(r: Restaurant, facts: string, capPercent: number): Promise<MonthlyWords> {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("monthly-report").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

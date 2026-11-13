@@ -18,6 +18,7 @@ import {
   type ClosureStatus,
 } from "@/lib/closure-rules";
 import { formatLondon } from "@/lib/clock";
+import { recordClosed } from "@/lib/founder/billing-history";
 import { exportCustomers } from "@/lib/customer-data";
 import { csvCell } from "@/lib/customer-csv";
 import { check } from "@/lib/drafts";
@@ -310,6 +311,8 @@ export async function runClosing(closureId: string) {
   counts.files = files;
   steps.login = await removeLogin(r.owner_email, r.id);
   await save();
+  // The founder dashboard counts it as ended (anonymous: no name is kept).
+  await recordClosed(r.id, c.ref);
   check(await supabase.from("restaurants").delete().eq("id", r.id));
   const left = check(await supabase.from("restaurants").select("id").eq("id", r.id).maybeSingle<{ id: string }>());
   if (left) throw new Error("The restaurant is still there after deleting it");

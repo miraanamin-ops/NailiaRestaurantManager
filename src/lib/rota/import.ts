@@ -79,7 +79,7 @@ const READ_SYSTEM =
 async function readOne(restaurantId: string, content: Block[], what: string, correction: string | null) {
   const c = dinaConfig();
   try {
-    const response = await claude().beta.messages.parse({
+    const response = await claude("rota").beta.messages.parse({
       ...WITH_FALLBACK,
       model: c.model,
       max_tokens: 16000,
@@ -501,7 +501,7 @@ const Changes = z.object({
 // the changes to the staffing card. Only for the pieces plain code couldn't read (import-rules.ts parseStaffingWords).
 export async function readStaffingWords(text: string, rows: { role: string; label: string; min: number; per: number | null }[]) {
   const { MODELS } = await import("@/lib/claude");
-  const response = await claude().beta.messages.parse({
+  const response = await claude("rota").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODELS.haiku,
     max_tokens: 2000,

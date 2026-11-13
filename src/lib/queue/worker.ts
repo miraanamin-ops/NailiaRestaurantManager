@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { withAiContext } from "@/lib/ai-context";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { getSupabase } from "@/lib/supabase";
 import { WORKER } from "./config";
@@ -78,7 +79,8 @@ async function runJob(job: QueueJob, worker: string, handlers: Record<string, Jo
   const handler = handlers[job.type];
   try {
     if (!handler) throw new PermanentJobError(`No handler for job type "${job.type}"`);
-    const result = await handler.run(job);
+    // Claude calls the job makes are counted against its restaurant (ai_usage).
+    const result = await withAiContext({ restaurantId: job.restaurant_id, jobType: job.type }, () => handler.run(job));
     await complete(job.id, worker, (result as Record<string, unknown>) ?? null, now());
     return { ...base, status: "done" };
   } catch (err) {

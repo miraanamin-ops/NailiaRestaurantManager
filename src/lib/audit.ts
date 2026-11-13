@@ -10,10 +10,11 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
-export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | "stripe" | "app store" | AgentActor;
+export type Actor = "owner" | "assistant" | "safety rules" | "system" | "hourly job" | "scheduled job" | "builder" | "customer" | "staff" | "stripe" | "app store" | "founder" | AgentActor;
 // An agent acting on its own (e.g. the checker recording a verdict).
 export type AgentActor = "checker" | "reputation" | "growth" | "visibility" | "insights" | "gm" | "profile keeper";
 export type AuditAction =
+  | "founder_viewed" // the founder opened this client on /admin (never shown to the owner)
   | "created" // a draft was written (and checked)
   | "edited"
   | "approved"

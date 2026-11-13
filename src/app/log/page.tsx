@@ -64,7 +64,7 @@ const ACTION_STYLE: Record<string, { icon: string; label: string }> = {
 };
 
 // What the owner never needs to see: agents' and the builder's own working entries.
-const BUILDER_ONLY = new Set(["checked", "agent_drafted", "agent_failed", "job_retried", "builder_command", "outside_data"]);
+const BUILDER_ONLY = new Set(["founder_viewed", "checked", "agent_drafted", "agent_failed", "job_retried", "builder_command", "outside_data"]);
 // What UNDO can take back (lib/undo-plan.ts decides; this only picks the card to show).
 const UNDOABLE = new Set(["setting", "profile_changed", "approved", "skipped", "staff_added", "staff_removed"]);
 

@@ -20,7 +20,7 @@ export async function mapColumns(table: Table): Promise<{ mapping: Mapping; by: 
   const rules = ruleMapping(table);
   try {
     const shapes = columnShapes(table);
-    const response = await claude().beta.messages.parse({
+    const response = await claude("customer-import").beta.messages.parse({
       ...fallbackFor("haiku"),
       model: MODELS.haiku,
       max_tokens: Math.min(MAX_TOKENS, 1024),

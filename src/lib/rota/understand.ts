@@ -48,7 +48,7 @@ const TeamReading = z.object({
 export type TeamReadingType = z.infer<typeof TeamReading>;
 
 export async function readTeamMessage(message: string, input: { team: Pick<TeamMember, "name" | "roles">[]; recent: string[]; today: string; rotaOnScreen: boolean }) {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("rota").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

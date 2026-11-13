@@ -38,7 +38,7 @@ export async function readTermDates(url: string, councilName: string, councilCod
   const page = isPdf
     ? { type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: bytes.toString("base64") } }
     : { type: "text" as const, text: textFromHtml(bytes.toString("utf8"), 60_000) };
-  const response = await claude().beta.messages.parse({
+  const response = await claude("feeds").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

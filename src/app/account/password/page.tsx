@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { setPassword } from "@/app/login/actions";
 import { AuthCard, authButton, authInput, authLabel } from "@/app/login/ui";
-import { requireOwner } from "@/lib/auth";
+import { requireAccount } from "@/lib/auth";
 import { PASSWORD_MIN } from "@/lib/auth-rules";
 
 export const metadata: Metadata = { title: "Your password", robots: { index: false, follow: false } };
@@ -30,7 +30,7 @@ export default function PasswordPage({ searchParams }: PageProps<"/account/passw
 
 async function Password({ searchParams }: Pick<PageProps<"/account/password">, "searchParams">) {
   await connection();
-  const owner = await requireOwner("/account/password");
+  const owner = await requireAccount("/account/password");
   const q = await searchParams;
   const one = (k: string) => (Array.isArray(q[k]) ? q[k][0] : q[k]);
   const error = one("error");

@@ -64,7 +64,7 @@ async function runCheck(ctx: RestaurantContext, which: "facts" | "tone", item: C
     fixes: z.array(z.string()).describe("Each change you made, in under 15 words"),
     flags: z.array(z.string()).describe("Problems for the owner to decide on, left unchanged, in under 15 words each"),
   });
-  const response = await claude().beta.messages.parse({
+  const response = await claude("checks").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,

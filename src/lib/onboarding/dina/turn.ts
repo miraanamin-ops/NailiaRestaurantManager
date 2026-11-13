@@ -1,4 +1,5 @@
 import "server-only";
+import { withAiContext } from "@/lib/ai-context";
 import { randomUUID } from "node:crypto";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { check } from "@/lib/drafts";
@@ -108,7 +109,12 @@ async function staffSheetData(restaurantId: string, state: Awaited<ReturnType<ty
 // Code's note says it saved something this turn (so "that's saved" can be true without her tool).
 const CODE_SAVED = /Code (saved|sent|made|kept|has (emailed|skipped)|read the menu|queued)|acceptance is simulated/;
 
-export async function dinaTurn(input: TurnInput): Promise<TurnResult> {
+// Every Claude call in a turn is counted against this restaurant (ai_usage).
+export function dinaTurn(input: TurnInput): Promise<TurnResult> {
+  return withAiContext({ restaurantId: input.restaurantId }, () => runTurn(input));
+}
+
+async function runTurn(input: TurnInput): Promise<TurnResult> {
   const supabase = getSupabase();
   const id = input.restaurantId;
   const session = (await getSession(id)) ?? (await startOnboarding(id, { channel: input.channel }));

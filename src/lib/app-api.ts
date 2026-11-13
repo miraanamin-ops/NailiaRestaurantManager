@@ -1,4 +1,5 @@
 import "server-only";
+import { withAiContext } from "@/lib/ai-context";
 import { NextResponse, type NextRequest } from "next/server";
 import { ownerFromToken, type Owner } from "@/lib/auth";
 
@@ -25,7 +26,8 @@ export async function withOwner(req: Pick<NextRequest, "headers">, run: (owner: 
     return null;
   });
   if (!owner) return appError(401, "login");
-  return run(owner);
+  // Claude calls in an app request are counted against the owner's restaurant (ai_usage).
+  return withAiContext({ restaurantId: owner.restaurantIds.length === 1 ? owner.restaurantIds[0] : null }, () => run(owner));
 }
 
 // The restaurant a call is about: the one asked for if this owner may see it, else their first.

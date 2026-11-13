@@ -13,7 +13,7 @@ import type { ZRead } from "./z-check";
 type Content = Parameters<ReturnType<typeof claude>["beta"]["messages"]["parse"]>[0]["messages"][number]["content"];
 
 async function parse<T extends z.ZodType>(schema: T, system: string, content: Content) {
-  const response = await claude().beta.messages.parse({
+  const response = await claude("sales").beta.messages.parse({
     ...WITH_FALLBACK,
     model: MODEL,
     max_tokens: MAX_TOKENS,
