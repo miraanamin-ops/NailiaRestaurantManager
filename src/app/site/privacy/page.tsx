@@ -3,7 +3,7 @@ import { COMPANY, CONTACT_EMAIL, LEGAL_ENTITY, SiteFrame } from "../frame";
 
 export const metadata: Metadata = { title: "Privacy notice · DinerAI" };
 
-const UPDATED = "7 November 2026";
+const UPDATED = "13 November 2026";
 
 // DinerAI's own privacy notice (for restaurant owners, and how we handle their
 // customers' details on their behalf). Each restaurant also has its own short
@@ -28,7 +28,7 @@ export default function SitePrivacy() {
 
         <h2 className={h2}>Restaurant owners</h2>
         <p className={p}>
-          When you sign up we collect your name, email address, WhatsApp number and details about your restaurant (such as its address, opening hours,
+          When you sign up we collect your name, email address, mobile number and details about your restaurant (such as its address, opening hours,
           menu and photos, some of which we copy from your public Google listing and website). We keep the messages you send the assistant, your
           approvals and edits, and a log of what was sent, so the service works and you can see and undo what happened. We use this to run the service
           for you, and to contact you about it. The legal basis is our contract with you.
@@ -43,7 +43,7 @@ export default function SitePrivacy() {
 
         <h2 className={h2}>Who helps us</h2>
         <p className={p}>
-          We use trusted providers to run the service: Vercel (hosting), Supabase (database), Resend (email), Twilio and Meta (WhatsApp), Anthropic
+          We use trusted providers to run the service: Vercel (hosting), Supabase (database), Resend (email), Expo (app notifications), Apple, Google and RevenueCat (the app stores and in-app subscriptions), Anthropic
           (the AI that drafts messages), Google (business listings) and Cloudflare (protecting forms from bots). They only process information to provide
           their service to us. The AI is given restaurant details and summaries, never customer lists or contact details. We never sell anyone&apos;s
           information.

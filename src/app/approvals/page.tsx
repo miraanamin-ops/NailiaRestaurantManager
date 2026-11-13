@@ -4,7 +4,7 @@ import { PageSkeleton } from "@/components/app-shell";
 import { DraftCard } from "@/components/draft-card";
 import { Icon } from "@/components/icons";
 import { RestaurantSwitcher } from "@/components/restaurant-switcher";
-import { ListCard, Notice, Page, PageHeader, Panel, Pill, Section, WhatsAppTip } from "@/components/ui";
+import { ListCard, Notice, Page, PageHeader, Panel, Pill, Section, AppTip } from "@/components/ui";
 import { waitingItems } from "@/lib/dashboard/data";
 import { ownerPage } from "@/lib/dashboard/page-context";
 import { ago, plainText } from "@/lib/dashboard/rules";
@@ -65,10 +65,10 @@ async function Approvals({ searchParams }: Pick<PageProps<"/approvals">, "search
             <div className="text-[15px] text-[#edefe8]">You&apos;re all caught up.</div>
           </Panel>
         )}
-        <WhatsAppTip>
+        <AppTip>
           Nothing reaches a customer or Google until you approve it, and every approval still passes the safety checks (sending hours, your discount limit,
-          consent). On WhatsApp, reply <span className="text-[#edefe8]">APPROVE ALL</span> to approve your whole brief.
-        </WhatsAppTip>
+          consent). In the app, <span className="text-[#edefe8]">Approve all</span> clears the simple ones in one tap.
+        </AppTip>
       </div>
 
       {(recent ?? []).length > 0 && (

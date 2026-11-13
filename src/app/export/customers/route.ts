@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const rid = String(form.get("r") ?? "");
   if (!verifyLink("customer-export", rid, String(form.get("t") ?? ""))) {
-    return new Response("This download link has expired. Text EXPORT CUSTOMERS on WhatsApp for a new one.", { status: 403 });
+    return new Response("This download link has expired. Send EXPORT CUSTOMERS in the app's Chat for a new one.", { status: 403 });
   }
   return download(rid, "from the WhatsApp link");
 }

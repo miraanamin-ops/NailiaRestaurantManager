@@ -41,7 +41,7 @@ function Body({ page }: { page: ReviewPage }) {
             <li key={l}>{l}</li>
           ))}
         </ul>
-        <p className="pt-2 text-sm text-stone-600">Reply GO on WhatsApp and Dina takes you through it, one thing at a time.</p>
+        <p className="pt-2 text-sm text-stone-600">Send GO in the app&apos;s Chat and Dina takes you through it, one thing at a time.</p>
       </Card>
 
       {backlog && (

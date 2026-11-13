@@ -38,7 +38,7 @@ async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchPa
     return (
       <Frame>
         <h1 className="text-2xl font-bold tracking-tight">🎉 {r.name} is set up</h1>
-        <p className="mt-1 text-stone-600">We&apos;ve sent this summary to your WhatsApp too.</p>
+        <p className="mt-1 text-stone-600">We&apos;ve sent this summary in the app too.</p>
         {trial}
         <div className="mt-5">
           <Card>
@@ -85,10 +85,10 @@ async function Choice({ searchParams }: Pick<PageProps<"/onboarding">, "searchPa
           {started ? `Carry on here (step ${Math.min(s.done + 1, s.total)} of ${s.total})` : "Set up here"}
         </Link>
         <Link href={`/onboarding/whatsapp?r=${restaurantId}`} className={secondary}>
-          {started ? "Carry on in WhatsApp" : "Set up on WhatsApp"}
+          {started ? "Carry on in the app" : "Set up in the app"}
         </Link>
       </div>
-      <p className="mt-4 text-sm text-stone-500">Either way, Naila runs on your WhatsApp, so you&apos;ll link your number before you finish.</p>
+      <p className="mt-4 text-sm text-stone-500">Either way, Naila runs in the app, so you&apos;ll link your number before you finish.</p>
     </Frame>
   );
 }

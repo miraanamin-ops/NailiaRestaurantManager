@@ -83,7 +83,7 @@ export function stepsEmail(input: { restaurantName: string; device: Device; mana
     "",
     REASSURANCE,
     "",
-    `When it's done, tell Dina on WhatsApp or in the chat: ${input.appUrl}/onboarding/chat`,
+    `When it's done, tell Dina in the app's Chat or the setup chat: ${input.appUrl}/onboarding/chat`,
     "",
     "Dina, your DinerAI manager",
   ].join("\n");
@@ -92,7 +92,7 @@ export function stepsEmail(input: { restaurantName: string; device: Device; mana
 <p>${esc(intro)}</p>
 ${steps.map((s) => `<p><b>${s.n}.</b> ${esc(s.text)}${s.link ? ` <a href="${s.link.href}">${esc(s.link.label)}</a>` : ""}${s.image ? `<br><img src="${input.appUrl}${s.image}" alt="Step ${s.n}" width="480" style="max-width:100%;border-radius:8px;margin-top:6px">` : ""}</p>`).join("\n")}
 <p><b>${esc(REASSURANCE)}</b></p>
-<p>When it's done, tell Dina on WhatsApp or in the <a href="${input.appUrl}/onboarding/chat">setup chat</a>.</p>
+<p>When it's done, tell Dina in the app or in the <a href="${input.appUrl}/onboarding/chat">setup chat</a>.</p>
 <p>Dina, your DinerAI manager</p></div>`;
   return { subject, text, html };
 }

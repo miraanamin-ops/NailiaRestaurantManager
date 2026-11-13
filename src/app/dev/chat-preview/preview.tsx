@@ -183,7 +183,7 @@ export const SCENES: Record<string, { progress: ProgressData; messages: ChatMess
               { key: "hours_faqs", title: "Hours and FAQs", status: "partial", detail: "Hours confirmed; FAQs not yet", editHref: "#" },
             ],
             locked: [{ key: "google", title: "Google profile", unlock: "Connect Google and I'll reply to your reviews, post updates and track calls and directions for you." }],
-            next: ["Your first morning brief arrives tomorrow at 9am on WhatsApp.", "Your Monday report comes on Monday morning.", "Your QR codes are ready to print."],
+            next: ["Your first morning brief arrives tomorrow at 9am in the app.", "Your Monday report comes on Monday morning.", "Your QR codes are ready to print."],
           },
         },
       },

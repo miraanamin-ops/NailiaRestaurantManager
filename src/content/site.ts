@@ -11,9 +11,9 @@
 
 export const site = {
   meta: {
-    title: "DinerAI: your AI restaurant manager, on WhatsApp",
+    title: "DinerAI: your AI restaurant manager, in an app",
     description:
-      "DinerAI drafts your review replies, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve on WhatsApp with one tap. £{price} a month, first month free, no contract.",
+      "DinerAI drafts your review replies, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve in the DinerAI app with one tap. £{price} a month, first month free, no contract.",
   },
 
   nav: [
@@ -27,19 +27,20 @@ export const site = {
 
   hero: {
     eyebrow: "AI restaurant manager for UK independents",
-    headline: ["Your AI restaurant manager.", "15 minutes a week, from WhatsApp."],
+    headline: ["Your AI restaurant manager.", "15 minutes a week, from one app."],
     subline:
       "DinerAI drafts the work: replies to your reviews, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve with one tap. Nothing reaches a customer without your yes.",
     secondary: "See how it works",
     note: "First month free, then £{price} a month. No contract, no setup fee.",
-    phoneLabel: "Example conversation",
+    phoneLabel: "Example: the DinerAI app",
   },
 
   // The phone in the hero. One loop: the brief arrives, a reply draft appears,
   // the owner taps Approve, the receipt ticks over.
   phone: {
     contact: "DinerAI",
-    status: "online",
+    notification: { title: "Good morning, Aisha", body: "3 things are ready for you to approve." },
+    screen: { eyebrow: "Wed 9:00", title: "Inbox", count: "3 to approve", left: "2 left" },
     time: "09:00",
     brief: {
       title: "Good morning, Aisha. 3 things for you today:",
@@ -55,7 +56,6 @@ export const site = {
       checks: ["Tone", "Facts", "Compliance", "Money"],
     },
     buttons: ["Approve", "Edit", "Skip"],
-    approved: "Approve",
     receipt: "Approved 09:02 · reply ready to post on Google",
     next: "Next: Thursday offer",
   },
@@ -84,8 +84,8 @@ export const site = {
       {
         tag: "Step 1 · about 20 min",
         title: "Set up once",
-        body: "We find you on Google, read your menu from a photo and learn how you sound from your website. You check it, change anything, and link your WhatsApp.",
-        ui: ["Found on Google", "Menu read from a photo", "Your voice picked", "Sign-up reward set", "WhatsApp linked"],
+        body: "We find you on Google, read your menu from a photo and learn how you sound from your website. You check it, change anything, and download the app.",
+        ui: ["Found on Google", "Menu read from a photo", "Your voice picked", "Sign-up reward set", "App ready on your phone"],
       },
       {
         tag: "Step 2 · every day",
@@ -95,8 +95,8 @@ export const site = {
       },
       {
         tag: "Step 3 · one tap",
-        title: "You approve on WhatsApp",
-        body: "Approve, Edit or Skip. Approve everything at once with APPROVE ALL. Edits and skip reasons teach it your tone.",
+        title: "You approve in the app",
+        body: "Approve, Edit or Skip. Approve the simple ones all at once. Edits and skip reasons teach it your tone.",
         ui: ["Approve", "Edit", "Skip"],
       },
     ],
@@ -171,7 +171,7 @@ export const site = {
   report: {
     eyebrow: "Every Monday",
     title: "Your week on one page, before you've had your coffee.",
-    body: "Reviews, customers, campaigns, Google and sales, last week against the week before, with three things to do next. Open it from WhatsApp or download the PDF.",
+    body: "Reviews, customers, campaigns, Google and sales, last week against the week before, with three things to do next. Open it in the app or download the PDF.",
     stamp: "Example report · made-up numbers",
     restaurant: "Ember & Spice Grill",
     week: "Week of 5 October",
@@ -196,7 +196,7 @@ export const site = {
     lastWeek: "Last week",
     actionsLabel: "Next week's 3 actions",
     actions: ["Repeat Thursday's offer for the 6 to 7pm tables", "Thank the 3 new 5 star reviewers", "Post the new lamb chops photo"],
-    actionButton: "Start in WhatsApp",
+    actionButton: "Start in the app",
   },
 
   pricing: {
@@ -240,7 +240,7 @@ export const site = {
       },
       {
         q: "What do I need to start?",
-        a: "A phone with WhatsApp, your menu (a photo is fine) and about 20 minutes. It helps if your restaurant is on Google. While we're in pilot, you send our WhatsApp number one short message to connect.",
+        a: "A smartphone (iPhone or Android) for the DinerAI app, your menu (a photo is fine) and about 20 minutes. It helps if your restaurant is on Google.",
       },
     ],
   },
@@ -262,8 +262,8 @@ export const site = {
       password: "Choose a password",
       passwordHint: "At least 8 characters. You'll log in with your email and this password.",
       restaurantName: "Restaurant name",
-      whatsapp: "Your mobile (for WhatsApp)",
-      whatsappHint: "DinerAI runs on WhatsApp: drafts, approvals and your 9am brief.",
+      whatsapp: "Your mobile number",
+      whatsappHint: "So we can reach you about your account. Drafts, approvals and your 9am brief come in the DinerAI app.",
       invite: "Pilot invite code",
       inviteOptional: "(optional)",
       inviteHint: "Have a pilot code? No card needed.",
@@ -278,7 +278,7 @@ export const site = {
     after: "Next, Stripe asks for your card. You won't be charged until your free month ends, and you can cancel before then. Founding restaurants: add your code on the card page.",
     steps: ["Your details and a password", "Card on Stripe, first month free", "Straight into setup", "Set up in about 20 minutes"],
     // While ONBOARDING_REQUIRES_PAYMENT is off: no card, straight into setup with Dina.
-    stepsInvite: ["Your details and invite code", "Straight into setup, no card", "Chat with Dina here or on WhatsApp", "Set up in about 20 minutes"],
+    stepsInvite: ["Your details and invite code", "Straight into setup, no card", "Chat with Dina here or in the app", "Set up in about 20 minutes"],
     stepsLabel: "What happens next",
     pilotStep: "Pilot code: no card needed",
     reassurance: ["£{price} a month after your free month", "No contract, no setup fee", "Cancel any time in settings"],

@@ -64,7 +64,7 @@ const paths: Record<string, React.ReactNode> = {
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   chevron: <path d="m9 6 6 6-6 6" />,
   back: <path d="M15 6l-6 6 6 6" />,
-  whatsapp: (
+  chat: (
     <>
       <path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.5 8.5 0 1 1 21 11.5z" />
     </>

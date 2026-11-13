@@ -30,7 +30,7 @@ export async function decideFromWeb(
   if (!restaurant || !draft) return { ok: false, message: "Sorry, I couldn't find that draft." };
   if (draft.status !== "pending") return { ok: false, message: `That one isn't waiting any more (it was ${draft.status}).` };
   if (!decidableOnWeb(draft as Draft & { business_review_id?: string | null })) {
-    return { ok: false, message: "That one needs your answer on WhatsApp." };
+    return { ok: false, message: "That one needs your answer in the app." };
   }
 
   // An imported list's welcome: Approve starts the daily batches (lib/customer-import).

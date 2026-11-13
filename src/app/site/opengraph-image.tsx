@@ -4,7 +4,7 @@ import { site } from "@/content/site";
 // The picture shown when dinerai.co.uk is shared (WhatsApp, LinkedIn, X...).
 // Built at deploy time from the headline in src/content/site.ts.
 
-export const alt = "DinerAI: your AI restaurant manager, on WhatsApp";
+export const alt = "DinerAI: your AI restaurant manager, in an app";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -43,7 +43,7 @@ export default function OpenGraphImage() {
         <div style={{ display: "flex", gap: 16, fontSize: 26, color: "#a3a99d" }}>
           <span>For UK restaurants, cafes and takeaways</span>
           <span style={{ color: "#ff7a3d" }}>·</span>
-          <span>Approve on WhatsApp</span>
+          <span>Approve in the app</span>
         </div>
       </div>
     ),

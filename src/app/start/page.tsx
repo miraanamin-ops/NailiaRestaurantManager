@@ -118,7 +118,7 @@ async function Start({ searchParams }: Pick<PageProps<"/start">, "searchParams">
           </label>
           <label className={label}>
             {s.fields.whatsapp}
-            <input name="whatsapp" type="tel" required autoComplete="tel" inputMode="tel" placeholder="07700 900123" className={input} />
+            <input name="chat" type="tel" required autoComplete="tel" inputMode="tel" placeholder="07700 900123" className={input} />
             <span className="mt-1.5 block text-[13px] font-normal text-fog">{s.fields.whatsappHint}</span>
           </label>
           {referral ? (

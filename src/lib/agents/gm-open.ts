@@ -46,7 +46,7 @@ export async function openItemsFor(turn: Turn, active: Draft | null): Promise<Op
     items.push({ ref: "sales", kind, asks: pendingSalesText(sales, londonYmd(now)), minutes_ago: minutesSince(sales.created_at, realNow) });
   }
   const file = pos && pos.mapping && stillOpen("file_layout", pos.created_at, realNow) ? { id: pos.id, mapping: pos.mapping } : null;
-  if (file && pos) items.push({ ref: "file", kind: "file_layout", asks: "A sales file sent on WhatsApp has a new column layout: import it with the columns shown?", minutes_ago: minutesSince(pos.created_at, realNow) });
+  if (file && pos) items.push({ ref: "file", kind: "file_layout", asks: "A sales file sent in the app has a new column layout: import it with the columns shown?", minutes_ago: minutesSince(pos.created_at, realNow) });
 
   const customerImport = preview && stillOpen("customer_import", preview.created_at, realNow) ? preview : null;
   if (customerImport) {

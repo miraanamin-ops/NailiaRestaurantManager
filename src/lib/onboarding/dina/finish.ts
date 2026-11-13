@@ -1,4 +1,5 @@
 import "server-only";
+import { markUsesApp } from "@/lib/app/app-user";
 import { ASSISTANT_AGENTS } from "@/lib/agents/assistant-mode";
 import { logAction } from "@/lib/audit";
 import { shouldBeActive } from "@/lib/billing/access";
@@ -49,8 +50,11 @@ const hourText = (h: number) => (h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `$
 // The first brief is the morning after setup finishes (the summary says so too).
 export const allSetLine = (briefHour: number) => `You're all set up. You'll next hear from me tomorrow morning at ${hourText(briefHour)} with your first brief.`;
 // Added when the business review has started: "here" on WhatsApp, where it arrives.
+// Said once at the end of a setup finished on the website: where everything arrives from now on.
+export const GET_THE_APP =
+  "Your brief, alerts and approvals now come in the DinerAI app. Get it on your phone and log in with the same email and password you use here.";
 export const reviewLine = (channel: "web" | "whatsapp" | "app") =>
-  `Give me about 5 minutes to review your business. I'll message you ${channel === "whatsapp" ? "here" : channel === "app" ? "in the DinerAI app" : "on WhatsApp"}.`;
+  `Give me about 5 minutes to review your business. I'll message you ${channel === "whatsapp" ? "here" : channel === "app" ? "in the DinerAI app" : "in the app"}.`;
 
 export async function finishIfDone(restaurantId: string): Promise<FinishOutcome | null> {
   const session = await getSession(restaurantId);
@@ -58,8 +62,9 @@ export async function finishIfDone(restaurantId: string): Promise<FinishOutcome 
   const { state } = await loadFlow(restaurantId);
   if (currentStep(state) !== null) return null;
   const r = await getRestaurant(restaurantId);
-  // WhatsApp linked, or the owner uses the app (their brief and alerts go there).
-  if (!r.owner_whatsapp && !r.app_since) return { finished: false, needsWhatsapp: true };
+  // Without a WhatsApp number (the old route), the owner uses the app: their brief and
+  // alerts go there (followups.ownerChannel reads app_since).
+  if (!r.owner_whatsapp && !r.app_since) await markUsesApp(restaurantId);
 
   const now = new Date().toISOString();
   const supabase = getSupabase();

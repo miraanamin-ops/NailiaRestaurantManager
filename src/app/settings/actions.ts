@@ -189,7 +189,7 @@ export async function saveBuilderControls(form: FormData) {
     if (mode === "live" && !checklist.ready) {
       blocked.push(`${agent} can't go live yet: missing ${checklist.labels.join(", ")}`);
       const prompted = await promptOwnerForGoLive(r, agent as AgentName);
-      if (prompted) blocked.push("the owner has been sent a WhatsApp asking for them");
+      if (prompted) blocked.push("the owner has been sent a message asking for them");
       continue;
     }
     modes[agent] = mode;
@@ -223,7 +223,7 @@ export async function askOwnerForGoLive(form: FormData) {
   for (const agent of Object.keys(GO_LIVE_FIELDS) as AgentName[]) {
     if (!sent && !(await goLiveChecklistFor(r, agent)).ready) sent = await promptOwnerForGoLive(r, agent);
   }
-  back(r.id, sent ? "saved=asked" : `error=${encodeURIComponent("Not sent: the owner was already asked in the last day, nothing is missing, or their WhatsApp isn't linked yet.")}`);
+  back(r.id, sent ? "saved=asked" : `error=${encodeURIComponent("Not sent: the owner was already asked in the last day, nothing is missing, or they can't be messaged yet.")}`);
 }
 
 // Revert one profile change (from the profile history list). Not UNDO.

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "DinerAI",
-  description: "Your AI restaurant manager, on WhatsApp",
+  description: "Your AI restaurant manager, in an app",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

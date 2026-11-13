@@ -42,7 +42,7 @@ async function Download({ searchParams }: Pick<PageProps<"/export/download">, "s
             </form>
           </>
         ) : (
-          <p className="mt-2 text-sm text-stone-600">This link has expired (they last an hour). Text EXPORT CUSTOMERS on WhatsApp for a new one.</p>
+          <p className="mt-2 text-sm text-stone-600">This link has expired (they last an hour). Send EXPORT CUSTOMERS in the app&apos;s Chat for a new one.</p>
         )}
       </div>
     </div>

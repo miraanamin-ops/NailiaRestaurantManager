@@ -1,4 +1,5 @@
 import "server-only";
+import { appUrl } from "@/lib/supabase";
 import { noEmDash } from "@/lib/text";
 import { Document, Link, Page, Rect, renderToBuffer, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { shorten } from "@/lib/text";
@@ -9,7 +10,7 @@ import {
   formatValue,
   SECTION_TITLES,
   sectionKey,
-  whatsappLink,
+  actionLink,
   type ActionsSection,
   type Compare,
   type CustomersSection,
@@ -335,7 +336,7 @@ function Actions({ x, data, brand }: { x: ActionsSection; data: ReportData; bran
     <View style={[s.section, { borderBottomWidth: 0 }]} wrap={false}>
       <Text style={s.h2}>{SECTION_TITLES.actions}</Text>
       {x.actions.map((a, i) => {
-        const link = whatsappLink(data.whatsappNumber, a.message);
+        const link = actionLink(a.message, appUrl());
         return (
           <View key={a.title} style={s.action}>
             <Text style={[s.num, { backgroundColor: brand }]}>{i + 1}</Text>
@@ -344,7 +345,7 @@ function Actions({ x, data, brand }: { x: ActionsSection; data: ReportData; bran
               <Text style={s.item}>{clean(a.why)}</Text>
               {link && (
                 <Link src={link} style={[s.link, { color: brand }]}>
-                  Start in WhatsApp
+                  Start in the app
                 </Link>
               )}
             </View>

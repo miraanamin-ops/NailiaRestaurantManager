@@ -62,7 +62,7 @@ async function Admin({ searchParams }: Pick<PageProps<"/onboarding/admin/busines
           <h2 className="text-xl font-semibold">Run it for {picked.name}?</h2>
           <ul className="mt-2 list-disc pl-5 text-sm text-stone-700">
             <li>
-              {picked.kind === "real" ? <b>A real restaurant.</b> : `A ${picked.kind} restaurant.`} The owner gets the message on WhatsApp.
+              {picked.kind === "real" ? <b>A real restaurant.</b> : `A ${picked.kind} restaurant.`} The owner gets the message in the app.
             </li>
             <li>Google: {picked.google}{picked.pilotZero ? " · Pilot Zero" : ""}</li>
             <li>Review replies and posts: {onOff(picked.repliesDryRun)}</li>

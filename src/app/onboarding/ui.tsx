@@ -43,7 +43,7 @@ export function SwitchToWhatsApp({ restaurantId }: { restaurantId: string }) {
   return (
     <p className="mt-6 text-center text-sm">
       <Link href={`/onboarding/whatsapp?r=${restaurantId}`} className="font-medium text-emerald-700 underline">
-        Finish on WhatsApp instead
+        Finish in the app instead
       </Link>
     </p>
   );
@@ -73,7 +73,7 @@ export async function LinkWhatsApp({ code, expected }: { code: string; expected:
         </div>
       )}
       <a href={codeLink} className={button}>
-        {isSandbox() && join ? "2. " : ""}Open WhatsApp and send my code
+        {isSandbox() && join ? "2. " : ""}Open the app and send my code
       </a>
       <p className="text-center text-sm text-stone-600">
         It sends <b>{linkMessage(code)}</b>

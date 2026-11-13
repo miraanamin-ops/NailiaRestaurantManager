@@ -31,12 +31,12 @@ const nextMonthFirst = (month: string) => {
 };
 
 const WordsSchema = z.object({
-  headline: z.string().describe("One short sentence for WhatsApp: the month's net takings and the like for like change on last month. No emojis, no explaining how the comparison works."),
+  headline: z.string().describe("One short sentence for the app notification and chat: the month's net takings and the like for like change on last month. No emojis, no explaining how the comparison works."),
   highlights: z
     .array(z.object({ title: z.string().describe("The message in at most 8 words, with its number"), detail: z.string().describe("One short sentence: the evidence or what it means") }))
     .describe("The 3 or 4 most important things the owner should take from the month, most important first. Each about something different; never repeat a number another highlight or the headline already gives."),
   actions: z
-    .array(z.object({ title: z.string().describe("The action in a few words"), why: z.string().describe("Why, from the numbers, in one short sentence"), message: z.string().describe("What the owner would send their WhatsApp assistant to start it") }))
+    .array(z.object({ title: z.string().describe("The action in a few words"), why: z.string().describe("Why, from the numbers, in one short sentence"), message: z.string().describe("What the owner would send in the DinerAI app's Chat to start it") }))
     .describe("Exactly 3 actions for next month"),
 });
 
@@ -52,7 +52,7 @@ The report shows the numbers as charts; your highlights say what they mean. Pick
 
 Only use the facts you're given. Never invent numbers, dishes or events. Comparisons are "like for like" (adjusted for the month's mix of weekdays): use those. When a day's reason is "No obvious reason", don't make one up.
 
-Actions must be things the owner's WhatsApp assistant can start now: an email campaign with an offer within a ${capPercent}% discount cap, a Google post about a dish, offer or event, a change to the menu or opening hours, replying to reviews, or a staffing change in next month's rotas. Each "message" is written as the owner talking to the assistant, ready to send.`,
+Actions must be things the owner's DinerAI assistant can start now: an email campaign with an offer within a ${capPercent}% discount cap, a Google post about a dish, offer or event, a change to the menu or opening hours, replying to reviews, or a staffing change in next month's rotas. Each "message" is written as the owner talking to the assistant, ready to send.`,
     messages: [{ role: "user", content: `The month's numbers:\n${facts}` }],
   });
   if (response.stop_reason === "refusal" || !response.parsed_output) throw new Error("Claude couldn't write the monthly report");

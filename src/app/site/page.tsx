@@ -39,7 +39,7 @@ export default function SiteHome() {
     "@type": "SoftwareApplication",
     name: "DinerAI",
     applicationCategory: "BusinessApplication",
-    operatingSystem: "WhatsApp",
+    operatingSystem: "iOS, Android, Web",
     description: t(site.meta.description),
     offers: { "@type": "Offer", price: String(PRICE_GBP), priceCurrency: "GBP" },
   };

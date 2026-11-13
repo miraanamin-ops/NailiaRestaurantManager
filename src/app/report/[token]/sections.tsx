@@ -4,7 +4,7 @@ import {
   direction,
   formatValue,
   SECTION_TITLES,
-  whatsappLink,
+  actionLink,
   type ActionsSection,
   type Compare,
   type CustomersSection,
@@ -383,7 +383,7 @@ function Actions({ s, ctx }: { s: ActionsSection; ctx: Ctx }) {
     <Card title={SECTION_TITLES.actions}>
       <ol className="space-y-3">
         {s.actions.map((a, i) => {
-          const link = whatsappLink(ctx.data.whatsappNumber, a.message);
+          const link = actionLink(a.message);
           return (
             <li key={a.title} className="rounded-xl border border-stone-200 p-4">
               <div className="flex gap-3">
@@ -401,17 +401,17 @@ function Actions({ s, ctx }: { s: ActionsSection; ctx: Ctx }) {
               {link && (
                 <a
                   href={link}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-[#0b3d1f] active:opacity-80"
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#c8f03c] px-4 py-2.5 text-sm font-semibold text-[#0b0c0a] active:opacity-80"
                 >
-                  Start in WhatsApp
+                  Start in the app
                 </a>
               )}
             </li>
           );
         })}
       </ol>
-      {ctx.data.whatsappNumber && (
-        <p className="mt-3 text-xs text-stone-500">Each button opens WhatsApp with the message ready. Just tap send.</p>
+      {s.actions.length > 0 && (
+        <p className="mt-3 text-xs text-stone-500">Each button opens the DinerAI app with the message ready. Just tap send.</p>
       )}
     </Card>
   );

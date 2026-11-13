@@ -32,11 +32,11 @@ export async function emailSupport(r: Pick<Restaurant, "id" | "name" | "slug" | 
       supportEmail(),
       `Owner question not in the help guide: ${r.name}`,
       [
-        `${r.owner_name ?? "The owner"} of ${r.name} (${r.slug ?? r.id}) asked on WhatsApp, and the help guide (agents/help.md) doesn't cover it:`,
+        `${r.owner_name ?? "The owner"} of ${r.name} (${r.slug ?? r.id}) asked the DinerAI assistant, and the help guide (agents/help.md) doesn't cover it:`,
         "",
         `"${question}"`,
         "",
-        `Reply to them on WhatsApp${sender ? ` (${sender.replace(/^whatsapp:/, "")})` : ""}${r.owner_email ? ` or by email (${r.owner_email})` : ""}, and add the answer to agents/help.md so next time it's answered straight away.`,
+        `${r.owner_email ? `Reply to them by email (${r.owner_email})` : "Reply to them"}${sender && !/^(app|whatsapp:\+447700900489)$/.test(sender) ? ` (their number: ${sender.replace(/^whatsapp:/, "")})` : ""}, and add the answer to agents/help.md so next time it's answered straight away.`,
       ].join("\n"),
     );
     return true;

@@ -2,11 +2,12 @@ import "server-only";
 import { Document, Link, Page, Rect, renderToBuffer, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { gbp, highlightsOf, labourLine, MONTHLY_FOOTNOTE, notIncluded, ordinal, type MonthlyReportData } from "./monthly-rules";
 import { clean } from "./pdf";
-import { whatsappLink } from "./types";
+import { actionLink } from "./types";
+import { appUrl } from "@/lib/supabase";
 import { benchmarkTitle, STAND, type Benchmark } from "./benchmark-rules";
 
 // The monthly report as an A4 PDF in the restaurant's colours: the file the owner
-// gets on WhatsApp and by email each month. Numbers and charts first, then the AI's
+// gets in the app and by email each month. Numbers and charts first, then the AI's
 // 3 or 4 key messages about them, then three actions. Same content as the web page.
 
 const INK = "#1c1917";
@@ -188,7 +189,7 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
           <View style={s.block} wrap={false}>
             <Text style={s.h2}>Three things for next month</Text>
             {data.words.actions.map((a, i) => {
-              const link = whatsappLink(data.whatsappNumber, a.message);
+              const link = actionLink(a.message, appUrl());
               return (
                 <View key={a.title} style={s.action}>
                   <Text style={[s.num, { backgroundColor: brand }]}>{i + 1}</Text>
@@ -197,7 +198,7 @@ function MonthlyPdf({ data }: { data: MonthlyReportData }) {
                     {a.why ? <Text style={s.aWhy}>{clean(a.why)}</Text> : null}
                     {link ? (
                       <Link src={link} style={s.link}>
-                        Start in WhatsApp
+                        Start in the app
                       </Link>
                     ) : null}
                   </View>

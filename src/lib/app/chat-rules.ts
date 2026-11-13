@@ -88,7 +88,7 @@ export const plainText = (text: string) => text.replace(/\*([^*\n]+)\*/g, "$1").
 // ---------- Files the owner sends ----------
 
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // what Claude reads (lib/photos.ts)
-export const MAX_FILE_BYTES = 16 * 1024 * 1024; // as on WhatsApp
+export const MAX_FILE_BYTES = 16 * 1024 * 1024; // the same limit as WhatsApp had
 
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const FILE_TYPES: Record<string, string> = {

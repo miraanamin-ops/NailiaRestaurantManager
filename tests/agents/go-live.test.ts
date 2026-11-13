@@ -54,7 +54,7 @@ describe("switching Reputation to live", () => {
   test("missing fields: stays in shadow, the owner is asked once (and not again the same day)", async () => {
     const url = await save("live");
     expect(url).toMatch(/reputation can't go live yet: missing sign-off name, contact for complaints, recovery offers, halal statement, allergen statement/);
-    expect(url).toMatch(/the owner has been sent a WhatsApp/);
+    expect(url).toMatch(/the owner has been sent a message/);
     expect(db.tables.restaurants[0].agent_modes).not.toMatchObject({ reputation: "live" });
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatch(/To reply to your Google reviews for you, I need your sign-off name/);

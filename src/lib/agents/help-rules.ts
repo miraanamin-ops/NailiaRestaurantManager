@@ -51,7 +51,7 @@ export const HelpOutput = z.object({
   covered: z.boolean().describe("true if the guide (or the setup facts) answers the question; false if it doesn't"),
   message: z
     .string()
-    .describe("The WhatsApp reply. covered: the answer. Not covered: one short line saying you'll check with the DinerAI team and come back to them (no guessing)"),
+    .describe("The reply. covered: the answer. Not covered: one short line saying you'll check with the DinerAI team and come back to them (no guessing)"),
   action: z
     .string()
     .nullable()
@@ -70,7 +70,7 @@ export function helpProblems(out: HelpOutputType): Problems {
   if (EM_DASH.test(text)) problems.push("no em-dashes");
   const internal = text.match(INTERNAL);
   if (internal) problems.push(`no internal words ("${internal[0]}"): talk about what the owner sees`);
-  if (text.length > 1400) problems.push("too long for WhatsApp: keep it under about 150 words");
+  if (text.length > 1400) problems.push("too long for a chat message: keep it under about 150 words");
   if (!out.covered && out.action) problems.push("an uncovered question can't offer an action");
   if (out.action !== null && !out.action.trim()) problems.push("action is a plain request, or null");
   return problems;

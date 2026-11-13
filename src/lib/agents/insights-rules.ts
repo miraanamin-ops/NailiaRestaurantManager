@@ -24,7 +24,7 @@ export const InsightsDraft = z.object({
         z.object({
           title: z.string().describe("Under 8 words"),
           why: z.string().describe("One sentence tied to a number in the report (advice: to one of this restaurant's figures; an idea not based on its figures starts with \"General:\")"),
-          message: z.string().describe("What the owner sends on WhatsApp to start it"),
+          message: z.string().describe("What the owner sends in the app to start it"),
         }),
       )
       .describe("Report and advice: exactly 3. Answer: none"),
@@ -267,7 +267,7 @@ export function insightsProblems(out: InsightsOutput, ctx: InsightsContext): Pro
     out.content.actions.forEach((a, i) => {
       if (!quotedNumbers(a.why).length) problems.push(`action ${i + 1}'s why must be tied to a number in the report`);
       if (wordCount(a.title) > 8) problems.push(`action ${i + 1}'s title is under 8 words`);
-      if (!a.message.trim()) problems.push(`action ${i + 1} needs the WhatsApp message that starts it`);
+      if (!a.message.trim()) problems.push(`action ${i + 1} needs the message that starts it`);
     });
   }
   return problems;

@@ -90,7 +90,7 @@ export function OwnerCard({ r }: { r: Restaurant }) {
   return (
     <Card>
       <h2 className="text-lg font-bold">About you</h2>
-      <p className="text-sm text-stone-600">How Naila talks to you on WhatsApp.</p>
+      <p className="text-sm text-stone-600">How Naila talks to you in the app.</p>
       <form action={saveOwner} className="space-y-4">
         <input type="hidden" name="r" value={r.id} />
         <label className="block">
@@ -265,7 +265,7 @@ export async function BuilderCard({ r }: { r: Restaurant }) {
       {Object.keys(GO_LIVE_FIELDS).some((a) => !goLiveChecklist(r, a as AgentName, confirmed).ready) && (
         <form action={askOwnerForGoLive}>
           <input type="hidden" name="r" value={r.id} />
-          <button className="text-sm text-emerald-700 underline">Ask the owner on WhatsApp for the missing details</button>
+          <button className="text-sm text-emerald-700 underline">Ask the owner in the app for the missing details</button>
         </form>
       )}
     </Card>

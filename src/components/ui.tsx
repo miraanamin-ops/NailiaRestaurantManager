@@ -254,11 +254,11 @@ export function EmptyCard({ icon, title, text, children }: { icon?: IconName; ti
 }
 
 // A tip about doing the same thing on WhatsApp.
-export function WhatsAppTip({ children }: { children: React.ReactNode }) {
+export function AppTip({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-[#121410] p-4 ring-1 ring-[#1e221b]">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#c8f03c]/12 text-[#c8f03c]">
-        <Icon name="whatsapp" className="h-[17px] w-[17px]" />
+        <Icon name="chat" className="h-[17px] w-[17px]" />
       </div>
       <p className="text-[13px] leading-relaxed text-[#a3a99d]">{children}</p>
     </div>

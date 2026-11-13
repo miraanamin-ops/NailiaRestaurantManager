@@ -1,5 +1,5 @@
 import { gbp, highlightsOf, labourLine, MONTHLY_FOOTNOTE, notIncluded, ordinal, type MonthlyReportData } from "@/lib/report/monthly-rules";
-import { whatsappLink } from "@/lib/report/types";
+import { actionLink } from "@/lib/report/types";
 import { benchmarkTitle, STAND } from "@/lib/report/benchmark-rules";
 
 // The monthly report on the owner's phone (the same content as its PDF): numbers and
@@ -157,7 +157,7 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
         <Card title="Three things for next month">
           <ol className="space-y-4">
             {data.words.actions.map((a, i) => {
-              const link = whatsappLink(data.whatsappNumber, a.message);
+              const link = actionLink(a.message);
               return (
                 <li key={a.title} className="flex gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-stone-900" style={{ background: brand }}>
@@ -168,7 +168,7 @@ export function MonthlyReport({ token, data, createdAt }: { token: string; data:
                     {a.why && <p className="text-sm text-stone-600">{a.why}</p>}
                     {link && (
                       <a href={link} className="mt-2 inline-block rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-semibold text-white">
-                        Start in WhatsApp
+                        Start in the app
                       </a>
                     )}
                   </div>

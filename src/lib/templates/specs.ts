@@ -88,7 +88,7 @@ export function menuCostsSpec(r: { name: string; brand_color?: string | null; me
       `Short of time? Fill in your main dishes, then on the last row ("${ALL_OTHER_DISHES}") put one share of the price for the rest, e.g. 30%.`,
       "Exact or estimate: leave it as Estimate unless you've worked the cost out properly.",
       "Don't change the dish names or prices here: change those in your settings.",
-      "When you're done, send this file back to me on WhatsApp or in the chat.",
+      "When you're done, send this file back to me in the app's Chat or the setup chat.",
       "Your costs are private: they're never shown to customers. They show which dishes make you the most money, so posts and offers push those and never the thin ones.",
     ],
   };
@@ -146,7 +146,7 @@ export function staffSpec(r: { name: string; brand_color?: string | null }): Tem
       "Days and times they can work: in your own words, e.g. Mon-Fri, weekends, 5pm-11pm, evenings. Blank means any day or any time.",
       "Most hours a week: only if there's a limit (students, second jobs).",
       "Can open and close: Yes for anyone with keys who can open up and lock up.",
-      "When you're done, send this file back to me on WhatsApp or in the chat. I use it to suggest your rotas and track labour %.",
+      "When you're done, send this file back to me in the app's Chat or the setup chat. I use it to suggest your rotas and track labour %.",
     ],
   };
 }
@@ -240,7 +240,7 @@ export function dailyTakingsSpec(r: { name: string; brand_color?: string | null 
       "Takings: without VAT, tips or service charge. Leave a day blank if you were closed or don't know.",
       "Orders: how many orders or bills that day, if you know. It makes forecasts more accurate. Fine to leave blank.",
       "Even 8 weeks is enough to start forecasting your quiet and busy days; more is better.",
-      "When you're done, send this file back to me on WhatsApp or in the chat.",
+      "When you're done, send this file back to me in the app's Chat or the setup chat.",
     ],
   };
 }

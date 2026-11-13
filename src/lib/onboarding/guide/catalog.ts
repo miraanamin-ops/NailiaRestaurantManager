@@ -458,7 +458,7 @@ export const CATALOG: CatalogQuestion[] = [
     label: "Morning brief",
     field: "brief_hour",
     kind: "one",
-    text: () => "When should your morning brief arrive on WhatsApp? It's everything waiting for you, in one message.",
+    text: () => "When should your morning brief arrive in the app? It's everything waiting for you, in one message.",
     options: () => [7, 8, 9, 10, 11].map((h) => ({ id: `h${h}`, label: `${h}am`, value: h })),
   },
   {

@@ -228,7 +228,7 @@ export async function sendIfReady(reviewId: string, now: Date): Promise<string> 
         .eq("id", review.id),
     );
     if (via === "session") await scheduleReceipt(review.id, r, now).catch((err) => console.error("Couldn't schedule the review receipt", err));
-    await logAction({ restaurantId: r.id, actor: "system", action: "business_review", detail: via === "session" ? "Business review sent on WhatsApp" : via === "template" ? "Business review ready: template sent, waiting for the owner's reply" : "Business review ready: waiting for the owner's next message (emailed the link)" });
+    await logAction({ restaurantId: r.id, actor: "system", action: "business_review", detail: via === "session" ? "Business review sent in the app" : via === "template" ? "Business review ready: template sent, waiting for the owner's reply" : "Business review ready: waiting for the owner's next message (emailed the link)" });
     return via;
   } catch (err) {
     // Not sent: free the claim so the send job's retry can try again.

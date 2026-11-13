@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { PageSkeleton } from "@/components/app-shell";
 import { Icon } from "@/components/icons";
 import { RestaurantSwitcher } from "@/components/restaurant-switcher";
-import { btnSecondary, EmptyCard, Eyebrow, Page, PageHeader, Pill, Section, Tile, WhatsAppTip, withR } from "@/components/ui";
+import { btnSecondary, EmptyCard, Eyebrow, Page, PageHeader, Pill, Section, Tile, AppTip, withR } from "@/components/ui";
 import { ownerPage } from "@/lib/dashboard/page-context";
 import { birthdayOn, compare } from "@/lib/dashboard/rules";
 import { check } from "@/lib/drafts";
@@ -201,10 +201,10 @@ async function Customers({ searchParams }: Pick<PageProps<"/customers">, "search
                 </div>
               </Section>
             )}
-            <WhatsAppTip>
+            <AppTip>
               Text <span className="text-[#edefe8]">“Thursday is quiet”</span> for an offer email to your list, or <span className="text-[#edefe8]">EXPORT CUSTOMERS</span> for a download link.
               Settings has the full list of what you can change: <a className="underline" href={withR("/settings", r)}>open Settings</a>.
-            </WhatsAppTip>
+            </AppTip>
           </div>
         </div>
       </div>

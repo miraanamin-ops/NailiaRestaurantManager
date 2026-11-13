@@ -11,7 +11,7 @@ import { callDina, DinaReplyError, routeStep, type Call, type ToolCall } from ".
 import { mightBeAnotherStep, turnText, type DataBlock, type HistoryLine, type TurnEvent } from "./prompt";
 import { dinaReplyProblems, fallbackReply, type DinaReply } from "./reply";
 import { applyFaqNotes, applyHoursNotes } from "./facts-step";
-import { finishIfDone, reviewLine } from "./finish";
+import { finishIfDone, GET_THE_APP, reviewLine } from "./finish";
 import { applyGoogleNotes } from "./google-step";
 import { nextDishForCard } from "./menu-step";
 import { helloPlacesData } from "./hello-step";
@@ -347,14 +347,19 @@ async function endOfSetup(id: string, messages: DinaReply["messages"], channel: 
     // Finished on the web: the same closing line on WhatsApp, where they'll hear from us next.
     const withReview = (c: "web" | "whatsapp" | "app") => (outcome.reviewStarted ? `${outcome.allSet} ${reviewLine(c)}` : outcome.allSet);
     // An app owner with no WhatsApp: everything comes in the app.
-    if (outcome.reach === "app") return [...summary, { text: withReview("app"), component: null }];
+    if (outcome.reach === "app")
+      return [
+        ...summary,
+        { text: withReview("app"), component: null },
+        ...(channel === "web" ? [{ text: GET_THE_APP, component: null }] : []),
+      ];
     if (channel === "web") await whatsAppLine(id, withReview("whatsapp")).catch((err) => console.error("Couldn't send the all-set line on WhatsApp", err));
     return [...summary, { text: withReview(channel === "web" ? "web" : "whatsapp"), component: null }];
   }
   const { data: recent } = await getSupabase().from("onboarding_messages").select("parts").eq("restaurant_id", id).eq("role", "dina").order("created_at", { ascending: false }).limit(6);
   const askedRecently = (recent ?? []).some((r) => ((r.parts as { type?: string }[] | null) ?? []).some((p) => p?.type === "whatsapp_link"));
   if (askedRecently || has("whatsapp_link")) return [];
-  return [...summary, { text: "One last thing: link your WhatsApp, so your morning brief and alerts can reach you. Then setup is finished.", component: { type: "whatsapp_link" as const } }];
+  return [...summary, { text: "One last thing: get the DinerAI app on your phone and log in, so your morning brief and alerts can reach you. Then setup is finished.", component: { type: "whatsapp_link" as const } }];
 }
 
 // One line to the owner on WhatsApp, inside its 24-hour window (it's logged like any other).

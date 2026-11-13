@@ -204,7 +204,7 @@ export function summaryFrom(sources: CardSources): SummaryData {
     items,
     locked: gapsFor(sources.state).map((g) => ({ key: g.step_key, title: gapTitle(g.step_key), unlock: g.unlock_text })),
     next: [
-      `Your first morning brief arrives on WhatsApp at ${hourWords(sources.restaurant.brief_hour ?? 9)}, the morning after you finish.`,
+      `Your first morning brief arrives in the app at ${hourWords(sources.restaurant.brief_hour ?? 9)}, the morning after you finish.`,
       "Your first Monday report comes on Monday morning.",
       ...(queued ? [`${queued} review repl${queued === 1 ? "y is" : "ies are"} waiting for your approval in that first brief.`] : []),
       qr ? `Your QR codes are ready to print: ${qr}` : "Your QR codes will be ready to print.",
@@ -304,7 +304,7 @@ function component(part: unknown, sources: CardSources): ChatComponent | null {
     return href && t ? { type: "link", label: t.label, href, hint: t.hint } : null;
   }
   if (p.type === "qr_kit") return sources.restaurant.slug ? { type: "link", label: "Open your QR codes", href: `/r/${sources.restaurant.slug}/qr-pack`, hint: "Four table cards and a counter sign, ready to print.", continueLabel: "I've opened my QR codes" } : null;
-  if (p.type === "whatsapp_link") return { type: "link", label: "Link my WhatsApp", href: `/onboarding/in?r=${sources.restaurant.id ?? ""}`, hint: null };
+  if (p.type === "whatsapp_link") return { type: "link", label: "Get the DinerAI app", href: `/onboarding/in?r=${sources.restaurant.id ?? ""}`, hint: null };
   if (p.type === "queue_replies")
     return {
       type: "quick_replies",

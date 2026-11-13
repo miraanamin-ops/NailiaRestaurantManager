@@ -36,7 +36,7 @@ export async function ReferralCard({ r }: { r: Restaurant }) {
       <p className="break-all text-sm text-stone-600">
         Or send them this link: <a className="underline" href={referralLink(code)}>{referralLink(code)}</a>
       </p>
-      <p className="text-sm text-stone-600">On WhatsApp, text REFER to get it there.</p>
+      <p className="text-sm text-stone-600">In the app&apos;s Chat, send REFER to get it there.</p>
     </Card>
   );
 }

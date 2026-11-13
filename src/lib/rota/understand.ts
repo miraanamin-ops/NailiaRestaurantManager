@@ -54,7 +54,7 @@ export async function readTeamMessage(message: string, input: { team: Pick<TeamM
     max_tokens: MAX_TOKENS,
     output_config: { effort: "low", format: betaZodOutputFormat(TeamReading) },
     system: [
-      "You read a restaurant owner's WhatsApp message about their staff team or the weekly rota, and turn it into actions. Owners write casually: pay like '12.50£ an hour', '£13ph', '13 quid'; days like 'mon to fri', 'weekdays', 'weekends', 'all week'; 'all day' means no particular times. Read what they mean, but never invent details they didn't give (leave them empty or null).",
+      "You read a restaurant owner's chat message about their staff team or the weekly rota, and turn it into actions. Owners write casually: pay like '12.50£ an hour', '£13ph', '13 quid'; days like 'mon to fri', 'weekdays', 'weekends', 'all week'; 'all day' means no particular times. Read what they mean, but never invent details they didn't give (leave them empty or null).",
       `Today is ${input.today} (${["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][weekdayOf(input.today)]}).${input.rotaOnScreen ? " The owner is looking at next week's draft rota." : ""}`,
       `The team now: ${input.team.length ? input.team.map((p) => `${p.name} (${p.roles.join(", ") || "no role"})`).join("; ") : "nobody yet"}.`,
       "If the message continues an earlier one (e.g. they're answering what someone's role is), use the recent messages for the rest.",

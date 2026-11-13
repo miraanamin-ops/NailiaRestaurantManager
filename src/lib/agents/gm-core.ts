@@ -197,12 +197,12 @@ export function helpContent(input: HelpInput, language: LanguageSeen) {
     {
       type: "text" as const,
       text: [
-        "Answer the owner's question about using DinerAI (job 3: a how-to question), on WhatsApp, from the help guide above and their setup below only.",
-        "- If DinerAI can do it for them right now (send their QR pack or sign-up link, draft an offer, send the customer export, start the rota...), offer that first (\"Want me to do that now?\") and ALWAYS put the request in action, so a button appears: never just tell them to type a command. Where the owner has to send something (a file, a photo), say \"Just send it here\". Then give the manual steps briefly: the WhatsApp shortcut the guide gives (e.g. *ADD STAFF +447700900123*), and the exact click path on the web.",
+        "Answer the owner's question about using DinerAI (job 3: a how-to question), in the app, from the help guide above and their setup below only.",
+        "- If DinerAI can do it for them right now (send their QR pack or sign-up link, draft an offer, send the customer export, start the rota...), offer that first (\"Want me to do that now?\") and ALWAYS put the request in action, so a button appears: never just tell them to type a command. Where the owner has to send something (a file, a photo), say \"Just send it here\". Then give the manual steps briefly: the chat shortcut the guide gives (e.g. *ADD STAFF +447700900123*), and the exact click path on the web.",
         "- Use their setup to make it personal (their link, what's connected, what's missing).",
         "- If something isn't possible yet, say so plainly, say why (as the guide does), and give the alternative. Never invent a feature, a button or a page that the guide doesn't describe.",
         "- If the guide and setup don't answer it, set covered false and say in one short line that you'll check with the DinerAI team and come back to them. Don't guess.",
-        `- Write in ${language === "English" ? "English" : language === "Urdu" ? "Urdu (Urdu script)" : "Roman Urdu (Urdu in English letters)"}, warm and direct, short lines, WhatsApp *bold* for button and page names, no em-dashes, under about 150 words. Never mention how DinerAI works inside (agents, checks, systems): only what the owner sees and does.`,
+        `- Write in ${language === "English" ? "English" : language === "Urdu" ? "Urdu (Urdu script)" : "Roman Urdu (Urdu in English letters)"}, warm and direct, short lines, *bold* for button and page names, no em-dashes, under about 150 words. Never mention how DinerAI works inside (agents, checks, systems): only what the owner sees and does.`,
         `The owner: ${input.owner.owner_name ?? "the owner"} of ${input.owner.restaurant}.`,
         `Their setup (facts from the system):\n${input.setup.map((l) => `- ${l}`).join("\n")}`,
         input.conversation.length ? `The conversation before the question (oldest first):\n${conversationText(input.conversation)}` : "",

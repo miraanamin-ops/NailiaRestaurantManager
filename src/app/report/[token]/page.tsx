@@ -13,7 +13,7 @@ function ExpiredCard() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-stone-100 p-6 text-center text-stone-700">
       <p>
-        This report link has expired (links last {REPORT_LINK_DAYS} days). Your newest report link arrives on WhatsApp every Monday morning, and the monthly one early each month.
+        This report link has expired (links last {REPORT_LINK_DAYS} days). Your newest report link arrives in the DinerAI app every Monday morning, and the monthly one early each month.
       </p>
     </div>
   );

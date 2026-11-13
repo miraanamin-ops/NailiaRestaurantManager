@@ -56,7 +56,7 @@ async function emailReviewLink(r: Restaurant, message: string) {
   const text = [
     `Hi${name ? ` ${name}` : ""},`,
     "",
-    `Your DinerAI business review for ${r.name} is ready. Send me any message on WhatsApp and I'll show it to you there, one thing at a time.`,
+    `Your DinerAI business review for ${r.name} is ready. Send me any message in the app and I'll show it to you there, one thing at a time.`,
     "",
     ...(link ? [`Or see it in full here: ${link}`, ""] : []),
     "Dina",

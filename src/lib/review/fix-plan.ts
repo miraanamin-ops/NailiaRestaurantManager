@@ -118,7 +118,7 @@ export function planFixes(p: ProfileSnapshot, f: KnownFacts, now: Date): FixPlan
   if (unknown.length) asks.push(`whether you have ${unknown.join(", ")}`);
 
   if (p.photoCount < HEALTH_RUBRIC.photos.good || !p.latestPhotoAt) {
-    copyPaste.push({ label: "More recent photos", text: "Send me a few photos of your food and the restaurant here on WhatsApp and I'll turn them into Google posts. Or add them in Google: open your profile, tap Add photos." });
+    copyPaste.push({ label: "More recent photos", text: "Send me a few photos of your food and the restaurant here and I'll turn them into Google posts. Or add them in Google: open your profile, tap Add photos." });
   }
   if (!p.hasLogo) {
     if (!empty(f.logo_url)) apply.push({ field: "logo", label: "Your logo", value: f.logo_url });

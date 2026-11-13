@@ -36,7 +36,7 @@ export default function SiteDpa() {
           <li className={li}>We keep it secure: encrypted connections, restricted access, and each restaurant&apos;s data kept apart.</li>
           <li className={li}>
             We use these sub-processors, each under its own data protection terms: Supabase (database), Vercel (hosting), Anthropic (AI drafting; no
-            customer lists or contact details are sent to it), Twilio (WhatsApp), Resend (email), Cloudflare (spam protection) and Google (your
+            customer lists or contact details are sent to it), Expo (app notifications), Resend (email), Cloudflare (spam protection) and Google (your
             Business Profile, if you connect it). We&apos;ll tell you before adding another.
           </li>
           <li className={li}>We help you answer customers who ask to see or delete their data (every email already has a &ldquo;Delete my data&rdquo; link).</li>

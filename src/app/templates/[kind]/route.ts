@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ kind
   const rid = req.nextUrl.searchParams.get("r") ?? "";
   if (!(TEMPLATE_KINDS as string[]).includes(kind)) return new Response("Not found", { status: 404 });
   if (!verifyLink(templatePurpose(kind as TemplateKind), rid, req.nextUrl.searchParams.get("t"))) {
-    return new Response("This download link has expired. Ask me on WhatsApp for a new one, or download it from your settings page.", { status: 403 });
+    return new Response("This download link has expired. Ask me in the app for a new one, or download it from your settings page.", { status: 403 });
   }
   const r = check(await getSupabase().from("restaurants").select("id, name, brand_color, menu").eq("id", rid).maybeSingle<Pick<Restaurant, "id" | "name" | "brand_color" | "menu">>());
   if (!r) return new Response("Not found", { status: 404 });

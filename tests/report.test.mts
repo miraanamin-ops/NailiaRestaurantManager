@@ -2,7 +2,7 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { bars, weekTotals } from "../src/lib/report/chart.ts";
-import { changeText, direction, formatValue, whatsappLink } from "../src/lib/report/types.ts";
+import { changeText, direction, formatValue, actionLink } from "../src/lib/report/types.ts";
 
 test("comparisons say up, down or the same", () => {
   assert.equal(direction({ now: 18, before: 9 }), "up");
@@ -31,7 +31,7 @@ test("charts split 14 days into the week before and last week", () => {
   assert.ok(b[1].h > 0, "zero days still show a hairline");
 });
 
-test("action buttons open WhatsApp with the message filled in", () => {
-  assert.equal(whatsappLink("14155238886", "Tuesday is quiet"), "https://wa.me/14155238886?text=Tuesday%20is%20quiet");
-  assert.equal(whatsappLink(null, "anything"), null);
+test("action buttons open the app's Chat with the message filled in", () => {
+  assert.equal(actionLink("Tuesday is quiet"), "/open-app?say=Tuesday%20is%20quiet");
+  assert.equal(actionLink("Tuesday is quiet", "https://app.dinerai.co.uk"), "https://app.dinerai.co.uk/open-app?say=Tuesday%20is%20quiet");
 });

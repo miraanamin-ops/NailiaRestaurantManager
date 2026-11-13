@@ -3,12 +3,11 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Icon } from "@/components/icons";
 import { RestaurantSwitcher } from "@/components/restaurant-switcher";
-import { btnGhost, btnPrimary, btnSecondary, Eyebrow, Notice, Page, PageHeader, Panel, Pill, Section, WhatsAppTip } from "@/components/ui";
+import { btnGhost, btnPrimary, btnSecondary, Eyebrow, Notice, Page, PageHeader, Panel, Pill, Section, AppTip } from "@/components/ui";
 import { londonYmd } from "@/lib/clock";
 import { ownerPage } from "@/lib/dashboard/page-context";
 import { initials } from "@/lib/dashboard/rules";
-import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
-import { whatsAppLink } from "@/lib/onboarding/steps";
+import { appChatLink } from "@/lib/app-link";
 import { db, must } from "@/lib/ops/db";
 import { nextWeekStart, rotaUrl, type RotaWeek } from "@/lib/rota/build";
 import { weekLabel } from "@/lib/rota/message";
@@ -82,7 +81,7 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
       <PageHeader
         eyebrow="Team"
         title="Team"
-        sub="Every Thursday at 10am I suggest next week's rota on WhatsApp: the cheapest person free for each shift, within your rules."
+        sub="Every Thursday at 10am I suggest next week's rota in the app: the cheapest person free for each shift, within your rules."
         action={
           <a href="#add" className={btnPrimary}>
             + Add someone
@@ -173,7 +172,7 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
                   </div>
                 </div>
               ) : (
-                <p className="text-[14px] text-[#a3a99d]">Not suggested yet: it comes on Thursday at 10am. Text ROTA on WhatsApp to see where it&apos;s up to.</p>
+                <p className="text-[14px] text-[#a3a99d]">Not suggested yet: it comes on Thursday at 10am. Send ROTA in the app&apos;s Chat to see where it&apos;s up to.</p>
               )}
               <div className="flex flex-wrap items-center gap-2">
                 {week?.status === "published" && week.share_token ? (
@@ -186,8 +185,8 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
                     </a>
                   </>
                 ) : week?.draft_id ? (
-                  <a className={btnPrimary} href={whatsAppLink(ourWhatsAppNumber(), "ROTA")} target="_blank" rel="noreferrer">
-                    Approve or change it on WhatsApp
+                  <a className={btnPrimary} href={appChatLink("ROTA")} target="_blank" rel="noreferrer">
+                    Approve or change it in the app
                   </a>
                 ) : null}
               </div>
@@ -341,9 +340,9 @@ async function Staff({ searchParams }: Pick<PageProps<"/staff">, "searchParams">
             </Panel>
           </Section>
 
-          <WhatsAppTip>
-            You can also say on WhatsApp: <span className="text-[#edefe8]">“Sana is off Friday”</span> or <span className="text-[#edefe8]">“add Omar, front of house, £11.44”</span>.
-          </WhatsAppTip>
+          <AppTip>
+            You can also say in the app: <span className="text-[#edefe8]">“Sana is off Friday”</span> or <span className="text-[#edefe8]">“add Omar, front of house, £11.44”</span>.
+          </AppTip>
         </div>
       </div>
     </Page>

@@ -141,8 +141,8 @@ function learningText(learning: Learning) {
 type Mode = "chat" | "write" | "campaign" | "post";
 
 const CHAT_INSTRUCTIONS = `Chatting with the owner:
-- This is WhatsApp. Keep replies short and easy to read on a phone, ideally under 120 words.
-- Use WhatsApp formatting only: *bold*, _italic_, and simple "- " bullet lists. No markdown headings, tables or links.
+- This is a chat in the DinerAI app on the owner's phone. Keep replies short and easy to read on a phone, ideally under 120 words.
+- Use chat formatting only: *bold*, _italic_, and simple "- " bullet lists. No markdown headings, tables or links.
 - Talk to the owner like a helpful, friendly colleague.
 - When the owner wants an offer, promotion or birthday email for customers, call create_email_campaign.
 - For a review reply or any other one-off public message, call create_draft.
@@ -163,7 +163,7 @@ function systemPrompt(
   mode: Mode,
   extra = "",
 ): Anthropic.Beta.BetaTextBlockParam[] {
-  const background = `You are Naila, a WhatsApp marketing assistant for the owner of ${ctx.restaurantName}. You work for the restaurant owner (not for customers).
+  const background = `You are Naila, the marketing assistant in the DinerAI app for the owner of ${ctx.restaurantName}. You work for the restaurant owner (not for customers).
 
 You help the owner understand how the restaurant is doing and grow it: summarise and analyse reviews, spot patterns, know the regular customers and upcoming birthdays, suggest simple marketing ideas, and write drafts of customer-facing messages for them to approve.
 
@@ -796,7 +796,7 @@ const ReportInsightsSchema = z.object({
       z.object({
         title: z.string().describe("The action, under 8 words, e.g. 'Fill quiet Tuesday with a grill offer'"),
         why: z.string().describe("Why, in one short sentence based on the numbers"),
-        message: z.string().describe("What the owner sends to their WhatsApp assistant to start it, e.g. 'Tuesday is quiet, draft a 15% off grills email for everyone'"),
+        message: z.string().describe("What the owner sends in the DinerAI app's Chat to start it, e.g. 'Tuesday is quiet, draft a 15% off grills email for everyone'"),
       }),
     )
     .describe("Exactly 3 actions for next week"),
@@ -816,7 +816,7 @@ export async function writeReportInsights(ctx: RestaurantContext, facts: string,
 Only use facts you're given. Don't invent numbers, dishes or events.
 About sales, state plainly what happened (what went up or down, the best and quietest days). Don't guess why, predict future sales or give financial advice.
 
-Actions must be things the owner's WhatsApp assistant can start right now:
+Actions must be things the owner's DinerAI assistant can start right now:
 - an email campaign with an offer (segments: everyone, birthdays in the next 7 days, new sign-ups who haven't used their welcome reward), within a ${ctx.discountCapPercent}% discount cap
 - a Google post about a dish, offer or event
 - replying to reviews, or changing the sign-up reward

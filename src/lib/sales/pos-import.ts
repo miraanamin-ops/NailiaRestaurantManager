@@ -105,7 +105,7 @@ export async function receivePosFile(input: {
   const own = await readOwnSheet(bytes);
   if (own && own.kind !== "daily_takings") {
     const what = own.kind === "menu_costs" ? "menu costs sheet" : "team sheet";
-    return { status: "failed", importId: null, message: `That's your ${what}, not a sales file. Send it to me on WhatsApp, or upload it on your settings page under Spreadsheets.` };
+    return { status: "failed", importId: null, message: `That's your ${what}, not a sales file. Send it to me in the app, or upload it on your settings page under Spreadsheets.` };
   }
 
   let table: Table | null = null;

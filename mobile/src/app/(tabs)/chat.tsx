@@ -329,7 +329,7 @@ function ChatRow({ row, onTap, disabled }: { row: Row; onTap: (b: ChatButton) =>
           <DraftCardBody card={m.card} />
         </>
       ) : (
-        <Bubble owner={owner} text={m.text} file={m.file && !m.file.photo ? `📄 ${m.file.name}` : null} imageUrl={m.imageUrl} via={m.channel === 'whatsapp' ? 'WhatsApp' : null} />
+        <Bubble owner={owner} text={m.text} file={m.file && !m.file.photo ? `📄 ${m.file.name}` : null} imageUrl={m.imageUrl} via={null} />
       )}
       {m.buttons.length > 0 && <QuickReplies buttons={m.buttons} onTap={onTap} disabled={disabled} />}
     </Animated.View>

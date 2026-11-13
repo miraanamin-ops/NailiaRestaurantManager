@@ -51,7 +51,7 @@ function joinLabels(labels: string[]) {
 export function goLivePromptText(restaurant: Restaurant, missing: ProfileFieldName[], agent: AgentName = "reputation") {
   const labels = missing.map((f) => label(f, restaurant));
   if (agent === "visibility") {
-    const photos = missing.includes("photo_library") ? " Send photos of your dishes here on WhatsApp any time and they go into your library." : "";
+    const photos = missing.includes("photo_library") ? " Send photos of your dishes here any time and they go into your library." : "";
     return `📝 To keep your Google listing fresh for you, I need your ${joinLabels(labels)}. Add them here: ${appUrl()}/settings?r=${restaurant.id}.${photos}`;
   }
   if (agent === "gm") {

@@ -1,3 +1,4 @@
+import { appChatLink } from "../app-link";
 // The weekly report's frozen data. Saved as JSON when the report is made, and
 // read by both the web page and the PDF, so they always show the same numbers.
 // No server-only imports here: the page components use these types too.
@@ -169,9 +170,10 @@ export function formatValue(v: number, format: ValueFormat) {
 export const SALES_FOOTNOTE = "Information about your business, not financial advice.";
 export const FORECAST_FOOTNOTE = "Forecasts are information, not financial advice.";
 
-// A wa.me link that opens WhatsApp with the action's message ready to send.
-export function whatsappLink(number: string | null, message: string) {
-  return number ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : null;
+// A link that opens the DinerAI app's Chat with the action's message ready to send
+// (base: empty on our pages, the app's address in PDFs).
+export function actionLink(message: string, base = "") {
+  return appChatLink(message, base);
 }
 
 // Report links stop working after this many days (the owner gets a new one every Monday).

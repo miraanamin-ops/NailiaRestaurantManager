@@ -45,7 +45,7 @@ export type WaitingItem = {
   campaignName: string | null;
   previewUrl: string | null;
   urgent: boolean;
-  onWeb: boolean; // Approve / Skip here; otherwise answered on WhatsApp
+  onWeb: boolean; // Approve / Skip here; otherwise answered in the app
 };
 
 export async function waitingItems(restaurantId: string): Promise<WaitingItem[]> {
@@ -254,7 +254,7 @@ async function setupList(restaurant: Restaurant, hasSales: boolean): Promise<Set
   const unconfirmed = (restaurant.menu ?? []).flatMap((c) => c.items).filter((i) => (i.allergens?.length ?? 0) > 0 && !i.allergens_confirmed).length;
   const r = (p: string) => `${p}?r=${restaurant.id}`;
   return [
-    { label: "Link your WhatsApp", done: Boolean(restaurant.owner_whatsapp), href: r("/onboarding") },
+    { label: "Get the DinerAI app", done: Boolean(restaurant.owner_whatsapp || restaurant.app_since), href: r("/onboarding/in") },
     { label: "Connect your Google profile", done: google > 0 || restaurant.is_demo, href: r("/settings/google") },
     { label: "Set a sign-up reward", done: Boolean(restaurant.signup_reward), href: r("/settings") },
     { label: unconfirmed ? `Confirm allergens for ${unconfirmed} dish${unconfirmed === 1 ? "" : "es"}` : "Confirm your allergens", done: unconfirmed === 0, href: r("/settings#menu") },
@@ -283,10 +283,10 @@ export async function dinaSetup(restaurant: Restaurant): Promise<SetupView | nul
     detail: c.left.length ? `Still to do: ${c.left.slice(0, 4).join(", ")}${c.left.length > 4 ? "…" : ""}` : null,
     href: `/onboarding/chat?r=${restaurant.id}&step=${firstStep.get(c.key as never) ?? "hello"}`,
   }));
-  const whatsappLinked = Boolean(restaurant.owner_whatsapp);
+  const whatsappLinked = Boolean(restaurant.owner_whatsapp || restaurant.app_since);
   const allDealtWith = (progress.chapters ?? []).every((c) => ["done", "partial", "skipped", "waiting"].includes(c.status));
   return {
-    items: [...(whatsappLinked ? [] : [{ label: "Link your WhatsApp", done: false, status: "To do", detail: "Your morning brief and alerts come here", href: `/onboarding/in?r=${restaurant.id}` }]), ...items],
+    items: [...(whatsappLinked ? [] : [{ label: "Get the DinerAI app", done: false, status: "To do", detail: "Your morning brief and alerts come there", href: `/onboarding/in?r=${restaurant.id}` }]), ...items],
     agents: goLive(sources),
     dina: true,
     allDealtWith,

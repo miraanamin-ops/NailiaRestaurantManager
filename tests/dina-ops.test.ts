@@ -379,6 +379,6 @@ describe("skipping, and the summary", () => {
       "4 on the team; Sara runs the site; at least 2 kitchen; labour target 30% (the default)",
       "Brief at 8am; customer messages 09:00 to 21:00; you approve everything",
     ]);
-    expect(s.next[0]).toBe("Your first morning brief arrives on WhatsApp at 8am, the morning after you finish.");
+    expect(s.next[0]).toBe("Your first morning brief arrives in the app at 8am, the morning after you finish.");
   });
 });

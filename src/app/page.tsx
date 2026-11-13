@@ -5,15 +5,14 @@ import { AppShell, PageSkeleton } from "@/components/app-shell";
 import { DraftCard } from "@/components/draft-card";
 import { Icon } from "@/components/icons";
 import { RestaurantSwitcher } from "@/components/restaurant-switcher";
-import { btnSecondary, Eyebrow, linkText, Notice, Page, Panel, Pill, Section, Stars, Tile, WhatsAppTip, withR } from "@/components/ui";
+import { btnSecondary, Eyebrow, linkText, Notice, Page, Panel, Pill, Section, Stars, Tile, AppTip, withR } from "@/components/ui";
 import { londonParts } from "@/lib/clock";
 import { homeData, weekAhead, type HomeData } from "@/lib/dashboard/data";
 
 type WeekAheadData = Awaited<ReturnType<typeof weekAhead>>;
 import { ownerPage } from "@/lib/dashboard/page-context";
 import { changeLabel, firstName, greeting, shortName, todaySummary } from "@/lib/dashboard/rules";
-import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
-import { whatsAppLink } from "@/lib/onboarding/steps";
+import { appChatLink } from "@/lib/app-link";
 import { gbp } from "@/lib/sales/format";
 import type { Restaurant } from "@/lib/supabase";
 
@@ -59,7 +58,7 @@ async function HomePage({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
         {one("oops") && <Notice tone="neg">{one("oops")}</Notice>}
         {!restaurant.active && <SetupNotice restaurant={restaurant} r={r} />}
         {restaurant.paused && (
-          <Notice tone="amber">The assistant is paused: nothing goes to customers or Google. Text RESUME on WhatsApp to start again.</Notice>
+          <Notice tone="amber">The assistant is paused: nothing goes to customers or Google. Send RESUME in the app&apos;s Chat to start again.</Notice>
         )}
       </div>
 
@@ -106,7 +105,7 @@ async function HomePage({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
                 </div>
                 <div>
                   <div className="text-[15px] font-medium text-[#edefe8]">Nothing waiting. You&apos;re all caught up.</div>
-                  <div className="text-[13px] text-[#a3a99d]">New drafts arrive in your 9am brief on WhatsApp, and here.</div>
+                  <div className="text-[13px] text-[#a3a99d]">New drafts arrive in your 9am brief in the app, and here.</div>
                 </div>
               </Panel>
             )}
@@ -145,10 +144,10 @@ async function HomePage({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
           <CampaignCard data={data} />
           <SetupCard data={data} />
 
-          <WhatsAppTip>
-            You can do all of this on WhatsApp too. Try <span className="text-[#edefe8]">“Thursday is quiet”</span> for an offer, or{" "}
+          <AppTip>
+            You can do all of this in the app too. Try <span className="text-[#edefe8]">“Thursday is quiet”</span> for an offer, or{" "}
             <span className="text-[#edefe8]">“change Friday hours to 11pm”</span>.
-          </WhatsAppTip>
+          </AppTip>
         </div>
       </div>
     </Page>
@@ -277,7 +276,7 @@ function ComingUp({ data }: { data: Pick<WeekAheadData, "days" | "hasForecast"> 
             <span className="h-2 w-2 rounded-full bg-[#ffb23d]" />
             <span className="text-[13px] text-[#edefe8]">{WEEKDAY_LONG[new Date(`${quiet.date}T12:00:00Z`).getUTCDay()]} looks quiet.</span>
           </div>
-          <a href={whatsAppLink(ourWhatsAppNumber(), `${WEEKDAY_LONG[new Date(`${quiet.date}T12:00:00Z`).getUTCDay()]} is quiet`)} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-[#c8f03c]">
+          <a href={appChatLink(`${WEEKDAY_LONG[new Date(`${quiet.date}T12:00:00Z`).getUTCDay()]} is quiet`)} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-[#c8f03c]">
             Draft an offer →
           </a>
         </div>
@@ -387,7 +386,7 @@ async function SetupNotice({ restaurant, r }: { restaurant: Restaurant; r: strin
   if (view?.allDealtWith && !view.whatsappLinked)
     return (
       <Link href={`/onboarding/in?r=${restaurant.id}`} className="block">
-        <Notice tone="amber">Every chapter is done. Link your WhatsApp to finish setting up: your morning brief comes there →</Notice>
+        <Notice tone="amber">Every chapter is done. Get the DinerAI app to finish setting up: your morning brief comes there →</Notice>
       </Link>
     );
   return (
@@ -435,7 +434,7 @@ function ChapterSetupCard({ view }: { view: import("@/lib/dashboard/data").Setup
   const left = view.items.filter((s) => !s.done);
   const waiting = view.agents.filter((a) => !a.ready);
   if (!left.length && !waiting.length) return null;
-  const chapters = view.items.filter((s) => s.label !== "Link your WhatsApp");
+  const chapters = view.items.filter((s) => s.label !== "Get the DinerAI app");
   const done = chapters.filter((s) => s.done).length;
   return (
     <Section title="Finish setting up">

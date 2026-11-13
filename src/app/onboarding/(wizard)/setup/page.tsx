@@ -382,7 +382,7 @@ async function FinishStep({ s, restaurantId }: { s: S; restaurantId: string }) {
     return (
       <Card>
         <h1 className="text-xl font-bold">Last step: link your WhatsApp</h1>
-        <p className="text-stone-600">Naila works on WhatsApp: your drafts, approvals and morning brief arrive there.</p>
+        <p className="text-stone-600">Naila works in the app: your drafts, approvals and morning brief arrive there.</p>
         <LinkWhatsApp code={await linkCodeFor(restaurantId, s.onboarding)} expected={s.onboarding.pending_whatsapp} />
         <a href={`/onboarding/setup?r=${restaurantId}`} className={secondary}>
           I&apos;ve sent it, carry on

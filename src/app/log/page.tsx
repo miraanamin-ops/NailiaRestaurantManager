@@ -6,8 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { RestaurantSwitcher } from "@/components/restaurant-switcher";
 import { Eyebrow, Page, PageHeader } from "@/components/ui";
 import { ago } from "@/lib/dashboard/rules";
-import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
-import { whatsAppLink } from "@/lib/onboarding/steps";
+import { appChatLink } from "@/lib/app-link";
 import { recentLog, type AuditEntry } from "@/lib/audit";
 import { pickRestaurantId, requireOwner, restaurantChoices } from "@/lib/auth";
 import { check } from "@/lib/drafts";
@@ -191,7 +190,7 @@ async function Log({ searchParams }: Pick<PageProps<"/log">, "searchParams">) {
                 <p className="mt-0.5 text-[14px] text-[#edefe8]">{lastChange.detail ?? ACTION_STYLE[lastChange.action]?.label}</p>
               </div>
             </div>
-            <a href={whatsAppLink(ourWhatsAppNumber(), "UNDO")} target="_blank" rel="noreferrer" className="shrink-0 rounded-full bg-[#171a14] px-4 py-1.5 text-[13px] font-medium text-[#c8f03c] ring-1 ring-[#2c3127]">
+            <a href={appChatLink("UNDO")} target="_blank" rel="noreferrer" className="shrink-0 rounded-full bg-[#171a14] px-4 py-1.5 text-[13px] font-medium text-[#c8f03c] ring-1 ring-[#2c3127]">
               Undo
             </a>
           </div>

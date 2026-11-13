@@ -61,7 +61,7 @@ export async function buildWorkbook(spec: TemplateSpec): Promise<Buffer> {
     row.alignment = { wrapText: true, vertical: "top" };
   }
   how.addRow([]);
-  how.addRow(["From DinerAI. Questions? Just ask me on WhatsApp."]).font = { italic: true, color: { argb: "FF78716C" } };
+  how.addRow(["From DinerAI. Questions? Just ask me in the app."]).font = { italic: true, color: { argb: "FF78716C" } };
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

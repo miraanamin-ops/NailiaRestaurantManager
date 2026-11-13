@@ -235,7 +235,7 @@ async function PilotZero({ searchParams }: Pick<PageProps<"/onboarding/admin/pil
       ) : (
         <>
           <p className="mt-3 text-sm text-stone-600">
-            Google writes for a Pilot Zero restaurant are dry run until you switch them here: the owner sees &quot;would have posted&quot; and nothing reaches Google. Replies to simulated reviews never go to Google. With replies live, each one still needs the owner&apos;s Approve on WhatsApp (never Auto) and is in the log. Hours and photos have their own switch. Nothing on WhatsApp can change these.
+            Google writes for a Pilot Zero restaurant are dry run until you switch them here: the owner sees &quot;would have posted&quot; and nothing reaches Google. Replies to simulated reviews never go to Google. With replies live, each one still needs the owner&apos;s Approve in the app (never Auto) and is in the log. Hours and photos have their own switch. Nothing in the app can change these.
           </p>
 
           {overview.marked.map((r, i) => {

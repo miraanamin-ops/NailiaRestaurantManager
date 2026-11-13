@@ -42,7 +42,7 @@ async function Upload({ searchParams }: Pick<PageProps<"/customers/import">, "se
         </form>
       </Card>
       <p className="mt-4 text-sm text-stone-600">
-        You can also just send the file to DinerAI on WhatsApp. <Link className="text-emerald-700 underline" href={`/customers?r=${rid}`}>Back to customers</Link>
+        You can also just send the file to DinerAI in the app. <Link className="text-emerald-700 underline" href={`/customers?r=${rid}`}>Back to customers</Link>
       </p>
     </Frame>
   );

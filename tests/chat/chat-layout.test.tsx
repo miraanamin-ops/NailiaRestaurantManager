@@ -74,14 +74,14 @@ describe("ChatLayout", () => {
     expect(screen.getAllByText("Setup 2 of 6").length).toBeGreaterThan(0);
   });
 
-  test("the header has 'Continue on WhatsApp' when there's somewhere to go, and not otherwise", () => {
+  test("the header has 'Get the DinerAI app' when there's somewhere to go, and not otherwise", () => {
     const { unmount } = render(
       <ChatLayout restaurantName="R" progress={progress} messages={messages} typing={false} skippable={false} whatsappHref="/onboarding/in?r=abc" handlers={handlers()} />,
     );
-    expect(screen.getByRole("link", { name: /WhatsApp/ }).getAttribute("href")).toBe("/onboarding/in?r=abc");
+    expect(screen.getByRole("link", { name: /Get the/ }).getAttribute("href")).toBe("/onboarding/in?r=abc");
     unmount();
     render(<ChatLayout restaurantName="R" progress={progress} messages={messages} typing={false} skippable={false} handlers={handlers()} />);
-    expect(screen.queryByRole("link", { name: /WhatsApp/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Get the/ })).toBeNull();
   });
 
   test("a tap on a quick reply says which message it answered", () => {

@@ -78,17 +78,17 @@ const session = (id = R) => db.tables.onboarding_sessions.find((x) => x.restaura
 const finishLastStep = () => db.tables.onboarding_steps.push({ restaurant_id: R, step_key: "hours_faqs", status: "done", data: { answers: { parking: "Yes" } }, completed_at: "2026-10-31T11:00:00Z" });
 
 describe("finishing setup", () => {
-  test("every step dealt with but no WhatsApp: not finished; the summary and one 'link your WhatsApp' (not repeated)", async () => {
+  test("every step dealt with and no WhatsApp: finishes on the app, and a web owner is told to get the app (13 Nov: no WhatsApp)", async () => {
     finishLastStep();
     callDina.mockResolvedValue(answer("That's every step dealt with."));
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
+    const { GET_THE_APP } = await import("@/lib/onboarding/dina/finish");
     const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "ok", externalId: "a" });
-    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual([null, "summary", "whatsapp_link"]);
-    expect(session().completed_at).toBeNull();
-    expect(r().active).toBe(false);
-    await new Promise((res) => setTimeout(res, 3));
-    const again = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "anything else?", externalId: "b" });
-    expect(again.duplicate === false && again.messages.map((m) => m.component?.type ?? null)).toEqual([null]); // nothing repeated
+    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual([null, "summary", null, null]);
+    expect(out.duplicate === false && out.messages[3].text).toBe(GET_THE_APP);
+    expect(out.duplicate === false && out.messages.map((m) => m.text).join(" ")).not.toMatch(/WhatsApp/);
+    expect(session().completed_at).toEqual(expect.any(String));
+    expect(r().app_since).toEqual(expect.any(String));
   });
 
   test("with WhatsApp linked: both setup records closed, switched on (exempt), the summary added once; then nothing more", async () => {
@@ -136,9 +136,8 @@ describe("finishing setup", () => {
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
     const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "ok", externalId: "c" });
     expect(session().completed_at).toEqual(expect.any(String));
-    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual(["summary", null]);
+    expect(out.duplicate === false && out.messages.map((m) => m.component?.type ?? null)).toEqual(["summary", null, null]);
     expect(out.duplicate === false && out.messages[1].text).not.toMatch(/WhatsApp/);
-    // Without the app either, it still waits for WhatsApp.
     const { reviewLine } = await import("@/lib/onboarding/dina/finish");
     expect(reviewLine("app")).toMatch(/in the DinerAI app/);
   });
@@ -149,7 +148,7 @@ describe("finishing setup", () => {
     expect(startReview).not.toHaveBeenCalled();
   });
 
-  test("the business review starts once, when setup finishes, and Dina says it's coming (here on WhatsApp, on WhatsApp from the web)", async () => {
+  test("the business review starts once, when setup finishes, and Dina says it's coming (here on WhatsApp, in the app from the web)", async () => {
     finishLastStep();
     r().owner_whatsapp = "whatsapp:+447700900111";
     startReview.mockResolvedValue(true);
@@ -157,7 +156,7 @@ describe("finishing setup", () => {
     const { dinaTurn } = await import("@/lib/onboarding/dina/turn");
     const out = await dinaTurn({ restaurantId: R, channel: "web", event: "message", text: "ok", externalId: "rv" });
     expect(out.duplicate === false && out.messages[1].text).toBe(
-      "You're all set up. You'll next hear from me tomorrow morning at 9am with your first brief. Give me about 5 minutes to review your business. I'll message you on WhatsApp.",
+      "You're all set up. You'll next hear from me tomorrow morning at 9am with your first brief. Give me about 5 minutes to review your business. I'll message you in the app.",
     );
     expect(startReview).toHaveBeenCalledTimes(1);
     expect(startReview).toHaveBeenCalledWith(R);

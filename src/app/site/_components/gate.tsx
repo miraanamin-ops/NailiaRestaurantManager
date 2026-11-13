@@ -25,7 +25,7 @@ export function Gate({ cards, checks, label }: { cards: readonly Card[]; checks:
                 <p className={`mt-2 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider ${c.ok ? "text-signal" : "text-ember"}`}>
                   {c.ok ? (
                     <>
-                      <Check /> To your WhatsApp
+                      <Check /> To your DinerAI app
                     </>
                   ) : (
                     "Held · not sent"

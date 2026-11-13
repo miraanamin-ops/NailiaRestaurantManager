@@ -23,7 +23,7 @@ import { OutsideDataCard, TeamsCard } from "./outside-cards";
 
 export const metadata: Metadata = { title: "Settings · DinerAI", robots: { index: false, follow: false } };
 
-const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked on WhatsApp.", teams: "✅ Teams saved.", benchmark: "✅ Nearby comparison saved." };
+const SAVED: Record<string, string> = { details: "✅ Details saved.", menu: "✅ Menu saved.", allergens: "✅ Allergens confirmed.", brand: "✅ Email look saved.", voice: "✅ Saved.", owner: "✅ Saved.", reverted: "✅ Reverted.", builder: "✅ Builder controls saved.", calendar: "✅ Calendar updated.", asked: "✅ The owner has been asked in the app.", teams: "✅ Teams saved.", benchmark: "✅ Nearby comparison saved." };
 
 // Change anything set up during onboarding. (Or just message Naila on WhatsApp:
 // "change Friday hours to 11pm", "add lamb chops, £14".)
@@ -62,7 +62,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
   return (
     <Page narrow>
       <RestaurantSwitcher choices={choices} current={restaurantId} path="/settings" />
-      <PageHeader eyebrow="Settings" title="Settings" sub={<>Or just tell me on WhatsApp, e.g. “change Friday hours to 11pm”. Send UNDO to take back any change.</>} />
+      <PageHeader eyebrow="Settings" title="Settings" sub={<>Or just tell me in the app, e.g. “change Friday hours to 11pm”. Send UNDO to take back any change.</>} />
       <div className="space-y-4">
         <BillingBanner r={r} />
         {one("saved") && <Notice>{SAVED[one("saved")!] ?? `✅ ${one("saved")}`}</Notice>}
@@ -99,7 +99,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         </SettingsGroup>
 
         <SettingsGroup title="How you sound">
-          <Row href="#voice" icon="whatsapp" label="Brand voice" value={r.brand_voice ? <span className="max-w-[10rem] truncate">{r.brand_voice}</span> : undefined} />
+          <Row href="#voice" icon="chat" label="Brand voice" value={r.brand_voice ? <span className="max-w-[10rem] truncate">{r.brand_voice}</span> : undefined} />
           <Row
             href="#emails"
             icon="mail"
@@ -116,7 +116,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <SettingsGroup title="Offers and sending">
           <Row href="#details" icon="spark" label="Sign-up reward" value={r.signup_reward ?? "Not set"} />
           <Row href="#details" icon="shield" label="Biggest discount allowed" value={`${r.discount_cap_percent}%`} />
-          <Row icon="pause" label="Sending hours" value={`${hhmm(r.send_window_start)}–${hhmm(r.send_window_end)}`} sub={r.paused ? "Paused: text RESUME to start again" : "Text PAUSE on WhatsApp to stop everything"} />
+          <Row icon="pause" label="Sending hours" value={`${hhmm(r.send_window_start)}–${hhmm(r.send_window_end)}`} sub={r.paused ? "Paused: text RESUME to start again" : "Send PAUSE in the app's Chat to stop everything"} />
         </SettingsGroup>
 
         <SettingsGroup title="Connections">
@@ -142,7 +142,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
           <h2 className="text-lg font-bold">Google Business Profile</h2>
           <p className="text-stone-700">{r.google_location_id ? `Connected: ${r.google_location_title ?? "your listing"}.` : "Not connected yet. Connect it so the replies and posts you approve go straight onto Google."}</p>
           {googleDryRun(r, "replies", dryRunContext(process.env)) && (
-            <p className="text-sm text-stone-600">🧪 Dry run: what you approve for Google shows as &quot;would have posted&quot; on WhatsApp and in your log, and nothing changes on Google. Only DinerAI can switch this.</p>
+            <p className="text-sm text-stone-600">🧪 Dry run: what you approve for Google shows as &quot;would have posted&quot; in the app and in your log, and nothing changes on Google. Only DinerAI can switch this.</p>
           )}
           <Link href={`/settings/google?r=${restaurantId}`} className="text-sm font-medium text-emerald-700 underline">
             {r.google_location_id ? "Manage Google" : "Connect Google"}
@@ -270,7 +270,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
                 </a>
               </span>
             ))}
-            . Or text <b>EMAIL PREVIEWS</b> on WhatsApp.
+            . Or text <b>EMAIL PREVIEWS</b> in the app.
           </p>
         </Card>
 
@@ -305,7 +305,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <div id="menu" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Menu</h2>
-          {(r.menu ?? []).length ? null : <p className="text-sm text-stone-600">No menu yet. Add dishes below, or send photos of your menu on WhatsApp during set-up.</p>}
+          {(r.menu ?? []).length ? null : <p className="text-sm text-stone-600">No menu yet. Add dishes below, or send photos of your menu in the app during set-up.</p>}
           <MenuEditor
             initial={menu.length ? menu : [{ category: "Menu", items: [{ name: "", price: 0, description: null }] }]}
             save={saveSettingsMenu.bind(null, restaurantId)}
@@ -318,7 +318,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/settings">, "searchPa
         <div id="spreadsheets" className="scroll-mt-20" />
         <Card>
           <h2 className="text-lg font-bold">Spreadsheets</h2>
-          <p className="text-sm text-stone-600">Easier at a laptop: download a sheet, fill it in, then upload it here (or send it to me on WhatsApp). Text SPREADSHEETS on WhatsApp for these links on your phone.</p>
+          <p className="text-sm text-stone-600">Easier at a laptop: download a sheet, fill it in, then upload it here (or send it to me in the app). Send SPREADSHEETS in the app&apos;s Chat for these links on your phone.</p>
           <ul className="mt-3 space-y-2 text-sm">
             {TEMPLATE_KINDS.map((k) => (
               <li key={k}>
@@ -392,7 +392,7 @@ async function SetupChapters({ restaurant }: { restaurant: Awaited<ReturnType<ty
   const { dinaSetup } = await import("@/lib/dashboard/data");
   const view = await dinaSetup(restaurant).catch(() => null);
   if (!view) return null;
-  const chapters = view.items.filter((s) => s.label !== "Link your WhatsApp");
+  const chapters = view.items.filter((s) => s.label !== "Get the DinerAI app");
   return (
     <SettingsGroup title="Your setup, chapter by chapter">
       {chapters.map((c) => (

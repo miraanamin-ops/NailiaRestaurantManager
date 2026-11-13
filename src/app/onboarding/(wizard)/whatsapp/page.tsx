@@ -1,58 +1,9 @@
-import { PageSkeleton } from "@/components/app-shell";
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
-import { showNumber, whatsAppLink } from "@/lib/onboarding/steps";
-import { linkCodeFor, loadOnboarding } from "@/app/onboarding/load";
-import { button, Card, Frame, LinkWhatsApp, Progress } from "@/app/onboarding/ui";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Set up on WhatsApp", robots: { index: false, follow: false } };
-
-// "Set up on WhatsApp" / "Finish on WhatsApp instead": link the number (if it
-// isn't yet) by sending the one-time code; the conversation carries on from
-// whichever step the owner is on.
-export default function WhatsAppSetupPage({ searchParams }: PageProps<"/onboarding/whatsapp">) {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <WhatsAppSetup searchParams={searchParams} />
-    </Suspense>
-  );
-}
-
-async function WhatsAppSetup({ searchParams }: Pick<PageProps<"/onboarding/whatsapp">, "searchParams">) {
-  const { s, restaurantId } = await loadOnboarding(searchParams, "/onboarding/whatsapp");
-  const linked = s.whatsappLinked;
-
-  return (
-    <Frame>
-      <Progress step={s.step} done={s.done} total={s.total} />
-      <h1 className="text-2xl font-bold tracking-tight">Set up on WhatsApp</h1>
-      <div className="mt-5">
-        <Card>
-          {linked ? (
-            <>
-              <p>
-                ✅ Your WhatsApp ({showNumber(s.restaurant.owner_whatsapp)}) is linked. Send any message and Naila carries on from{" "}
-                {s.done ? "where you got to" : "the first step"}.
-              </p>
-              <a href={whatsAppLink(ourWhatsAppNumber(), "Carry on setting up")} className={button}>
-                Open WhatsApp
-              </a>
-            </>
-          ) : (
-            <>
-              <p>Link your WhatsApp and Naila will take you through the rest there. It takes a few seconds.</p>
-              <LinkWhatsApp code={await linkCodeFor(restaurantId, s.onboarding)} expected={s.onboarding.pending_whatsapp} />
-            </>
-          )}
-        </Card>
-      </div>
-      <p className="mt-6 text-center text-sm">
-        <Link href={`/onboarding/setup?r=${restaurantId}`} className="font-medium text-emerald-700 underline">
-          Set up here in the browser instead
-        </Link>
-      </p>
-    </Frame>
-  );
+// The old "Set up on WhatsApp" page: DinerAI runs in its app now, so this goes to
+// "Get the DinerAI app" (same restaurant).
+export default async function OldWhatsAppSetupPage({ searchParams }: PageProps<"/onboarding/whatsapp">) {
+  const r = (await searchParams).r;
+  const id = Array.isArray(r) ? r[0] : r;
+  redirect(id ? `/onboarding/in?r=${encodeURIComponent(id)}` : "/onboarding/in");
 }

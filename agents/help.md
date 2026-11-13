@@ -1,9 +1,9 @@
 # DinerAI help guide
 
-What DinerAI does, how to do each thing on WhatsApp and on the web, what isn't possible
+What DinerAI does, how to do each thing in the DinerAI app and on the web, what isn't possible
 yet, and the answers to common questions. Written for restaurant owners.
 
-How this guide is used: when you ask "how do I...?" on WhatsApp, the answer comes from
+How this guide is used: when you ask "how do I...?" in the app's Chat, the answer comes from
 this guide and from your own setup. If the guide doesn't cover your question, we say so
 and ask the DinerAI team for you.
 
@@ -11,8 +11,9 @@ and ask the DinerAI team for you.
 
 ## The basics
 
-DinerAI is your restaurant's assistant. You run it from WhatsApp; the web app at
-**app.dinerai.co.uk** is there when you want the bigger picture.
+DinerAI is your restaurant's assistant. You run it from the DinerAI app on your phone; the
+website at **app.dinerai.co.uk** is there when you want the bigger picture. Everything
+in this guide that says "send" or "say" means in the app's **Chat** tab.
 
 - **You don't need commands.** Write the way you'd talk to a manager: "Thursday looks
   quiet", "post about our new lamb ribs", "how did last week go?", "change Friday hours
@@ -27,14 +28,14 @@ DinerAI is your restaurant's assistant. You run it from WhatsApp; the web app at
   edit or setting change, where possible. Send **PAUSE** to stop all sending, **RESUME**
   to start again.
 
-## The DinerAI phone app (in testing)
+## The DinerAI app
 
-A DinerAI app for iPhone and Android is being tested now and isn't in the App Store or
-Google Play yet. Until it is, keep using WhatsApp and the web app.
+DinerAI runs in its own app for iPhone and Android. It's on its way to the App Store and
+Google Play; log in with the same email and password as on the website. Your brief and
+urgent alerts arrive as notifications.
 
-- **Chat tab**: the same conversation as WhatsApp. Everything you'd write on WhatsApp works
-  there too: your own words ("Thursday is quiet"), commands like PAUSE, UNDO or STATUS,
-  and answering questions. Choices come as buttons to tap, and drafts come as cards with
+- **Chat tab**: talk to DinerAI in your own words ("Thursday is quiet"), use commands like
+  PAUSE, UNDO or STATUS, and answer questions. Choices come as buttons to tap, and drafts come as cards with
   Approve, Edit and Skip.
 - **Photos and files in Chat**: the camera button for a photo of a dish (it becomes a Google
   post) or of your till report (it's read in as that day's sales); the photo button to pick
@@ -68,8 +69,8 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
 - **Setup with Dina in the app**: the same setup as on the website, chapter by chapter.
   Tap **Chapters** to jump to one; take photos of your menu with the camera button. At the
   end you're asked to turn on alerts (your morning brief, and anything urgent).
-- **No WhatsApp?** If you use the app and haven't linked WhatsApp, your brief and alerts
-  come to the app (a notification, and the message in Chat).
+- **Notifications**: your brief and alerts come to the app (a notification, and the
+  message in Chat). Choose which ones you get in **More > Settings**.
 - **Delete your account**: More > **Delete account**, then type the restaurant's name.
   Sending stops at once; you have 24 hours to tap **Keep my account**; then we email you a
   copy of your data and delete everything. It doesn't cancel an App Store or Google Play
@@ -96,7 +97,7 @@ Google Play yet. Until it is, keep using WhatsApp and the web app.
 
 ## Getting started (setup with Dina)
 
-Dina takes you through setup, on WhatsApp, in the web app (app.dinerai.co.uk/onboarding) or in the DinerAI phone app. You can switch between them at any step without losing progress.
+Dina takes you through setup, in the DinerAI app or on the website (app.dinerai.co.uk/onboarding). You can switch between them at any step without losing progress.
 Every step can be skipped and finished later from **Settings** (**Your setup, chapter by
 chapter**).
 
@@ -147,16 +148,17 @@ below).
   today's forecast, the next few days' events and, on Mondays, labour against your
   target. If yesterday's sales are missing, it asks for them. On a quiet day you get
   nothing at all.
-- **Approving several at once**: **APPROVE ALL** approves everything in the latest brief.
+- **Approving several at once**: **Approve all** in the Inbox approves the simple ones whose
+  checks passed, and **APPROVE ALL** in Chat approves everything in the latest brief.
   **APPROVE 2**, **EDIT 2** or **SKIP 2** acts on one numbered item. Or just say "approve
   the first two".
 - **QUEUE** shows drafts waiting for you; **NEXT** brings up the next one.
 - **Urgent alerts**: a 1 to 3 star review arrives straight away with a reply already
   drafted. At most one alert an hour, and none during your quiet hours (11pm to 9am unless
   you changed them).
-- **The 24-hour WhatsApp rule**: WhatsApp only lets us message you freely within 24 hours
-  of your last message. If you've been quiet, we send a short "you have things waiting"
-  message and the rest arrives as soon as you reply.
+- **Notifications**: the brief and alerts arrive as notifications from the DinerAI app.
+  Turn them on when the app asks (or in your phone's settings), and choose which ones you
+  get in **More > Settings**.
 
 ## Approve, Edit, Skip
 
@@ -176,8 +178,8 @@ below).
   short form in your colours, tick a box to hear from you, and confirm their email.
 - After confirming they get a welcome email with your **sign-up reward**. At the till they
   tap **Redeem now**: the screen turns green with a live clock for 10 minutes, then shows
-  "Already used". You get a WhatsApp message when a reward is used.
-- **Get your QR codes**: send **QR** on WhatsApp for your sign-up link and printable QR
+  "Already used". You get a message in the app when a reward is used.
+- **Get your QR codes**: send **QR** in Chat for your sign-up link and printable QR
   pack (four table cards, a counter sign and an A4/A5 poster in your colours). On the web:
   **Customers**, then **Print QR table cards**.
 - **Change your sign-up reward**: just say "set sign-up reward to a free mango lassi", or
@@ -195,8 +197,8 @@ below).
 You can add customers you already have (from a booking system, a loyalty scheme or a
 spreadsheet), up to 5,000 at a time.
 
-- **On WhatsApp**: just send the file (CSV or Excel) here. We read it and come back with
-  what we found.
+- **In the app**: send the file (CSV or Excel) in Chat with the paperclip, or **More >
+  Customers > Import a list in Chat**. We read it and come back with what we found.
 - **On the web**: **Customers**, then **Import customers**, then choose the file.
 - We work out which columns are the name, email, phone and birthday, check every email,
   and leave out duplicates, anyone already on your list, and anyone who unsubscribed or
@@ -251,8 +253,8 @@ spreadsheet), up to 5,000 at a time.
   get a short feedback email with your Google review link (always, whatever their rating)
   and a private form. 1 to 3 star feedback reaches you straight away. At most one per
   customer every 30 days.
-- **Not yet**: offers by WhatsApp to customers (email only for now; WhatsApp marketing
-  needs Meta's approval). Text messages (SMS) aren't available.
+- **Not yet**: offers to customers by text message (SMS) or WhatsApp. Customer offers
+  are email only for now.
 
 ## Reviews (Google)
 
@@ -373,16 +375,17 @@ profit. Send whatever you have; the more detail, the better:
 
 ## Reports
 
-- **Monday report**: a web page and PDF, with a short WhatsApp version: last week's sales
-  against the forecast, Google, customers and campaigns, your menu, time saved, next week,
-  and 3 actions with "Start in WhatsApp" buttons. Links work for 30 days.
+- **Monday report**: in the app (**Reports**), as a web page and as a PDF, with a short
+  version in Chat: last week's sales against the forecast, Google, customers and
+  campaigns, your menu, time saved, next week, and 3 actions with "Start in the app"
+  buttons. Web links work for 30 days.
 - **Monthly report**: early each month, last month like for like, busiest days and hours,
   dishes rising and falling, staff cost, reviews and three actions. **MONTHLY REPORT** for
   last month's, or **MONTHLY REPORT SEPTEMBER** for another month.
 - **Business review**: straight after setup, a first review of your restaurant (your
   Google reviews, replies to unanswered ones, your Google profile score, nearby rivals,
-  the next 30 days' key dates, your QR poster), worked through one step at a time on
-  WhatsApp.
+  the next 30 days' key dates, your QR poster), worked through one step at a time in the
+  app's Chat.
 
 ## Your details and settings
 
@@ -441,7 +444,28 @@ REFER · HELP
 ## Common questions
 
 **Can you text or WhatsApp my customers?** Not yet. Customer messages are email only for
-now; WhatsApp marketing needs Meta's approval.
+now.
+
+**Do I need WhatsApp?** No. DinerAI runs in its own app: your brief, alerts, approvals
+and chat are all there, with notifications.
+
+**Can I connect Xero, QuickBooks, Sage or other accounting software?** Not yet. DinerAI
+doesn't connect to accounting software. For your sales, send your till's export (CSV or
+Excel), a photo of the end-of-day till report, or just type the day's takings ("we took
+£2,340"). For costs, use the menu costs spreadsheet (send **SPREADSHEETS**). If you'd like
+an accounting connection, say so and we'll pass it on to the DinerAI team.
+
+**Can you connect to my till (Square, Epos Now, Lightspeed, Toast)?** Not yet: a direct
+connection is built and waiting for the till companies' approval. Until then, send your
+till's export or a photo of the end-of-day report (see **Sales and till reports**).
+
+**Can you connect to Deliveroo, Uber Eats or Just Eat?** Not yet. You can include their
+sales in your takings by sending your till export or typing the day's total. To reply to
+a review from one of them, paste it in Chat and we write a reply for you to copy.
+
+**Can you connect to my booking system (OpenTable, ResDiary, SevenRooms) or Mailchimp?**
+Not directly. You can import a customer list exported from them: **More > Customers >
+Import a list in Chat**, or **Customers > Import customers** on the website.
 
 **Can you post on Instagram, Facebook or TikTok?** Not yet. We draft Google posts. We can
 write a caption for you to post yourself: just ask.
@@ -449,10 +473,9 @@ write a caption for you to post yourself: just ask.
 **Can you take bookings or orders?** No. DinerAI works alongside your booking and till
 systems.
 
-**Can I have more than one restaurant?** Each restaurant has its own account and its own
-WhatsApp number for now.
+**Can I have more than one restaurant?** Each restaurant has its own account for now.
 
-**Can someone else approve things?** Only your registered WhatsApp number can approve.
+**Can someone else approve things?** Only you, logged in to your account, can approve.
 Staff phones can send sales only.
 
 **Why didn't my offer go out yet?** Emails only go out within your sending hours (9am to

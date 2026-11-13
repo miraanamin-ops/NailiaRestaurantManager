@@ -2,8 +2,7 @@ import { approveFromWeb, skipFromWeb } from "@/app/approvals/actions";
 import { ago, plainText } from "@/lib/dashboard/rules";
 import type { WaitingItem } from "@/lib/dashboard/data";
 import { KIND_LABELS } from "@/lib/drafts";
-import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
-import { whatsAppLink } from "@/lib/onboarding/steps";
+import { appChatLink } from "@/lib/app-link";
 import { Icon } from "./icons";
 import { btnGhost, btnPrimary, btnSecondary, Eyebrow, Panel, Pill, Stars } from "./ui";
 
@@ -24,7 +23,7 @@ export function DraftCard({ item, restaurantId, back, now }: { item: WaitingItem
   const { draft: d, review } = item;
   const label = item.urgent ? "Needs attention" : d.kind === "email_campaign" && item.campaignName ? item.campaignName : KIND_LABELS[d.kind];
   const n = d.brief_number;
-  const waLink = (text: string) => whatsAppLink(ourWhatsAppNumber(), text);
+  const waLink = (text: string) => appChatLink(text);
   const flags = d.check_notes?.flags ?? [];
   return (
     <Panel edge={item.urgent ? "ember" : undefined} className="space-y-3">
@@ -96,8 +95,8 @@ export function DraftCard({ item, restaurantId, back, now }: { item: WaitingItem
         </div>
       ) : (
         <a href={waLink(n ? `${n}` : "")} target="_blank" rel="noreferrer" className={`${btnSecondary} w-full`}>
-          <Icon name="whatsapp" className="h-4 w-4 text-[#c8f03c]" />
-          Answer on WhatsApp
+          <Icon name="chat" className="h-4 w-4 text-[#c8f03c]" />
+          Answer in the app
         </a>
       )}
     </Panel>

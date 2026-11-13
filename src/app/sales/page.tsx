@@ -4,12 +4,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { RestaurantSwitcher } from "@/components/restaurant-switcher";
-import { btnPrimary, btnSecondary, EmptyCard, Eyebrow, Notice, Page, PageHeader, Panel, Pill, Section, Tile, WhatsAppTip } from "@/components/ui";
+import { btnPrimary, btnSecondary, EmptyCard, Eyebrow, Notice, Page, PageHeader, Panel, Pill, Section, Tile, AppTip } from "@/components/ui";
 import { ownerPage } from "@/lib/dashboard/page-context";
 import { changeLabel } from "@/lib/dashboard/rules";
 import { salesOverview, type SalesOverview, type SalesPeriod } from "@/lib/dashboard/sales";
-import { ourWhatsAppNumber } from "@/lib/onboarding/channel";
-import { showNumber, whatsAppLink } from "@/lib/onboarding/steps";
+import { showNumber } from "@/lib/onboarding/steps";
+import { appChatLink } from "@/lib/app-link";
 import { dayLabel, gbp } from "@/lib/sales/format";
 import { salesPageData } from "@/lib/sales/page-data";
 
@@ -134,12 +134,12 @@ async function Sales({ searchParams }: Pick<PageProps<"/sales">, "searchParams">
           <EmptyCard
             icon="sales"
             title="See your sales here"
-            text="Upload an export from your till below, or send a photo of your end-of-day till report on WhatsApp. I'll track your takings and warn you before quiet days."
+            text="Upload an export from your till below, or send a photo of your end-of-day till report in the app. I'll track your takings and warn you before quiet days."
           >
             <a href="#upload" className={btnPrimary}>
               Upload a sales file
             </a>
-            <a href={whatsAppLink(ourWhatsAppNumber(), "")} target="_blank" rel="noreferrer" className={btnSecondary}>
+            <a href={appChatLink("")} target="_blank" rel="noreferrer" className={btnSecondary}>
               Send a till report
             </a>
           </EmptyCard>
@@ -156,7 +156,7 @@ async function Sales({ searchParams }: Pick<PageProps<"/sales">, "searchParams">
               </div>
               <p className="text-[13px] text-[#a3a99d]">
                 An export from your till (CSV or Excel). The first time, I&apos;ll show you which column I think is which; after that, files like it import
-                straight away. You can also just send the file on WhatsApp.
+                straight away. You can also just send the file in the app.
               </p>
               <form action="/sales/upload" method="post" encType="multipart/form-data" className="space-y-3">
                 <input type="hidden" name="r" value={restaurantId} />
@@ -181,7 +181,7 @@ async function Sales({ searchParams }: Pick<PageProps<"/sales">, "searchParams">
                   {data.imports.map((i) => (
                     <li key={i.id} className="flex items-center justify-between gap-3 py-2.5">
                       <div className="min-w-0">
-                        <div className="truncate text-[#edefe8]">{i.file_name ?? (i.channel === "whatsapp" ? "Sent on WhatsApp" : "Uploaded file")}</div>
+                        <div className="truncate text-[#edefe8]">{i.file_name ?? (i.channel === "whatsapp" ? "Sent in the app" : "Uploaded file")}</div>
                         <div className="text-[#a3a99d]">
                           {i.first_day && i.last_day ? `${dayLabel(i.first_day, year)} to ${dayLabel(i.last_day, year)} · ` : ""}
                           {i.rows_imported !== null ? `${i.rows_imported} lines` : `${i.rows_total ?? 0} rows`}
@@ -205,12 +205,12 @@ async function Sales({ searchParams }: Pick<PageProps<"/sales">, "searchParams">
 
             <Panel className="space-y-3">
               <div className="flex items-center gap-2">
-                <Icon name="whatsapp" className="h-5 w-5 text-[#a3a99d]" />
+                <Icon name="chat" className="h-5 w-5 text-[#a3a99d]" />
                 <h3 className="text-[15px] font-medium text-[#edefe8]">End-of-day till reports</h3>
               </div>
-              <p className="text-[13px] text-[#a3a99d]">Send a photo of your end-of-day till report (Z-report) on WhatsApp. Staff numbers can send them too.</p>
-              <a href={whatsAppLink(ourWhatsAppNumber(), "")} target="_blank" rel="noreferrer" className={`${btnSecondary} w-full`}>
-                <Icon name="whatsapp" className="h-4 w-4 text-[#c8f03c]" /> Open WhatsApp
+              <p className="text-[13px] text-[#a3a99d]">Send a photo of your end-of-day till report (Z-report) in the app. Staff numbers can send them too.</p>
+              <a href={appChatLink("")} target="_blank" rel="noreferrer" className={`${btnSecondary} w-full`}>
+                <Icon name="chat" className="h-4 w-4 text-[#c8f03c]" /> Open the app
               </a>
               {data.zReports.length ? (
                 <ul className="divide-y divide-[#1e221b] border-t border-[#1e221b] text-[13px]">
@@ -283,7 +283,7 @@ async function Sales({ searchParams }: Pick<PageProps<"/sales">, "searchParams">
             <Section title="Staff numbers">
               <Panel className="space-y-2">
                 <p className="text-[13px] text-[#a3a99d]">
-                  They can send till reports and sales files, nothing else. Add one on WhatsApp: <span className="text-[#edefe8]">ADD STAFF +447700900123</span> (and REMOVE
+                  They can send till reports and sales files, nothing else. Add one in the app: <span className="text-[#edefe8]">ADD STAFF +447700900123</span> (and REMOVE
                   STAFF to take them off).
                 </p>
                 {data.staff.length ? (
@@ -441,7 +441,7 @@ function Dishes({ overview }: { overview: SalesOverview }) {
                 </div>
               ))}
               <a
-                href={whatsAppLink(ourWhatsAppNumber(), `Which dishes should I look at? ${overview.slowDishes.map((d) => d.item).join(", ")} aren't selling much.`)}
+                href={appChatLink(`Which dishes should I look at? ${overview.slowDishes.map((d) => d.item).join(", ")} aren't selling much.`)}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-block pt-1 text-[13px] font-medium text-[#c8f03c]"
@@ -480,16 +480,16 @@ function NextWeek({ overview }: { overview: SalesOverview }) {
                 {quietName} looks quiet (about {next.quiet.orders} orders).
               </p>
             </div>
-            <a href={whatsAppLink(ourWhatsAppNumber(), `${quietName} is quiet`)} target="_blank" rel="noreferrer" className={`${btnPrimary} w-full`}>
+            <a href={appChatLink(`${quietName} is quiet`)} target="_blank" rel="noreferrer" className={`${btnPrimary} w-full`}>
               Draft a {quietName} offer
             </a>
           </>
         )}
         <p className="text-[11px] text-[#6e7468]">Forecasts are information, not financial advice.</p>
       </Panel>
-      <WhatsAppTip>
-        Send a photo of tonight&apos;s till report on WhatsApp and it&apos;s added here.
-      </WhatsAppTip>
+      <AppTip>
+        Send a photo of tonight&apos;s till report in the app and it&apos;s added here.
+      </AppTip>
     </Section>
   );
 }

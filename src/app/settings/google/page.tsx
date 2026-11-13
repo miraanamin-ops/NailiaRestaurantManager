@@ -112,7 +112,7 @@ function Status({ r, conn }: { r: Restaurant; conn: GoogleConnection | null }) {
           <button className={`${small} text-red-700`}>Disconnect</button>
         </form>
       </div>
-      <p className="text-xs text-stone-500">Replies and posts still only go up once you approve them on WhatsApp.</p>
+      <p className="text-xs text-stone-500">Replies and posts still only go up once you approve them in the app.</p>
     </Card>
   );
 }

@@ -43,7 +43,7 @@ async function Rota({ params, searchParams }: Pick<PageProps<"/rota/[token]">, "
           <h1 className="mt-1 text-2xl font-bold tracking-tight">{view.title}</h1>
           {owner && (
             <p className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-sm text-stone-100">
-              {draft ? "Draft: only you can see this. Approve it on WhatsApp to share it with your team. " : "Your view, with costs. Your team's link shows only who works when. "}
+              {draft ? "Draft: only you can see this. Approve it in the app to share it with your team. " : "Your view, with costs. Your team's link shows only who works when. "}
               Labour {money(plan.totals.costPence)}
               {plan.totals.labourPct !== null ? `, ${plan.totals.labourPct}% of forecast sales` : ""}.
             </p>

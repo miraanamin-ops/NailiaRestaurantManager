@@ -73,7 +73,7 @@ describe("web decisions", () => {
     vi.resetModules();
     setup(draft({ kind: "review_question" }));
     const again = await import("@/lib/web-decisions");
-    expect((await again.decideFromWeb({ restaurantIds: ["r1"] }, "r1", "d1", "skip")).message).toMatch(/WhatsApp/);
+    expect((await again.decideFromWeb({ restaurantIds: ["r1"] }, "r1", "d1", "skip")).message).toMatch(/in the app/);
     expect(s.attemptSend).not.toHaveBeenCalled();
   });
 
