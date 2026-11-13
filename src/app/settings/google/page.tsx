@@ -46,6 +46,8 @@ async function GoogleSettings({ searchParams }: Pick<PageProps<"/settings/google
   const picking = pickId ? await getConnection(pickId) : null;
   const canPick = picking && picking.status === "ok" && (picking.kind === "owner" ? picking.restaurant_id === rid : owner.isBuilder);
   const mode = googleSwitch(process.env);
+  // Still setting up with Dina: a way back to the chat if signing in didn't work (she offers the Manager route).
+  const settingUp = !r.google_location_id && (await import("@/lib/onboarding/dina/whatsapp-turn").then((m) => m.dinaSetupInProgress(rid)).catch(() => false));
 
   return (
     <Frame>
@@ -59,8 +61,8 @@ async function GoogleSettings({ searchParams }: Pick<PageProps<"/settings/google
       {one("error") && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-red-800">{one("error")}</p>}
 
       <div className="space-y-5">
-        {canPick ? <Picker r={r} conn={picking!} /> : <Status r={r} conn={conn} />}
-        {!r.google_location_id && !canPick && <ConnectCard r={r} managerEmail={process.env.GOOGLE_MANAGER_EMAIL || manager?.google_email || null} />}
+        {canPick ? <Picker r={r} conn={picking!} settingUp={settingUp} /> : <Status r={r} conn={conn} />}
+        {!r.google_location_id && !canPick && <ConnectCard r={r} managerEmail={process.env.GOOGLE_MANAGER_EMAIL || manager?.google_email || null} settingUp={settingUp} />}
         {owner.isBuilder && <BuilderCard owner={owner} r={r} manager={manager} mode={`${mode.mode}${mode.note ? ` (${mode.note})` : ""}`} />}
       </div>
     </Frame>
@@ -115,7 +117,7 @@ function Status({ r, conn }: { r: Restaurant; conn: GoogleConnection | null }) {
   );
 }
 
-function ConnectCard({ r, managerEmail }: { r: Restaurant; managerEmail: string | null }) {
+function ConnectCard({ r, managerEmail, settingUp }: { r: Restaurant; managerEmail: string | null; settingUp: boolean }) {
   return (
     <Card>
       <h2 className="text-lg font-bold">Connect your Google Business Profile</h2>
@@ -127,20 +129,23 @@ function ConnectCard({ r, managerEmail }: { r: Restaurant; managerEmail: string 
       ) : (
         <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Google sign-in isn&apos;t switched on yet.</p>
       )}
-      <p className="text-sm text-stone-500">
-        Google may say it hasn&apos;t verified the app yet: tap <b>Advanced</b>, then <b>Go to DinerAI</b>.
-      </p>
+      <p className="text-sm text-stone-500">Use the Google account you manage your profile with.</p>
       {managerEmail && (
         <p className="text-sm text-stone-600">
-          Prefer not to sign in? In your Business Profile open ⋮ → <b>Business Profile settings</b> → <b>Managers</b> → <b>Add</b>, and add <b>{managerEmail}</b> as a Manager. We&apos;ll link it for you.
+          Signing in didn&apos;t work, or prefer not to? In your Business Profile open ⋮ → <b>Business Profile settings</b> → <b>Managers</b> → <b>Add</b>, and add <b>{managerEmail}</b> as a Manager. We&apos;ll link it for you.
         </p>
+      )}
+      {settingUp && (
+        <Link href={`/onboarding/chat?r=${r.id}`} className="text-sm text-emerald-700 underline">
+          Back to setup (Dina will walk you through adding us as a Manager)
+        </Link>
       )}
     </Card>
   );
 }
 
 // Every location the login can see, across its accounts.
-async function Picker({ r, conn }: { r: Restaurant; conn: GoogleConnection }) {
+async function Picker({ r, conn, settingUp }: { r: Restaurant; conn: GoogleConnection; settingUp: boolean }) {
   let rows: { account: string; accountName: string; location: string; title: string; address: string | null }[] = [];
   let error: string | null = null;
   try {
@@ -156,7 +161,7 @@ async function Picker({ r, conn }: { r: Restaurant; conn: GoogleConnection }) {
       <h2 className="text-lg font-bold">Which one is {r.name}?</h2>
       <p className="text-sm text-stone-600">Signed in as {conn.google_email ?? "your Google account"}. These are the businesses it manages.</p>
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">Couldn&apos;t read your businesses from Google: {error}</p>}
-      {!error && !rows.length && <p className="text-stone-700">This Google account doesn&apos;t manage any business locations. Sign in with the account that owns your Business Profile.</p>}
+      {!error && !rows.length && <p className="text-stone-700">This Google account doesn&apos;t manage any business locations. Sign in with the account that owns or manages your Business Profile.</p>}
       <ul className="space-y-2">
         {rows.map((row) => (
           <li key={row.location}>
@@ -178,6 +183,11 @@ async function Picker({ r, conn }: { r: Restaurant; conn: GoogleConnection }) {
       <a href={`/api/google/connect?r=${r.id}`} className="text-sm text-emerald-700 underline">
         Use a different Google account
       </a>
+      {settingUp && (error || !rows.length) && (
+        <Link href={`/onboarding/chat?r=${r.id}`} className="block text-sm text-emerald-700 underline">
+          Back to setup to add us as a Manager instead
+        </Link>
+      )}
     </Card>
   );
 }

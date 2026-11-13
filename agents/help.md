@@ -103,10 +103,11 @@ chapter**).
 The chapters, in order:
 
 1. **You and your restaurant** (Hello): your name, your restaurant and your website.
-2. **Google** (Google profile): we find your restaurant on Google Maps and help you add
-   DinerAI as a Manager on your Google Business Profile, with step-by-step pictures. We
-   accept the invitation for you and copy your address, hours, phone, rating, photos and
-   reviews across.
+2. **Google** (Google profile): we find your restaurant on Google Maps, then you either tap
+   **Connect Google** and sign in with the Google account you manage your profile with
+   (quickest), or add DinerAI as a Manager on your Google Business Profile, with
+   step-by-step pictures (if signing in doesn't work for your account). Either way we copy
+   your address, hours, phone, rating, photos and reviews across.
 3. **Your look and voice** (Your look, Your tone): your logo and colours (we can pick them
    up from your website, or send a photo), and the tone you want replies and posts to
    have. We show you replies to your own real reviews in four tones; pick one or write
@@ -272,17 +273,17 @@ spreadsheet), up to 5,000 at a time.
 ## Google profile
 
 - **Connect Google**: during setup (the Google chapter), or **Settings**, then
-  **Connections**, then **Google Business Profile**. We use the Manager access you give
-  us; you stay the owner of your profile.
+  **Connections**, then **Google Business Profile**, then **Connect Google** and sign in
+  with the Google account you manage your profile with. If that doesn't work for your
+  account, add DinerAI as a Manager instead (the same page shows how). You stay the owner
+  of your profile either way.
 - **Posts**: two drafted Google posts a week (Monday and Thursday). Send a **photo** of a
   dish (add a note if you like) and it becomes a captioned post to approve. A photo that
   won't work (too dark, blurry, a customer's face) gets a reason instead.
 - **Hours**: "we close at 11 on Fridays now" becomes a card to confirm; after Approve it
   updates your settings and Google. Four weeks before a bank holiday we ask whether your
   hours are changing (Same / Closed / Different) and set special hours on Google.
-- **Not yet**: sending your menu to Google (menu changes update DinerAI only), and
-  connecting Google with your own Google sign-in (waiting for Google's approval; adding
-  us as a Manager works today).
+- **Not yet**: sending your menu to Google (menu changes update DinerAI only).
 
 ## Sales and till reports
 

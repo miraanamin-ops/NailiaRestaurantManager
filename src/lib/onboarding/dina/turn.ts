@@ -191,8 +191,8 @@ async function runTurn(input: TurnInput): Promise<TurnResult> {
         return [k, v && typeof v === "object" && !Object.keys(v).length ? null : v];
       }),
     ),
-    // Path A: the owner can connect Google directly (google_connect) instead of the manager steps.
-    ...(googleConnectOn() ? { google_connect: "available: offer google_connect in the Google step" } : {}),
+    // Path A: the owner can connect Google directly (google_connect); the manager steps stay as the alternative.
+    ...(googleConnectOn() ? { google_connect: "available: offer google_connect first in the Google step, with the Manager route as the alternative" } : {}),
     // This step's settings and the next one's: she often moves on in the same reply,
     // and must never guess what's set (the full run of 1 Nov proposed a 20% cap that was 15%).
     ...Object.fromEntries(near.flatMap((k) => STEP_FIELDS[k] ?? []).map((k) => [k, restaurant[k as keyof typeof restaurant] ?? null])),
