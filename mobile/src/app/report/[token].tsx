@@ -80,7 +80,7 @@ function Actions({ actions }: { actions: ReportAction[] }) {
               {a.why}
             </T>
           ) : null}
-          <Button label="Start in Chat" kind="plain" onPress={() => router.navigate({ pathname: '/chat', params: { prefill: a.message || a.title } })} />
+          <Button label="Start in Chat" kind="plain" onPress={() => router.push({ pathname: '/conversation', params: { prefill: a.message || a.title } })} />
         </View>
       ))}
     </Card>

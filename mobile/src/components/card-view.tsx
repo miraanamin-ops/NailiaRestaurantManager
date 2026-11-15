@@ -4,15 +4,15 @@
 // it full screen), and full screen in the Inbox's viewer. Nothing opens a link.
 import { Image } from 'expo-image';
 import * as WebBrowser from 'expo-web-browser';
-import { useState } from 'react';
-import { Modal, NativeModules, Pressable, ScrollView, StyleSheet, TurboModuleRegistry, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, NativeModules, Pressable, ScrollView, StyleSheet, TurboModuleRegistry, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { money } from '@/components/charts';
 import { RotaWeek } from '@/components/rota-week';
 import { Avatar, Button, Icon, Panel, T, usePalette } from '@/components/ui';
 import { Space } from '@/constants/theme';
-import type { CardView, InboxCard } from '@/lib/api';
+import { getEmailLook, type CardView, type InboxCard } from '@/lib/api';
 
 // The email is shown in a web view. A build of the app made before it was added has no
 // web view, so the picture of the email is shown instead (importing the package there
@@ -28,6 +28,8 @@ function loadWebView(): WebViewType | null {
   }
 }
 const WebView = loadWebView();
+// This build can show an email inside the app (the email page); older builds can't.
+export const hasWebView = Boolean(WebView);
 
 // Links in the email go nowhere in the preview (they'd leave the app).
 const noLinks = `document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a');if(a){e.preventDefault();}},true);true;`;
@@ -179,7 +181,7 @@ export function SeeEmailButton({ card }: { card: InboxCard }) {
   if (!url) return null;
   return (
     <>
-      <Button label="See the email" kind="plain" small icon="mail-open-outline" onPress={() => (WebView ? setOpen(true) : WebBrowser.openBrowserAsync(url))} />
+      <Button label="See the email" small icon="mail-open-outline" onPress={() => (WebView ? setOpen(true) : WebBrowser.openBrowserAsync(url))} />
       {WebView && (
         <Modal visible={open} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setOpen(false)}>
           <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={['top', 'bottom', 'left', 'right']}>
@@ -201,11 +203,81 @@ export function SeeEmailButton({ card }: { card: InboxCard }) {
 
 // ---------- Full screen, in the Inbox's viewer ----------
 
-export function CardViewFull({ card }: { card: InboxCard }) {
+// The email page (15 Nov, the owner's ask): the real email on the page, a swipe left or
+// right for each of its family's looks, "Use this look" for the one on screen, and
+// "Add photo" / "Change photo". Only with the web view (a new enough app build).
+function EmailPager({ card, onUseLook, onPhoto, busy }: { card: InboxCard; onUseLook: (look: string) => void; onPhoto: (from: 'camera' | 'library') => void; busy: boolean }) {
+  const c = usePalette();
+  const { width } = useWindowDimensions();
+  const view = card.view as Extract<CardView, { type: 'email' }>;
+  const saved = view.lookKey ?? null;
+  const options = view.options?.length ? [...view.options.filter((o) => o.key === saved), ...view.options.filter((o) => o.key !== saved)] : [{ key: saved ?? 'saved', name: view.look ?? 'This look' }];
+  const [index, setIndex] = useState(0);
+  const [html, setHtml] = useState<Record<string, string>>({ [saved ?? 'saved']: view.html });
+  const current = options[index];
+  useEffect(() => {
+    if (!current || html[current.key]) return;
+    let live = true;
+    getEmailLook(card.id, current.key)
+      .then((out) => {
+        if (live) setHtml((h) => ({ ...h, [current.key]: out.html }));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [card.id, current, html]);
+  const photo = () =>
+    Alert.alert(view.photo ? 'Change photo' : 'Add a photo', 'It goes in the email (we check it first) and into your photo library.', [
+      { text: 'Take photo', onPress: () => onPhoto('camera') },
+      { text: 'Choose photo', onPress: () => onPhoto('library') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  const W = WebView!;
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))} style={{ flex: 1 }}>
+        {options.map((o) => (
+          <View key={o.key} style={{ width, flex: 1 }}>
+            {html[o.key] ? (
+              <W
+                originWhitelist={['*']}
+                source={{ html: html[o.key] }}
+                injectedJavaScript={noLinks}
+                onShouldStartLoadWithRequest={(req) => req.url.startsWith('about:') || req.url.startsWith('data:')}
+                style={{ flex: 1, backgroundColor: '#ffffff' }}
+              />
+            ) : (
+              <ActivityIndicator style={{ flex: 1 }} />
+            )}
+          </View>
+        ))}
+      </ScrollView>
+      <View style={[styles.pagerBar, { borderTopColor: c.border }]}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <View style={styles.dots}>
+            {options.map((o, i) => (
+              <View key={o.key} style={[styles.dot, { backgroundColor: i === index ? c.tint : c.border }]} />
+            ))}
+          </View>
+          <T kind="small" quiet numberOfLines={1}>
+            {current?.name}
+            {current?.key === saved ? ' · chosen' : options.length > 1 ? ' · swipe for more' : ''}
+          </T>
+        </View>
+        {current && current.key !== saved ? <Button label="Use this look" small icon="checkmark" onPress={() => onUseLook(current.key)} disabled={busy} /> : null}
+        <Button label={view.photo ? 'Change photo' : 'Add photo'} kind="plain" small icon="camera-outline" onPress={photo} disabled={busy} />
+      </View>
+    </View>
+  );
+}
+
+export function CardViewFull({ card, onUseLook, onPhoto, busy = false }: { card: InboxCard; onUseLook?: (look: string) => void; onPhoto?: (from: 'camera' | 'library') => void; busy?: boolean }) {
   const c = usePalette();
   const view = card.view;
   if (!view) return null;
   if (view.type === 'email') {
+    if (WebView && onUseLook && onPhoto) return <EmailPager card={card} onUseLook={onUseLook} onPhoto={onPhoto} busy={busy} />;
     if (WebView) {
       return (
         <WebView
@@ -280,6 +352,9 @@ const styles = StyleSheet.create({
     padding: Space.m,
   },
   postPhoto: { width: '100%', aspectRatio: 4 / 3, borderRadius: 10 },
+  pagerBar: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingHorizontal: Space.m, paddingVertical: Space.s, borderTopWidth: StyleSheet.hairlineWidth },
+  dots: { flexDirection: 'row', gap: 5 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingHorizontal: Space.m, paddingVertical: Space.s + 2, borderBottomWidth: StyleSheet.hairlineWidth },
   fullPad: { padding: Space.m, gap: Space.m, paddingBottom: Space.xl * 3 },
 });

@@ -19,7 +19,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (action === "look") {
       const { tryAnotherLook } = await import("@/lib/email/design-store");
       const { LOOK_NAMES } = await import("@/lib/email/designs");
-      const next = await tryAnotherLook(row.restaurant_id, id).catch(() => null);
+      const wanted = typeof (body as { look?: unknown } | null)?.look === "string" ? String((body as { look: string }).look) : null;
+      const next = await tryAnotherLook(row.restaurant_id, id, wanted).catch(() => null);
       if (!next) return appError(409, "no_look");
       const { inboxCards } = await import("@/lib/app/inbox");
       const card = (await inboxCards(row.restaurant_id)).find((c) => c.id === id) ?? null;

@@ -84,7 +84,7 @@ export default function CustomersScreen() {
             <T kind="small" quiet>
               Import: send your list (CSV or Excel) in Chat. I’ll ask how they agreed to hear from you before anyone is emailed.
             </T>
-            <Button label="Import a list in Chat" kind="plain" onPress={() => router.navigate({ pathname: '/chat', params: { attach: 'file' } })} />
+            <Button label="Import a list in Chat" kind="plain" onPress={() => router.push({ pathname: '/conversation', params: { attach: 'file' } })} />
             <Button label="Download my list (CSV)" kind="plain" onPress={exportList} busy={busy} />
           </Card>
 

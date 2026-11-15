@@ -72,8 +72,10 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
 
   if (t.action === "approve") {
     const wasOnScreen = draft.waiting_for !== null;
+    const photoLine = await photoStep(turn, draft);
     const approved = await approveDraft(draft);
-    const result = sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve"));
+    const result = photoLine ?? sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve"));
+    if (photoLine) await attemptSend(approved.id, r, ctx.now, "approve");
     await send(`${draft.brief_number ? `*${draft.brief_number}.* ` : ""}${result}${draft.briefed_at ? remainingNote(await remainingInBrief(r)) : ""}`);
     if (wasOnScreen) await presentNext(ctx, send);
     await afterReviewDecision(turn, draft);
@@ -120,8 +122,10 @@ export async function decideOnScreen(turn: Turn, action: Action, active: Draft |
   }
   if (action === "approve") {
     if (decisionDraft) {
+      const photoLine = await photoStep(turn, decisionDraft);
       const approved = await approveDraft(decisionDraft);
-      await send(sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve")));
+      const result = sendResultMessage(await attemptSend(approved.id, r, ctx.now, "approve"));
+      await send(photoLine ?? result);
       await presentNext(ctx, send);
       await afterReviewDecision(turn, decisionDraft);
       return true;
@@ -164,4 +168,14 @@ export async function decideImportWelcome(r: Restaurant, draft: Draft, action: "
   if (action === "approve") return approveImportWelcome(r, draft);
   if (action === "skip") return skipImportWelcome(r, draft);
   return IMPORT_WELCOME_EDIT;
+}
+
+// An offer email approved in the app asks for a photo first (lib/email/photo-ask.ts); the
+// gate then holds it until the photo comes or its deadline. Null: nothing asked.
+async function photoStep(turn: Turn, draft: Draft) {
+  if (draft.kind !== "email_campaign") return null;
+  const { APP_ADDRESS, APP_CHANNEL_TO } = await import("@/lib/app/chat-rules");
+  const inApp = Boolean(turn.channel.app) || turn.channel.to === APP_CHANNEL_TO || turn.channel.to === APP_ADDRESS;
+  const { photoStepBeforeApproval } = await import("@/lib/email/photo-ask");
+  return photoStepBeforeApproval(turn.ctx.restaurant, draft, inApp, turn.ctx.now);
 }

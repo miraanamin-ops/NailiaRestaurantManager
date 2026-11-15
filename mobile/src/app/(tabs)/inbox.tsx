@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'rea
 import { Alert, KeyboardAvoidingView, Linking, LayoutAnimation, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { canChangeLook, CardViewFull } from '@/components/card-view';
+import { canChangeLook, CardViewFull, hasWebView } from '@/components/card-view';
 import { DraftCardBody } from '@/components/draft-card';
 import { Button, Card, Icon, IconTile, Pill, T, Skeleton, TabHeader, usePalette, useTabBarSpace, type IconName } from '@/components/ui';
 import { MaxWidth, Space } from '@/constants/theme';
@@ -221,8 +221,13 @@ export default function Inbox() {
       const file = await uploadChatFile(restaurantId, { uri: a.uri, name: `photo.${mimeType === 'image/png' ? 'png' : 'jpg'}`, mimeType, size: a.fileSize ?? 1 });
       if ('refused' in file) return show(file.refused);
       const out = await run(card, { action: 'photo', path: file.path }, 'Photo added.');
-      // A photo that won't do comes back with its reason, and the card stays.
-      if (out && !out.card) drop([card.id]);
+      // A photo that won't do comes back with its reason, and the card stays. An email
+      // keeps its card, now with the photo in it.
+      if (out?.card) {
+        const next = out.card;
+        setCards((list) => (list ? list.map((x) => (x.id === next.id ? next : x)) : list));
+        setFull((f) => (f && f.id === next.id ? next : f));
+      } else if (out && card.kind === 'photo_request') drop([card.id]);
     } catch {
       show("That photo didn't go through. Try again.");
     } finally {
@@ -412,6 +417,19 @@ export default function Inbox() {
       <FullView
         card={full}
         busy={busy}
+        onUseLook={async (look) => {
+          if (!full) return;
+          setBusy(true);
+          const out = await run(full, { action: 'look', look }, 'Look chosen.');
+          setBusy(false);
+          if (out?.card) {
+            setFull(out.card);
+            setCards((list) => (list ? list.map((x) => (x.id === out.card!.id ? out.card! : x)) : list));
+          }
+        }}
+        onPhoto={(from) => {
+          if (full) addPhoto(full, from);
+        }}
         onLook={async () => {
           if (!full) return;
           setBusy(true);
@@ -530,7 +548,7 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull, 
               </View>
             </>
           ) : answer ? (
-            <Button label="Answer in Chat" icon="chatbubble-ellipses-outline" onPress={() => router.navigate({ pathname: '/chat', params: { question: card.id } })} />
+            <Button label="Answer in Chat" icon="chatbubble-ellipses-outline" onPress={() => router.push({ pathname: '/conversation', params: { question: card.id } })} />
           ) : (
             <>
               <Button label={card.approveLabel ?? (card.kind === 'review_reply' ? 'Approve & post' : 'Approve')} icon="checkmark" onPress={onApprove} disabled={busy} />
@@ -558,7 +576,7 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull, 
 
 // Full screen: the rota, the real email, the Google post or the change, with the same
 // buttons as the open card along the bottom.
-function FullView({ card, busy, onClose, onApprove, onDelete, onEdit, onLook }: { card: InboxCard | null; busy: boolean; onClose: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void; onLook: () => void }) {
+function FullView({ card, busy, onClose, onApprove, onDelete, onEdit, onLook, onUseLook, onPhoto }: { card: InboxCard | null; busy: boolean; onClose: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void; onLook: () => void; onUseLook: (look: string) => void; onPhoto: (from: 'camera' | 'library') => void }) {
   const c = usePalette();
   const canEdit = Boolean(card && card.actions !== 'answer' && card.actions.includes('edit'));
   return (
@@ -572,8 +590,19 @@ function FullView({ card, busy, onClose, onApprove, onDelete, onEdit, onLook }: 
             <Icon name="close" size={20} color={c.text} />
           </Pressable>
         </View>
-        <View style={styles.fill}>{card && <CardViewFull key={card.view?.type === 'email' ? `${card.id}:${card.view.look}` : card.id} card={card} />}</View>
-        {card && canChangeLook(card) && (
+        <View style={styles.fill}>
+          {card && (
+            <CardViewFull
+              key={card.view?.type === 'email' ? `${card.id}:${card.view.lookKey ?? card.view.look}:${card.view.photo ? 'p' : 'n'}` : card.id}
+              card={card}
+              busy={busy}
+              onUseLook={onUseLook}
+              onPhoto={onPhoto}
+            />
+          )}
+        </View>
+        {/* Older app builds: the email opens in the browser sheet, so the look is changed here. */}
+        {card && canChangeLook(card) && !hasWebView && (
           <View style={[styles.lookBar, { borderTopColor: c.border }]}>
             <T kind="small" quiet style={{ flex: 1 }}>
               {card.view?.type === 'email' ? card.view.look : null}

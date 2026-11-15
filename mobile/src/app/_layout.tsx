@@ -68,6 +68,8 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={signedIn && stage !== 'pay' && stage !== 'setup'}>
           <Stack.Screen name="(tabs)" />
+          {/* Chat as a full page over the tabs: swipe right from anywhere to go back. */}
+          <Stack.Screen name="conversation" options={{ gestureEnabled: true, fullScreenGestureEnabled: true, animation: 'slide_from_right' }} />
           <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
           {/* Phase 5: More's screens and a report, with a header and back button. */}
           <Stack.Screen name="customers" options={{ headerShown: true, title: 'Customers', headerBackTitle: 'More' }} />

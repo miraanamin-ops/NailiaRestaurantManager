@@ -59,6 +59,9 @@ urgent alerts arrive as notifications.
   with each day's cost, an email shows how it will look, a Google post shows how it will
   look on Google, and an hours or menu change shows what's on Google now and after. Tap it
   (or **Full screen**) to see it full size, with the same buttons along the bottom.
+- **Chat**: opens as a full page. **‹ Inbox** at the top left (or a swipe right) takes you
+  back. For a bigger job (an offer, a rota change, a numbers question) you get "On it, back
+  in a minute" straight away; the answer appears in the chat when it's ready.
 - **Links from the app**: links in Chat can be tapped, and pages of ours (the full
   report, settings pages) open inside the app already logged in. After Approve or Delete you have 5 seconds
   to tap **Undo**; **Undo** at the top reverses your last decision. After a Delete you
@@ -246,10 +249,16 @@ spreadsheet), up to 5,000 at a time.
   confirm and "How was your visit?" emails have one design each. If we have a photo of
   the dish (one you've sent us, or from your Google profile, that names it), it goes in;
   otherwise the design still looks finished without one. In the app, open the email in
-  your **Inbox** and tap it to see it full screen, exactly as customers will; tap **Try
-  another look** to switch to the next design before you approve.
-- **A photo for the email**: when you approve an offer about a dish we have no photo of,
-  a second card appears in your **Inbox**: "Photo: <the dish>". Tap **Take photo** or
+  your **Inbox** and tap **Full screen**: the email is on the page, exactly as customers
+  will see it. Swipe left or right to see its other designs and tap **Use this look** to
+  keep one. **Add photo** (or **Change photo**) puts your own photo in it. In Chat, an email
+  card has **See the email**. (On an older version of the app the email opens in a browser
+  sheet and **Try another look** switches design.)
+- **A photo for the email**: every offer email is better with a photo. When you approve
+  one that has none (in the Inbox, with the buttons in Chat, or by typing "approve"), a
+  second card appears in your **Inbox**: "Photo: <the dish>" (or "one of your desserts",
+  or "your food" for a general offer). If your photo library already has a photo of it,
+  we use that and don't ask. Tap **Take photo** or
   **Choose photo**: we check it (bright, sharp, the food, no faces) and it goes in the
   email, and into your photo library for next time. Or tap **Send without**. If you
   don't answer, the email goes without a photo 3 hours after you approved it (or at its

@@ -63,7 +63,10 @@ async function viewsFor(restaurantId: string, drafts: Draft[]): Promise<Map<stri
     ...emailIds.map(async (id) => {
       const content = await previewContent(`draft-${id}`);
       if (!content) return;
-      const look = content.design ? { look: LOOK_NAMES[content.design.look], looks: LOOKS[content.design.family].length } : {};
+      const d = content.design;
+      const look = d
+        ? { look: LOOK_NAMES[d.look], looks: LOOKS[d.family].length, lookKey: d.look, options: (LOOKS[d.family] as readonly (keyof typeof LOOK_NAMES)[]).map((k) => ({ key: k, name: LOOK_NAMES[k] })), photo: Boolean(d.photoUrl) }
+        : {};
       views.set(id, { type: "email", subject: content.subject, html: (await renderEmail(content)).html, ...look });
     }),
   ]).catch((err) => console.error("Inbox views failed", err));
@@ -166,6 +169,13 @@ export async function decideFromApp(restaurantId: string, draftId: string, decis
     await saveSkipReason(draft, decision.reason.slice(0, 500));
     return { ok: true as const, replies: ["Thanks, noted."], card: null };
   }
+  // "Add photo" / "Change photo" on an email that's still waiting: the photo goes in it.
+  if (decision.action === "photo" && draft.kind === "email_campaign") {
+    const { setEmailPhoto } = await import("@/lib/email/photo-ask");
+    const out = await setEmailPhoto((await loadRestaurantContext(restaurantId)).restaurant, draft.id, decision.path);
+    const card = (await inboxCards(restaurantId)).find((c) => c.id === draft.id) ?? null;
+    return { ok: true as const, replies: [out.ok ? "Photo added to the email." : out.reason], card };
+  }
   if (decision.action === "photo" || decision.action === "nophoto") {
     if (draft.kind !== "photo_request") return { ok: false as const, error: "not_photo" };
     const { answerWithPhoto, answerWithoutPhoto } = await import("@/lib/email/photo-ask");
@@ -176,14 +186,6 @@ export async function decideFromApp(restaurantId: string, draftId: string, decis
     // A photo that won't do: the card stays, with the reason and how to fix it.
     if (!out.ok) return { ok: true as const, replies: [out.reason], card: (await inboxCards(restaurantId)).find((c) => c.id === draft.id) ?? null };
     return { ok: true as const, replies: [(decision.action === "photo" ? savedLine : withoutLine)(!out.sendAt, out.sendAt, now)], card: null };
-  }
-  // Approving an offer email about a dish with no photo: part 2 asks for one first.
-  let photoLine: string | null = null;
-  if (decision.action === "approve" && draft.kind === "email_campaign" && draft.status === "pending") {
-    const { startPhotoAsk } = await import("@/lib/email/photo-ask");
-    const { approvedLine } = await import("@/lib/email/photo-ask-rules");
-    const dish = await startPhotoAsk((await loadRestaurantContext(restaurantId)).restaurant, draft, new Date()).catch((err) => (console.error("Photo request failed", err), null));
-    if (dish) photoLine = approvedLine(dish);
   }
   const { turn, replies } = await appTurn(restaurantId);
   if (decision.action === "edit") {
@@ -197,8 +199,7 @@ export async function decideFromApp(restaurantId: string, draftId: string, decis
   }
   // The card as it stands now (an edit comes back rewritten for a decision).
   const after = (await inboxCards(restaurantId)).find((c) => c.id === draft.id) ?? null;
-  // With a photo asked for, that line is all the owner needs ("Scheduled for..." would confuse).
-  return { ok: true as const, replies: photoLine ? [photoLine] : replies.map(plainReply), card: after };
+  return { ok: true as const, replies: replies.map(plainReply), card: after };
 }
 
 export async function undoFromApp(restaurant: Restaurant) {

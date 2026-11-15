@@ -44,7 +44,8 @@ export const verifyPreview = (subject: string, sig: string | null) => verifyLink
 const SAMPLE_NAME = "Sam";
 
 // The content behind a preview: a campaign draft, or one of the fixed emails with sample details.
-export async function previewContent(subject: string): Promise<EmailContent | null> {
+// look: draw a campaign in another of its family's looks (the app's email page shows each before one is chosen).
+export async function previewContent(subject: string, look?: string | null): Promise<EmailContent | null> {
   const m = subject.match(/^(draft|confirm|welcome|feedback)-([0-9a-f-]{36})$/);
   if (!m) return null;
   const [, kind, id] = m;
@@ -56,9 +57,12 @@ export async function previewContent(subject: string): Promise<EmailContent | nu
     const campaign = draft ? await getCampaignForDraft(draft.id) : null;
     const restaurant = draft ? await loadRestaurant(draft.restaurant_id) : null;
     if (!campaign || !restaurant) return null;
+    const { designOf, LOOKS } = await import("./designs");
+    const saved = designOf(campaign);
+    const shown = look && (LOOKS[saved.family] as readonly string[]).includes(look) ? { ...saved, look: look as typeof saved.look } : saved;
     return campaignEmailContent({
       restaurant,
-      campaign,
+      campaign: { ...campaign, email_design: shown },
       validity: formatValidity(campaign.valid_from, campaign.valid_until),
       baseUrl: base,
       token: "preview",

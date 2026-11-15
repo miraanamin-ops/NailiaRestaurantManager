@@ -121,7 +121,7 @@ export default function Today() {
                 <T kind="small" quiet>
                   Yesterday’s takings aren’t in yet.
                 </T>
-                <Button label="Add in Chat" kind="plain" small icon="camera-outline" onPress={() => router.navigate('/chat')} />
+                <Button label="Add in Chat" kind="plain" small icon="camera-outline" onPress={() => router.push('/conversation')} />
               </>
             )}
           </Card>

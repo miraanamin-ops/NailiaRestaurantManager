@@ -1,6 +1,6 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { appError, appJson, restaurantFor, withOwner } from "@/lib/app-api";
-import { chatState, chatTurn, fileTurn, UploadRefused } from "@/lib/app/chat";
+import { chatState, chatTurn, fileTurn, ON_IT_APP_MS, UploadRefused } from "@/lib/app/chat";
 import { checkRow } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 
@@ -40,8 +40,21 @@ export async function POST(req: NextRequest) {
     if (!text && !payload && !file) return appError(400, "empty");
     const r = await restaurant(id);
     try {
-      const out = file ? await fileTurn(r, file, text, clientId) : await chatTurn(r, { body: text, payload, clientId });
-      return appJson({ duplicate: out.duplicate, ...(await chatState(r)) });
+      // A quick answer comes back with the reply. A longer job: once "On it" is in the
+      // chat, the app gets its answer and the work carries on here in the background;
+      // the app checks for the reply (chatState's working).
+      const work = file ? fileTurn(r, file, text, clientId) : chatTurn(r, { body: text, payload, clientId });
+      const settled = work.then(
+        (out) => ({ out, err: null as unknown }),
+        (err: unknown) => ({ out: null, err }),
+      );
+      const quick = await Promise.race([settled, new Promise<null>((resolve) => setTimeout(() => resolve(null), ON_IT_APP_MS + 1500))]);
+      if (!quick) {
+        after(() => settled.then(({ err }) => err && console.error("Background chat turn failed", err)));
+        return appJson({ duplicate: false, ...(await chatState(r)) });
+      }
+      if (quick.err) throw quick.err;
+      return appJson({ duplicate: quick.out!.duplicate, ...(await chatState(r)) });
     } catch (err) {
       if (err instanceof UploadRefused) return appJson({ refused: err.message, ...(await chatState(r)) });
       throw err;

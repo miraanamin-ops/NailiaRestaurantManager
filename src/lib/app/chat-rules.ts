@@ -21,6 +21,8 @@ export type ChatMeta = {
   image?: string | null; // a picture the bot sent (an email preview)
   file?: { path: string; name: string; contentType: string } | null; // what the owner sent
   clientId?: string | null; // the app's own id for an owner message (one answer per message)
+  // On an owner message: DinerAI is still working on it (the reply comes in the background).
+  working?: boolean;
 };
 export type ChatMessage = { text: string } & ChatMeta;
 

@@ -29,7 +29,7 @@ export function RotaWeek({ week, next, today, inInbox = false }: { week: AppRota
           label="Ask in Chat"
           kind="plain"
           icon="chatbubble-ellipses-outline"
-          onPress={() => router.navigate({ pathname: '/chat', params: { prefill: next ? 'Can you suggest next week’s rota?' : 'Show me this week’s rota' } })}
+          onPress={() => router.push({ pathname: '/conversation', params: { prefill: next ? 'Can you suggest next week’s rota?' : 'Show me this week’s rota' } })}
         />
       </Card>
     );
@@ -81,7 +81,7 @@ export function RotaWeek({ week, next, today, inInbox = false }: { week: AppRota
               {f}
             </T>
           ))}
-          {!inInbox && <Button label="Sort it in Chat" kind="plain" small icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />}
+          {!inInbox && <Button label="Sort it in Chat" kind="plain" small icon="chatbubble-ellipses-outline" onPress={() => router.push('/conversation')} />}
         </Card>
       )}
 
@@ -114,7 +114,7 @@ export function RotaWeek({ week, next, today, inInbox = false }: { week: AppRota
       {week.days.map((d) => (
         <Day key={d.date} day={d} today={d.date === today} open={open === d.date} onToggle={() => toggle(d.date)} />
       ))}
-      {!inInbox && <Button label="Change something in Chat" kind="plain" icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />}
+      {!inInbox && <Button label="Change something in Chat" kind="plain" icon="chatbubble-ellipses-outline" onPress={() => router.push('/conversation')} />}
     </>
   );
 }

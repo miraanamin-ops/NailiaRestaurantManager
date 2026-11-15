@@ -1,7 +1,7 @@
 import "server-only";
 import { check } from "@/lib/drafts";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
-import { anotherLook, chooseDesign, designOf, familyOf, type CampaignLike, type EmailDesign } from "./designs";
+import { anotherLook, chooseDesign, designOf, familyOf, LOOKS, type CampaignLike, type EmailDesign, type Look } from "./designs";
 
 // Saving each campaign's email design (campaigns.email_design, migration 071; the rules
 // are in ./designs.ts). Never in the way of a campaign: before 071 has run, or if the
@@ -46,14 +46,17 @@ export async function redesignAfterEdit(restaurant: Restaurant, campaign: Campai
   return assignDesign(restaurant, campaign);
 }
 
-// "Try another look" from the app: the next look in the same family, on a campaign
-// still waiting for the owner. Null if there's no such campaign or nothing to change.
-export async function tryAnotherLook(restaurantId: string, draftId: string): Promise<EmailDesign | null> {
+// "Use this look" from the app's email page: that look (one of its family's), on a
+// campaign still waiting for the owner; without one, the next look round. Null if
+// there's no such campaign or the look isn't one of its family's.
+export async function tryAnotherLook(restaurantId: string, draftId: string, look?: string | null): Promise<EmailDesign | null> {
   const campaign = check(
     await getSupabase().from("campaigns").select("*").eq("restaurant_id", restaurantId).eq("draft_id", draftId).maybeSingle<CampaignLike & { sent_at: string | null }>(),
   );
   if (!campaign || campaign.sent_at) return null;
-  const next = anotherLook(designOf(campaign));
+  const current = designOf(campaign);
+  if (look && !(LOOKS[current.family] as readonly string[]).includes(look)) return null;
+  const next = look ? { ...current, look: look as Look } : anotherLook(current);
   check(await getSupabase().from("campaigns").update({ email_design: next }).eq("id", campaign.id).eq("restaurant_id", restaurantId));
   return next;
 }

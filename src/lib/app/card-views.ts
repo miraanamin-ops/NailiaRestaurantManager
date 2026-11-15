@@ -10,7 +10,9 @@ export type ChangeRow = { label: string; from: string; to: string };
 export type CardView =
   | { type: "rota"; week: AppRotaWeek }
   // look: the design's name ("Big number"); looks: how many its family has (3 = "Try another look").
-  | { type: "email"; subject: string | null; html: string; look?: string | null; looks?: number }
+  // lookKey and options: the saved look and its family's looks (the email page swipes
+  // through them); photo: whether it has a dish photo ("Change photo" or "Add photo").
+  | { type: "email"; subject: string | null; html: string; look?: string | null; looks?: number; lookKey?: string | null; options?: { key: string; name: string }[]; photo?: boolean }
   | { type: "google_post"; name: string; text: string; photoUrl: string | null }
   | { type: "change"; field: "hours" | "menu"; note: string; rows: ChangeRow[] };
 

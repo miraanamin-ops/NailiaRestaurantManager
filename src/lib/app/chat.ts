@@ -1,4 +1,5 @@
 import "server-only";
+import { ON_IT_LINES } from "@/lib/agents/gm-rules";
 import { randomUUID } from "node:crypto";
 import { alertBuilder } from "@/lib/builder-alerts";
 import { check, focusDraft, getDraft } from "@/lib/drafts";
@@ -22,7 +23,14 @@ const HISTORY = 60;
 const SIGNED_SECONDS = 3600;
 
 export type ChatEntry = ChatItem & { card: InboxCard | null; imageUrl: string | null };
-export type ChatState = { restaurantId: string; messages: ChatEntry[]; hasMore: boolean };
+// working: DinerAI is still on a message (it said "On it" and carries on in the background).
+export type ChatState = { restaurantId: string; messages: ChatEntry[]; hasMore: boolean; working: boolean };
+
+// A message that takes longer than this gets "On it, back in a minute" at once, and the
+// rest of the work carries on after the app has its answer (15 Nov: the owner waited for
+// the whole job and only then saw "On it").
+export const ON_IT_APP_MS = 3000;
+const WORKING_FOR_MS = 6 * 60_000;
 
 const ownerOf = (r: Restaurant) => r.owner_whatsapp ?? APP_ADDRESS;
 
@@ -65,9 +73,11 @@ export async function chatState(r: Restaurant, before: string | null = null): Pr
   // every waiting email on each turn made replies slow (15 Nov).
   const cards = open.length ? new Map((await inboxCards(r.id, { views: false })).map((c) => [c.id, c])) : new Map<string, InboxCard>();
   const links = await signedLinks(rows.filter((m) => m.app?.file?.contentType.startsWith("image/")).map((m) => m.app!.file!.path));
+  const working = rows.some((m) => m.direction === "inbound" && m.app?.working === true && Date.now() - new Date(m.created_at).getTime() < WORKING_FOR_MS);
   return {
     restaurantId: r.id,
     hasMore,
+    working,
     messages: items.map((m) => {
       const path = rows.find((row) => row.id === m.id)?.app?.file?.path;
       return { ...m, card: m.draftId ? (cards.get(m.draftId) ?? null) : null, imageUrl: m.image ?? (path ? (links.get(path) ?? null) : null) };
@@ -90,7 +100,7 @@ export async function chatTurn(r: Restaurant, input: TurnInput): Promise<{ dupli
       body: (input.logged ?? input.body).slice(0, 1600),
       twilio_sid: `app-${clientId}`,
       status: "received",
-      app: { clientId, ...(input.file ? { file: input.file } : {}) } satisfies ChatMeta,
+      app: { clientId, working: true, ...(input.file ? { file: input.file } : {}) } satisfies ChatMeta,
     });
   } catch (err) {
     // 23505: this message id is already logged, so it was (or is being) answered.
@@ -99,6 +109,12 @@ export async function chatTurn(r: Restaurant, input: TurnInput): Promise<{ dupli
   }
   const sink: AppSink = { owner, messages: [] };
   const { handleMessage } = await import("@/lib/bot");
+  let finished = false;
+  const onIt = setTimeout(() => {
+    if (finished || sink.messages.length) return;
+    sink.onIt = true;
+    void messageOwner(appChannel(r, sink), ON_IT_LINES.English);
+  }, ON_IT_APP_MS);
   try {
     await handleMessage({
       restaurantId: r.id,
@@ -115,6 +131,16 @@ export async function chatTurn(r: Restaurant, input: TurnInput): Promise<{ dupli
     console.error("App chat message failed", cause);
     if (!(err instanceof OwnerToldError)) await messageOwner(appChannel(r, sink), SORRY);
     await alertBuilder(`app-chat:${r.id}`, `App chat failed for ${r.name}: ${cause instanceof Error ? cause.message : String(cause)}`).catch(() => {});
+  } finally {
+    finished = true;
+    clearTimeout(onIt);
+    // Done: the app stops showing that DinerAI is working on it.
+    await getSupabase()
+      .from("messages")
+      .update({ app: { clientId, ...(input.file ? { file: input.file } : {}) } })
+      .eq("restaurant_id", r.id)
+      .eq("twilio_sid", `app-${clientId}`)
+      .then(({ error }) => error && console.error("Couldn't mark the message answered", error.message));
   }
   return { duplicate: false, replies: sink.messages.length };
 }

@@ -3,7 +3,7 @@
 // waits (3 hours, or its own send time) and goes with the photo, without it, or at the
 // deadline. It starts from the app's approval, so nothing here reaches WhatsApp.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { approvedLine, askText, photoDeadline, PHOTO_WAIT_MS, savedLine, wantsPhoto, withoutLine } from "@/lib/email/photo-ask-rules";
+import { approvedLine, askText, photoDeadline, photoSubject, PHOTO_WAIT_MS, savedLine, wantsPhoto, withoutLine } from "@/lib/email/photo-ask-rules";
 import { memoryDb } from "./support/memory-db";
 
 const R = "11111111-1111-4111-8111-111111111111";
@@ -11,12 +11,19 @@ const NOW = new Date("2026-11-16T10:00:00Z");
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
 describe("the rules", () => {
-  test("only an offer about a dish with no photo, never a birthday", () => {
-    expect(wantsPhoto({ family: "discount", photo_url: null }, "Mixed Grill Platter")).toBe(true);
-    expect(wantsPhoto({ family: "discount", photo_url: "https://x/p.jpg" }, "Mixed Grill Platter")).toBe(false);
-    expect(wantsPhoto({ family: "discount", photo_url: null }, null)).toBe(false);
-    expect(wantsPhoto({ family: "birthday", photo_url: null }, "Kunafa")).toBe(false);
-    expect(wantsPhoto(null, "Kunafa")).toBe(false);
+  test("every offer email prefers a photo; never a birthday, never one that has one", () => {
+    expect(wantsPhoto({ family: "discount", photo_url: null })).toBe(true);
+    expect(wantsPhoto({ family: "quiet", photo_url: null })).toBe(true);
+    expect(wantsPhoto({ family: "discount", photo_url: "https://x/p.jpg" })).toBe(false);
+    expect(wantsPhoto({ family: "birthday", photo_url: null })).toBe(false);
+    expect(wantsPhoto(null)).toBe(false);
+  });
+
+  test("what to ask a photo of: the dish, a kind of dish, else the food", () => {
+    expect(photoSubject("Mixed Grill Platter", [], null)).toEqual({ phrase: "the mixed grill platter", caption: "Mixed Grill Platter" });
+    expect(photoSubject(null, ["any dessert"], null)).toEqual({ phrase: "one of your desserts", caption: "desserts" });
+    expect(photoSubject(null, [], "any main")).toEqual({ phrase: "one of your mains", caption: "mains" });
+    expect(photoSubject(null, [], null)).toEqual({ phrase: "your food", caption: null });
   });
 
   test("it waits 3 hours, or until its own send time if that's later", () => {
@@ -26,8 +33,8 @@ describe("the rules", () => {
   });
 
   test("short words", () => {
-    expect(askText("Mixed Grill Platter", new Date("2026-11-16T13:00:00Z"), NOW)).toBe("Add a photo of the mixed grill platter and it goes in the email. It sends at 1:00pm either way.");
-    expect(approvedLine("Lamb Chops")).toBe("Approved. Add a photo of the lamb chops? It's next in your Inbox.");
+    expect(askText("the mixed grill platter", new Date("2026-11-16T13:00:00Z"), NOW)).toBe("Add a photo of the mixed grill platter and it goes in the email. It sends at 1:00pm either way.");
+    expect(approvedLine("the lamb chops")).toBe("Approved. Add a photo of the lamb chops? It's next in your Inbox.");
     expect(savedLine(true, null, NOW)).toBe("Photo added. Sending now.");
     expect(withoutLine(false, new Date("2026-11-18T09:00:00Z"), NOW)).toBe("It sends at Wed 18 Nov, 9:00am, without a photo.");
   });
@@ -83,7 +90,7 @@ describe("the flow", () => {
 
   test("approving asks for a photo; the email waits; a good photo goes in, into the library, and it sends", async () => {
     const { startPhotoAsk, answerWithPhoto } = await import("@/lib/email/photo-ask");
-    expect(await startPhotoAsk(restaurant as never, db.tables.drafts[0] as never, NOW)).toBe("Mixed Grill Platter");
+    expect(await startPhotoAsk(restaurant as never, db.tables.drafts[0] as never, NOW)).toBe("the mixed grill platter");
     expect(request()?.content).toMatch(/^Add a photo of the mixed grill platter/);
     // As the gate would: the approved email is held until the deadline.
     Object.assign(db.tables.drafts[0], { status: "queued", scheduled_for: new Date(NOW.getTime() + PHOTO_WAIT_MS).toISOString() });
@@ -124,6 +131,14 @@ describe("the flow", () => {
     campaign().email_design.photo_ask!.answered = null;
     await closePhotoAskFor({ id: "c1", restaurant_id: R, email_design: campaign().email_design as never });
     expect(request()?.status).toBe("withdrawn");
+  });
+
+  test("a library photo of it is used straight away, with nothing to ask", async () => {
+    const { startPhotoAsk } = await import("@/lib/email/photo-ask");
+    const withPhoto = { ...restaurant, photo_library: [{ url: "https://cdn.test/grill.jpg", caption: "Mixed grill platter" }] };
+    expect(await startPhotoAsk(withPhoto as never, db.tables.drafts[0] as never, NOW)).toBeNull();
+    expect(campaign().email_design.photo_url).toBe("https://cdn.test/grill.jpg");
+    expect(request()).toBeUndefined();
   });
 
   test("no photo asked for a campaign that has one, or before 071 (no saved design)", async () => {
