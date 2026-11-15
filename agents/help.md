@@ -54,7 +54,13 @@ urgent alerts arrive as notifications.
   amber line saying what needs your look. The main button says what it does (**Post
   reply**, **Send email**, **Publish rota**, **Publish post**), with **Edit** and
   **Delete** (the app's word for Skip) underneath. **Approve all** at the top takes only
-  simple items that were all checked. After Approve or Delete you have 5 seconds
+  simple items that were all checked.
+  Opening an item shows the thing itself, not a link: a rota shows the week day by day
+  with each day's cost, an email shows how it will look, a Google post shows how it will
+  look on Google, and an hours or menu change shows what's on Google now and after. Tap it
+  (or **Full screen**) to see it full size, with the same buttons along the bottom.
+- **Links from the app**: links in Chat can be tapped, and pages of ours (the full
+  report, settings pages) open inside the app already logged in. After Approve or Delete you have 5 seconds
   to tap **Undo**; **Undo** at the top reverses your last decision. After a Delete you
   can tap why it didn't work (optional). A question for you has an **Answer in Chat**
   button. On the **Today** tab, **Waiting for you** shows one tile per type with its

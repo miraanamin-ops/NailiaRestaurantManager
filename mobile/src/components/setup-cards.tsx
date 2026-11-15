@@ -4,13 +4,13 @@
 // the same action the website sends (answer, pick, confirm, files...).
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Card, T, usePalette } from '@/components/ui';
 import { Brand, Space, TapHeight } from '@/constants/theme';
 import { API_URL, type ConfirmationData, type GridData, type QuestionData, type RecapData, type SetupComponent, type SetupOption, type StaffingAnswer, type StaffingData, type SummaryData } from '@/lib/api';
+import { openPage } from '@/lib/open-page';
 
 export type CardHandlers = {
   answer: (choiceId: string, label: string) => void; // a button (quick reply, card, step action)
@@ -45,7 +45,7 @@ export function SetupCard({ c, done, chosen, on }: { c: SetupComponent; done: bo
               <View style={{ flex: 1, gap: 4 }}>
                 <T>{s.text}</T>
                 {s.copy ? <Button label={`Copy ${s.copy}`} kind="plain" onPress={() => Clipboard.setStringAsync(s.copy!)} /> : null}
-                {s.link ? <Button label={s.link.label} kind="plain" onPress={() => WebBrowser.openBrowserAsync(full(s.link!.href))} /> : null}
+                {s.link ? <Button label={s.link.label} kind="plain" onPress={() => openPage(full(s.link!.href))} /> : null}
               </View>
             </View>
           ))}
@@ -74,7 +74,7 @@ export function SetupCard({ c, done, chosen, on }: { c: SetupComponent; done: bo
           <Button
             label={c.label}
             onPress={() => {
-              WebBrowser.openBrowserAsync(full(c.href));
+              openPage(full(c.href));
               if (c.continueLabel && !done) on.answer('opened', c.continueLabel);
             }}
           />
@@ -298,7 +298,7 @@ function Question({ data, done, onPick, onUpload }: { data: QuestionData; done: 
         />
       )}
       {data.upload && !done ? <UploadButtons accept={data.upload.accept} label={data.upload.label} done={done} onUpload={onUpload} /> : null}
-      {data.link ? <Button label={data.link.label} kind="plain" onPress={() => WebBrowser.openBrowserAsync(full(data.link!.href))} /> : null}
+      {data.link ? <Button label={data.link.label} kind="plain" onPress={() => openPage(full(data.link!.href))} /> : null}
       {!done && (data.confirm || data.multi || needsWords || data.grid || data.staffing) && <Button label={data.grid ? 'These are right' : data.staffing ? 'Save these numbers' : 'Confirm'} onPress={confirm} disabled={!ready} />}
       {!done && data.skip && <Button label="Skip this question" kind="plain" onPress={() => onPick({ choiceIds: ['skip_q'], label: 'Skip this question' })} />}
     </View>

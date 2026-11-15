@@ -3,12 +3,15 @@ import { loadRestaurantContext } from "@/lib/assistant";
 import { doneTally, waitingDrafts } from "@/lib/brief";
 import { londonYmd } from "@/lib/clock";
 import { check, getDraft, getLearningContext, saveSkipReason, startEdit, type Draft } from "@/lib/drafts";
-import { draftPreviewUrl } from "@/lib/email/previews";
+import { draftPreviewUrl, previewContent } from "@/lib/email/previews";
+import { renderEmail } from "@/lib/email/templates";
 import { google } from "@/lib/google";
 import type { OwnerChannel } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
 import { undoLast } from "@/lib/undo";
 import { APP_CHANNEL_TO } from "./chat-rules";
+import { changeView, type CardView } from "./card-views";
+import { appRotaWeek, type RotaWeekLike } from "./rota-rules";
 import { sortCards, takingsLine, toCard, typeTiles, waitingSummary, type CardReview, type InboxCard } from "./cards";
 
 // The app's Today and Inbox (step 50, phase 1): the same drafts the morning brief
@@ -20,7 +23,58 @@ import { sortCards, takingsLine, toCard, typeTiles, waitingSummary, type CardRev
 // The channel is a placeholder number no message can reach (APP_CHANNEL_TO), so if a
 // decision path tries to message the owner (a rota PDF), nothing is sent anywhere.
 
-export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
+// The thing itself for each card that has one (lib/app/card-views.ts). Each kind is
+// looked up once for all its drafts; a view that can't be made is left out, never in
+// the way of the card.
+async function viewsFor(restaurantId: string, drafts: Draft[]): Promise<Map<string, CardView>> {
+  const views = new Map<string, CardView>();
+  const ids = (kind: Draft["kind"]) => drafts.filter((d) => d.kind === kind).map((d) => d.id);
+  const rotaIds = ids("rota");
+  const postIds = ids("google_post");
+  const emailIds = ids("email_campaign");
+  const restaurant =
+    rotaIds.length || postIds.length
+      ? check(await getSupabase().from("restaurants").select("name, labour_target_pct").eq("id", restaurantId).maybeSingle<{ name: string; labour_target_pct: number | null }>())
+      : null;
+  await Promise.all([
+    rotaIds.length &&
+      getSupabase()
+        .from("rota_weeks")
+        .select("week_start, status, summary, draft_id, share_token")
+        .eq("restaurant_id", restaurantId)
+        .in("draft_id", rotaIds)
+        .returns<RotaWeekLike[]>()
+        .then((res) => {
+          const target = restaurant?.labour_target_pct == null ? null : Number(restaurant.labour_target_pct) || null;
+          for (const w of check(res) ?? []) if (w.draft_id) views.set(w.draft_id, { type: "rota", week: appRotaWeek(w, w.week_start, target) });
+        }),
+    postIds.length &&
+      getSupabase()
+        .from("google_posts")
+        .select("draft_id, photo_url")
+        .eq("restaurant_id", restaurantId)
+        .in("draft_id", postIds)
+        .returns<{ draft_id: string; photo_url: string | null }[]>()
+        .then((res) => {
+          const photos = new Map((check(res) ?? []).map((p) => [p.draft_id, p.photo_url]));
+          for (const d of drafts.filter((x) => x.kind === "google_post")) views.set(d.id, { type: "google_post", name: restaurant?.name ?? "", text: d.content, photoUrl: photos.get(d.id) ?? null });
+        }),
+    ...emailIds.map(async (id) => {
+      const content = await previewContent(`draft-${id}`);
+      if (content) views.set(id, { type: "email", subject: content.subject, html: (await renderEmail(content)).html });
+    }),
+  ]).catch((err) => console.error("Inbox views failed", err));
+  for (const d of drafts) {
+    if (d.kind !== "hours_update" && d.kind !== "menu_update") continue;
+    const v = changeView(d.kind, d.content);
+    if (v) views.set(d.id, v);
+  }
+  return views;
+}
+
+// views: false for callers that only count or approve (Today, Approve all), so the
+// emails aren't drawn for nothing.
+export async function inboxCards(restaurantId: string, opts: { views?: boolean } = {}): Promise<InboxCard[]> {
   const drafts = await waitingDrafts(restaurantId);
   if (!drafts.length) return [];
   const reviewIds = new Set(drafts.map((d) => d.review_id).filter(Boolean));
@@ -34,6 +88,7 @@ export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
     : [];
   const campaignName = new Map(campaigns.map((c) => [c.draft_id, c.name]));
   const birthdays = new Set(campaigns.filter((c) => c.segment === "birthdays_7d").map((c) => c.draft_id));
+  const views = opts.views === false ? new Map<string, CardView>() : await viewsFor(restaurantId, drafts);
   return sortCards(
     drafts.map((d) =>
       toCard(d, {
@@ -42,6 +97,7 @@ export async function inboxCards(restaurantId: string): Promise<InboxCard[]> {
         previewImageUrl: draftPreviewUrl(d),
         body: d.content,
         birthday: birthdays.has(d.id),
+        view: views.get(d.id) ?? null,
       }),
     ),
   );
@@ -51,7 +107,7 @@ export async function todayFor(restaurant: Restaurant, now = new Date()) {
   const day = (offset: number) => londonYmd(new Date(now.getTime() - offset * 86_400_000));
   const { rotaToday } = await import("./rota");
   const [cards, sales, done, rota] = await Promise.all([
-    inboxCards(restaurant.id),
+    inboxCards(restaurant.id, { views: false }),
     getSupabase()
       .from("sales_days")
       .select("day, net_sales")
@@ -123,7 +179,7 @@ export async function undoFromApp(restaurant: Restaurant) {
 // taken from the phone), each approved through the bot's own decision code like one tap,
 // so every send-time check still runs. Returns how many went, and anything held back.
 export async function approveSimple(restaurantId: string) {
-  const simple = (await inboxCards(restaurantId)).filter((c) => c.bulk);
+  const simple = (await inboxCards(restaurantId, { views: false })).filter((c) => c.bulk);
   let approved = 0;
   const notes: string[] = [];
   for (const c of simple) {

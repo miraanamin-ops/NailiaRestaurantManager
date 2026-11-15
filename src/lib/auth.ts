@@ -91,6 +91,28 @@ async function signupRestaurantOf(sessionId: string | null) {
   return data?.restaurant_id ?? null;
 }
 
+// A one-time link that logs the app's owner into the website inside the app's own
+// browser, so a page opened from the app (the full report, a settings page) doesn't ask
+// them to log in again (phase 2 of the Inbox and emails plan, 15 Nov 2026). It makes a
+// fresh session of its own: the app's tokens never leave the app, and Supabase's
+// one-time token in the link works once. Never for a sign-up login that hasn't proved
+// its email (its limit can belong to the session, which the new one wouldn't carry).
+export async function appWebLink(token: string, path: string, base: string): Promise<string | null> {
+  if (!authConfigured() || !token) return null;
+  const { data } = await tokenClient().auth.getUser(token);
+  const user = data.user;
+  if (!user?.email) return null;
+  if (signupScope(await signupRestaurantOf(sessionIdFromToken(token)), user.app_metadata)) return null;
+  if (!(await accessFor(user.email)).allowed) return null;
+  const { data: link, error } = await getSupabase().auth.admin.generateLink({ type: "magiclink", email: user.email });
+  const hash = link?.properties?.hashed_token;
+  if (error || !hash) {
+    console.error("Couldn't make a web link for the app", error?.message);
+    return null;
+  }
+  return `${base}/auth/app?token_hash=${encodeURIComponent(hash)}&next=${encodeURIComponent(safeNext(path))}`;
+}
+
 export type NewAccount = { ok: true } | { ok: false; reason: "not_configured" | "existing_user" | "failed" };
 
 // Makes the login account for a brand-new owner with the password they chose at

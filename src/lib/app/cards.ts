@@ -4,6 +4,7 @@
 // which buttons it gets. lib/app/inbox.ts loads the rows and calls these.
 import { CHECK_LABELS, CHECK_NAMES, type CheckStatus, type DraftChecks } from "@/lib/checks/types";
 import { isQuestion, KIND_LABELS, OWNER_ONLY_KINDS, type Draft } from "@/lib/drafts";
+import type { CardView } from "./card-views";
 
 export type CardReview = { author: string; rating: number; text: string | null };
 export type CardCheck = { name: string; label: string; status: CheckStatus; notes: string[] };
@@ -31,6 +32,9 @@ export type InboxCard = {
   preview: string; // at most PREVIEW_WORDS words
   allClear: boolean; // every check passed or was fixed: one tick, nothing else
   checkLine: string | null; // when not: what needs a look, at most CHECK_LINE_WORDS words
+  // The thing itself, drawn by the app (lib/app/card-views.ts): the rota, the real email,
+  // the Google post, an hours or menu change. Null for words-only drafts.
+  view: CardView | null;
   // The Inbox's sections and colours (the owner's table, 12 Nov): the message type, and
   // its category (categoryOf). The older "tier" is the same as the category.
   type: { key: MessageTypeKey; label: string };
@@ -93,6 +97,22 @@ const SHORT_KIND: Partial<Record<Draft["kind"], string>> = {
 // The closed card's one line: the review, else the words that would go out.
 export function cardPreview(body: string, review: CardReview | null) {
   return firstWords(review?.text ? `“${review.text}”` : firstLine(body), PREVIEW_WORDS);
+}
+
+// A card with a view gets its one line from the thing itself ("Mon 17 to Sun 23 Nov, £2,140").
+export function viewPreview(view: CardView | null) {
+  if (!view) return null;
+  if (view.type === "rota") {
+    const t = view.week.totals;
+    const cost = t ? `, £${Math.round(t.costPence / 100).toLocaleString("en-GB")}` : "";
+    return firstWords(`${view.week.label.replace(/\s+[–-]\s+/, " to ")}${cost}${view.week.openShifts ? `, ${view.week.openShifts} open` : ""}`, PREVIEW_WORDS);
+  }
+  if (view.type === "email") return view.subject ? firstWords(view.subject, PREVIEW_WORDS) : null;
+  if (view.type === "change") {
+    const r = view.rows[0];
+    return firstWords(`${r.label ? `${r.label}: ` : ""}${r.from} → ${r.to}${view.rows.length > 1 ? `, +${view.rows.length - 1} more` : ""}`, PREVIEW_WORDS);
+  }
+  return null;
 }
 
 // What the Approve button says.
@@ -166,7 +186,7 @@ export function cardChecks(checks: DraftChecks | null): CardCheck[] {
 
 export function toCard(
   d: Draft,
-  extra: { review: CardReview | null; campaignName?: string | null; previewImageUrl?: string | null; body: string; birthday?: boolean },
+  extra: { review: CardReview | null; campaignName?: string | null; previewImageUrl?: string | null; body: string; birthday?: boolean; view?: CardView | null },
 ): InboxCard {
   const checks = cardChecks(d.checks);
   const card: Omit<InboxCard, "tier" | "category" | "type" | "bulk"> = {
@@ -184,7 +204,8 @@ export function toCard(
     actions: isQuestion(d.kind) ? "answer" : d.kind === "special_idea" ? ["approve", "skip"] : ["approve", "edit", "skip"],
     approveHint: approveHint(d.kind),
     approveLabel: approveLabel(d.kind),
-    preview: cardPreview(extra.body, extra.review),
+    preview: viewPreview(extra.view ?? null) ?? cardPreview(extra.body, extra.review),
+    view: extra.view ?? null,
     ...checkSummary(checks, d.check_notes?.flags ?? []),
     waitingSince: d.created_at,
   };

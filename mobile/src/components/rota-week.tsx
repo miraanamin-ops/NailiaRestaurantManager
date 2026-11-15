@@ -12,7 +12,9 @@ import { Avatar, Button, Card, Icon, Panel, Pill, T, usePalette } from '@/compon
 import { Space } from '@/constants/theme';
 import type { AppRotaDay, AppRotaWeek } from '@/lib/api';
 
-export function RotaWeek({ week, next, today }: { week: AppRotaWeek; next: boolean; today?: string }) {
+// inInbox: shown full screen from its Inbox card, which has the Approve and Edit buttons,
+// so the status card and "Change something in Chat" are left out.
+export function RotaWeek({ week, next, today, inInbox = false }: { week: AppRotaWeek; next: boolean; today?: string; inInbox?: boolean }) {
   const c = usePalette();
   const [open, setOpen] = useState<string | null>(today && week.days.some((d) => d.date === today) ? today : null);
   if (week.status === 'none') {
@@ -39,7 +41,10 @@ export function RotaWeek({ week, next, today }: { week: AppRotaWeek; next: boole
   };
   return (
     <>
-      <Card accent={week.status === 'waiting'}>
+      {inInbox ? (
+        <T kind="heading">{week.label}</T>
+      ) : (
+        <Card accent={week.status === 'waiting'}>
         <T kind="heading">{week.label}</T>
         <Pill label={week.status === 'approved' ? 'Approved' : 'Suggested · waiting for you'} tone={week.status === 'approved' ? 'signal' : 'amber'} dot />
         {week.status === 'waiting' ? (
@@ -60,7 +65,8 @@ export function RotaWeek({ week, next, today }: { week: AppRotaWeek; next: boole
             </View>
           </>
         ) : null}
-      </Card>
+        </Card>
+      )}
 
       {week.openShifts > 0 && (
         <Card tone="ember">
@@ -75,7 +81,7 @@ export function RotaWeek({ week, next, today }: { week: AppRotaWeek; next: boole
               {f}
             </T>
           ))}
-          <Button label="Sort it in Chat" kind="plain" small icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />
+          {!inInbox && <Button label="Sort it in Chat" kind="plain" small icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />}
         </Card>
       )}
 
@@ -108,7 +114,7 @@ export function RotaWeek({ week, next, today }: { week: AppRotaWeek; next: boole
       {week.days.map((d) => (
         <Day key={d.date} day={d} today={d.date === today} open={open === d.date} onToggle={() => toggle(d.date)} />
       ))}
-      <Button label="Change something in Chat" kind="plain" icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />
+      {!inInbox && <Button label="Change something in Chat" kind="plain" icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />}
     </>
   );
 }

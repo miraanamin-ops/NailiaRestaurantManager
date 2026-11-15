@@ -21,6 +21,7 @@ import { DraftCardBody } from '@/components/draft-card';
 import { Icon, IconTile, T, TabHeader, usePalette, useTabBarSpace, type IconName } from '@/components/ui';
 import { Brand, MaxWidth, Space } from '@/constants/theme';
 import { ApiError, focusChat, getChat, LoginNeeded, newClientId, sendChat, uploadChatFile, type ChatButton, type ChatEntry, type ChatFile, type ChatState } from '@/lib/api';
+import { openPage, withLinks } from '@/lib/open-page';
 import { useSession } from '@/lib/session';
 
 const POLL_MS = 15_000;
@@ -352,7 +353,15 @@ function Bubble({ owner, text, file, imageUrl, faded, via }: { owner: boolean; t
       ) : null}
       {text ? (
         <T style={{ color: ink }} selectable>
-          {text}
+          {withLinks(text).map((part, i) =>
+            part.url ? (
+              <T key={i} style={{ color: ink, textDecorationLine: 'underline' }} onPress={() => openPage(part.url!)} accessibilityRole="link">
+                {part.text}
+              </T>
+            ) : (
+              part.text
+            ),
+          )}
         </T>
       ) : null}
       {via ? (

@@ -8,6 +8,7 @@ import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { CardViewSmall } from '@/components/card-view';
 import { Card, Icon, Panel, Pill, T, usePalette } from '@/components/ui';
 import { Brand, Space } from '@/constants/theme';
 import type { InboxCard } from '@/lib/api';
@@ -25,8 +26,10 @@ function Stars({ rating }: { rating: number }) {
 }
 
 // bare: without its own card (inside an Inbox row, which is the card).
-export function DraftCardBody({ card, bare = false }: { card: InboxCard; bare?: boolean }) {
+// onOpen: shows the card's view full screen (the Inbox's viewer); without it there's no view.
+export function DraftCardBody({ card, bare = false, onOpen }: { card: InboxCard; bare?: boolean; onOpen?: () => void }) {
   const c = usePalette();
+  const view = onOpen && card.view ? card.view : null;
   const content = (
     <>
       {!bare && (
@@ -51,7 +54,8 @@ export function DraftCardBody({ card, bare = false }: { card: InboxCard; bare?: 
           </T>
         </Panel>
       )}
-      {card.previewImageUrl ? <Image source={{ uri: card.previewImageUrl }} style={styles.preview} contentFit="contain" accessibilityLabel="How the email will look" /> : null}
+      {view && onOpen ? <CardViewSmall card={card} onOpen={onOpen} /> : null}
+      {!view && card.previewImageUrl ? <Image source={{ uri: card.previewImageUrl }} style={styles.preview} contentFit="contain" accessibilityLabel="How the email will look" /> : null}
       {card.actions !== 'answer' && card.review && (
         <View style={styles.row}>
           <Icon name="sparkles-outline" size={14} color={c.tint} />
@@ -60,7 +64,7 @@ export function DraftCardBody({ card, bare = false }: { card: InboxCard; bare?: 
           </T>
         </View>
       )}
-      <T selectable>{card.body}</T>
+      {!view && <T selectable>{card.body}</T>}
       {card.allClear ?? card.checks.every((ch) => ch.status === 'pass' || ch.status === 'fixed') ? (
         card.checks.length > 0 && (
           <View style={styles.row} accessibilityLabel="Checked, all correct">

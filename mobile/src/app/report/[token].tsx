@@ -3,7 +3,6 @@
 // share, and the full web page.
 import * as Sharing from 'expo-sharing';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
@@ -11,6 +10,7 @@ import { BarChart, Change, money } from '@/components/charts';
 import { Button, Card, Screen, T, usePalette } from '@/components/ui';
 import { Space } from '@/constants/theme';
 import { getReport, LoginNeeded, type Compare, type Daily, type MonthlyData, type Report, type ReportAction, type ReportStat, type WeeklyData, type WeeklySection } from '@/lib/api';
+import { openPage } from '@/lib/open-page';
 import { useSession } from '@/lib/session';
 
 const fmt = (format: ReportStat['format']) => (n: number) => (format === 'money' ? money(n) : format === 'rating' ? n.toFixed(1) : String(Math.round(n)));
@@ -58,7 +58,7 @@ export default function ReportScreen() {
       {report && (
         <>
           <Button label="Share the PDF" onPress={sharePdf} busy={sharing} />
-          {report.webUrl ? <Button label="Open the full report" kind="plain" onPress={() => WebBrowser.openBrowserAsync(report.webUrl!)} /> : null}
+          {report.webUrl ? <Button label="Open the full report" kind="plain" onPress={() => openPage(report.webUrl!)} /> : null}
         </>
       )}
     </Screen>

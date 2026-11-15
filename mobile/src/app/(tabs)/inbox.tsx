@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'rea
 import { Alert, KeyboardAvoidingView, LayoutAnimation, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CardViewFull } from '@/components/card-view';
 import { DraftCardBody } from '@/components/draft-card';
 import { Button, Card, Icon, IconTile, Pill, T, Skeleton, TabHeader, usePalette, useTabBarSpace, type IconName } from '@/components/ui';
 import { MaxWidth, Space } from '@/constants/theme';
@@ -68,6 +69,8 @@ export default function Inbox() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [editing, setEditing] = useState<InboxCard | null>(null);
   const [reasonFor, setReasonFor] = useState<InboxCard | null>(null);
+  // The card shown full screen (its rota, email, post or change), with its buttons.
+  const [full, setFull] = useState<InboxCard | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reasonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -158,6 +161,7 @@ export default function Inbox() {
     LayoutAnimation.easeInEaseOut();
     drop([card.id]);
     setOpen(null);
+    setFull(null);
     const p: Pending = { card, action, timer: setTimeout(sendPending, UNDO_SECONDS * 1000) };
     pendingRef.current = p;
     setPending(p);
@@ -311,6 +315,7 @@ export default function Inbox() {
                   onApprove={() => decideSoon(card, 'approve')}
                   onDelete={() => decideSoon(card, 'skip')}
                   onEdit={() => setEditing(card)}
+                  onFull={() => setFull(card)}
                 />
               ))}
             </View>
@@ -360,6 +365,19 @@ export default function Inbox() {
         </View>
       ) : null}
 
+      <FullView
+        card={full}
+        busy={busy}
+        onClose={() => setFull(null)}
+        onApprove={() => full && decideSoon(full, 'approve')}
+        onDelete={() => full && decideSoon(full, 'skip')}
+        onEdit={() => {
+          const card = full;
+          setFull(null);
+          // The edit sheet opens once the viewer has gone (two sheets at once don't show on iOS).
+          if (card) setTimeout(() => setEditing(card), 400);
+        }}
+      />
       <EditSheet key={editing?.id ?? 'none'} card={editing} onCancel={() => setEditing(null)} onSend={sendEdit} />
     </SafeAreaView>
   );
@@ -397,7 +415,7 @@ function Round({ icon, label, onPress, tone, disabled }: { icon: IconName; label
 }
 
 // One item: the closed card, and the full draft when opened.
-function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit }: { card: InboxCard; open: boolean; busy: boolean; onToggle: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void }) {
+function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull }: { card: InboxCard; open: boolean; busy: boolean; onToggle: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void; onFull: () => void }) {
   const c = usePalette();
   const category = categoryOf(card);
   const tone = CATEGORIES[category].tone;
@@ -437,7 +455,7 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit }: { card
 
       {open && (
         <View style={{ gap: Space.s + 2 }}>
-          <DraftCardBody card={card} bare />
+          <DraftCardBody card={card} bare onOpen={onFull} />
           {answer ? (
             <Button label="Answer in Chat" icon="chatbubble-ellipses-outline" onPress={() => router.navigate({ pathname: '/chat', params: { question: card.id } })} />
           ) : (
@@ -462,6 +480,43 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit }: { card
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} color={c.textSecondary} />
       </Pressable>
     </View>
+  );
+}
+
+// Full screen: the rota, the real email, the Google post or the change, with the same
+// buttons as the open card along the bottom.
+function FullView({ card, busy, onClose, onApprove, onDelete, onEdit }: { card: InboxCard | null; busy: boolean; onClose: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void }) {
+  const c = usePalette();
+  const canEdit = Boolean(card && card.actions !== 'answer' && card.actions.includes('edit'));
+  return (
+    <Modal visible={Boolean(card?.view)} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <SafeAreaView style={[styles.fill, { backgroundColor: c.background }]} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[styles.fullHead, { borderBottomColor: c.border }]}>
+          <T kind="heading" numberOfLines={1} style={{ flex: 1 }}>
+            {card?.title}
+          </T>
+          <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close" style={[styles.round, { borderColor: c.border, backgroundColor: c.panel }]}>
+            <Icon name="close" size={20} color={c.text} />
+          </Pressable>
+        </View>
+        <View style={styles.fill}>{card && <CardViewFull card={card} />}</View>
+        {card && card.actions !== 'answer' && (
+          <View style={[styles.fullBar, { borderTopColor: c.border, backgroundColor: c.background }]}>
+            <Button label={card.approveLabel ?? 'Approve'} icon="checkmark" onPress={onApprove} disabled={busy} />
+            <View style={styles.pair}>
+              {canEdit && (
+                <View style={{ flex: 1 }}>
+                  <Button label="Edit" kind="plain" small icon="create-outline" onPress={onEdit} disabled={busy} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Button label="Delete" kind="quiet" small icon="trash-outline" onPress={onDelete} disabled={busy} />
+              </View>
+            </View>
+          </View>
+        )}
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -515,5 +570,7 @@ const styles = StyleSheet.create({
   chip: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   undo: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   sheet: { padding: Space.l, gap: Space.m },
+  fullHead: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingHorizontal: Space.m, paddingVertical: Space.s + 2, borderBottomWidth: StyleSheet.hairlineWidth },
+  fullBar: { gap: Space.s, padding: Space.m, borderTopWidth: StyleSheet.hairlineWidth },
   input: { minHeight: 120, borderWidth: 1, borderRadius: 14, padding: Space.m, fontSize: 17, textAlignVertical: 'top' },
 });

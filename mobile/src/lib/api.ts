@@ -117,6 +117,9 @@ export type InboxCard = {
   preview?: string;
   allClear?: boolean;
   checkLine?: string | null;
+  // The thing itself (phase 2, 15 Nov): the rota, the real email, the Google post, an
+  // hours or menu change. Drawn small on the open card and full screen on a tap.
+  view?: CardView | null;
   waitingSince: string;
   // Set by the server (lib/app/cards.ts): the message type the owner sees it under, its
   // category (urgent, look = open it to check, later = not urgent, simple = a tick and
@@ -125,6 +128,12 @@ export type InboxCard = {
   category: Category;
   bulk: boolean;
 };
+export type ChangeRow = { label: string; from: string; to: string };
+export type CardView =
+  | { type: 'rota'; week: AppRotaWeek }
+  | { type: 'email'; subject: string | null; html: string }
+  | { type: 'google_post'; name: string; text: string; photoUrl: string | null }
+  | { type: 'change'; field: 'hours' | 'menu'; note: string; rows: ChangeRow[] };
 export type Category = 'urgent' | 'look' | 'later' | 'simple';
 export type TypeTile = { key: string; label: string; category: Category; count: number };
 export type Today = {
