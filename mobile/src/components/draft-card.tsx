@@ -2,13 +2,12 @@
 // would go out and a picture of an email. Checks are one tick, or one amber line when
 // something needs the owner (fewer words, 15 Nov).
 // Swipe right to approve, left to skip; or use the buttons underneath (InboxScreen).
-import { Image } from 'expo-image';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { CardViewSmall } from '@/components/card-view';
+import { CardViewSmall, SeeEmailButton } from '@/components/card-view';
 import { Card, Icon, Panel, Pill, T, usePalette } from '@/components/ui';
 import { Brand, Space } from '@/constants/theme';
 import type { InboxCard } from '@/lib/api';
@@ -55,7 +54,8 @@ export function DraftCardBody({ card, bare = false, onOpen }: { card: InboxCard;
         </Panel>
       )}
       {view && onOpen ? <CardViewSmall card={card} onOpen={onOpen} /> : null}
-      {!view && card.previewImageUrl ? <Image source={{ uri: card.previewImageUrl }} style={styles.preview} contentFit="contain" accessibilityLabel="How the email will look" /> : null}
+      {/* No view here (the chat): the old picture of the email is gone; this opens the real one. */}
+      {!view && card.kind === 'email_campaign' ? <SeeEmailButton card={card} /> : null}
       {card.actions !== 'answer' && card.review && (
         <View style={styles.row}>
           <Icon name="sparkles-outline" size={14} color={c.tint} />
@@ -145,7 +145,6 @@ export function SwipeableCard({ card, onApprove, onSkip, enabled }: { card: Inbo
 const styles = StyleSheet.create({
   card: { gap: Space.s + 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  preview: { width: '100%', aspectRatio: 0.75, borderRadius: 12 },
   stamp: { position: 'absolute', top: Space.m, borderWidth: 2, borderRadius: 8, paddingHorizontal: Space.s, paddingVertical: 2 },
   stampLeft: { left: Space.m },
   stampRight: { right: Space.m },

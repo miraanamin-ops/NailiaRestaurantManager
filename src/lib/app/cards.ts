@@ -18,6 +18,7 @@ export type InboxCard = {
   audience: string | null;
   review: CardReview | null;
   previewImageUrl: string | null; // an email campaign's picture
+  previewHtmlUrl?: string | null; // the real email as a page (signed): full screen in the app
   checks: CardCheck[];
   flagged: boolean; // a check wants the owner to look
   urgent: boolean; // category urgent
@@ -188,7 +189,7 @@ export function cardChecks(checks: DraftChecks | null): CardCheck[] {
 
 export function toCard(
   d: Draft,
-  extra: { review: CardReview | null; campaignName?: string | null; previewImageUrl?: string | null; body: string; birthday?: boolean; view?: CardView | null },
+  extra: { review: CardReview | null; campaignName?: string | null; previewImageUrl?: string | null; previewHtmlUrl?: string | null; body: string; birthday?: boolean; view?: CardView | null },
 ): InboxCard {
   const checks = cardChecks(d.checks);
   const card: Omit<InboxCard, "tier" | "category" | "type" | "bulk"> = {
@@ -200,6 +201,7 @@ export function toCard(
     audience: d.audience,
     review: extra.review,
     previewImageUrl: extra.previewImageUrl ?? null,
+    previewHtmlUrl: extra.previewHtmlUrl ?? null,
     checks,
     flagged: checks.some((c) => c.status === "flagged" || c.status === "blocked") || Boolean(d.check_notes?.flags?.length),
     urgent: false,

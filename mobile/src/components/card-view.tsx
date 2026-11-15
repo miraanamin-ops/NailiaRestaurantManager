@@ -3,11 +3,14 @@
 // it, an hours or menu change as before and after. Small on the open card (a tap opens
 // it full screen), and full screen in the Inbox's viewer. Nothing opens a link.
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, TurboModuleRegistry, View, NativeModules } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
+import { Modal, NativeModules, Pressable, ScrollView, StyleSheet, TurboModuleRegistry, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { money } from '@/components/charts';
 import { RotaWeek } from '@/components/rota-week';
-import { Avatar, Icon, Panel, T, usePalette } from '@/components/ui';
+import { Avatar, Button, Icon, Panel, T, usePalette } from '@/components/ui';
 import { Space } from '@/constants/theme';
 import type { CardView, InboxCard } from '@/lib/api';
 
@@ -47,8 +50,6 @@ export function CardViewSmall({ card, onOpen }: { card: InboxCard; onOpen: () =>
             <View pointerEvents="none" style={styles.emailThumb}>
               <WebView originWhitelist={['*']} source={{ html: view.html }} scrollEnabled={false} style={{ flex: 1, backgroundColor: '#ffffff' }} />
             </View>
-          ) : card.previewImageUrl ? (
-            <Image source={{ uri: card.previewImageUrl }} style={styles.emailThumb} contentFit="cover" contentPosition="top" accessibilityLabel="How the email will look" />
           ) : (
             <View style={styles.emailStub}>
               <Icon name="mail-outline" size={22} color={c.textSecondary} />
@@ -169,6 +170,35 @@ function ChangeRows({ view, max }: { view: Extract<CardView, { type: 'change' }>
 // "Try another look" applies to an email whose family has more than one design.
 export const canChangeLook = (card: InboxCard) => card.view?.type === 'email' && (card.view.looks ?? 0) > 1;
 
+// "See the email" on an email card with no view of its own (the chat): the real email
+// full screen, in the app's web view, or the browser sheet on an older build.
+export function SeeEmailButton({ card }: { card: InboxCard }) {
+  const c = usePalette();
+  const [open, setOpen] = useState(false);
+  const url = card.previewHtmlUrl;
+  if (!url) return null;
+  return (
+    <>
+      <Button label="See the email" kind="plain" small icon="mail-open-outline" onPress={() => (WebView ? setOpen(true) : WebBrowser.openBrowserAsync(url))} />
+      {WebView && (
+        <Modal visible={open} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setOpen(false)}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={['top', 'bottom', 'left', 'right']}>
+            <View style={[styles.sheetHead, { borderBottomColor: c.border }]}>
+              <T kind="heading" numberOfLines={1} style={{ flex: 1 }}>
+                {card.title}
+              </T>
+              <Pressable onPress={() => setOpen(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+                <Icon name="close" size={22} color={c.text} />
+              </Pressable>
+            </View>
+            <WebView originWhitelist={['*']} source={{ uri: url }} injectedJavaScript={noLinks} style={{ flex: 1, backgroundColor: '#ffffff' }} />
+          </SafeAreaView>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 // ---------- Full screen, in the Inbox's viewer ----------
 
 export function CardViewFull({ card }: { card: InboxCard }) {
@@ -191,7 +221,9 @@ export function CardViewFull({ card }: { card: InboxCard }) {
     }
     return (
       <ScrollView contentContainerStyle={styles.fullPad}>
-        {card.previewImageUrl ? <Image source={{ uri: card.previewImageUrl }} style={styles.emailFull} contentFit="contain" accessibilityLabel="How the email will look" /> : <T>{card.body}</T>}
+        {/* An app build without the web view: the real email in the app's browser sheet. */}
+        <T kind="heading">{view.subject ?? 'Your email'}</T>
+        {card.previewHtmlUrl ? <Button label="See the email" icon="mail-open-outline" onPress={() => WebBrowser.openBrowserAsync(card.previewHtmlUrl!)} /> : <T>{card.body}</T>}
       </ScrollView>
     );
   }
@@ -247,7 +279,7 @@ const styles = StyleSheet.create({
     gap: Space.s,
     padding: Space.m,
   },
-  emailFull: { width: '100%', aspectRatio: 0.6 },
   postPhoto: { width: '100%', aspectRatio: 4 / 3, borderRadius: 10 },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingHorizontal: Space.m, paddingVertical: Space.s + 2, borderBottomWidth: StyleSheet.hairlineWidth },
   fullPad: { padding: Space.m, gap: Space.m, paddingBottom: Space.xl * 3 },
 });

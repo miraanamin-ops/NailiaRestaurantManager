@@ -9,5 +9,10 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/email-previe
   if (!verifyPreview(subject, req.nextUrl.searchParams.get("s"))) return new Response("Not found", { status: 404 });
   const content = await previewContent(subject);
   if (!content) return new Response("Not found", { status: 404 });
+  // ?format=html: the real email (the app shows it full screen), not the WhatsApp picture.
+  if (req.nextUrl.searchParams.get("format") === "html") {
+    const { renderEmail } = await import("@/lib/email/templates");
+    return new Response((await renderEmail(content)).html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store" } });
+  }
   return emailPreviewImage(content);
 }

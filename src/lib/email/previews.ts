@@ -29,6 +29,12 @@ export function draftPreviewUrl(draft: Pick<Draft, "id" | "kind" | "version">) {
   return `${previewUrl(`draft-${draft.id}`)}&v=${draft.version}`;
 }
 
+// The real email as a web page (the app opens it full screen). Signed like the picture.
+export function draftPreviewHtmlUrl(draft: Pick<Draft, "id" | "kind" | "version">) {
+  if (draft.kind !== "email_campaign") return null;
+  return `${previewUrl(`draft-${draft.id}`)}&v=${draft.version}&format=html`;
+}
+
 export function samplePreviewUrl(restaurantId: string, kind: SampleKind) {
   return publicSite() ? previewUrl(`${kind}-${restaurantId}`) : null;
 }

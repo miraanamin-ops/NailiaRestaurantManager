@@ -3,7 +3,7 @@ import { loadRestaurantContext } from "@/lib/assistant";
 import { doneTally, waitingDrafts } from "@/lib/brief";
 import { londonYmd } from "@/lib/clock";
 import { check, getDraft, getLearningContext, saveSkipReason, startEdit, type Draft } from "@/lib/drafts";
-import { draftPreviewUrl, previewContent } from "@/lib/email/previews";
+import { draftPreviewHtmlUrl, draftPreviewUrl, previewContent } from "@/lib/email/previews";
 import { renderEmail } from "@/lib/email/templates";
 import { LOOK_NAMES, LOOKS } from "@/lib/email/designs";
 import { google } from "@/lib/google";
@@ -98,6 +98,7 @@ export async function inboxCards(restaurantId: string, opts: { views?: boolean }
         review: d.review_id ? (byReview.get(d.review_id) ?? null) : null,
         campaignName: campaignName.get(d.id) ?? null,
         previewImageUrl: draftPreviewUrl(d),
+        previewHtmlUrl: draftPreviewHtmlUrl(d),
         body: d.content,
         birthday: birthdays.has(d.id),
         view: views.get(d.id) ?? null,

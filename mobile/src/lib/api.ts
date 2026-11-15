@@ -106,6 +106,7 @@ export type InboxCard = {
   audience: string | null;
   review: { author: string; rating: number; text: string | null } | null;
   previewImageUrl: string | null;
+  previewHtmlUrl?: string | null; // the real email as a page: full screen
   checks: CardCheck[];
   flagged: boolean;
   urgent: boolean;
