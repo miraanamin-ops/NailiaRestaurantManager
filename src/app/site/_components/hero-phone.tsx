@@ -183,11 +183,9 @@ export function HeroPhone({ phone, label }: { phone: Phone; label: string }) {
 
 function Logo() {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-signal">
-      <svg viewBox="0 0 28 28" width="16" height="16">
-        <path d="M8 14.5l4 4 8-9" fill="none" stroke="#0b0c0a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
+    // The app icon from the brand kit, as it shows on a notification.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/brand/app-icon-180.png" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg" />
   );
 }
 

@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { site } from "@/content/site";
+
+const lockup = `data:image/png;base64,${readFileSync(join(process.cwd(), "public/brand/lockup-on-ink.png")).toString("base64")}`;
 
 // The picture shown when dinerai.co.uk is shared (WhatsApp, LinkedIn, X...).
 // Built at deploy time from the headline in src/content/site.ts.
@@ -27,15 +31,9 @@ export default function OpenGraphImage() {
           color: "#edefe8",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <svg viewBox="0 0 28 28" width="56" height="56">
-            <rect x="1" y="1" width="26" height="26" rx="7" fill="#c8f03c" />
-            <path d="M8 14.5l4 4 8-9" fill="none" stroke="#0b0c0a" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div style={{ display: "flex", fontSize: 40, fontWeight: 600 }}>
-            Diner<span style={{ color: "#c8f03c" }}>AI</span>
-          </div>
-        </div>
+        {/* The brand kit's lock-up (on ink, like this picture). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={lockup} alt="DinerAI" width={320} height={80} />
         <div style={{ display: "flex", flexDirection: "column", fontSize: 72, fontWeight: 600, lineHeight: 1.05, letterSpacing: -2 }}>
           <span>{site.hero.headline[0]}</span>
           <span style={{ color: "#c8f03c" }}>{site.hero.headline[1]}</span>

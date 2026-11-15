@@ -2,6 +2,7 @@
 // Stitch designs): screens with safe-area spacing and a centred column on tablets, cards,
 // text styles (Geist, and Geist Mono for numbers and labels), buttons, pills, initials,
 // section titles, the logo and the header. Colours follow the phone's light or dark setting.
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
@@ -203,14 +204,17 @@ export function SectionTitle({ title, tone, aside }: { title: string; tone?: 'si
 }
 
 // The DinerAI wordmark: a chartreuse dot and the name.
+// The DinerAI lock-up (the cloche and "diner" with "ai" in the accent), from the brand kit
+// (Nov 2026); the light or dark version to match the screen. size: the old type size, kept
+// so callers don't change.
+const LOCKUP = { dark: require('../../assets/images/lockup-dark.png'), light: require('../../assets/images/lockup-light.png') };
+const LOCKUP_RATIO = 818.39 / 200;
 export function Logo({ size = 22 }: { size?: number }) {
-  const c = usePalette();
+  const scheme = useColorScheme();
+  const height = Math.round(size * 1.35);
   return (
     <View style={styles.logo} accessibilityRole="header" accessibilityLabel="DinerAI">
-      <View style={{ width: size * 0.42, height: size * 0.42, borderRadius: size, backgroundColor: c.tint }} />
-      <Text style={{ fontFamily: Fonts.bold, fontSize: size, letterSpacing: -0.6, color: c.text }} maxFontSizeMultiplier={1.3}>
-        DinerAI
-      </Text>
+      <Image source={scheme === 'dark' ? LOCKUP.dark : LOCKUP.light} style={{ height, width: Math.round(height * LOCKUP_RATIO) }} contentFit="contain" />
     </View>
   );
 }
