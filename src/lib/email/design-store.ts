@@ -29,7 +29,7 @@ export async function assignDesign(restaurant: Restaurant, campaign: CampaignLik
     const family = familyOf(campaign);
     // A look that clearly does worse across all restaurants is passed over (lib/email/design-results.ts).
     const { lookToSkip } = await import("./design-results");
-    const skip = await lookToSkip().catch(() => [] as string[]);
+    const skip = lookToSkip();
     const design = chooseDesign(campaign, await lastLookOf(restaurant.id, family, campaign.id), restaurant.menu, restaurant.photo_library, skip);
     check(await getSupabase().from("campaigns").update({ email_design: design }).eq("id", campaign.id).eq("restaurant_id", restaurant.id));
     return design;

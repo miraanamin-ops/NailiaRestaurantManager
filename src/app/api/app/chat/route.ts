@@ -8,7 +8,9 @@ import { getSupabase, type Restaurant } from "@/lib/supabase";
 // alike), newest 60, or the 60 before ?before=<time>. POST: one message (typed words,
 // a tapped quick reply, or a file already uploaded through /api/app/chat/upload),
 // answered by the WhatsApp bot's own engine; the answer is the conversation after it.
-export const maxDuration = 120;
+// An offer request writes and checks a whole campaign in this request (several AI
+// calls), which can run past two minutes: the same limit as the job workers.
+export const maxDuration = 300;
 
 async function restaurant(id: string) {
   return checkRow(await getSupabase().from("restaurants").select("*").eq("id", id).maybeSingle<Restaurant>());

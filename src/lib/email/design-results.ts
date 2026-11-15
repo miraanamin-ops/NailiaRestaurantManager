@@ -59,8 +59,19 @@ export async function allSendRows(now = new Date()): Promise<SendRow[]> {
 }
 
 // Looks that clearly do worse than the rest of their family: skipped in the turns.
-export async function lookToSkip(now = new Date()) {
-  return weakLooks(await allSendRows(now), LOOKS);
+// Never makes the owner wait: it answers from what's already worked out (nothing, the
+// first time on a fresh server) and works it out again in the background. Going through
+// every restaurant inside an owner's request pushed a chat reply past its time limit (15 Nov).
+let refreshing = false;
+export function lookToSkip(now = new Date()): string[] {
+  const fresh = pooled && now.getTime() - pooled.at < 6 * 3600_000;
+  if (!fresh && !refreshing) {
+    refreshing = true;
+    void allSendRows(now)
+      .catch((err) => console.error("Email design results failed", err))
+      .finally(() => (refreshing = false));
+  }
+  return pooled ? weakLooks(pooled.rows, LOOKS) : [];
 }
 
 export async function designResults(now = new Date()) {

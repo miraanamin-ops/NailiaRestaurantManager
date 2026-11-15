@@ -61,7 +61,9 @@ export async function chatState(r: Restaurant, before: string | null = null): Pr
     ? (check(await getSupabase().from("drafts").select("id").eq("restaurant_id", r.id).eq("status", "pending").in("id", draftIds).returns<{ id: string }[]>()) ?? []).map((d) => d.id)
     : [];
   const items = chatItems(rows, new Set(open));
-  const cards = open.length ? new Map((await inboxCards(r.id)).map((c) => [c.id, c])) : new Map<string, InboxCard>();
+  // No views here: the chat shows a card's words, never its rota or email, and drawing
+  // every waiting email on each turn made replies slow (15 Nov).
+  const cards = open.length ? new Map((await inboxCards(r.id, { views: false })).map((c) => [c.id, c])) : new Map<string, InboxCard>();
   const links = await signedLinks(rows.filter((m) => m.app?.file?.contentType.startsWith("image/")).map((m) => m.app!.file!.path));
   return {
     restaurantId: r.id,
