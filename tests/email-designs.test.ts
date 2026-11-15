@@ -201,3 +201,24 @@ describe("saving designs (lib/email/design-store.ts)", () => {
     vi.doUnmock("@/lib/supabase");
   });
 });
+
+describe("the one-design emails (confirm, welcome, feedback) in the new style", () => {
+  test("each keeps its links and its rules", async () => {
+    const { confirmContent, welcomeContent, feedbackContent } = await import("@/lib/email/content");
+    const links = { unsubscribe: "https://site.test/unsubscribe/tok", deleteData: "https://site.test/delete/tok" };
+    for (const [key, brand] of Object.entries(brands)) {
+      const emails = {
+        confirm: confirmContent(brand, { firstName: "Sara", reward: "a free mango lassi", confirmUrl: "https://site.test/confirm/tok", links }),
+        welcome: welcomeContent(brand, { firstName: "Sara", reward: "a free mango lassi", rewardUrl: "https://site.test/reward/tok", links }),
+        feedback: feedbackContent(brand, { firstName: "Sara", feedbackUrl: "https://site.test/feedback/tok", googleUrl: "https://search.google.com/local/writereview?placeid=x", links }),
+      };
+      for (const [kind, content] of Object.entries(emails)) {
+        const { html } = await renderEmail(content);
+        expect(html).toContain(links.unsubscribe);
+        // The Google review link is in every feedback email, whatever the rating.
+        if (kind === "feedback") expect(html).toContain("search.google.com/local/writereview");
+        if (outDir) writeFileSync(join(outDir, `${key}-standard-${kind}.html`), html);
+      }
+    }
+  });
+});
