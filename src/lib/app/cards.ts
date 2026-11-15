@@ -22,7 +22,8 @@ export type InboxCard = {
   flagged: boolean; // a check wants the owner to look
   urgent: boolean; // category urgent
   // approve/edit/skip: the usual three. answer: a question, answered in Chat (phase 3).
-  actions: ("approve" | "edit" | "skip")[] | "answer";
+  // photo: "add a photo of the dish" for an approved email (Take photo, Choose, Send without).
+  actions: ("approve" | "edit" | "skip")[] | "answer" | "photo";
   // What Approve does, in the owner's words ("Posts the reply on Google"). Older apps
   // show it under the card; since 15 Nov the button says it instead (approveLabel).
   approveHint: string;
@@ -74,6 +75,7 @@ export function cardTitle(d: Pick<Draft, "kind" | "audience" | "content">, revie
   const who = review ? wordsOf(firstName(review.author))[0] ?? "a guest" : null;
   let title: string;
   if (d.kind === "review_reply") title = who ? `Reply to ${who}` : "Review reply";
+  else if (d.kind === "photo_request") title = `Photo: ${d.audience ?? "the dish"}`;
   else if (d.kind === "review_question") title = who ? `${who}'s review: your call` : "A review: your call";
   else if (d.kind === "hours_question") title = "Bank holiday hours";
   else if (d.kind === "email_campaign" || d.kind === "promotion") title = `Email: ${campaignName ?? "offer"}`;
@@ -201,7 +203,7 @@ export function toCard(
     checks,
     flagged: checks.some((c) => c.status === "flagged" || c.status === "blocked") || Boolean(d.check_notes?.flags?.length),
     urgent: false,
-    actions: isQuestion(d.kind) ? "answer" : d.kind === "special_idea" ? ["approve", "skip"] : ["approve", "edit", "skip"],
+    actions: isQuestion(d.kind) ? "answer" : d.kind === "photo_request" ? "photo" : d.kind === "special_idea" ? ["approve", "skip"] : ["approve", "edit", "skip"],
     approveHint: approveHint(d.kind),
     approveLabel: approveLabel(d.kind),
     preview: viewPreview(extra.view ?? null) ?? cardPreview(extra.body, extra.review),
@@ -220,6 +222,7 @@ export function toCard(
 // an email campaign is a birthday email when it goes to the birthday group.
 export const MESSAGE_TYPES = {
   rota: "Rota",
+  photo_request: "Photos",
   agent_question: "Questions",
   choice: "Quick checks",
   review_poor: "Poor reviews",
@@ -244,6 +247,7 @@ export type MessageTypeKey = keyof typeof MESSAGE_TYPES;
 export type Category = "urgent" | "look" | "later" | "simple";
 export const CATEGORY_OF: Record<MessageTypeKey, Category> = {
   rota: "urgent",
+  photo_request: "urgent",
   agent_question: "urgent",
   choice: "urgent",
   review_poor: "look",

@@ -11,16 +11,17 @@
 // Approve and Delete wait 5 seconds with Undo before they go to the server. Today's
 // tiles open the Inbox at their type (?type=).
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Alert, KeyboardAvoidingView, LayoutAnimation, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, LayoutAnimation, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { canChangeLook, CardViewFull } from '@/components/card-view';
 import { DraftCardBody } from '@/components/draft-card';
 import { Button, Card, Icon, IconTile, Pill, T, Skeleton, TabHeader, usePalette, useTabBarSpace, type IconName } from '@/components/ui';
 import { MaxWidth, Space } from '@/constants/theme';
-import { approveSimple, decide, getInbox, LoginNeeded, undoLast, type Category, type InboxCard } from '@/lib/api';
+import { approveSimple, decide, getInbox, LoginNeeded, undoLast, uploadChatFile, type Category, type InboxCard } from '@/lib/api';
 import { CATEGORIES, CATEGORY_ORDER, typeIcon } from '@/lib/kinds';
 import { setBadge } from '@/lib/notifications';
 import { useSession } from '@/lib/session';
@@ -138,7 +139,10 @@ export default function Inbox() {
     clearTimeout(p.timer);
     pendingRef.current = null;
     setPending(null);
-    if (p.action === 'approve') run(p.card, { action: 'approve' }, 'Approved.');
+    if (p.action === 'approve') run(p.card, { action: 'approve' }, 'Approved.').then((out) => {
+        // An offer email may bring its photo request (phase 4): show it straight away.
+        if (out && p.card.kind === 'email_campaign') load();
+      });
     else
       run(p.card, { action: 'skip' }, 'Deleted.', true).then((out) => {
         if (!out) return;
@@ -185,6 +189,45 @@ export default function Inbox() {
     setBusy(false);
     if (out?.card) setCards((list) => (list ? list.map((x) => (x.id === card.id ? out.card! : x)) : [out.card!]));
     else await load();
+  }
+
+  // A photo request (phase 4): take or pick a photo, it goes into the email (after a
+  // check), and the email sends; or send it without one.
+  async function addPhoto(card: InboxCard, from: 'camera' | 'library' | 'none') {
+    if (busy) return;
+    if (from === 'none') {
+      setBusy(true);
+      const out = await run(card, { action: 'nophoto' }, 'Sending without a photo.');
+      setBusy(false);
+      if (out) drop([card.id]);
+      return;
+    }
+    if (from === 'camera') {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        show(perm.canAskAgain ? 'DinerAI needs the camera to take a photo.' : 'Camera access is off. Turn it on in Settings, then try again.');
+        if (!perm.canAskAgain) Linking.openSettings().catch(() => {});
+        return;
+      }
+    }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.7, exif: false };
+    const result = from === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    const a = result.canceled ? null : result.assets[0];
+    if (!a) return;
+    setBusy(true);
+    show('Checking your photo…');
+    try {
+      const mimeType = a.mimeType === 'image/png' ? 'image/png' : 'image/jpeg';
+      const file = await uploadChatFile(restaurantId, { uri: a.uri, name: `photo.${mimeType === 'image/png' ? 'png' : 'jpg'}`, mimeType, size: a.fileSize ?? 1 });
+      if ('refused' in file) return show(file.refused);
+      const out = await run(card, { action: 'photo', path: file.path }, 'Photo added.');
+      // A photo that won't do comes back with its reason, and the card stays.
+      if (out && !out.card) drop([card.id]);
+    } catch {
+      show("That photo didn't go through. Try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const bulk = (cards ?? []).filter((x) => x.bulk);
@@ -316,6 +359,7 @@ export default function Inbox() {
                   onDelete={() => decideSoon(card, 'skip')}
                   onEdit={() => setEditing(card)}
                   onFull={() => setFull(card)}
+                  onPhoto={(from) => addPhoto(card, from)}
                 />
               ))}
             </View>
@@ -425,15 +469,16 @@ function Round({ icon, label, onPress, tone, disabled }: { icon: IconName; label
 }
 
 // One item: the closed card, and the full draft when opened.
-function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull }: { card: InboxCard; open: boolean; busy: boolean; onToggle: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void; onFull: () => void }) {
+function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull, onPhoto }: { card: InboxCard; open: boolean; busy: boolean; onToggle: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void; onFull: () => void; onPhoto: (from: 'camera' | 'library' | 'none') => void }) {
   const c = usePalette();
   const category = categoryOf(card);
   const tone = CATEGORIES[category].tone;
   const colour = toneColour(c, tone);
   const answer = card.actions === 'answer';
-  const canEdit = !answer && card.actions.includes('edit');
+  const photo = card.actions === 'photo';
+  const canEdit = !answer && !photo && (card.actions as string[]).includes('edit');
   // A tick straight from the closed card only for simple and not-urgent ones.
-  const tick = !answer && (category === 'simple' || category === 'later');
+  const tick = !answer && !photo && (category === 'simple' || category === 'later');
   const preview = card.preview ?? (card.review?.text ? `“${card.review.text}”` : card.body);
   return (
     <View style={[styles.row, { backgroundColor: category === 'urgent' ? c.emberSoft : c.card, borderColor: category === 'urgent' ? c.ember : card.flagged ? c.amber : c.border, borderLeftColor: colour }]}>
@@ -457,7 +502,13 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull }
         </Pressable>
         {!open && (
           <View style={styles.rounds}>
-            {tick ? <Round icon="checkmark" label={`Approve: ${card.title}`} tone={c.tint} onPress={onApprove} disabled={busy} /> : <Round icon="eye-outline" label={`Open: ${card.title}`} tone={colour} onPress={onToggle} />}
+            {photo ? (
+              <Round icon="camera-outline" label={`Take a photo: ${card.title}`} tone={colour} onPress={() => onPhoto('camera')} disabled={busy} />
+            ) : tick ? (
+              <Round icon="checkmark" label={`Approve: ${card.title}`} tone={c.tint} onPress={onApprove} disabled={busy} />
+            ) : (
+              <Round icon="eye-outline" label={`Open: ${card.title}`} tone={colour} onPress={onToggle} />
+            )}
             {canEdit && <Round icon="pencil" label={`Edit: ${card.title}`} tone={c.textSecondary} onPress={onEdit} disabled={busy} />}
           </View>
         )}
@@ -466,7 +517,19 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull }
       {open && (
         <View style={{ gap: Space.s + 2 }}>
           <DraftCardBody card={card} bare onOpen={onFull} />
-          {answer ? (
+          {photo ? (
+            <>
+              <Button label="Take photo" icon="camera-outline" onPress={() => onPhoto('camera')} disabled={busy} />
+              <View style={styles.pair}>
+                <View style={{ flex: 1 }}>
+                  <Button label="Choose photo" kind="plain" small icon="images-outline" onPress={() => onPhoto('library')} disabled={busy} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button label="Send without" kind="quiet" small icon="send-outline" onPress={() => onPhoto('none')} disabled={busy} />
+                </View>
+              </View>
+            </>
+          ) : answer ? (
             <Button label="Answer in Chat" icon="chatbubble-ellipses-outline" onPress={() => router.navigate({ pathname: '/chat', params: { question: card.id } })} />
           ) : (
             <>

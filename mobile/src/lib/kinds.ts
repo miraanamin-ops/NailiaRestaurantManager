@@ -16,6 +16,7 @@ const BY_KIND: Record<string, IconName> = {
   choice: 'chatbubble-ellipses-outline',
   special_idea: 'bulb-outline',
   import_welcome: 'people-outline',
+  photo_request: 'camera-outline',
 };
 
 export const kindIcon = (kind: string): IconName => BY_KIND[kind] ?? 'document-text-outline';

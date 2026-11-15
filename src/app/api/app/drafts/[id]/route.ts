@@ -29,6 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (action === "approve" || action === "skip") decision = { action };
     else if (action === "edit" && String(body?.instructions ?? "").trim()) decision = { action, instructions: String(body!.instructions).trim() };
     else if (action === "reason" && String(body?.reason ?? "").trim()) decision = { action, reason: String(body!.reason).trim() };
+    else if (action === "photo" && typeof (body as { path?: unknown } | null)?.path === "string") decision = { action, path: String((body as { path: string }).path) };
+    else if (action === "nophoto") decision = { action };
     else return appError(400, "bad_action");
 
     const out = await decideFromApp(row.restaurant_id, id, decision);

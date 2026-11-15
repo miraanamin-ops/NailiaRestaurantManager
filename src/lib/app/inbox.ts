@@ -149,7 +149,13 @@ async function appTurn(restaurantId: string) {
 // WhatsApp formatting out of the bot's replies, for the app to show as plain text.
 export const plainReply = (text: string) => text.replace(/\*([^*\n]+)\*/g, "$1").replace(/_([^_\n]+)_/g, "$1").trim();
 
-export type Decision = { action: "approve" | "skip" } | { action: "edit"; instructions: string } | { action: "reason"; reason: string };
+export type Decision =
+  | { action: "approve" | "skip" }
+  | { action: "edit"; instructions: string }
+  | { action: "reason"; reason: string }
+  // A photo request (lib/email/photo-ask.ts): a photo in the app's uploads, or "Send without".
+  | { action: "photo"; path: string }
+  | { action: "nophoto" };
 
 // One decision on one draft from the app. The draft must belong to the restaurant.
 export async function decideFromApp(restaurantId: string, draftId: string, decision: Decision) {
@@ -158,6 +164,25 @@ export async function decideFromApp(restaurantId: string, draftId: string, decis
   if (decision.action === "reason") {
     await saveSkipReason(draft, decision.reason.slice(0, 500));
     return { ok: true as const, replies: ["Thanks, noted."], card: null };
+  }
+  if (decision.action === "photo" || decision.action === "nophoto") {
+    if (draft.kind !== "photo_request") return { ok: false as const, error: "not_photo" };
+    const { answerWithPhoto, answerWithoutPhoto } = await import("@/lib/email/photo-ask");
+    const { savedLine, withoutLine } = await import("@/lib/email/photo-ask-rules");
+    const restaurant = (await loadRestaurantContext(restaurantId)).restaurant;
+    const now = new Date();
+    const out = decision.action === "photo" ? await answerWithPhoto(restaurant, draft.id, decision.path, now) : await answerWithoutPhoto(restaurant, draft.id, now);
+    // A photo that won't do: the card stays, with the reason and how to fix it.
+    if (!out.ok) return { ok: true as const, replies: [out.reason], card: (await inboxCards(restaurantId)).find((c) => c.id === draft.id) ?? null };
+    return { ok: true as const, replies: [(decision.action === "photo" ? savedLine : withoutLine)(!out.sendAt, out.sendAt, now)], card: null };
+  }
+  // Approving an offer email about a dish with no photo: part 2 asks for one first.
+  let photoLine: string | null = null;
+  if (decision.action === "approve" && draft.kind === "email_campaign" && draft.status === "pending") {
+    const { startPhotoAsk } = await import("@/lib/email/photo-ask");
+    const { approvedLine } = await import("@/lib/email/photo-ask-rules");
+    const dish = await startPhotoAsk((await loadRestaurantContext(restaurantId)).restaurant, draft, new Date()).catch((err) => (console.error("Photo request failed", err), null));
+    if (dish) photoLine = approvedLine(dish);
   }
   const { turn, replies } = await appTurn(restaurantId);
   if (decision.action === "edit") {
@@ -171,7 +196,8 @@ export async function decideFromApp(restaurantId: string, draftId: string, decis
   }
   // The card as it stands now (an edit comes back rewritten for a decision).
   const after = (await inboxCards(restaurantId)).find((c) => c.id === draft.id) ?? null;
-  return { ok: true as const, replies: replies.map(plainReply), card: after };
+  // With a photo asked for, that line is all the owner needs ("Scheduled for..." would confuse).
+  return { ok: true as const, replies: photoLine ? [photoLine] : replies.map(plainReply), card: after };
 }
 
 export async function undoFromApp(restaurant: Restaurant) {

@@ -248,6 +248,12 @@ spreadsheet), up to 5,000 at a time.
   otherwise the design still looks finished without one. In the app, open the email in
   your **Inbox** and tap it to see it full screen, exactly as customers will; tap **Try
   another look** to switch to the next design before you approve.
+- **A photo for the email**: when you approve an offer about a dish we have no photo of,
+  a second card appears in your **Inbox**: "Photo: <the dish>". Tap **Take photo** or
+  **Choose photo**: we check it (bright, sharp, the food, no faces) and it goes in the
+  email, and into your photo library for next time. Or tap **Send without**. If you
+  don't answer, the email goes without a photo 3 hours after you approved it (or at its
+  planned send time, if that's later). A photo that won't do comes back with what to fix.
 - **Who it goes to**: everyone on your list, customers with a birthday in the next 7 days,
   or new sign-ups who haven't used their reward yet.
 - **Rules that protect you**: only customers who agreed and confirmed; at most one offer

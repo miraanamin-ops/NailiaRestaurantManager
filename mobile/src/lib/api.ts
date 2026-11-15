@@ -109,7 +109,8 @@ export type InboxCard = {
   checks: CardCheck[];
   flagged: boolean;
   urgent: boolean;
-  actions: ('approve' | 'edit' | 'skip')[] | 'answer';
+  // photo: "add a photo of the dish" for an approved email (phase 4).
+  actions: ('approve' | 'edit' | 'skip')[] | 'answer' | 'photo';
   approveHint: string;
   // Fewer words (15 Nov): the button's own words, one line for the closed card, checks
   // as one tick. Optional so the app still works against an older server.
@@ -143,7 +144,7 @@ export type Today = {
   done: string[];
   rota?: TodayRota; // who's on today, from this week's rota
 };
-export type DecideBody = { action: 'approve' | 'skip' | 'look' } | { action: 'edit'; instructions: string } | { action: 'reason'; reason: string };
+export type DecideBody = { action: 'approve' | 'skip' | 'look' | 'nophoto' } | { action: 'photo'; path: string } | { action: 'edit'; instructions: string } | { action: 'reason'; reason: string };
 export type DecideResult = { ok: true; replies: string[]; card: InboxCard | null };
 
 const q = (r: string | null) => (r ? `?r=${encodeURIComponent(r)}` : '');

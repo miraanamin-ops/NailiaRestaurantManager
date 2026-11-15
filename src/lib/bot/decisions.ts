@@ -45,6 +45,15 @@ export async function decideTargeted(turn: Turn, t: TargetedAction) {
   if (draft.status === "pending" && draft.kind === "special_idea" && t.action !== "edit") return decideIdea(turn, draft, t.action === "approve");
   // An imported list's welcome: Approve starts the daily batches; its wording is fixed.
   if (draft.status === "pending" && draft.kind === "import_welcome") return send(await decideImportWelcome(r, draft, t.action));
+  // A photo request (phase 4) is answered in the app; anywhere else, Approve or Skip
+  // sends the email without a photo.
+  if (draft.status === "pending" && draft.kind === "photo_request") {
+    if (t.action === "edit") return send("Add the photo in the DinerAI app: open this card in your Inbox and tap Take photo.");
+    const { answerWithoutPhoto } = await import("@/lib/email/photo-ask");
+    const { withoutLine } = await import("@/lib/email/photo-ask-rules");
+    const out = await answerWithoutPhoto(r, draft.id, ctx.now);
+    return send(out.ok ? withoutLine(!out.sendAt, out.sendAt, ctx.now) : out.reason);
+  }
   // A rota is published on Approve (never sent to anyone).
   if (draft.status === "pending" && draft.kind === "rota" && t.action === "approve") {
     await approveRota(r, draft, send, turn.channel);

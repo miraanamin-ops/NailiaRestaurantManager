@@ -350,6 +350,9 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
   const supabase = getSupabase();
   const campaign = await getCampaignForDraft(draft.id);
   if (!campaign) throw new Error("Campaign not found for draft");
+  // Going now: a photo request still waiting for it leaves the Inbox (lib/email/photo-ask.ts).
+  const { closePhotoAskFor } = await import("@/lib/email/photo-ask");
+  await closePhotoAskFor(campaign).catch((err) => console.error("Couldn't close the photo request", err));
   const { eligible, excluded, limited } = await recipientsFor(restaurant, campaign.segment, now, { isBirthday: campaign.is_birthday });
   const ownerEmail = restaurant.owner_email?.toLowerCase() ?? null;
 
