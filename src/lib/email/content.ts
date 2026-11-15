@@ -3,6 +3,7 @@
 // preview the owner approves matches what customers get. No imports beyond the
 // brand rules, so it's unit-tested (tests/email.test.ts).
 import { COPY, type Brand } from "./brand";
+import type { DishFact, Family, Look, Occasion } from "./designs";
 
 export type EmailKind = "confirm" | "welcome" | "campaign" | "birthday" | "feedback";
 
@@ -28,6 +29,25 @@ export type EmailContent = {
     ownerCopy: boolean;
   };
   trackingPixel: string | null;
+  // A campaign's design (lib/email/designs.ts): which look draws it, and the facts the
+  // look shows, all from the restaurant and the approved campaign. Null: the plain layout.
+  design?: DesignFacts | null;
+};
+
+export type DesignFacts = {
+  family: Family;
+  look: Look;
+  photoUrl: string | null;
+  dish: DishFact | null;
+  big: { big: string; rest: string } | null;
+  prices: { was: number; now: number } | null;
+  day: string; // a quiet night's day in big type
+  occasion: Occasion | null;
+  date: { weekday: string; day: string; month: string } | null;
+  validity: string;
+  conditions: string | null;
+  firstName: string; // the customer's ("[First name]" on previews)
+  ownerFirst: string | null; // the chef's note is signed by the owner, when we know their name
 };
 
 export type Links = { unsubscribe: string | null; deleteData: string | null };
@@ -111,6 +131,7 @@ export function campaignContent(
     links: Links;
     ownerCopy: boolean;
     trackingPixel: string | null;
+    design?: DesignFacts | null;
   },
 ): EmailContent {
   const personal = (s: string) => s.replaceAll("{first_name}", i.firstName);
@@ -131,6 +152,7 @@ export function campaignContent(
       ? footer(brand, "This is your owner copy. Customers' emails have unsubscribe and delete-my-data links here.", { unsubscribe: null, deleteData: null }, true)
       : footer(brand, `You're getting this because you signed up at ${brand.name} and asked for offers by email.`, i.links),
     trackingPixel: i.trackingPixel,
+    design: i.design ?? null,
   };
 }
 

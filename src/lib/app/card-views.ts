@@ -9,7 +9,8 @@ export type ChangeRow = { label: string; from: string; to: string };
 
 export type CardView =
   | { type: "rota"; week: AppRotaWeek }
-  | { type: "email"; subject: string | null; html: string }
+  // look: the design's name ("Big number"); looks: how many its family has (3 = "Try another look").
+  | { type: "email"; subject: string | null; html: string; look?: string | null; looks?: number }
   | { type: "google_post"; name: string; text: string; photoUrl: string | null }
   | { type: "change"; field: "hours" | "menu"; note: string; rows: ChangeRow[] };
 

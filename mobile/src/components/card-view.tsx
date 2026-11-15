@@ -42,7 +42,12 @@ export function CardViewSmall({ card, onOpen }: { card: InboxCard; onOpen: () =>
       <View style={[styles.small, { borderColor: c.border, backgroundColor: c.panel }]}>
         {view.type === 'rota' && <RotaMini view={view} />}
         {view.type === 'email' &&
-          (card.previewImageUrl ? (
+          (WebView ? (
+            // The real email, small and still (a tap opens it full screen).
+            <View pointerEvents="none" style={styles.emailThumb}>
+              <WebView originWhitelist={['*']} source={{ html: view.html }} scrollEnabled={false} style={{ flex: 1, backgroundColor: '#ffffff' }} />
+            </View>
+          ) : card.previewImageUrl ? (
             <Image source={{ uri: card.previewImageUrl }} style={styles.emailThumb} contentFit="cover" contentPosition="top" accessibilityLabel="How the email will look" />
           ) : (
             <View style={styles.emailStub}>
@@ -160,6 +165,9 @@ function ChangeRows({ view, max }: { view: Extract<CardView, { type: 'change' }>
     </View>
   );
 }
+
+// "Try another look" applies to an email whose family has more than one design.
+export const canChangeLook = (card: InboxCard) => card.view?.type === 'email' && (card.view.looks ?? 0) > 1;
 
 // ---------- Full screen, in the Inbox's viewer ----------
 

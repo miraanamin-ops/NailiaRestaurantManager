@@ -239,6 +239,15 @@ spreadsheet), up to 5,000 at a time.
   term", "an offer for Eid". We draft a branded email with the offer, the audience and
   the send time, and send you a picture of it to approve. If you don't say what offer,
   we pick one from the kinds you're happy to run, within your discount cap.
+- **How your emails look**: each offer gets a design that suits it, in your logo and
+  colours: a discount on a dish, an occasion (Eid, Ramadan, Diwali, Christmas, a match,
+  a bank holiday...), a quiet night, or a new dish. Each kind has three designs that take
+  turns, so your customers don't get the same look every time. Birthday, welcome,
+  confirm and "How was your visit?" emails have one design each. If we have a photo of
+  the dish (one you've sent us, or from your Google profile, that names it), it goes in;
+  otherwise the design still looks finished without one. In the app, open the email in
+  your **Inbox** and tap it to see it full screen, exactly as customers will; tap **Try
+  another look** to switch to the next design before you approve.
 - **Who it goes to**: everyone on your list, customers with a birthday in the next 7 days,
   or new sign-ups who haven't used their reward yet.
 - **Rules that protect you**: only customers who agreed and confirmed; at most one offer

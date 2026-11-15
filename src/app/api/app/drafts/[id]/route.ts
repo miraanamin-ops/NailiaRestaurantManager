@@ -15,6 +15,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const body = (await req.json().catch(() => null)) as { action?: unknown; instructions?: unknown; reason?: unknown } | null;
     const action = String(body?.action ?? "");
+    // "Try another look" on an email (lib/email/designs.ts): the next design in its family.
+    if (action === "look") {
+      const { tryAnotherLook } = await import("@/lib/email/design-store");
+      const { LOOK_NAMES } = await import("@/lib/email/designs");
+      const next = await tryAnotherLook(row.restaurant_id, id).catch(() => null);
+      if (!next) return appError(409, "no_look");
+      const { inboxCards } = await import("@/lib/app/inbox");
+      const card = (await inboxCards(row.restaurant_id)).find((c) => c.id === id) ?? null;
+      return appJson({ ok: true, replies: [`Now showing: ${LOOK_NAMES[next.look]}`], card });
+    }
     let decision: Decision;
     if (action === "approve" || action === "skip") decision = { action };
     else if (action === "edit" && String(body?.instructions ?? "").trim()) decision = { action, instructions: String(body!.instructions).trim() };

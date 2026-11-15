@@ -100,7 +100,7 @@ describe("every customer email", () => {
     expect(html).toContain("Ember &amp; Spice Grill");
     expect(html).toContain('src="https://cdn.example/logo.png"');
     expect(html).toContain("#c2410c"); // the brand colour
-    expect(html).toMatch(/max-width:\s*560px/); // mobile-first, single column
+    expect(html).toMatch(/max-width:\s*600px/); // mobile-first, single column (600px since the designs, 15 Nov)
   });
 
   test("campaign: the owner's approved words, personalised, with the offer and its link", async () => {

@@ -45,6 +45,8 @@ export type Campaign = CampaignFields & {
   offer_details?: StructuredOffer | null;
   // Growth's send time (024): approved, it waits until then. Null = send at approval.
   send_at?: string | null;
+  // Which design draws its email (071, lib/email/designs.ts).
+  email_design?: import("@/lib/email/designs").EmailDesign | null;
 };
 
 export type CampaignSend = {
@@ -294,7 +296,10 @@ export async function createCampaignDraft(input: {
       .select("*")
       .single<Campaign>(),
   );
-  return { draft, campaign };
+  // Its email's look (lib/email/designs.ts): saved now, so the preview is the email that goes.
+  const { assignDesign } = await import("@/lib/email/design-store");
+  const design = await assignDesign(input.restaurant, campaign);
+  return { draft, campaign: design ? { ...campaign, email_design: design } : campaign };
 }
 
 export async function getCampaignForDraft(draftId: string) {
@@ -318,6 +323,8 @@ export async function updateCampaignDraft(input: {
       .update({ ...input.fields, updated_at: new Date().toISOString() })
       .eq("id", input.campaign.id),
   );
+  const { redesignAfterEdit } = await import("@/lib/email/design-store");
+  await redesignAfterEdit(input.restaurant, { ...input.campaign, ...input.fields });
   const updated = await applyEdit(input.draft, input.instruction, campaignPreviewText(input.fields), input.checks);
   // Keep the audience count current after a segment change.
   return checkRow(

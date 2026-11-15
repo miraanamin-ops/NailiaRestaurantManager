@@ -131,7 +131,7 @@ export type InboxCard = {
 export type ChangeRow = { label: string; from: string; to: string };
 export type CardView =
   | { type: 'rota'; week: AppRotaWeek }
-  | { type: 'email'; subject: string | null; html: string }
+  | { type: 'email'; subject: string | null; html: string; look?: string | null; looks?: number }
   | { type: 'google_post'; name: string; text: string; photoUrl: string | null }
   | { type: 'change'; field: 'hours' | 'menu'; note: string; rows: ChangeRow[] };
 export type Category = 'urgent' | 'look' | 'later' | 'simple';
@@ -143,7 +143,7 @@ export type Today = {
   done: string[];
   rota?: TodayRota; // who's on today, from this week's rota
 };
-export type DecideBody = { action: 'approve' | 'skip' } | { action: 'edit'; instructions: string } | { action: 'reason'; reason: string };
+export type DecideBody = { action: 'approve' | 'skip' | 'look' } | { action: 'edit'; instructions: string } | { action: 'reason'; reason: string };
 export type DecideResult = { ok: true; replies: string[]; card: InboxCard | null };
 
 const q = (r: string | null) => (r ? `?r=${encodeURIComponent(r)}` : '');

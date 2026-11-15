@@ -5,6 +5,7 @@ import { londonYmd } from "@/lib/clock";
 import { check, getDraft, getLearningContext, saveSkipReason, startEdit, type Draft } from "@/lib/drafts";
 import { draftPreviewUrl, previewContent } from "@/lib/email/previews";
 import { renderEmail } from "@/lib/email/templates";
+import { LOOK_NAMES, LOOKS } from "@/lib/email/designs";
 import { google } from "@/lib/google";
 import type { OwnerChannel } from "@/lib/notify";
 import { getSupabase, type Restaurant } from "@/lib/supabase";
@@ -61,7 +62,9 @@ async function viewsFor(restaurantId: string, drafts: Draft[]): Promise<Map<stri
         }),
     ...emailIds.map(async (id) => {
       const content = await previewContent(`draft-${id}`);
-      if (content) views.set(id, { type: "email", subject: content.subject, html: (await renderEmail(content)).html });
+      if (!content) return;
+      const look = content.design ? { look: LOOK_NAMES[content.design.look], looks: LOOKS[content.design.family].length } : {};
+      views.set(id, { type: "email", subject: content.subject, html: (await renderEmail(content)).html, ...look });
     }),
   ]).catch((err) => console.error("Inbox views failed", err));
   for (const d of drafts) {

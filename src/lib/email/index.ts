@@ -8,6 +8,8 @@ import { brandFor } from "./brand";
 import { campaignContent, confirmContent, feedbackContent, welcomeContent, importWelcomeContent, type EmailContent, type Links } from "./content";
 import { fromHeader, isEmail, routeEmail, senderAddress } from "./route";
 import { renderEmail } from "./templates";
+import { bigDay, bigNumber, dateTile, designOf, occasionOf, offerDish, prices, type CampaignLike } from "./designs";
+import type { DesignFacts } from "./content";
 
 // Sending customer emails. Every one:
 //   - comes from our verified domain with the restaurant's name ("Ember & Spice Grill <hello@mail.dinerai.co.uk>")
@@ -118,9 +120,32 @@ export function sendWelcomeEmail(i: { restaurant: Restaurant; customer: Person; 
   return sendCustomerEmail({ restaurant: i.restaurant, to: i.customer.email, content, oneClickUrl: oneClick(i.baseUrl, i.customer) });
 }
 
+// The design facts for a campaign (lib/email/designs.ts): its saved look, the dish, the
+// big number, the day or occasion, all from the campaign and the restaurant's own menu.
+export function campaignDesignFacts(restaurant: Restaurant, campaign: CampaignLike, validity: string, firstName: string): DesignFacts {
+  const design = designOf(campaign);
+  const dish = offerDish(campaign, restaurant.menu);
+  const conditions = campaign.offer_details?.conditions?.trim() || null;
+  return {
+    family: design.family,
+    look: design.look,
+    photoUrl: design.photo_url && /^https:\/\//.test(design.photo_url) ? design.photo_url : null,
+    dish,
+    big: bigNumber(campaign),
+    prices: prices(campaign, dish),
+    day: bigDay(campaign),
+    occasion: design.family === "occasion" ? (occasionOf(`${campaign.name}\n${campaign.subject}`) ?? occasionOf(campaign.body)) : null,
+    date: dateTile(campaign.valid_from ?? null),
+    validity,
+    conditions,
+    firstName,
+    ownerFirst: (restaurant.owner_name ?? "").trim().split(/\s+/)[0] || null,
+  };
+}
+
 export function campaignEmailContent(i: {
   restaurant: Restaurant;
-  campaign: { subject: string; body: string; offer: string; is_birthday: boolean };
+  campaign: { subject: string; body: string; offer: string; is_birthday: boolean } & Partial<CampaignLike>;
   validity: string;
   baseUrl: string;
   token: string;
@@ -140,6 +165,10 @@ export function campaignEmailContent(i: {
     links: customerLinks(i.baseUrl, i.unsubscribeToken),
     ownerCopy: i.ownerCopy,
     trackingPixel: i.track === false ? null : `${i.baseUrl}/api/t/open/${i.token}`,
+    // A campaign row (with its id and dates) gets its design; anything less, the plain layout.
+    design: i.campaign.id && i.campaign.valid_from
+      ? campaignDesignFacts(i.restaurant, i.campaign as CampaignLike, i.validity, i.firstName)
+      : null,
   });
 }
 

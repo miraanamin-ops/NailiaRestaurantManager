@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'rea
 import { Alert, KeyboardAvoidingView, LayoutAnimation, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CardViewFull } from '@/components/card-view';
+import { canChangeLook, CardViewFull } from '@/components/card-view';
 import { DraftCardBody } from '@/components/draft-card';
 import { Button, Card, Icon, IconTile, Pill, T, Skeleton, TabHeader, usePalette, useTabBarSpace, type IconName } from '@/components/ui';
 import { MaxWidth, Space } from '@/constants/theme';
@@ -368,6 +368,16 @@ export default function Inbox() {
       <FullView
         card={full}
         busy={busy}
+        onLook={async () => {
+          if (!full) return;
+          setBusy(true);
+          const out = await run(full, { action: 'look' }, 'Changed the look.');
+          setBusy(false);
+          if (out?.card) {
+            setFull(out.card);
+            setCards((list) => (list ? list.map((x) => (x.id === out.card!.id ? out.card! : x)) : list));
+          }
+        }}
         onClose={() => setFull(null)}
         onApprove={() => full && decideSoon(full, 'approve')}
         onDelete={() => full && decideSoon(full, 'skip')}
@@ -485,7 +495,7 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit, onFull }
 
 // Full screen: the rota, the real email, the Google post or the change, with the same
 // buttons as the open card along the bottom.
-function FullView({ card, busy, onClose, onApprove, onDelete, onEdit }: { card: InboxCard | null; busy: boolean; onClose: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void }) {
+function FullView({ card, busy, onClose, onApprove, onDelete, onEdit, onLook }: { card: InboxCard | null; busy: boolean; onClose: () => void; onApprove: () => void; onDelete: () => void; onEdit: () => void; onLook: () => void }) {
   const c = usePalette();
   const canEdit = Boolean(card && card.actions !== 'answer' && card.actions.includes('edit'));
   return (
@@ -499,7 +509,15 @@ function FullView({ card, busy, onClose, onApprove, onDelete, onEdit }: { card: 
             <Icon name="close" size={20} color={c.text} />
           </Pressable>
         </View>
-        <View style={styles.fill}>{card && <CardViewFull card={card} />}</View>
+        <View style={styles.fill}>{card && <CardViewFull key={card.view?.type === 'email' ? `${card.id}:${card.view.look}` : card.id} card={card} />}</View>
+        {card && canChangeLook(card) && (
+          <View style={[styles.lookBar, { borderTopColor: c.border }]}>
+            <T kind="small" quiet style={{ flex: 1 }}>
+              {card.view?.type === 'email' ? card.view.look : null}
+            </T>
+            <Button label="Try another look" kind="plain" small icon="color-palette-outline" onPress={onLook} disabled={busy} />
+          </View>
+        )}
         {card && card.actions !== 'answer' && (
           <View style={[styles.fullBar, { borderTopColor: c.border, backgroundColor: c.background }]}>
             <Button label={card.approveLabel ?? 'Approve'} icon="checkmark" onPress={onApprove} disabled={busy} />
@@ -572,5 +590,6 @@ const styles = StyleSheet.create({
   sheet: { padding: Space.l, gap: Space.m },
   fullHead: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingHorizontal: Space.m, paddingVertical: Space.s + 2, borderBottomWidth: StyleSheet.hairlineWidth },
   fullBar: { gap: Space.s, padding: Space.m, borderTopWidth: StyleSheet.hairlineWidth },
+  lookBar: { flexDirection: 'row', alignItems: 'center', gap: Space.s, paddingHorizontal: Space.m, paddingVertical: Space.s, borderTopWidth: StyleSheet.hairlineWidth },
   input: { minHeight: 120, borderWidth: 1, borderRadius: 14, padding: Space.m, fontSize: 17, textAlignVertical: 'top' },
 });
