@@ -101,9 +101,15 @@ export function familyOf(c: Pick<CampaignLike, "is_birthday" | "name" | "subject
 
 // The next look after the last one this restaurant sent in that family (the first, if
 // none), so two in a row never look the same.
-export function nextLook(family: Family, lastLook: string | null): Look {
+// skip: looks that clearly do worse (design-results-rules weakLooks), passed over
+// unless that would leave nothing.
+export function nextLook(family: Family, lastLook: string | null, skip: readonly string[] = []): Look {
   const looks = LOOKS[family] as readonly Look[];
   const i = lastLook ? looks.indexOf(lastLook as Look) : -1;
+  for (let step = 1; step <= looks.length; step++) {
+    const look = looks[(i + step) % looks.length];
+    if (!skip.includes(look)) return look;
+  }
   return looks[(i + 1) % looks.length];
 }
 
@@ -221,8 +227,8 @@ export function photoFor(library: { url: string; caption: string | null }[] | nu
 
 // The design a new campaign gets: its family, the next look in turn, and the dish's
 // photo if the library has one.
-export function chooseDesign(c: Omit<CampaignLike, "id">, lastLook: string | null, menu: unknown, library: { url: string; caption: string | null }[] | null | undefined): EmailDesign {
+export function chooseDesign(c: Omit<CampaignLike, "id">, lastLook: string | null, menu: unknown, library: { url: string; caption: string | null }[] | null | undefined, skip: readonly string[] = []): EmailDesign {
   const family = familyOf(c);
   const dish = offerDish({ ...c, id: "" }, menu);
-  return { family, look: nextLook(family, lastLook), photo_url: photoFor(library, dish?.name ?? null) };
+  return { family, look: nextLook(family, lastLook, skip), photo_url: photoFor(library, dish?.name ?? null) };
 }

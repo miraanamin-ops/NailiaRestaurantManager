@@ -14,6 +14,7 @@ const TABS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/costs", label: "Costs" },
+  { href: "/admin/emails", label: "Emails" },
 ];
 
 async function Header() {

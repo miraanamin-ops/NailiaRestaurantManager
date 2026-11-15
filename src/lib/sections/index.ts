@@ -5,6 +5,7 @@ import type { Restaurant } from "@/lib/supabase";
 import { calendarBriefSection, financeBriefSection, lastWeekReportSection, nextWeekReportSection } from "./finance";
 import { googleReportSection } from "./google";
 import { photoAskBriefSection } from "@/lib/agents/photo-ask";
+import { emailsReportSection } from "./emails";
 import { menuReportSection } from "./menu";
 import { reviewBriefSection, timeSavedReportSection } from "@/lib/review/receipt";
 import { runBriefSections, runReportSections, type BriefOffer, type BriefSectionDef, type ReportSectionDef } from "./types";
@@ -22,6 +23,7 @@ export const REPORT_SECTIONS: ReportSectionDef[] = [
   googleReportSection, // rating, reviews, replies, calls, directions, views, 3 themes
   nextWeekReportSection, // forecast range, rota cost, key calendar dates
   menuReportSection, // menu engineering: winners, hidden gems, crowd-pleasers (lib/menu-engineering)
+  emailsReportSection, // what a dish photo does for offer emails, once it's real (lib/email/design-results)
   timeSavedReportSection, // about how much time DinerAI saved, last week and so far (lib/review)
 ];
 

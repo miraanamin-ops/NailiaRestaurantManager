@@ -254,6 +254,12 @@ spreadsheet), up to 5,000 at a time.
   email, and into your photo library for next time. Or tap **Send without**. If you
   don't answer, the email goes without a photo 3 hours after you approved it (or at its
   planned send time, if that's later). A photo that won't do comes back with what to fix.
+- **Do photos help?** Once you've sent enough offer emails with and without a dish photo
+  to tell (about 100 of each, from at least 3 campaigns), your Monday report has a "Your
+  emails" section saying what the photo did, e.g. "Emails with a dish photo got 2.1× the
+  clicks". Until then it stays out: we only say it when the numbers show it. A design
+  that clearly does worse than the others of its kind, across all DinerAI restaurants,
+  stops being used.
 - **Who it goes to**: everyone on your list, customers with a birthday in the next 7 days,
   or new sign-ups who haven't used their reward yet.
 - **Rules that protect you**: only customers who agreed and confirmed; at most one offer
