@@ -86,7 +86,7 @@ export default function Today() {
               <View style={{ flex: 1 }}>
                 <T style={{ fontWeight: '600' }}>Turn on alerts</T>
                 <T kind="small" quiet>
-                  Your morning brief, and urgent things like a bad review, with Approve right on the notification.
+                  Your brief and urgent reviews.
                 </T>
               </View>
             </View>
@@ -96,7 +96,7 @@ export default function Today() {
         {alerts === 'off' && (
           <Card>
             <T kind="small" quiet>
-              Alerts are off for DinerAI. To get your brief and urgent alerts, turn them on in your phone’s Settings → DinerAI → Notifications.
+              Alerts are off. Turn them on in Settings → DinerAI → Notifications.
             </T>
           </Card>
         )}
@@ -119,9 +119,9 @@ export default function Today() {
                   £ –
                 </T>
                 <T kind="small" quiet>
-                  No takings in for yesterday yet. Send a photo of your till report in Chat, or type what you took.
+                  Yesterday’s takings aren’t in yet.
                 </T>
-                <Button label="Send it in Chat" kind="plain" small icon="camera-outline" onPress={() => router.navigate('/chat')} />
+                <Button label="Add in Chat" kind="plain" small icon="camera-outline" onPress={() => router.navigate('/chat')} />
               </>
             )}
           </Card>
@@ -135,9 +135,11 @@ export default function Today() {
             </View>
             {data.waiting.count > 0 ? (
               <>
-                <T kind="small" quiet>
-                  {data.waiting.line}
-                </T>
+                {data.waiting.tiles?.length ? null : (
+                  <T kind="small" quiet>
+                    {data.waiting.line}
+                  </T>
+                )}
                 {data.waiting.tiles?.length ? (
                   <View style={styles.tiles}>
                     {data.waiting.tiles.map((t) => {
@@ -156,7 +158,7 @@ export default function Today() {
                               {t.count}
                             </T>
                           </View>
-                          <T kind="small" numberOfLines={2}>
+                          <T kind="small" numberOfLines={1}>
                             {t.label}
                           </T>
                         </Pressable>
@@ -179,12 +181,12 @@ export default function Today() {
                     </Pressable>
                   ))
                 )}
-                <Button label={`Review now (${data.waiting.count})`} icon="arrow-forward" onPress={() => router.navigate('/inbox')} />
+                <Button label="Review now" icon="arrow-forward" onPress={() => router.navigate('/inbox')} />
               </>
             ) : (
               <View style={styles.row}>
                 <Icon name="checkmark-circle" color={c.tint} />
-                <T>Nothing waiting. All done for now.</T>
+                <T>All done.</T>
               </View>
             )}
           </Card>
@@ -234,7 +236,7 @@ export default function Today() {
                 {done.length} since yesterday
               </T>
             </View>
-            {done.map((d) => (
+            {done.slice(0, 3).map((d) => (
               <View key={d} style={styles.row}>
                 <Icon name="checkmark-circle-outline" size={18} color={c.tint} />
                 <T kind="small" style={{ flex: 1 }}>
@@ -242,6 +244,11 @@ export default function Today() {
                 </T>
               </View>
             ))}
+            {done.length > 3 && (
+              <T kind="small" quiet>
+                and {done.length - 3} more
+              </T>
+            )}
           </Card>
         )}
 

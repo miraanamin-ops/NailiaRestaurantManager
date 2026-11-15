@@ -111,6 +111,12 @@ export type InboxCard = {
   urgent: boolean;
   actions: ('approve' | 'edit' | 'skip')[] | 'answer';
   approveHint: string;
+  // Fewer words (15 Nov): the button's own words, one line for the closed card, checks
+  // as one tick. Optional so the app still works against an older server.
+  approveLabel?: string;
+  preview?: string;
+  allClear?: boolean;
+  checkLine?: string | null;
   waitingSince: string;
   // Set by the server (lib/app/cards.ts): the message type the owner sees it under, its
   // category (urgent, look = open it to check, later = not urgent, simple = a tick and

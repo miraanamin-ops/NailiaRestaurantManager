@@ -1,5 +1,6 @@
 // One draft as a card (phase 1): what it is, the review it answers, the words that
-// would go out, a picture of an email, the four checks, and what Approve does.
+// would go out and a picture of an email. Checks are one tick, or one amber line when
+// something needs the owner (fewer words, 15 Nov).
 // Swipe right to approve, left to skip; or use the buttons underneath (InboxScreen).
 import { Image } from 'expo-image';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -9,16 +10,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { Card, Icon, Panel, Pill, T, usePalette } from '@/components/ui';
 import { Brand, Space } from '@/constants/theme';
-import type { CardCheck, InboxCard } from '@/lib/api';
-
-const CHECK: Record<CardCheck['status'], { tone: 'signal' | 'amber' | 'ember' | 'neutral'; icon: 'checkmark-circle-outline' | 'alert-circle-outline' | 'close-circle-outline' | 'time-outline' }> = {
-  pass: { tone: 'signal', icon: 'checkmark-circle-outline' },
-  fixed: { tone: 'signal', icon: 'checkmark-circle-outline' },
-  flagged: { tone: 'amber', icon: 'alert-circle-outline' },
-  failed: { tone: 'amber', icon: 'alert-circle-outline' },
-  held: { tone: 'neutral', icon: 'time-outline' },
-  blocked: { tone: 'ember', icon: 'close-circle-outline' },
-};
+import type { InboxCard } from '@/lib/api';
 
 function Stars({ rating }: { rating: number }) {
   const c = usePalette();
@@ -54,7 +46,7 @@ export function DraftCardBody({ card, bare = false }: { card: InboxCard; bare?: 
             <T style={{ fontWeight: '600', flex: 1 }}>{card.review.author}</T>
             <Stars rating={card.review.rating} />
           </View>
-          <T kind="small" quiet style={{ fontStyle: 'italic' }} numberOfLines={8}>
+          <T kind="small" quiet style={{ fontStyle: 'italic' }} numberOfLines={6}>
             {card.review.text ? `“${card.review.text}”` : '(rating only, no words)'}
           </T>
         </Panel>
@@ -69,25 +61,20 @@ export function DraftCardBody({ card, bare = false }: { card: InboxCard; bare?: 
         </View>
       )}
       <T selectable>{card.body}</T>
-      {card.checks.length > 0 && (
-        <View style={styles.checks}>
-          {card.checks.map((ch) => (
-            <Pill key={ch.name} label={ch.label} tone={CHECK[ch.status].tone} icon={CHECK[ch.status].icon} />
-          ))}
-        </View>
-      )}
-      {card.checks
-        .filter((ch) => ch.notes.length && (ch.status === 'flagged' || ch.status === 'blocked'))
-        .map((ch) => (
-          <T key={ch.name} kind="small" style={{ color: c.amber }}>
-            {ch.label}: {ch.notes.join(' ')}
-          </T>
-        ))}
-      {card.actions !== 'answer' && (
+      {card.allClear ?? card.checks.every((ch) => ch.status === 'pass' || ch.status === 'fixed') ? (
+        card.checks.length > 0 && (
+          <View style={styles.row} accessibilityLabel="Checked, all correct">
+            <Icon name="checkmark-circle" size={16} color={c.tint} />
+            <T kind="caption" style={{ color: c.tint }}>
+              Checked
+            </T>
+          </View>
+        )
+      ) : (
         <View style={styles.row}>
-          <Icon name="information-circle-outline" size={15} color={c.textSecondary} />
-          <T kind="caption" quiet style={{ flex: 1 }}>
-            Approve: {card.approveHint.charAt(0).toLowerCase() + card.approveHint.slice(1)}.
+          <Icon name="alert-circle-outline" size={16} color={c.amber} />
+          <T kind="small" style={{ color: c.amber, flex: 1 }}>
+            {card.checkLine ?? card.checks.find((ch) => ch.status !== 'pass' && ch.status !== 'fixed')?.notes[0] ?? 'Have a look before you approve.'}
           </T>
         </View>
       )}
@@ -155,7 +142,6 @@ const styles = StyleSheet.create({
   card: { gap: Space.s + 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   preview: { width: '100%', aspectRatio: 0.75, borderRadius: 12 },
-  checks: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.xs + 2 },
   stamp: { position: 'absolute', top: Space.m, borderWidth: 2, borderRadius: 8, paddingHorizontal: Space.s, paddingVertical: 2 },
   stampLeft: { left: Space.m },
   stampRight: { right: Space.m },

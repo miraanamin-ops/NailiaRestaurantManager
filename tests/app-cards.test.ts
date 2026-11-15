@@ -3,7 +3,7 @@
 // decision runs through the bot's own code.
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { approveAllEligible, cardChecks, cardTitle, categoryOf, messageType, sortCards, takingsLine, toCard, typeTiles, waitingSummary, type InboxCard } from "@/lib/app/cards";
+import { approveAllEligible, approveLabel, cardChecks, cardPreview, cardTitle, checkSummary, firstWords, MESSAGE_TYPES, PREVIEW_WORDS, TITLE_WORDS, categoryOf, messageType, sortCards, takingsLine, toCard, typeTiles, waitingSummary, type InboxCard } from "@/lib/app/cards";
 import type { Draft } from "@/lib/drafts";
 
 const draft = (fields: Partial<Draft> = {}): Draft =>
@@ -12,10 +12,47 @@ const review = { author: "Sam K.", rating: 2, text: "Waited 40 minutes" };
 
 describe("cards", () => {
   test("titles in plain words", () => {
-    expect(cardTitle(draft(), review)).toBe("Reply to Sam K's 2-star review");
-    expect(cardTitle(draft({ kind: "email_campaign", audience: "everyone" }), null, "Quiet Thursday")).toBe("Email: Quiet Thursday to everyone");
+    expect(cardTitle(draft(), review)).toBe("Reply to Sam");
+    expect(cardTitle(draft({ kind: "email_campaign", audience: "everyone" }), null, "Quiet Thursday")).toBe("Email: Quiet Thursday");
     expect(cardTitle(draft({ kind: "google_post" }), null)).toBe("Google post");
-    expect(cardTitle(draft({ kind: "review_question" }), review)).toBe("Your call on Sam K's 2-star review");
+    expect(cardTitle(draft({ kind: "review_question" }), review)).toBe("Sam's review: your call");
+    expect(cardTitle(draft({ kind: "rota", audience: "w/c 17 Nov" }), null)).toBe("Next week's rota");
+  });
+
+  // Less is more (the owner, 15 Nov 2026): every closed card stays inside its word limits.
+  test("fewer words: titles 5 words, previews 12, the check line 12, type labels 3", () => {
+    const long = "Mohammed Abdul Rahman Khan-Smith";
+    const count = (t: string) => t.split(/\s+/).filter(Boolean).length;
+    const kinds = ["review_reply", "review_question", "email_campaign", "google_post", "rota", "hours_update", "menu_update", "hours_question", "profile_change", "profile_fix", "agent_question", "choice", "special_idea", "import_welcome", "other"] as const;
+    for (const kind of kinds) {
+      const title = cardTitle(draft({ kind, audience: "everyone who signed up in the last thirty days at the till" }), { ...review, author: long }, "Quiet Thursday two mains for twenty pounds dine in only");
+      expect(count(title), `${kind}: ${title}`).toBeLessThanOrEqual(TITLE_WORDS);
+    }
+    const body = "🧑‍🍳 *Next week's rota*\nMon 17 Nov: Ali 11am to 5pm, Sara 5pm to 11pm, Bilal 5pm to 11pm, two open shifts costed at the average";
+    expect(count(cardPreview(body, null))).toBeLessThanOrEqual(PREVIEW_WORDS + 0);
+    expect(cardPreview(body, null)).toMatch(/^Next week's rota/);
+    expect(cardPreview("x", { ...review, text: "Waited 40 minutes for a cold naan and nobody said sorry, never again, really disappointed" })).toBe("“Waited 40 minutes for a cold naan and nobody said sorry, never…");
+    for (const label of Object.values(MESSAGE_TYPES)) expect(count(label), label).toBeLessThanOrEqual(3);
+    expect(firstWords("one two three", 2)).toBe("one two…");
+  });
+
+  test("checks become one tick, or the one thing to look at", () => {
+    const pass = { name: "tone", label: "Brand & tone", status: "pass" as const, notes: [] };
+    expect(checkSummary([pass, { ...pass, name: "facts", status: "fixed" }])).toEqual({ allClear: true, checkLine: null });
+    expect(checkSummary([pass, { ...pass, name: "money", label: "Money & risk", status: "flagged", notes: ["The 25% off is over your 20% cap, so I have held this email until you decide"] }])).toEqual({
+      allClear: false,
+      checkLine: "The 25% off is over your 20% cap, so I have held…",
+    });
+    expect(checkSummary([pass], ["Mentions a dish not on the menu"])).toEqual({ allClear: false, checkLine: "Mentions a dish not on the menu" });
+    expect(checkSummary([]).allClear).toBe(false);
+  });
+
+  test("the Approve button says what it does", () => {
+    expect(approveLabel("review_reply")).toBe("Post reply");
+    expect(approveLabel("email_campaign")).toBe("Send email");
+    expect(approveLabel("rota")).toBe("Publish rota");
+    expect(approveLabel("other")).toBe("Approve");
+    expect(toCard(draft({ kind: "google_post" }), { review: null, body: "Fresh naan out of the tandoor all day" })).toMatchObject({ approveLabel: "Publish post", preview: "Fresh naan out of the tandoor all day" });
   });
 
   test("a bad review needs a look, a good one is simple (the owner's table); a question is answered, not approved", () => {

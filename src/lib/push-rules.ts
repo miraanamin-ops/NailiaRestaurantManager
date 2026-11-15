@@ -26,7 +26,7 @@ const clean = (text: string) =>
     .trim();
 
 // The first line that says something, cut to fit a notification.
-export function headline(text: string, max = 120) {
+export function headline(text: string, max = 90) {
   const line = clean(text).split("\n").find((l) => l.trim().length > 3) ?? "";
   return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
 }
@@ -39,17 +39,17 @@ export function pushFor(request: OpenerRequest, text: string, draftId?: string |
   const withDraft = draftId ? { draftId } : {};
   switch (kind) {
     case "review":
-      return { title: `New ${review?.[1] ?? ""}-star review`.replace("  ", " "), body: "I've drafted a careful reply. Check it before it's posted.", category: draftId ? "draft" : "info", data: { screen: "inbox", kind, ...withDraft }, urgent: true };
+      return { title: `New ${review?.[1] ?? ""}-star review`.replace("  ", " "), body: "Reply ready to check.", category: draftId ? "draft" : "info", data: { screen: "inbox", kind, ...withDraft }, urgent: true };
     case "feedback":
-      return { title: `A customer rated their visit ${feedback?.[1] ?? "low"} out of 5`, body: headline(text.split("\n").slice(1).join("\n")) || "They left a private note for you.", category: "info", data: { screen: "inbox", kind }, urgent: true };
+      return { title: `A customer rated their visit ${feedback?.[1] ?? "low"} out of 5`, body: headline(text.split("\n").slice(1).join("\n")) || "They left you a private note.", category: "info", data: { screen: "inbox", kind }, urgent: true };
     case "rota":
-      return { title: "Next week's rota is ready", body: "Check it and approve it in one tap.", category: draftId ? "draft" : "info", data: { screen: "inbox", kind, ...withDraft }, urgent: false };
+      return { title: "Next week's rota is ready", body: "Tap to check it.", category: draftId ? "draft" : "info", data: { screen: "inbox", kind, ...withDraft }, urgent: false };
     case "report":
-      return { title: "Your report is ready", body: headline(text) || "Your latest numbers, in charts.", category: "info", data: { screen: "today", kind }, urgent: false };
+      return { title: "Your report is ready", body: headline(text) || "Tap to see your numbers.", category: "info", data: { screen: "today", kind }, urgent: false };
     case "none":
       return { title: "DinerAI", body: headline(text), category: "info", data: { screen: "today", kind: "info" }, urgent: false };
     default:
-      return { title: "DinerAI", body: headline(text) || "Something needs a quick look.", category: draftId ? "draft" : "info", data: { screen: draftId ? "inbox" : "today", kind: "update", ...withDraft }, urgent: false };
+      return { title: "DinerAI", body: headline(text) || "Needs a quick look.", category: draftId ? "draft" : "info", data: { screen: draftId ? "inbox" : "today", kind: "update", ...withDraft }, urgent: false };
   }
 }
 
@@ -77,8 +77,8 @@ export function nudgeDue(now: Date, lastSeenAt: Date, lastNudgeAt: Date | null) 
 
 export function nudgePush(waiting: number, idea: string | null): PushMessage {
   return {
-    title: "We haven't seen you in a while 👋",
-    body: idea ? `Here's an idea to bring in more covers this week: ${headline(idea, 90)}` : waiting ? `${waiting} ${waiting === 1 ? "draft is" : "drafts are"} ready to bring in more covers. One tap each.` : "Let me help you bring in more covers this week. Tell me your quietest day.",
+    title: "It's been a few days 👋",
+    body: idea ? `An idea for this week: ${headline(idea, 70)}` : waiting ? `${waiting} ${waiting === 1 ? "draft is" : "drafts are"} ready. One tap each.` : "What's your quietest day? I'll fill it.",
     category: "info",
     data: { screen: waiting ? "inbox" : "today", kind: "nudge" },
     urgent: false,

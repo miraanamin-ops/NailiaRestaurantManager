@@ -20,7 +20,7 @@ describe("what notifications say", () => {
     expect(briefPush({ waiting: 0 })).toMatchObject({ body: "Nothing to approve today.", category: "info", data: { screen: "today" } });
   });
   test("headlines are cut to fit", () => {
-    expect(headline("x".repeat(200)).length).toBe(120);
+    expect(headline("x".repeat(200)).length).toBe(90);
     expect(headline("\n\nok\nHello there")).toBe("Hello there");
   });
 });

@@ -186,7 +186,7 @@ export default function Inbox() {
   const bulk = (cards ?? []).filter((x) => x.bulk);
   function approveAll() {
     const n = bulk.length;
-    Alert.alert(`Approve ${n} ${n === 1 ? 'item' : 'items'}?`, 'Replies to 4 and 5 star reviews and birthday emails whose checks all passed. Each still goes through the usual checks when it’s sent.', [
+    Alert.alert(`Approve ${n} ${n === 1 ? 'item' : 'items'}?`, 'Good reviews and birthday emails, all checked.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Approve',
@@ -212,7 +212,7 @@ export default function Inbox() {
   }
 
   function undoLastDecision() {
-    Alert.alert('Undo your last decision?', 'Reverses your last approval, delete or edit where possible. An email already sent can’t be taken back.', [
+    Alert.alert('Undo your last decision?', 'Sent emails can’t be taken back.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Undo',
@@ -239,7 +239,6 @@ export default function Inbox() {
     setOpen((x) => (x === id ? null : id));
   };
   const groups = groupsOf(cards ?? []);
-  const counts = CATEGORY_ORDER.map((cat) => ({ cat, n: (cards ?? []).filter((x) => categoryOf(x) === cat).length })).filter((x) => x.n);
   const restaurant = me?.restaurants.find((r) => r.id === restaurantId)?.name ?? null;
   const floatBottom = Platform.OS === 'ios' ? tabSpace - Space.s : Space.m;
 
@@ -277,30 +276,14 @@ export default function Inbox() {
             <View style={styles.empty}>
               <Icon name="checkmark-done-circle" size={44} color={c.tint} />
               <T kind="heading">All done for now</T>
-              <T quiet style={{ textAlign: 'center' }}>
-                Nothing is waiting for you. New drafts arrive with your morning brief, and anything urgent comes straight away.
-              </T>
             </View>
           </Card>
-        )}
-
-        {counts.length > 1 && (
-          <View style={styles.pills}>
-            {counts.map(({ cat, n }) => (
-              <Pill key={cat} label={`${n} ${CATEGORIES[cat].title.toLowerCase()}`} tone={CATEGORIES[cat].tone} dot />
-            ))}
-          </View>
         )}
 
         {bulk.length > 1 && (
           <Card accent>
             <View style={styles.quickRow}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <T style={{ fontWeight: '600' }}>Quick clear</T>
-                <T kind="small" quiet>
-                  {bulk.length} simple {bulk.length === 1 ? 'item' : 'items'} whose checks all passed.
-                </T>
-              </View>
+              <T style={{ fontWeight: '600', flex: 1 }}>{bulk.length} quick ones, all checked</T>
               <Button label="Approve all" small icon="checkmark-done" onPress={approveAll} />
             </View>
           </Card>
@@ -339,7 +322,7 @@ export default function Inbox() {
         <View style={[styles.float, { bottom: floatBottom, backgroundColor: c.card, borderColor: c.border }]}>
           <View style={styles.reasonHead}>
             <T kind="small" style={{ flex: 1 }}>
-              Deleted. Why didn’t it work? (optional)
+              Why not? (optional)
             </T>
             <Pressable onPress={() => setReasonFor(null)} hitSlop={12} accessibilityLabel="No reason">
               <Icon name="close" size={18} color={c.textSecondary} />
@@ -365,7 +348,7 @@ export default function Inbox() {
         <View style={[styles.float, styles.toastRow, { bottom: floatBottom, backgroundColor: c.card, borderColor: c.border }]} accessibilityLiveRegion="polite">
           <Icon name={pending ? (pending.action === 'approve' ? 'checkmark-circle' : 'trash-outline') : 'information-circle-outline'} color={pending?.action === 'skip' ? c.textSecondary : c.tint} />
           <T kind="small" style={{ flex: 1 }}>
-            {pending ? (pending.action === 'approve' ? 'Approved. Sending in a moment…' : 'Deleted.') : toast}
+            {pending ? (pending.action === 'approve' ? 'Approved.' : 'Deleted.') : toast}
           </T>
           {pending && (
             <Pressable onPress={undoPending} hitSlop={12} accessibilityRole="button" style={[styles.undo, { backgroundColor: c.panel }]}>
@@ -423,7 +406,7 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit }: { card
   const canEdit = !answer && card.actions.includes('edit');
   // A tick straight from the closed card only for simple and not-urgent ones.
   const tick = !answer && (category === 'simple' || category === 'later');
-  const preview = card.review?.text ? `“${card.review.text}”` : card.body;
+  const preview = card.preview ?? (card.review?.text ? `“${card.review.text}”` : card.body);
   return (
     <View style={[styles.row, { backgroundColor: category === 'urgent' ? c.emberSoft : c.card, borderColor: category === 'urgent' ? c.ember : card.flagged ? c.amber : c.border, borderLeftColor: colour }]}>
       <View style={styles.rowHead}>
@@ -432,13 +415,13 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit }: { card
           <View style={{ flex: 1, gap: 3 }}>
             <View style={styles.rowMeta}>
               {card.review && <Pill label={`${card.review.rating}★`} tone={card.review.rating <= 3 ? 'ember' : 'signal'} />}
-              {card.flagged && <Pill label="Check" tone="amber" icon="alert-circle-outline" />}
+              {card.flagged && <Icon name="alert-circle" size={16} color={c.amber} />}
             </View>
-            <T style={{ fontWeight: '600' }} numberOfLines={open ? undefined : 2}>
+            <T style={{ fontWeight: '600' }} numberOfLines={open ? undefined : 1}>
               {card.title}
             </T>
             {!open && (
-              <T kind="small" quiet numberOfLines={2}>
+              <T kind="small" quiet numberOfLines={1}>
                 {preview}
               </T>
             )}
@@ -459,7 +442,7 @@ function Row({ card, open, busy, onToggle, onApprove, onDelete, onEdit }: { card
             <Button label="Answer in Chat" icon="chatbubble-ellipses-outline" onPress={() => router.navigate({ pathname: '/chat', params: { question: card.id } })} />
           ) : (
             <>
-              <Button label={card.kind === 'review_reply' ? 'Approve & post' : 'Approve'} icon="checkmark" onPress={onApprove} disabled={busy} />
+              <Button label={card.approveLabel ?? (card.kind === 'review_reply' ? 'Approve & post' : 'Approve')} icon="checkmark" onPress={onApprove} disabled={busy} />
               <View style={styles.pair}>
                 {canEdit && (
                   <View style={{ flex: 1 }}>
@@ -490,13 +473,12 @@ function EditSheet({ card, onCancel, onSend }: { card: InboxCard | null; onCance
       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.sheet}>
           <T kind="heading">What should change?</T>
-          <T quiet>In your own words, e.g. “shorter”, “mention our new lamb dish”, “more apologetic”. I’ll rewrite it and check it again.</T>
           <TextInput
             value={words}
             onChangeText={setWords}
             multiline
             autoFocus
-            placeholder="Type the change…"
+            placeholder="e.g. shorter, mention the lamb"
             placeholderTextColor={c.textSecondary}
             style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.card }]}
             accessibilityLabel="What should change"

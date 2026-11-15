@@ -22,8 +22,15 @@ export type InboxCard = {
   urgent: boolean; // category urgent
   // approve/edit/skip: the usual three. answer: a question, answered in Chat (phase 3).
   actions: ("approve" | "edit" | "skip")[] | "answer";
-  // What Approve does, in the owner's words ("Posts the reply on Google").
+  // What Approve does, in the owner's words ("Posts the reply on Google"). Older apps
+  // show it under the card; since 15 Nov the button says it instead (approveLabel).
   approveHint: string;
+  // Fewer words (15 Nov 2026, the owner's "less is more"): the Approve button's own
+  // words ("Post reply"), one line for the closed card, and checks as one tick.
+  approveLabel: string;
+  preview: string; // at most PREVIEW_WORDS words
+  allClear: boolean; // every check passed or was fixed: one tick, nothing else
+  checkLine: string | null; // when not: what needs a look, at most CHECK_LINE_WORDS words
   // The Inbox's sections and colours (the owner's table, 12 Nov): the message type, and
   // its category (categoryOf). The older "tier" is the same as the category.
   type: { key: MessageTypeKey; label: string };
@@ -36,13 +43,91 @@ export type InboxCard = {
 
 const firstName = (author: string) => author.replace(/\.$/, "").trim();
 
+// Word limits for what an owner sees on a closed card (tests/app-cards.test.ts).
+export const TITLE_WORDS = 5;
+export const PREVIEW_WORDS = 12;
+export const CHECK_LINE_WORDS = 12;
+
+const wordsOf = (text: string) => text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+// At most n words, ending in "…" if cut.
+export function firstWords(text: string, n: number) {
+  const w = wordsOf(text);
+  return w.length <= n ? w.join(" ") : `${w.slice(0, n).join(" ").replace(/[,.;:!?]+$/, "")}…`;
+}
+// The first line that says something (a draft's text often starts with an emoji header).
+const firstLine = (text: string) =>
+  text
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/_([^_\n]+)_/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => /[a-z0-9]/i.test(l))
+    // A leading emoji header ("🧑‍🍳 Next week's rota") is noise on a one-line preview.
+    ?.replace(/^[^\p{L}\p{N}£$“"'(]+/u, "") ?? "";
+
 export function cardTitle(d: Pick<Draft, "kind" | "audience" | "content">, review: CardReview | null, campaignName?: string | null) {
-  if (d.kind === "review_reply" && review) return `Reply to ${firstName(review.author)}'s ${review.rating}-star review`;
-  if (d.kind === "review_question") return review ? `Your call on ${firstName(review.author)}'s ${review.rating}-star review` : "Your call on a review";
-  if (d.kind === "hours_question") return d.audience ?? "Your hours on a bank holiday";
-  if (d.kind === "email_campaign") return `Email: ${campaignName ?? "offer"}${d.audience ? ` to ${d.audience}` : ""}`;
-  if (d.kind === "google_post") return "Google post";
-  return `${KIND_LABELS[d.kind] ?? "Draft"}${d.audience && !OWNER_ONLY_KINDS.has(d.kind) ? ` for ${d.audience}` : ""}`;
+  const who = review ? wordsOf(firstName(review.author))[0] ?? "a guest" : null;
+  let title: string;
+  if (d.kind === "review_reply") title = who ? `Reply to ${who}` : "Review reply";
+  else if (d.kind === "review_question") title = who ? `${who}'s review: your call` : "A review: your call";
+  else if (d.kind === "hours_question") title = "Bank holiday hours";
+  else if (d.kind === "email_campaign" || d.kind === "promotion") title = `Email: ${campaignName ?? "offer"}`;
+  else title = SHORT_KIND[d.kind] ?? KIND_LABELS[d.kind] ?? "Draft";
+  return firstWords(title, TITLE_WORDS);
+}
+
+const SHORT_KIND: Partial<Record<Draft["kind"], string>> = {
+  google_post: "Google post",
+  rota: "Next week's rota",
+  hours_update: "Google hours change",
+  menu_update: "Google menu change",
+  profile_change: "Save to your details",
+  profile_fix: "Google profile fixes",
+  agent_question: "A quick question",
+  choice: "Which did you mean?",
+  special_idea: "An idea",
+  import_welcome: "Welcome your imported list",
+};
+
+// The closed card's one line: the review, else the words that would go out.
+export function cardPreview(body: string, review: CardReview | null) {
+  return firstWords(review?.text ? `“${review.text}”` : firstLine(body), PREVIEW_WORDS);
+}
+
+// What the Approve button says.
+export function approveLabel(kind: Draft["kind"]) {
+  switch (kind) {
+    case "review_reply":
+      return "Post reply";
+    case "google_post":
+      return "Publish post";
+    case "email_campaign":
+    case "promotion":
+      return "Send email";
+    case "rota":
+      return "Publish rota";
+    case "profile_change":
+      return "Save";
+    case "special_idea":
+      return "Keep idea";
+    case "hours_update":
+    case "menu_update":
+    case "profile_fix":
+      return "Update Google";
+    case "import_welcome":
+      return "Start emails";
+    default:
+      return "Approve";
+  }
+}
+
+// Checks as the owner cares about them: all fine (one tick), or the one thing to look at.
+export function checkSummary(checks: CardCheck[], extraFlags: string[] = []) {
+  const bad = checks.filter((c) => c.status === "flagged" || c.status === "blocked" || c.status === "failed");
+  const note = bad.flatMap((c) => c.notes)[0] ?? extraFlags[0] ?? (bad.length ? `${bad[0].label} needs a look` : null);
+  const allClear = checks.length > 0 && !bad.length && !extraFlags.length && checks.every((c) => c.status === "pass" || c.status === "fixed");
+  return { allClear, checkLine: allClear || !note ? null : firstWords(note, CHECK_LINE_WORDS) };
 }
 
 export function approveHint(kind: Draft["kind"]) {
@@ -98,6 +183,9 @@ export function toCard(
     urgent: false,
     actions: isQuestion(d.kind) ? "answer" : d.kind === "special_idea" ? ["approve", "skip"] : ["approve", "edit", "skip"],
     approveHint: approveHint(d.kind),
+    approveLabel: approveLabel(d.kind),
+    preview: cardPreview(extra.body, extra.review),
+    ...checkSummary(checks, d.check_notes?.flags ?? []),
     waitingSince: d.created_at,
   };
   const type = messageType(d.kind, extra.review?.rating ?? null, Boolean(extra.birthday));
@@ -111,20 +199,20 @@ export function toCard(
 // an email campaign is a birthday email when it goes to the birthday group.
 export const MESSAGE_TYPES = {
   rota: "Rota",
-  agent_question: "Questions from DinerAI",
-  choice: "Which did you mean?",
-  review_poor: "Replies to 1 to 3 star reviews",
+  agent_question: "Questions",
+  choice: "Quick checks",
+  review_poor: "Poor reviews",
   review_question: "Review questions",
   email_offer: "Email offers",
-  import_welcome: "Welcome emails for imported lists",
-  hours_update: "Hours updates",
-  menu_update: "Menu updates",
-  hours_question: "Bank holiday hours",
-  profile_fix: "Google profile fixes",
+  import_welcome: "Welcome emails",
+  hours_update: "Hours changes",
+  menu_update: "Menu changes",
+  hours_question: "Bank holidays",
+  profile_fix: "Google fixes",
   profile_change: "Facts to save",
   google_post: "Google posts",
-  special_idea: "Special ideas",
-  review_good: "Replies to 4 and 5 star reviews",
+  special_idea: "Ideas",
+  review_good: "Good reviews",
   birthday_email: "Birthday emails",
   other: "Other",
 } as const;

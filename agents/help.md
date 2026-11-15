@@ -42,16 +42,19 @@ urgent alerts arrive as notifications.
   one you've taken; the paperclip for files (a menu PDF, a till export as CSV or Excel, or
   our spreadsheets filled in). Photos up to 5 MB, files up to 16 MB.
 - **Inbox tab**: everything waiting for you, in four colour-coded groups, each split by
-  type of message: **Urgent** (your rota, questions from DinerAI, "which did you mean?"),
-  **Needs a look** (replies to 1 to 3 star reviews, review questions, email offers,
-  welcome emails for an imported list, hours and menu updates, bank holiday hours,
-  Google profile fixes, facts to save, and anything a check flagged), **Not urgent**
-  (Google posts, special ideas) and **Simple** (replies to 4 and 5 star reviews,
-  birthday emails). On a closed item, the tick approves it straight away (simple and not
-  urgent ones), the eye opens it to read first (urgent and needs a look), and the pencil
-  asks what to change; the arrow at the bottom opens it in full with **Approve**,
-  **Edit** and **Delete** (the app's word for Skip). **Approve all** at the top takes
-  only simple items whose checks all passed. After Approve or Delete you have 5 seconds
+  type of message: **Urgent** (Rota, Questions, Quick checks: "which did you mean?"),
+  **Needs a look** (Poor reviews: replies to 1 to 3 star reviews, Review questions, Email
+  offers, Welcome emails for an imported list, Hours and Menu changes, Bank holidays,
+  Google fixes, Facts to save, and anything we flagged), **Not urgent** (Google posts,
+  Ideas) and **Simple** (Good reviews: replies to 4 and 5 star reviews, Birthday emails).
+  A closed item shows a short title and one line; tap it to read the rest. On a closed
+  item, the tick approves it straight away (simple and not urgent ones), the eye opens it
+  to read first (urgent and needs a look), and the pencil asks what to change. Open, it
+  shows the full draft and a green **Checked** tick when everything is correct, or one
+  amber line saying what needs your look. The main button says what it does (**Post
+  reply**, **Send email**, **Publish rota**, **Publish post**), with **Edit** and
+  **Delete** (the app's word for Skip) underneath. **Approve all** at the top takes only
+  simple items that were all checked. After Approve or Delete you have 5 seconds
   to tap **Undo**; **Undo** at the top reverses your last decision. After a Delete you
   can tap why it didn't work (optional). A question for you has an **Answer in Chat**
   button. On the **Today** tab, **Waiting for you** shows one tile per type with its
