@@ -10,6 +10,9 @@ const HOUR = 3_600_000;
 export type FeedbackCustomer = {
   email: string | null;
   email_confirmed_at: string | null;
+  // Only customers who ticked the marketing box get it: with the Google review
+  // link in it, the ICO would treat it as marketing under PECR (review C2).
+  marketing_opt_in: boolean | null;
   unsubscribed_at: string | null;
   deleted_at: string | null;
 };
@@ -30,6 +33,7 @@ export function feedbackDecision(input: {
   if (!customer || customer.deleted_at) return { action: "skip", reason: "customer deleted their data" };
   if (!customer.email || !customer.email_confirmed_at) return { action: "skip", reason: "email not confirmed" };
   if (customer.unsubscribed_at) return { action: "skip", reason: "unsubscribed" };
+  if (!customer.marketing_opt_in) return { action: "skip", reason: "didn't agree to marketing" };
   if (input.lastSentAt && now.getTime() - input.lastSentAt.getTime() < FEEDBACK_GAP_DAYS * 24 * HOUR) {
     return { action: "skip", reason: `already had one in the last ${FEEDBACK_GAP_DAYS} days` };
   }

@@ -52,6 +52,9 @@ export function LandingFooter() {
           <a href={sitePath("terms")} className="hover:text-mist">
             {f.terms}
           </a>
+          <a href={sitePath("cookies")} className="hover:text-mist">
+            {f.cookies}
+          </a>
           <a href="/login" className="hover:text-mist">
             {site.login}
           </a>

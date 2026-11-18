@@ -59,6 +59,8 @@ beforeEach(() => {
   vi.doMock("@/lib/billing/checkout", () => ({ createTrialCheckout }));
   vi.doMock("@/lib/audit", () => ({ logAction }));
   vi.doMock("@/lib/rate-limit", async (orig) => ({ ...(await orig<object>()), overLimit: async () => false }));
+  // The robot check has its own tests (tests/turnstile.test.ts); here it passes.
+  vi.doMock("@/lib/turnstile", async (orig) => ({ ...(await orig<object>()), verifyTurnstile: async () => ({ ok: true }) }));
   vi.doMock("next/server", async (orig) => ({ ...(await orig<object>()), after: fakeAfter }));
   vi.doMock("next/headers", () => ({ headers: async () => new Headers({ host: "app.test", "x-forwarded-for": "203.0.113.9" }) }));
   vi.doMock("next/navigation", () => ({

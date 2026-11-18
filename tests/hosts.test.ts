@@ -45,6 +45,7 @@ describe("the app", () => {
     expect(route("nailiarestaurantmanager-git-site-x.vercel.app", "/terms")).toEqual({ kind: "site", rewrite: "/site/terms" });
     expect(route("app.dinerai.co.uk", "/dpa")).toEqual({ kind: "site", rewrite: "/site/dpa" });
     expect(route("dinerai.co.uk", "/dpa")).toEqual({ kind: "site", rewrite: "/site/dpa" });
+    expect(route("www.dinerai.co.uk", "/cookies")).toEqual({ kind: "site", rewrite: "/site/cookies" });
     expect(route("app.dinerai.co.uk", "/r/ember-spice/privacy")).toEqual({ kind: "app" });
   });
   test("the site's share picture, robots.txt and sitemap load on the main domain", () => {

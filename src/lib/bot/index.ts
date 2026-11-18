@@ -85,6 +85,18 @@ export async function handleMessage(input: {
     const { deliverWaitingReview } = await import("@/lib/review/deliver");
     if (await deliverWaitingReview(ctx.restaurant, channel, new Date()).catch(() => false)) return;
 
+    // AI limits (security review A2): a typed message or a file may start AI work, so
+    // it's counted against the restaurant's hourly and daily limits. Commands and taps
+    // (Approve, Edit, Skip...) never are.
+    if (!command && !input.buttonPayload) {
+      const { chatBudget, refusalText } = await import("@/lib/ai-budget");
+      const budget = await chatBudget(ctx.restaurantId);
+      if (!budget.ok) {
+        await send(refusalText(budget.why));
+        return;
+      }
+    }
+
     const turn: Turn = { ctx, channel, owner, send };
     // The business review's guided flow: Let's go / GO, Next, Stop, and each step's buttons.
     const { handleReviewFlow } = await import("@/lib/review/flow-run");

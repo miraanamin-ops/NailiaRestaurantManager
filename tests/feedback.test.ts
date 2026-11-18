@@ -14,7 +14,7 @@ const due = new Date("2026-10-10T14:00:00Z"); // 3pm UK
 const ok = {
   dueAt: due,
   now: new Date(due.getTime() + 10 * 60_000),
-  customer: { email: "sam@gmail.com", email_confirmed_at: "2026-10-01T00:00:00Z", unsubscribed_at: null, deleted_at: null },
+  customer: { email: "sam@gmail.com", email_confirmed_at: "2026-10-01T00:00:00Z", marketing_opt_in: true, unsubscribed_at: null, deleted_at: null },
   lastSentAt: null,
   enabled: true,
   paused: false,
@@ -32,6 +32,8 @@ describe("when a feedback email goes out", () => {
   });
   test("never to unconfirmed, unsubscribed or deleted customers, or when switched off", () => {
     expect(feedbackDecision({ ...ok, customer: { ...ok.customer, email_confirmed_at: null } }).action).toBe("skip");
+    // No marketing consent: never sent (PECR, review C2).
+    expect(feedbackDecision({ ...ok, customer: { ...ok.customer, marketing_opt_in: false } })).toEqual({ action: "skip", reason: "didn't agree to marketing" });
     expect(feedbackDecision({ ...ok, customer: { ...ok.customer, unsubscribed_at: "2026-10-02T00:00:00Z" } }).action).toBe("skip");
     expect(feedbackDecision({ ...ok, customer: { ...ok.customer, deleted_at: "2026-10-02T00:00:00Z" } }).action).toBe("skip");
     expect(feedbackDecision({ ...ok, customer: null }).action).toBe("skip");

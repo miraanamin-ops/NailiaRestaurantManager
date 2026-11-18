@@ -43,7 +43,7 @@ const money = (n: number) => (Number.isInteger(n) ? `£${n}` : `£${n.toFixed(2)
 
 function Shell({ c, children }: { c: EmailContent; children: ReactNode }) {
   return (
-    <Html lang="en">
+    <Html lang="en-GB">
       <Head>
         <meta name="color-scheme" content="light only" />
         <meta name="supported-color-schemes" content="light only" />

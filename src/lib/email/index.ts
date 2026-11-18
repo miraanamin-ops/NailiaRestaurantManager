@@ -10,6 +10,7 @@ import { fromHeader, isEmail, routeEmail, senderAddress } from "./route";
 import { renderEmail } from "./templates";
 import { bigDay, bigNumber, dateTile, designOf, occasionOf, offerDish, prices, type CampaignLike } from "./designs";
 import type { DesignFacts } from "./content";
+import { backoffMs, BATCH_SIZE, chunk, isRetryable, MAX_ATTEMPTS } from "./batch-rules";
 
 // Sending customer emails. Every one:
 //   - comes from our verified domain with the restaurant's name ("Ember & Spice Grill <hello@mail.dinerai.co.uk>")
@@ -35,13 +36,20 @@ function replyTo(r: Restaurant) {
   return isEmail(address) ? address.trim() : undefined;
 }
 
-export async function sendCustomerEmail(input: {
+type CustomerEmailInput = {
   restaurant: Restaurant;
   to: string;
   content: EmailContent;
   oneClickUrl: string | null; // the POST address for one-click unsubscribe
   seed?: boolean; // a dummy customer from the seed data
-}): Promise<Delivery> {
+};
+
+type Prepared =
+  | { kind: "simulate"; delivery: Delivery }
+  | { kind: "send"; payload: Parameters<Resend["emails"]["send"]>[0] & { html: string }; to: string; redirectedFrom: string | null };
+
+// Works out who really gets one email (routeEmail) and builds what Resend is sent.
+async function prepareCustomerEmail(input: CustomerEmailInput): Promise<Prepared> {
   const { restaurant, content } = input;
   const route = routeEmail(input.to, {
     redirect: redirectEmails(emailRedirectSwitch(process.env).on, restaurant),
@@ -49,26 +57,85 @@ export async function sendCustomerEmail(input: {
     builder: builderEmails()[0] ?? null,
     seed: input.seed,
   });
-  if (route.kind === "simulate") return { delivery: "simulated", id: null, to: null, redirectedFrom: null, reason: route.reason };
-
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("Missing RESEND_API_KEY");
+  if (route.kind === "simulate") return { kind: "simulate", delivery: { delivery: "simulated", id: null, to: null, redirectedFrom: null, reason: route.reason } };
   const { html, text } = await renderEmail(content);
   const subject = route.redirectedFrom ? `[Test → ${route.redirectedFrom}] ${content.subject}` : content.subject;
-  const { data, error } = await new Resend(apiKey).emails.send({
-    from: fromHeader(restaurant.name, senderAddress(process.env)),
+  return {
+    kind: "send",
     to: route.to,
-    replyTo: replyTo(restaurant),
-    subject,
-    html,
-    text,
-    headers: input.oneClickUrl
-      ? { "List-Unsubscribe": `<${input.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
-      : undefined,
-    tags: [{ name: "kind", value: content.kind }],
-  });
-  if (error) throw new Error(`Resend: ${error.message}`);
-  return { delivery: "email", id: data?.id ?? null, to: route.to, redirectedFrom: route.redirectedFrom };
+    redirectedFrom: route.redirectedFrom,
+    payload: {
+      from: fromHeader(restaurant.name, senderAddress(process.env)),
+      to: route.to,
+      replyTo: replyTo(restaurant),
+      subject,
+      html,
+      text,
+      headers: input.oneClickUrl ? { "List-Unsubscribe": `<${input.oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined,
+      tags: [{ name: "kind", value: content.kind }],
+    },
+  };
+}
+
+function resendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("Missing RESEND_API_KEY");
+  return new Resend(apiKey);
+}
+
+// Runs one Resend call, trying again (up to MAX_ATTEMPTS) when the failure is worth it.
+async function withRetries<T>(call: () => Promise<{ data: T | null; error: { message: string; name?: string | null; statusCode?: number | null } | null }>) {
+  for (let attempt = 1; ; attempt++) {
+    let res: Awaited<ReturnType<typeof call>>;
+    try {
+      res = await call();
+    } catch (err) {
+      res = { data: null, error: { message: err instanceof Error ? err.message : String(err), statusCode: null } };
+    }
+    if (!res.error) return res.data;
+    if (attempt >= MAX_ATTEMPTS || !isRetryable(res.error)) throw new Error(`Resend: ${res.error.message}`);
+    await new Promise((resolve) => setTimeout(resolve, backoffMs(attempt)));
+  }
+}
+
+export async function sendCustomerEmail(input: CustomerEmailInput): Promise<Delivery> {
+  const prepared = await prepareCustomerEmail(input);
+  if (prepared.kind === "simulate") return prepared.delivery;
+  const resend = resendClient();
+  const data = await withRetries(() => resend.emails.send(prepared.payload));
+  return { delivery: "email", id: data?.id ?? null, to: prepared.to, redirectedFrom: prepared.redirectedFrom };
+}
+
+// Many customer emails in Resend batches of up to 100 (security review E1). Each batch
+// has an idempotency key (keyPrefix + its number) so a retry never sends twice.
+// Returns one result per input, in order: a Delivery, or the Error that batch ended with.
+export async function sendCustomerEmails(inputs: CustomerEmailInput[], keyPrefix: string): Promise<(Delivery | Error)[]> {
+  const results: (Delivery | Error)[] = new Array(inputs.length);
+  const toSend: { index: number; prepared: Extract<Prepared, { kind: "send" }> }[] = [];
+  for (const [index, input] of inputs.entries()) {
+    try {
+      const prepared = await prepareCustomerEmail(input);
+      if (prepared.kind === "simulate") results[index] = prepared.delivery;
+      else toSend.push({ index, prepared });
+    } catch (err) {
+      results[index] = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  if (!toSend.length) return results;
+  const resend = resendClient();
+  for (const [n, group] of chunk(toSend, BATCH_SIZE).entries()) {
+    try {
+      const data = await withRetries(() => resend.batch.send(group.map((g) => g.prepared.payload), { idempotencyKey: `${keyPrefix}:${n}` }));
+      const ids = (data as { data?: { id: string }[] } | null)?.data ?? [];
+      group.forEach((g, i) => {
+        results[g.index] = { delivery: "email", id: ids[i]?.id ?? null, to: g.prepared.to, redirectedFrom: g.prepared.redirectedFrom };
+      });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      for (const g of group) results[g.index] = error;
+    }
+  }
+  return results;
 }
 
 // A plain email to the builder (alerts about the system itself, never to customers or owners).
@@ -176,6 +243,13 @@ export function sendCampaignEmail(i: Parameters<typeof campaignEmailContent>[0] 
   const content = campaignEmailContent(i);
   const oneClickUrl = i.unsubscribeToken ? `${i.baseUrl}/api/unsubscribe/${i.unsubscribeToken}` : null;
   return sendCustomerEmail({ restaurant: i.restaurant, to: i.to, content, oneClickUrl, seed: i.seed });
+}
+
+// The inputs for one campaign email, for sendCustomerEmails (a whole campaign at once).
+export function campaignEmailInput(i: Parameters<typeof campaignEmailContent>[0] & { to: string; seed?: boolean }): CustomerEmailInput {
+  const content = campaignEmailContent(i);
+  const oneClickUrl = i.unsubscribeToken ? `${i.baseUrl}/api/unsubscribe/${i.unsubscribeToken}` : null;
+  return { restaurant: i.restaurant, to: i.to, content, oneClickUrl, seed: i.seed };
 }
 
 export function sendFeedbackEmail(i: { restaurant: Restaurant; customer: Person; token: string; googleUrl: string; baseUrl: string }) {

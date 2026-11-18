@@ -291,7 +291,8 @@ spreadsheet), up to 5,000 at a time.
 - **"How was your visit?"**: about 3 hours after a customer uses a reward or offer, they
   get a short feedback email with your Google review link (always, whatever their rating)
   and a private form. 1 to 3 star feedback reaches you straight away. At most one per
-  customer every 30 days.
+  customer every 30 days. Only customers who ticked the box to hear from you get it
+  (it counts as marketing because it asks for a review).
 - **Not yet**: offers to customers by text message (SMS) or WhatsApp. Customer offers
   are email only for now.
 

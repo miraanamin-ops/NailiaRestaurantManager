@@ -13,7 +13,7 @@ export const site = {
   meta: {
     title: "DinerAI: your AI restaurant manager, in an app",
     description:
-      "DinerAI drafts your review replies, Google posts, offers for quiet nights, a 9am brief and a Monday report. You approve in the DinerAI app with one tap. £{price} a month, first month free, no contract.",
+      "DinerAI drafts your review replies, Google posts and email offers for quiet nights, forecasts your week, suggests your rota and shows which dishes make money. You approve in the DinerAI app with one tap. £{price} a month, first month free, no contract.",
   },
 
   nav: [
@@ -116,12 +116,12 @@ export const site = {
     items: [
       {
         title: "Better reviews",
-        body: "A reply to every review in your voice: paste one in and get a reply ready to post. After a reward is used, customers get a “How was your visit?” email with your Google review link. Unhappy answers reach you privately, straight away.",
+        body: "A reply to every review in your voice, posted to Google when you approve. After a reward is used, customers who opted in get a “How was your visit?” email with your Google review link. Unhappy answers reach you privately, straight away.",
         readout: { label: "Reviews replied", value: "14 / 14" },
       },
       {
         title: "Fuller quiet nights",
-        body: "Text “Thursday is quiet” and get a finished offer, inside your discount cap, ready to send to the customers who signed up. You see a picture of the email before you approve.",
+        body: "Tell DinerAI “Thursday is quiet” and get a finished email offer, inside your discount cap, ready to send to the customers who signed up. You see the email before you approve. Offers go by email, to customers who opted in.",
         readout: { label: "Thursday offer redeemed", value: "31 of 214" },
       },
       {
@@ -139,9 +139,29 @@ export const site = {
         body: "One brief at 9am with everything waiting, not a stream of pings. Two Google posts a week drafted from your photos. A Monday report you can read in two minutes.",
         readout: { label: "Taps to approve the brief", value: "1" },
       },
+      {
+        title: "Know next week before it happens",
+        body: "A forecast of next week's orders and sales from your own sales history and local dates like matches, school holidays, Ramadan and Eid. Each Monday you see the range, the busiest and quietest days, and your staff cost as a share of sales.",
+        readout: { label: "Next week, likely", value: "£13,800" },
+      },
+      {
+        title: "A rota in minutes",
+        body: "Add your team once with their roles, pay and usual days. Every Thursday DinerAI suggests next week's rota from your forecast, with the cost of each day. Change it in plain words, approve it, and share a link your team can open.",
+        readout: { label: "Staff cost, % of sales", value: "27%" },
+      },
+      {
+        title: "Know which dishes make money",
+        body: "Add rough costs and DinerAI sorts your menu into winners, crowd-pleasers, hidden gems and dishes to rethink, using what your till actually sells. Offers never cut a dish below the profit you set.",
+        readout: { label: "Hidden gems to promote", value: "3" },
+      },
+      {
+        title: "A full check-up, then a monthly report",
+        body: "When setup finishes you get a review of your Google profile, replies drafted for your older reviews, and the dates that matter in the next 30 days. Early each month, a report on last month's takings, dishes, staff cost and reviews, with three things to do.",
+        readout: { label: "Google profile score", value: "82 / 100" },
+      },
     ],
     soonLabel: "Coming soon",
-    soon: ["Automatic Google sync", "Instagram posts"],
+    soon: ["Instagram posts"],
   },
 
   safety: {
@@ -161,7 +181,7 @@ export const site = {
       { key: "PAUSE", text: "Stops everything going out. RESUME starts it again." },
       { key: "UNDO", text: "Takes back your last change." },
       { key: "Cap", text: "Your maximum discount. Offers above it are held, not sent." },
-      { key: "9am to 9pm", text: "Customer emails only go out in sending hours." },
+      { key: "Hours", text: "Customer emails only go out in the sending hours you choose." },
       { key: "Export", text: "Your customer list is yours. Download it as a spreadsheet any time." },
     ],
     footnote:
@@ -209,7 +229,7 @@ export const site = {
       "No contract. Cancel any time and keep it until the end of the month you've paid for.",
       "No setup fee.",
       "Card needed to start. Cancel before your free trial ends and you pay nothing.",
-      "Review replies, Google posts, email offers, birthday emails, the 9am brief, the Monday report and sales from your till reports.",
+      "Review replies, Google posts, email offers, birthday emails, the 9am brief, the Monday and monthly reports, sales forecasts, rota suggestions and menu profit.",
     ],
     fine: "One plan per restaurant.",
   },
@@ -311,6 +331,7 @@ export const site = {
     office: "Registered office: 27 Lea Valley House, Stoneybridge Drive, EN9 3LY",
     privacy: "Privacy",
     terms: "Terms",
+    cookies: "Cookies",
     contact: "Contact",
   },
 } as const;

@@ -41,12 +41,29 @@ export default function SiteHome() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "iOS, Android, Web",
     description: t(site.meta.description),
-    offers: { "@type": "Offer", price: String(PRICE_GBP), priceCurrency: "GBP" },
+    offers: { "@type": "Offer", price: String(PRICE_GBP), priceCurrency: "GBP", description: "First month free, then monthly. No contract." },
+    publisher: { "@id": `${SITE_URL}/#org` },
+  };
+  // The company behind it, for search results (review W4).
+  const orgLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#org`,
+    name: "DinerAI",
+    legalName: site.footer.company,
+    url: SITE_URL,
+    email: CONTACT_EMAIL,
+    address: { "@type": "PostalAddress", streetAddress: "27 Lea Valley House, Stoneybridge Drive", postalCode: "EN9 3LY", addressCountry: "GB" },
   };
 
   return (
     <div className="dai-site min-h-dvh bg-ink-950 font-sans text-mist antialiased selection:bg-signal selection:text-ink-950">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }} />
+      {/* Vercel Web Analytics: visit counts with no cookies and nothing stored on the
+          visitor's device, so no cookie banner is needed (review W4). Counts start once
+          Analytics is switched on for the project in Vercel; until then this does nothing. */}
+      <script defer src="/_vercel/insights/script.js" />
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-signal focus:px-3 focus:py-2 focus:text-ink-950">
         Skip to content
       </a>

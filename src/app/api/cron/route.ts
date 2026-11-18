@@ -4,6 +4,7 @@ import { clearOldRateLimits } from "@/lib/rate-limit";
 import { dispatch } from "@/lib/queue/dispatch";
 import { checkFeedHealth } from "@/lib/feeds/status";
 import { checkLateBriefs, checkQueueHealth } from "@/lib/queue/health";
+import { bearerMatches } from "@/lib/secret-compare";
 
 // Only queues work now (seconds), but give it room on a slow day.
 export const maxDuration = 60;
@@ -25,7 +26,7 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return new Response("CRON_SECRET not configured", { status: 500 });
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return new Response("Unauthorized", { status: 401 });
+  if (!bearerMatches(req.headers.get("authorization"), secret)) return new Response("Unauthorized", { status: 401 });
 
   const job = req.nextUrl.searchParams.get("job");
   if (job !== "hourly" && job !== "daily") return new Response("Unknown job", { status: 400 });

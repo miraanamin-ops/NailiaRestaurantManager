@@ -99,6 +99,14 @@ async function closeRequest(req: Draft) {
   check(await getSupabase().from("drafts").update({ status: "answered", waiting_for: null }).eq("id", req.id).eq("restaurant_id", req.restaurant_id));
 }
 
+// If the photo check itself fails (Claude down, a timeout), the photo is never let
+// through unchecked: a customer's face or a child must not reach an email (review A1).
+const CHECK_FAILED = "I couldn't check that photo just now. Please send it again in a minute.";
+function photoCheckFailed(err: unknown) {
+  console.error("Photo check failed", err);
+  return "check_failed" as const;
+}
+
 export type PhotoAnswer = { ok: true; sendAt: Date | null } | { ok: false; reason: string };
 
 // A photo from the app (already in the private app-uploads bucket at `path`): checked,
@@ -114,7 +122,8 @@ export async function answerWithPhoto(restaurant: Restaurant, requestDraftId: st
   if (!mediaType) return { ok: false, reason: "That needs to be a photo (JPEG or PNG)." };
   const { design, campaign, req } = found;
   const dish = design.photo_ask?.dish ?? "food";
-  const problem = await checkDishPhoto({ base64: bytes.toString("base64"), mediaType }, dish, restaurant.id).catch(() => "ok" as const);
+  const problem = await checkDishPhoto({ base64: bytes.toString("base64"), mediaType }, dish, restaurant.id).catch(photoCheckFailed);
+  if (problem === "check_failed") return { ok: false, reason: CHECK_FAILED };
   if (problem !== "ok") return { ok: false, reason: PHOTO_FIX[problem] };
 
   const { savePostPhoto } = await import("@/lib/photos");
@@ -181,7 +190,8 @@ export async function setEmailPhoto(restaurant: Restaurant, campaignDraftId: str
   if (!mediaType) return { ok: false, reason: "That needs to be a photo (JPEG or PNG)." };
   const dish = offerDish(campaign, restaurant.menu)?.name ?? null;
   const subject = photoSubject(dish, campaign.offer_details?.items ?? [], campaign.offer_details?.applies_to ?? null);
-  const problem = await checkDishPhoto({ base64: bytes.toString("base64"), mediaType }, subject.caption ?? "food", restaurant.id).catch(() => "ok" as const);
+  const problem = await checkDishPhoto({ base64: bytes.toString("base64"), mediaType }, subject.caption ?? "food", restaurant.id).catch(photoCheckFailed);
+  if (problem === "check_failed") return { ok: false, reason: CHECK_FAILED };
   if (problem !== "ok") return { ok: false, reason: PHOTO_FIX[problem] };
   const { savePostPhoto } = await import("@/lib/photos");
   const url = await savePostPhoto(restaurant.id, bytes, mediaType);

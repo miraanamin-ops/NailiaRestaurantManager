@@ -21,7 +21,9 @@ describe("landing page copy", () => {
 
   test("things not built yet are marked coming soon", () => {
     expect(site.outcomes.soonLabel).toBe("Coming soon");
-    expect(site.outcomes.soon).toContain("Automatic Google sync");
+    // Live Google (reviews, replies, posts, hours) is built (step 33): never "coming soon" again.
+    expect(site.outcomes.soon).not.toContain("Automatic Google sync");
+    expect(site.outcomes.soon).toContain("Instagram posts");
   });
 
   test("trial length and price are filled in", () => {

@@ -12,11 +12,13 @@ export const CONTACT_EMAIL = process.env.CONTACT_EMAIL || "hello@dinerai.co.uk";
 export const COMPANY = "DinerAI";
 // The legal company behind DinerAI (also in the footer, src/content/site.ts).
 export const LEGAL_ENTITY = "DinerAI Limited, a company registered in England and Wales (company number 17558608), registered office 27 Lea Valley House, Stoneybridge Drive, EN9 3LY";
-export const SITE_URL = "https://dinerai.co.uk";
+// The one address search engines are given (canonical, share image, sitemap): www,
+// because dinerai.co.uk redirects there (Vercel domain settings; review W2).
+export const SITE_URL = "https://www.dinerai.co.uk";
 
 // "/", "/privacy" and "/terms" work on dinerai.co.uk; "/privacy" and "/terms" also
 // on the app domain and previews (src/lib/hosts.ts), where the landing page is /site.
-export const sitePath = (page: "" | "privacy" | "terms") => (page ? `/${page}` : "/");
+export const sitePath = (page: "" | "privacy" | "terms" | "cookies") => (page ? `/${page}` : "/");
 
 export function SiteFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -44,6 +46,9 @@ export function SiteFrame({ children }: { children: React.ReactNode }) {
             </Link>
             <Link href={sitePath("terms")} className="underline">
               {site.footer.terms}
+            </Link>
+            <Link href={sitePath("cookies")} className="underline">
+              {site.footer.cookies}
             </Link>
             <a href="/login" className="underline">
               Owner login

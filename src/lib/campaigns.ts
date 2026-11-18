@@ -2,7 +2,8 @@ import "server-only";
 import { londonTime, londonYmd } from "@/lib/clock";
 import type { DraftChecks } from "@/lib/checks/types";
 import { check, checkRow, createDraft, applyEdit, type Draft } from "@/lib/drafts";
-import { sendCampaignEmail } from "@/lib/email";
+import { campaignEmailInput, sendCustomerEmails } from "@/lib/email";
+import { chunk, LOOKUP_CHUNK } from "@/lib/email/batch-rules";
 import { isDummyAddress } from "@/lib/email/route";
 import { CAMPAIGN_GAP_DAYS, weeklyLimit } from "@/lib/gate-rules";
 import { newToken } from "@/lib/signups";
@@ -373,66 +374,80 @@ export async function deliverCampaign(draft: Draft, restaurant: Restaurant, now:
   }
 
   // Insert every row first: the unique index stops any customer getting this campaign twice.
-  check(
-    await supabase.from("campaign_sends").insert(
-      rows.map((r) => ({
-        campaign_id: campaign.id,
-        restaurant_id: restaurant.id,
-        customer_id: r.customer_id,
-        email: r.email,
-        token: r.token,
-        kind: r.kind,
-        delivery: r.delivery,
-      })),
-    ),
-  );
+  // In chunks, so a big list stays within the database's request size.
+  for (const part of chunk(rows, 500)) {
+    check(
+      await supabase.from("campaign_sends").insert(
+        part.map((r) => ({
+          campaign_id: campaign.id,
+          restaurant_id: restaurant.id,
+          customer_id: r.customer_id,
+          email: r.email,
+          token: r.token,
+          kind: r.kind,
+          delivery: r.delivery,
+        })),
+      ),
+    );
+  }
 
-  // Unsubscribe links for the real emails.
+  // Unsubscribe links for the real emails, looked up 100 customers at a time: one
+  // query with every id in it fails once the list reaches a few hundred (review E2).
   const realCustomerIds = rows.filter((r) => r.delivery === "email" && r.customer_id).map((r) => r.customer_id!);
-  if (realCustomerIds.length) {
-    const tokens =
+  const unsubscribeTokens = new Map<string, string | null>();
+  for (const ids of chunk(realCustomerIds, LOOKUP_CHUNK)) {
+    const found =
       check(
         await supabase
           .from("customers")
           .select("id, unsubscribe_token")
-          .in("id", realCustomerIds)
+          .eq("restaurant_id", restaurant.id)
+          .in("id", ids)
           .returns<{ id: string; unsubscribe_token: string | null }[]>(),
       ) ?? [];
-    for (const r of rows) r.unsubscribeToken = tokens.find((t) => t.id === r.customer_id)?.unsubscribe_token ?? null;
+    for (const t of found) unsubscribeTokens.set(t.id, t.unsubscribe_token);
   }
+  for (const r of rows) if (r.customer_id) r.unsubscribeToken = unsubscribeTokens.get(r.customer_id) ?? null;
 
-  let emailed = 0;
-  let failed = 0;
-  for (const r of rows.filter((x) => x.delivery === "email")) {
-    try {
-      const sent = await sendCampaignEmail({
+  // Sent in Resend batches of 100, each retried if Resend is busy or briefly down
+  // (review E1). Each batch's idempotency key comes from the campaign, so a retry
+  // never sends twice.
+  const toSend = rows.filter((x) => x.delivery === "email");
+  const validity = formatValidity(campaign.valid_from, campaign.valid_until);
+  const results = await sendCustomerEmails(
+    toSend.map((r) =>
+      campaignEmailInput({
         restaurant,
         campaign,
         seed: r.seed,
-        validity: formatValidity(campaign.valid_from, campaign.valid_until),
+        validity,
         baseUrl: appUrl(),
         token: r.token,
         to: r.email,
         firstName: r.name,
         unsubscribeToken: r.unsubscribeToken,
         ownerCopy: r.kind === "owner_copy",
-      });
-      if (sent.delivery === "simulated") {
-        r.delivery = "simulated";
-        check(await supabase.from("campaign_sends").update({ delivery: "simulated", error: sent.reason ?? null }).eq("token", r.token));
-        continue;
-      }
-      check(await supabase.from("campaign_sends").update({ resend_id: sent.id }).eq("token", r.token));
-      emailed++;
-    } catch (err) {
+      }),
+    ),
+    `campaign:${campaign.id}`,
+  );
+
+  let emailed = 0;
+  let failed = 0;
+  for (const [i, r] of toSend.entries()) {
+    const sent = results[i];
+    if (sent instanceof Error) {
       failed++;
-      check(
-        await supabase
-          .from("campaign_sends")
-          .update({ delivery: "failed", error: err instanceof Error ? err.message : String(err) })
-          .eq("token", r.token),
-      );
+      check(await supabase.from("campaign_sends").update({ delivery: "failed", error: sent.message.slice(0, 300) }).eq("token", r.token));
+      continue;
     }
+    if (sent.delivery === "simulated") {
+      r.delivery = "simulated";
+      check(await supabase.from("campaign_sends").update({ delivery: "simulated", error: sent.reason ?? null }).eq("token", r.token));
+      continue;
+    }
+    check(await supabase.from("campaign_sends").update({ resend_id: sent.id }).eq("token", r.token));
+    emailed++;
   }
 
   check(

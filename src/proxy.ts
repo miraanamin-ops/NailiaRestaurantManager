@@ -21,6 +21,9 @@ export async function proxy(req: NextRequest) {
   });
   if (route.kind === "redirect") return NextResponse.redirect(route.to, 308);
   if (route.kind === "site") return NextResponse.rewrite(new URL(route.rewrite, req.url));
+  // The local-only preview pages (/dev/...) don't exist on Vercel: a real 404 status,
+  // decided here because a streamed page has already said 200 by the time it knows (review W5).
+  if (process.env.VERCEL && req.nextUrl.pathname.startsWith("/dev/")) return new NextResponse("Not found", { status: 404 });
   if (!needsLogin(req.nextUrl.pathname)) return NextResponse.next();
   // On this computer: the dev project, never live by accident (lib/live-guard.ts).
   const refusal = liveDatabaseRefusal(process.env);

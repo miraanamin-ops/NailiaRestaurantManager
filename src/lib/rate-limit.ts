@@ -18,16 +18,22 @@ export function clientIp(headers: Headers) {
   return headers.get("x-forwarded-for")?.split(",")[0]?.trim() || headers.get("x-real-ip") || "unknown";
 }
 
-// True if any limit is already used up. Otherwise records one attempt against each and returns false.
+// Records this attempt against each limit first, then counts: true if any limit
+// is now over its max. Recording before counting means two requests arriving at
+// the same moment both see each other, so they can't both slip under the limit.
+// A refused attempt still counts (repeated hammering keeps the window full).
 export async function overLimit(limits: Limit[], now = new Date()) {
-  if (await limitReached(limits, now)) return true;
   await recordAttempt(limits);
-  return false;
+  return countsOver(limits, now, (count, max) => count > max);
 }
 
 // True if any limit is already used up; records nothing. For actions that only
 // count once we know what they cost (pair with recordAttempt).
 export async function limitReached(limits: Limit[], now = new Date()) {
+  return countsOver(limits, now, (count, max) => count >= max);
+}
+
+async function countsOver(limits: Limit[], now: Date, over: (count: number, max: number) => boolean) {
   const supabase = getSupabase();
   for (const l of limits) {
     const since = new Date(now.getTime() - l.windowMs).toISOString();
@@ -37,7 +43,7 @@ export async function limitReached(limits: Limit[], now = new Date()) {
       console.error("Rate limit check failed", error);
       return false;
     }
-    if ((count ?? 0) >= l.max) return true;
+    if (over(count ?? 0, l.max)) return true;
   }
   return false;
 }

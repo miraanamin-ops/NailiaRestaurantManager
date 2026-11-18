@@ -44,7 +44,7 @@ export const FOUNDER = { code: "FOUNDER", amountOffPence: 4900, months: 4, maxUs
 // The terms an owner ticks at sign-up (the "Last updated" date on /terms), and the
 // privacy notice and data processing agreement ticked with them (/privacy, /dpa).
 export const TERMS_VERSION = "7 November 2026";
-export const PRIVACY_VERSION = "7 November 2026";
+export const PRIVACY_VERSION = "18 November 2026";
 export const DPA_VERSION = "7 November 2026";
 
 // Does onboarding wait for payment? Off (the default) while the whole flow is

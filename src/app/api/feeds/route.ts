@@ -6,6 +6,7 @@ import { FEED_NAMES, type FeedName } from "@/lib/feeds/config";
 import { coverageFor } from "@/lib/feeds/coverage-data";
 import { feedStatuses } from "@/lib/feeds/status";
 import { kickWorkers } from "@/lib/queue/kick";
+import { bearerMatches } from "@/lib/secret-compare";
 
 // The outside data feeds by hand (scripts/run-feed.mjs). Needs the CRON_SECRET password.
 //   GET  ?status=1                    each feed's status row
@@ -15,7 +16,7 @@ import { kickWorkers } from "@/lib/queue/kick";
 //   POST ?backfill=<restaurant id>    fill a restaurant's history (weather, prayer times, calendar)
 function authorised(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  return Boolean(secret) && req.headers.get("authorization") === `Bearer ${secret}`;
+  return bearerMatches(req.headers.get("authorization"), secret);
 }
 const UUID = /^[0-9a-f-]{36}$/i;
 
