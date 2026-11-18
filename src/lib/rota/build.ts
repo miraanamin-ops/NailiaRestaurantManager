@@ -84,9 +84,10 @@ async function timeOffIn(restaurantId: string, weekStart: string) {
   return out;
 }
 
-// Past rotas (approved or published) in the 8 weeks before: who usually works
-// which day, and what the last one cost.
-async function history(restaurantId: string, weekStart: string, staff: RotaStaff[]): Promise<{ usual: FillInput["usual"]; previous: Previous }> {
+// Past rotas (approved or published): who usually works which day (the 8 weeks
+// before), what the last one cost, and everyone's hours over the 16 weeks before
+// (the 48-hour limit is an average over 17 weeks, review R3).
+async function history(restaurantId: string, weekStart: string, staff: RotaStaff[]): Promise<{ usual: FillInput["usual"]; previous: Previous; past: FillInput["past"] }> {
   const weeks = (must(
     await db()
       .from("rota_weeks")
@@ -94,11 +95,11 @@ async function history(restaurantId: string, weekStart: string, staff: RotaStaff
       .eq("restaurant_id", restaurantId)
       .in("status", ["approved", "published"])
       .lt("week_start", weekStart)
-      .gte("week_start", addDaysYmd(weekStart, -56))
+      .gte("week_start", addDaysYmd(weekStart, -112))
       .order("week_start", { ascending: false }),
     "past rotas",
   ) ?? []) as { id: string; week_start: string; summary: StoredPlan | null }[];
-  if (!weeks.length) return { usual: {}, previous: null };
+  if (!weeks.length) return { usual: {}, previous: null, past: { weeks: 0, hours: {} } };
   const shifts = (must(
     await db().from("rota_shifts").select("staff_id, business_date, starts_at, ends_at, break_minutes, rota_week_id").eq("restaurant_id", restaurantId).in("rota_week_id", weeks.map((w) => w.id)),
     "past shifts",
@@ -109,7 +110,15 @@ async function history(restaurantId: string, weekStart: string, staff: RotaStaff
   const minutes = lastShifts.reduce((n, s) => n + paidMinutes(s), 0);
   // The cost as approved (its snapshot), else today's rates on its hours.
   const cost = last.summary?.totals?.costPence ?? Math.round(lastShifts.reduce((n, s) => n + (paidMinutes(s) / 60) * (s.staff_id ? (rate.get(s.staff_id) ?? 0) : 0), 0));
-  return { usual: usualFromHistory(shifts), previous: { weekStart: last.week_start, costPence: cost, hours: Math.round(minutes / 6) / 10 } };
+  const recent = new Set(weeks.filter((w) => w.week_start >= addDaysYmd(weekStart, -56)).map((w) => w.id));
+  const hours: Record<string, number> = {};
+  for (const s of shifts) if (s.staff_id) hours[s.staff_id] = (hours[s.staff_id] ?? 0) + paidMinutes(s) / 60;
+  return {
+    usual: usualFromHistory(shifts.filter((s) => recent.has(s.rota_week_id))),
+    // "Last week's rota" only if it was in the last 8 weeks, as before.
+    previous: recent.has(last.id) ? { weekStart: last.week_start, costPence: cost, hours: Math.round(minutes / 6) / 10 } : null,
+    past: { weeks: weeks.length, hours },
+  };
 }
 
 export type Built = { week: RotaWeek; plan: StoredPlan; previous: Previous } | { error: string };
@@ -141,6 +150,7 @@ export async function planWeek(r: Restaurant, weekStart: string, now: Date, adju
     adjustments,
     timeOff,
     usual: past.usual,
+    past: past.past,
     days: ahead.days.map((d) => ({
       date: d.date,
       weekday: d.weekday as Weekday,

@@ -151,3 +151,52 @@ describe("the owner's costs onto the menu", () => {
     expect(cleanMenu(sent, saved).flatMap((c) => c.items)[0]).toMatchObject({ cost: 3.4, cost_estimated: false });
   });
 });
+
+describe("groups within each menu section (review ME1)", () => {
+  // Mains earn far more per plate than sides; on one scale every side would be "low profit".
+  const twoSections: MenuCategory[] = [
+    { category: "Mains", items: [dish("Lamb Chops", 18, 6), dish("Mixed Grill", 16.8, 7), dish("Chicken Karahi", 13.2, 5.5)] },
+    { category: "Sides", items: [dish("Garlic Naan", 3.6, 0.4), dish("Chips", 3.6, 1.6), dish("Raita", 2.4, 0.3)] },
+  ];
+
+  test("a side is judged against sides, not mains", () => {
+    const p = menuProfit(twoSections);
+    const group = (n: string) => p.dishes.find((d) => d.name === n)?.group;
+    // Garlic Naan earns £2.60 a plate: low next to any main, but high among the sides.
+    expect(group("Garlic Naan")).toBe("high_profit");
+    expect(group("Chips")).toBe("low_profit");
+    expect(group("Lamb Chops")).toBe("high_profit");
+    expect(p.dishes.filter((d) => d.category === "Sides" && d.group === "high_profit").length).toBeGreaterThan(0);
+    expect(p.estimatedSections).toEqual([]);
+  });
+
+  test("small sections (under 3 costed dishes) are compared together", () => {
+    const p = menuProfit([
+      { category: "Desserts", items: [dish("Kulfi", 4.8, 1)] },
+      { category: "Drinks", items: [dish("Lassi", 3.6, 0.6), dish("Chai", 2.4, 0.9)] },
+    ]);
+    expect(p.dishes.map((d) => [d.name, d.group])).toEqual([
+      ["Kulfi", "high_profit"],
+      ["Lassi", "high_profit"],
+      ["Chai", "low_profit"],
+    ]);
+  });
+
+  test("a section costed at one flat share of the price is held back, not ranked by price", () => {
+    const flat: MenuCategory[] = [
+      ...twoSections,
+      { category: "Grills", items: [dish("Seekh Kebab", 10, 3), dish("Tikka", 12, 3.6), dish("Wings", 8, 2.4)] },
+    ];
+    const p = menuProfit(flat);
+    expect(p.estimatedSections).toEqual(["Grills"]);
+    expect(p.estimatedOnly).toEqual(["Seekh Kebab", "Tikka", "Wings"]);
+    expect(p.dishes.some((d) => d.category === "Grills")).toBe(false);
+    expect(dishesToPush(p)).not.toContain("Tikka");
+    expect(menuReportLines(p).join("\n")).toMatch(/Grills: most costs are the same share of the price/);
+  });
+
+  test("exact costs at the same share are real costs, so they're ranked", () => {
+    const exact = [dish("Seekh Kebab", 10, 3, { cost_estimated: false }), dish("Tikka", 12, 3.6, { cost_estimated: false }), dish("Wings", 8, 2.4, { cost_estimated: false })];
+    expect(menuProfit([{ category: "Grills", items: exact }]).estimatedSections).toEqual([]);
+  });
+});

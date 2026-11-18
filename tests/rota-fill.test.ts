@@ -1,7 +1,7 @@
 // The rota suggester's greedy fill, swaps, cost maths and flags (src/lib/rota/fill.ts),
 // and the WhatsApp wording (src/lib/rota/message.ts). Pure code, no database.
 import { describe, expect, test } from "vitest";
-import { buildPlan, fill, labourPct, summarise, usualFromHistory, type FillDay, type FillInput, type PlannedShift } from "@/lib/rota/fill";
+import { buildPlan, fill, flagsFor, labourPct, summarise, usualFromHistory, type FillDay, type FillInput, type PlannedShift } from "@/lib/rota/fill";
 import { DEFAULT_SETTINGS, effectiveRules, openSpans } from "@/lib/rota/rules";
 import { DUMMY_RULES, DUMMY_STAFF, noAvailability, type RotaStaff, type Weekday } from "@/lib/rota/types";
 import { MINIMUM_NOTE, rotaDraftText, rotaWeekMessages, span12, time12, weekLabel } from "@/lib/rota/message";
@@ -368,5 +368,34 @@ describe("Test Kitchen's dummy week makes a sensible rota", () => {
   test("week labels", () => {
     expect(weekLabel("2026-11-02")).toBe("Mon 2 – Sun 8 Nov");
     expect(weekLabel("2026-10-26")).toBe("Mon 26 Oct – Sun 1 Nov");
+  });
+});
+
+describe("the 48-hour limit is an average over 17 weeks (review R3)", () => {
+  // Ali works 5 shifts of 10 hours: 50 hours this week.
+  const ali = person("ali", ["kitchen"], 1300, ALL);
+  const shifts = [0, 1, 2, 3, 4].map((i) => ({ staffId: "ali", role: "kitchen", date: date(i), start: 12 * 60, end: 22 * 60, name: "Ali", hours: 10, costPence: 13000 }));
+  const flags = (past?: FillInput["past"]) => flagsFor(shifts, input({ staff: [ali], past })).filter((f) => f.staffId === "ali" && f.kind.startsWith("over_"));
+
+  test("no history: the week itself is flagged, as before", () => {
+    expect(flags()).toEqual([{ kind: "over_week", staffId: "ali", text: "Ali: 50 hours this week, over 48" }]);
+  });
+
+  test("a long week inside a normal average: noted, with the average", () => {
+    const f = flags({ weeks: 5, hours: { ali: 5 * 40 } });
+    expect(f).toHaveLength(1);
+    expect(f[0].kind).toBe("over_week");
+    expect(f[0].text).toBe("Ali: 50 hours this week, over 48 (their 6-week average is 41.7, under the limit)");
+  });
+
+  test("an average over 48: flagged as the legal limit", () => {
+    const f = flags({ weeks: 5, hours: { ali: 5 * 52 } });
+    expect(f).toEqual([
+      { kind: "over_average", staffId: "ali", text: "Ali: averaging 51.7 hours a week over the last 6 weeks, over 48 (the legal limit, averaged over 17 weeks, unless they've signed an opt-out)" },
+    ]);
+  });
+
+  test("too little history for an average (under 4 weeks in all): only the week counts", () => {
+    expect(flags({ weeks: 2, hours: { ali: 2 * 60 } })).toEqual([{ kind: "over_week", staffId: "ali", text: "Ali: 50 hours this week, over 48" }]);
   });
 });

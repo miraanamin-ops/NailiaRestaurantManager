@@ -6,12 +6,14 @@ import { listStaff } from "@/lib/ops/staff";
 import type { OpsSource, StaffAvailabilityRow, StaffPayRateRow, StaffRow } from "@/lib/ops/types";
 import { gbp } from "@/lib/sales/format";
 import { findStaff } from "./edits";
+import { wageWarning as warnWage } from "./minimum-wage";
 import { roleLabel, roleKey } from "./rules";
 import type { StaffInput } from "./staff-input";
 
 // The rota's team, saved from WhatsApp ("add Ali, kitchen, £13, weekdays") and
 // the staff page (/staff). Pay and availability are history (032): a new rate is
 // a new row from today; new availability ends the old pattern today.
+
 
 export type TeamMember = {
   id: string;
@@ -86,7 +88,7 @@ export async function saveStaff(
   // staffId: this person (the staff page); spans: their exact week (the staff page), instead of days + one time.
   input: StaffInput & { staffId?: string; spans?: { weekday: number; starts: string; ends: string }[] },
   opts: { today: string; source: OpsSource; actor: Actor },
-): Promise<{ member: TeamMember; created: boolean }> {
+): Promise<{ member: TeamMember; created: boolean; wageWarning: string | null }> {
   // "bilal" -> "Bilal": a name typed all in lower case gets its capitals.
   if (input.name === input.name.toLowerCase()) input = { ...input, name: input.name.replace(/(^|[\s'-])(\p{L})/gu, (_m, pre: string, c: string) => pre + c.toUpperCase()) };
   const current = await team(restaurantId, opts.today);
@@ -145,7 +147,9 @@ export async function saveStaff(
     detail: `${existing ? "Updated" : "Added"} ${member.name} on the rota team (${memberLine(member).replace(/^- \*.*?\*: /, "")})`,
     data: { staff_id: id, created: !existing },
   });
-  return { member, created: !existing };
+  // A pay rate below the minimum wage is saved as the owner said, with a warning to show them (review R2).
+  const wageWarning = input.ratePence !== null && input.ratePence !== existing?.ratePence ? warnWage(member.name, input.ratePence, opts.today) : null;
+  return { member, created: !existing, wageWarning };
 }
 
 // A new weekly pattern from today: rows that started before today end today; any from today are replaced.

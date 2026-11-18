@@ -47,8 +47,9 @@ export async function saveMember(form: FormData) {
     spans.push({ weekday: wd, starts, ends });
   }
   const staffId = get("staff_id") || undefined;
-  await saveStaff(r.id, { name, roles, ratePence: rate, maxHours: max, days: null, starts: null, ends: null, staffId, spans, canOpenClose: form.get("can_open_close") === "yes" }, { today: londonYmd(new Date()), source: "manual", actor: "owner" });
-  back(r.id, `saved=${encodeURIComponent(staffId ? `${name} updated.` : `${name} added to the team.`)}`);
+  const { wageWarning } = await saveStaff(r.id, { name, roles, ratePence: rate, maxHours: max, days: null, starts: null, ends: null, staffId, spans, canOpenClose: form.get("can_open_close") === "yes" }, { today: londonYmd(new Date()), source: "manual", actor: "owner" });
+  const saved = staffId ? `${name} updated.` : `${name} added to the team.`;
+  back(r.id, `saved=${encodeURIComponent(wageWarning ? `${saved} ${wageWarning.replace(/^⚠️ /, "")}` : saved)}`);
 }
 
 export async function removeMember(form: FormData) {

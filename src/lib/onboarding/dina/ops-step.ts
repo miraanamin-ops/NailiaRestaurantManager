@@ -172,14 +172,16 @@ export async function saveTeam(restaurantId: string, input: TeamInput, channel: 
 
 // Each person into the rota's team (availability and contracted hours included).
 // Also used for the team spreadsheet (lib/templates/import.ts).
-export async function saveTeamMembers(restaurantId: string, staff: StaffInputRow[], manager: string | null) {
+// Returns the minimum wage warnings for anyone saved below it (review R2): saved anyway.
+export async function saveTeamMembers(restaurantId: string, staff: StaffInputRow[], manager: string | null): Promise<string[]> {
   const day = today();
+  const warnings: string[] = [];
   for (const s of staff) {
     const isManager = manager?.trim().toLowerCase() === s.name.trim().toLowerCase();
     // Main role first, then what else they can do (and manager, for the site manager).
     const roles = [...new Set([roleKey(s.role), ...(s.also_roles ?? []).map(roleKey), ...(isManager ? ["manager"] : [])])];
     const a = availabilityOf(s);
-    const { member } = await saveStaff(
+    const { member, wageWarning } = await saveStaff(
       restaurantId,
       {
         name: s.name.trim(),
@@ -194,7 +196,9 @@ export async function saveTeamMembers(restaurantId: string, staff: StaffInputRow
       { today: day, source: "owner_message", actor: "owner" },
     );
     if (s.contracted_hours !== null) check(await getSupabase().from("staff").update({ contracted_hours: s.contracted_hours }).eq("restaurant_id", restaurantId).eq("id", member.id));
+    if (wageWarning) warnings.push(wageWarning);
   }
+  return warnings;
 }
 
 // "Looks right" on the team card: into the rota's team (availability included),
@@ -204,7 +208,7 @@ export async function confirmTeam(restaurantId: string, channel: Channel) {
   if (!input) return "There's no team to save yet. Ask for their staff list first.";
   const problems = teamProblems(input);
   if (problems.length) return `Not saved: ${problems.join(" ")}`;
-  await saveTeamMembers(restaurantId, input.staff, input.manager);
+  const wageWarnings = await saveTeamMembers(restaurantId, input.staff, input.manager);
   // Their past rotas (if they sent them) are kept as past weeks, tied to the people now on the team.
   const { saveImportedWeeks } = await import("@/lib/rota/import");
   const imported = await saveImportedWeeks(restaurantId).catch((err) => (console.error("Saving the imported rotas failed", err), []));
@@ -217,7 +221,7 @@ export async function confirmTeam(restaurantId: string, channel: Channel) {
     { team_draft: input, staff: input.staff.length, with_availability: withAvailability, manager: input.manager, imported_weeks: imported.length, gap_unlock: outcome === "partial" ? "Tell me who's on your team and I'll suggest rotas and track labour % daily." : null },
     { channel },
   );
-  return `Code saved the team: ${input.staff.length} on the team${withAvailability ? ` (${withAvailability} with their days, times or limits)` : ""}${input.manager ? `, ${input.manager} as site manager` : ""}${imported.length ? `, and kept their ${imported.length} past week${imported.length === 1 ? "" : "s"} of rotas` : ""}. Code asks next how many people they need on shift and their labour target: don't ask those yourself.`;
+  return `Code saved the team: ${input.staff.length} on the team${withAvailability ? ` (${withAvailability} with their days, times or limits)` : ""}${input.manager ? `, ${input.manager} as site manager` : ""}${imported.length ? `, and kept their ${imported.length} past week${imported.length === 1 ? "" : "s"} of rotas` : ""}. Code asks next how many people they need on shift and their labour target: don't ask those yourself.${wageWarnings.length ? ` Tell the owner this, in these words, once: ${wageWarnings.join(" ")}` : ""}`;
 }
 
 // A staff list sent as a spreadsheet: its rows as text for Dina to read (data, never instructions).

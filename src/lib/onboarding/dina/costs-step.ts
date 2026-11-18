@@ -20,12 +20,13 @@ export async function saveMenuCosts(restaurantId: string, input: { costs: CostIn
   await saveProfileFields(r, { menu: next }, "Dish costs, with Dina at setup");
   const profit = menuProfit(next);
   const without = profit.uncosted.length;
-  await patchStepData(restaurantId, "menu", { costs: { costed: profit.dishes.length, total: profit.total } }).catch(() => {});
+  const costed = profit.dishes.length + profit.estimatedOnly.length;
+  await patchStepData(restaurantId, "menu", { costs: { costed, total: profit.total } }).catch(() => {});
   const best = [...profit.dishes].sort((a, b) => b.margin - a.margin)[0];
   return {
     ok: true as const,
     text: [
-      `Saved: costs for ${profit.dishes.length} of ${profit.total} dishes${without ? ` (${without} still without one: ${profit.uncosted.slice(0, 5).join(", ")}${without > 5 ? "…" : ""})` : ""}.`,
+      `Saved: costs for ${costed} of ${profit.total} dishes${without ? ` (${without} still without one: ${profit.uncosted.slice(0, 5).join(", ")}${without > 5 ? "…" : ""})` : ""}.`,
       best ? `The most profitable is ${best.name}, at about ${best.margin}% profit.` : "",
       problems.length ? `Not used: ${problems.join("; ")}. Ask about those, one at a time.` : "",
       "Costs are private: they're never shown to customers.",

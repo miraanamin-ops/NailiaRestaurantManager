@@ -190,7 +190,9 @@ below).
   short form in your colours, tick a box to hear from you, and confirm their email.
 - After confirming they get a welcome email with your **sign-up reward**. At the till they
   tap **Redeem now**: the screen turns green with a live clock for 10 minutes, then shows
-  "Already used". You get a message in the app when a reward is used.
+  "Already used". You get a message in the app when a reward is used. It's one welcome
+  reward per person: a phone that has used one at your restaurant can't use a second
+  one there by signing up with another email address.
 - **Get your QR codes**: send **QR** in Chat for your sign-up link and printable QR
   pack (four table cards, a counter sign and an A4/A5 poster in your colours). On the web:
   **Customers**, then **Print QR table cards**.
@@ -368,6 +370,9 @@ profit. Send whatever you have; the more detail, the better:
   "Sara is a server who can also do the bar", "Mo can open and lock up", "Sara's going up
   to 13 quid", "Bilal's left") or use the **Team** page (**More**, then **Team and rota**; **Team** in the side menu on a computer). **TEAM**
   lists everyone.
+- **Pay and the minimum wage**: if you save an hourly rate below the minimum wage for
+  staff aged 21 and over, we save it as you said and show a warning with the lower rates
+  for younger staff and apprentices. We never block it: you know your team.
 - **Roles**: manager (or supervisor), head chef, chef (cook, sous chef, grill, tandoor),
   kitchen porter (KP, dishwasher), server (waiter or waitress), host, bar (or barista),
   runner, counter (takeaway counter, till, phones) and driver (your own drivers, not
@@ -392,7 +397,10 @@ profit. Send whatever you have; the more detail, the better:
   setup; the rota learns from the ones it makes with you instead.
 - **Rota**: every Thursday at 10am we suggest next week's rota from your opening hours,
   the forecast and your rules, with labour cost against forecast sales and warnings (over
-  48 hours, too little rest). **ROTA** shows it now. Change it in plain words ("Ali can't
+  48 hours, too little rest). The 48-hour limit is an average over 17 weeks, so once you
+  have a few weeks of approved rotas the warning uses the average and notes a single long
+  week without raising the alarm. Breaks aren't added to shifts: you manage them on the
+  day. Not yet possible: rules for staff under 18 (we don't store ages). **ROTA** shows it now. Change it in plain words ("Ali can't
   do Friday", "swap Sara and Bilal on Sunday"). After Approve you get a rota page and a PDF
   to forward to staff (without pay or costs).
 - **Labour target**: **LABOUR TARGET 28%** sets it (or at setup, where we show what your
@@ -407,7 +415,11 @@ profit. Send whatever you have; the more detail, the better:
 - **Dish costs and profit**: add what each dish costs you (in setup, the menu costs
   spreadsheet from **SPREADSHEETS**, or settings). With costs and item sales we show profit
   per dish and group dishes into winners, crowd-pleasers, hidden gems and ones to rethink,
-  in your Monday report. No offer can leave a costed dish below your minimum profit.
+  in your Monday report. Dishes are compared with others in the same menu section (sides
+  with sides, mains with mains). If most of a section's costs are one rough share of the
+  price (like "30% for everything"), that section's groups wait until you add real costs,
+  because the profit would just follow the price. No offer can leave a costed dish below
+  your minimum profit.
 - **Ideas and advice**: ask "what are three ways to improve my margins?" or "how can we
   grow revenue next year?". You get ideas based on your own numbers, each with a next step
   we can do for you. We give information about your business, not financial, tax or legal

@@ -16,7 +16,7 @@ export const menuReportSection: ReportSectionDef = {
   order: 35,
   async build({ restaurant, period }) {
     const costed = menuProfit(restaurant.menu);
-    if (!costed.dishes.length) return null;
+    if (!costed.dishes.length && !costed.estimatedSections.length) return null;
     const since = ymd(new Date(period.end.getTime() - 56 * 86_400_000));
     const rows = (check(
       await getSupabase().from("sales_items").select("day, item, quantity").eq("restaurant_id", restaurant.id).gte("day", since).lt("day", ymd(period.end)).limit(20000),

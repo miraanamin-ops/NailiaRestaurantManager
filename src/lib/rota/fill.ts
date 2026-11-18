@@ -36,7 +36,15 @@ export type FillInput = {
   timeOff?: Record<string, string[]>; // staff id -> dates they're off (approved holiday, sickness)
   usual?: Record<string, Partial<Record<number, number>>>; // staff id -> weekday -> weeks they worked it lately
   shares?: ChannelShares; // each channel's share of orders (rules.channelShares); null = every role counts all orders
+  // Approved rotas in the 16 weeks before (review R3): how many weeks, and each person's
+  // hours across them, for the 48-hour limit, which the law averages over 17 weeks.
+  past?: { weeks: number; hours: Record<string, number> };
 };
+
+// The working time limit is an average over 17 weeks; with fewer than this many past
+// weeks the average says too little, so only the week itself is flagged.
+export const MIN_WEEKS_FOR_AVERAGE = 4;
+export const AVERAGE_WEEKS = 17;
 
 export type PlannedShift = { staffId: string | null; role: string; date: string; start: number; end: number };
 
@@ -56,7 +64,7 @@ export type DayPlan = {
 };
 
 export type RotaFlag = {
-  kind: "over_week" | "over_cap" | "short_rest" | "open_shift" | "outside_availability" | "wrong_role" | "no_rate" | "other_role" | "no_key_holder";
+  kind: "over_week" | "over_average" | "over_cap" | "short_rest" | "open_shift" | "outside_availability" | "wrong_role" | "no_rate" | "other_role" | "no_key_holder";
   text: string;
   staffId?: string;
   date?: string;
@@ -389,8 +397,17 @@ export function flagsFor(shifts: CostedShift[], input: FillInput): RotaFlag[] {
     const mine = shifts.filter((s) => s.staffId === p.id).sort((a, b) => (index.get(a.date) ?? 0) - (index.get(b.date) ?? 0) || a.start - b.start);
     if (!mine.length) continue;
     const hours = round1(mine.reduce((n, s) => n + s.hours, 0));
-    if (hours > settings.flag_week_hours) {
-      flags.push({ kind: "over_week", staffId: p.id, text: `${p.name}: ${hours} hours this week, over ${settings.flag_week_hours}` });
+    const past = input.past && input.past.weeks + 1 >= MIN_WEEKS_FOR_AVERAGE ? input.past : null;
+    const average = past ? round1(((past.hours[p.id] ?? 0) + hours) / (past.weeks + 1)) : null;
+    if (average !== null && average > settings.flag_week_hours) {
+      flags.push({
+        kind: "over_average",
+        staffId: p.id,
+        text: `${p.name}: averaging ${average} hours a week over the last ${past!.weeks + 1} weeks, over ${settings.flag_week_hours} (the legal limit, averaged over ${AVERAGE_WEEKS} weeks, unless they've signed an opt-out)`,
+      });
+    } else if (hours > settings.flag_week_hours) {
+      const fine = average !== null ? ` (their ${past!.weeks + 1}-week average is ${average}, under the limit)` : "";
+      flags.push({ kind: "over_week", staffId: p.id, text: `${p.name}: ${hours} hours this week, over ${settings.flag_week_hours}${fine}` });
     } else if (p.max_hours_week !== null && hours > p.max_hours_week) {
       flags.push({ kind: "over_cap", staffId: p.id, text: `${p.name}: ${hours} hours, more than their ${p.max_hours_week}-hour limit` });
     }

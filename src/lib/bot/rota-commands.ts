@@ -57,6 +57,6 @@ export async function staffCommand(turn: Turn, cmd: StaffCommand) {
     await removeStaff(r.id, who.id, { today, actor: "owner" });
     return turn.send(`👋 *${who.name}* is off the rota team from today. (Past rotas still show their shifts.)`);
   }
-  const { member, created } = await saveStaff(r.id, cmd.input, { today, source: "owner_message", actor: "owner" });
-  return turn.send(`${created ? "✅ Added to your rota team" : "✅ Updated"}:\n${memberLine(member)}\n\nThey'll be on the next rota I suggest. Text *TEAM* to see everyone.`);
+  const { member, created, wageWarning } = await saveStaff(r.id, cmd.input, { today, source: "owner_message", actor: "owner" });
+  return turn.send(`${created ? "✅ Added to your rota team" : "✅ Updated"}:\n${memberLine(member)}${wageWarning ? `\n\n${wageWarning}` : ""}\n\nThey'll be on the next rota I suggest. Text *TEAM* to see everyone.`);
 }

@@ -26,7 +26,7 @@ export async function saveCostsSheet(restaurant: Restaurant, table: Table | null
   const profit = menuProfit(next);
   const best = [...profit.dishes].sort((a, b) => b.margin - a.margin)[0];
   const lines = [
-    `✅ Saved costs for ${profit.dishes.length} of ${profit.total} dishes.`,
+    `✅ Saved costs for ${profit.dishes.length + profit.estimatedOnly.length} of ${profit.total} dishes.`,
     best ? `Your most profitable is ${best.name}, at about ${best.margin}% profit.` : "",
     [...read.problems, ...problems].length ? `Not used: ${[...read.problems, ...problems].join("; ")}.` : "",
     profit.uncosted.length ? `Still without a cost: ${profit.uncosted.slice(0, 5).join(", ")}${profit.uncosted.length > 5 ? "…" : ""}.` : "",
@@ -40,9 +40,9 @@ export async function saveTeamSheet(restaurantId: string, table: Table | null): 
   const read = readStaff(table);
   if (!read.staff.length) return { ok: false, message: `I couldn't use that sheet: ${read.problems.join("; ")}.` };
   const { saveTeamMembers } = await import("@/lib/onboarding/dina/ops-step");
-  await saveTeamMembers(restaurantId, read.staff, null);
+  const wageWarnings = await saveTeamMembers(restaurantId, read.staff, null);
   return {
     ok: true,
-    message: [`✅ Saved ${read.staff.length} ${read.staff.length === 1 ? "person" : "people"} to your team: ${read.staff.map((s) => s.name).join(", ")}.`, read.problems.length ? `Not saved: ${read.problems.join("; ")}.` : ""].filter(Boolean).join(" "),
+    message: [`✅ Saved ${read.staff.length} ${read.staff.length === 1 ? "person" : "people"} to your team: ${read.staff.map((s) => s.name).join(", ")}.`, read.problems.length ? `Not saved: ${read.problems.join("; ")}.` : "", ...wageWarnings].filter(Boolean).join(" "),
   };
 }

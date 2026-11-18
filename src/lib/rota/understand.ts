@@ -116,12 +116,12 @@ export async function handleTeamMessage(r: Restaurant, message: string, opts: { 
       const rate = a.hourly_rate_pounds !== null && a.hourly_rate_pounds > 0 && a.hourly_rate_pounds <= 200 ? Math.round(a.hourly_rate_pounds * 100) : null;
       const max = a.max_hours_week !== null && a.max_hours_week > 0 && a.max_hours_week <= 80 ? a.max_hours_week : null;
       const times = a.from && a.until && TIME.test(a.from) && (TIME.test(a.until) || a.until === "23:59") ? { starts: a.from, ends: a.until } : null;
-      const { member, created } = await saveStaff(
+      const { member, created, wageWarning } = await saveStaff(
         r.id,
         { name, roles: a.roles as Role[], ratePence: rate, maxHours: max, days: a.days.length ? [...new Set(a.days)].sort() : null, starts: times?.starts ?? null, ends: times?.ends ?? null, canOpenClose: a.can_open_close },
         { today, source: "owner_message", actor: "owner" },
       );
-      replies.push(`${created ? "✅ Added to your rota team" : "✅ Updated"}:\n${memberLine(member)}${created && rate === null ? `\n_No hourly rate yet, so their hours won't be costed. Tell me it any time (e.g. "${name} is on £12.50")._` : ""}`);
+      replies.push(`${created ? "✅ Added to your rota team" : "✅ Updated"}:\n${memberLine(member)}${created && rate === null ? `\n_No hourly rate yet, so their hours won't be costed. Tell me it any time (e.g. "${name} is on £12.50")._` : ""}${wageWarning ? `\n${wageWarning}` : ""}`);
       continue;
     }
     if (a.kind === "remove_person") {
