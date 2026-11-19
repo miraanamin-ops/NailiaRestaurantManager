@@ -1,0 +1,44 @@
+# A smoke test against the real dev database (dinerai-dev), never live: sign-up,
+# confirm, reward claimed once, rate limits and the AI spend check on the real
+# tables (security review T1). No Claude, email or Google, so it costs nothing.
+# Runs after every push to main and when started by hand
+# (GitHub > Actions > Dev database smoke test > Run workflow).
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   DEV_SUPABASE_URL         the dev project's URL (https://nfphswknczyovnmnxjfa.supabase.co)
+#   DEV_SUPABASE_SECRET_KEY  the dev project's secret key
+# Without them it's skipped with a warning.
+name: Dev database smoke test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-dev
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Smoke test on the dev database
+        env:
+          SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.DEV_SUPABASE_SECRET_KEY }}
+          EMAIL_REDIRECT: "true"
+          TEST_TOOLS: "true"
+          GOOGLE_MODE: dummy
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::warning::No DEV_SUPABASE_URL / DEV_SUPABASE_SECRET_KEY secrets, so the dev database smoke test was skipped."
+            exit 0
+          fi
+          node node_modules/vitest/vitest.mjs run --config vitest.e2e.config.mts tests/e2e/smoke-dev.e2e.ts

@@ -60,16 +60,17 @@ const ownerMessage: JobHandler = {
       await handleStaffMessage({ restaurantId, staffNumber: p.owner, sandbox: p.sandbox, body: p.body, media: media[0] ?? null });
       return { handled: "staff" };
     }
-    // A restaurant setting up with Dina gets Dina; one on the older setup gets that.
+    // A restaurant setting up gets Dina. One still on the older (retired) setup is
+    // moved into Dina's chapters first (lib/onboarding/retire-old.ts).
     const { dinaSetupInProgress, handleDinaWhatsApp } = await import("@/lib/onboarding/dina/whatsapp-turn");
+    const { onboardingInProgress } = await import("@/lib/onboarding/whatsapp-flow");
+    if ((await onboardingInProgress(restaurantId)) && !(await dinaSetupInProgress(restaurantId))) {
+      const { moveOldSetupToDina } = await import("@/lib/onboarding/retire-old");
+      await moveOldSetupToDina(restaurantId);
+    }
     if (await dinaSetupInProgress(restaurantId)) {
       await handleDinaWhatsApp({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, buttonPayload: p.buttonPayload, listId: p.listId, media, messageSid: p.messageSid });
       return { handled: "dina" };
-    }
-    const { handleOnboardingMessage, onboardingInProgress } = await import("@/lib/onboarding/whatsapp-flow");
-    if (await onboardingInProgress(restaurantId)) {
-      await handleOnboardingMessage({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, media });
-      return { handled: "onboarding" };
     }
     const { handleMessage } = await import("@/lib/bot");
     await handleMessage({ restaurantId, owner: p.owner, sandbox: p.sandbox, body: p.body, buttonPayload: p.buttonPayload, media: media[0] ?? null });

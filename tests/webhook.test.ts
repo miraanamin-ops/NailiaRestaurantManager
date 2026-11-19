@@ -12,7 +12,9 @@ const OWNER = "whatsapp:+447700900123";
 const handleMessage = vi.fn(async () => {});
 const linkFromWhatsApp = vi.fn(async () => {});
 const handleOnboardingMessage = vi.fn(async () => {});
+const handleDinaWhatsApp = vi.fn(async () => {});
 let settingUp = false;
+let movedToDina = false;
 // The job queue: what the webhook queued, and whether queuing works.
 let queued: { type: string; restaurantId: string | null; key: string; priority?: number; concurrencyKey?: string | null; payload?: Record<string, unknown> }[] = [];
 let queueBroken = false;
@@ -29,7 +31,9 @@ beforeEach(() => {
   handleMessage.mockClear();
   linkFromWhatsApp.mockClear();
   handleOnboardingMessage.mockClear();
+  handleDinaWhatsApp.mockClear();
   settingUp = false;
+  movedToDina = false;
   queued = [];
   queueBroken = false;
   kicks = 0;
@@ -56,6 +60,9 @@ beforeEach(() => {
   vi.doMock("@/lib/supabase", () => ({ getSupabase: () => db.client }));
   vi.doMock("@/lib/bot", () => ({ handleMessage }));
   vi.doMock("@/lib/onboarding/whatsapp-flow", () => ({ linkFromWhatsApp, handleOnboardingMessage, onboardingInProgress: async () => settingUp }));
+  // The older setup is retired: an unfinished one is moved into Dina's chapters.
+  vi.doMock("@/lib/onboarding/retire-old", () => ({ moveOldSetupToDina: async () => ((movedToDina = settingUp), movedToDina) }));
+  vi.doMock("@/lib/onboarding/dina/whatsapp-turn", async (orig) => ({ ...(await orig<object>()), dinaSetupInProgress: async () => movedToDina, handleDinaWhatsApp }));
   vi.doMock("next/server", async (orig) => ({ ...(await orig<object>()), after: fakeAfter }));
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
@@ -63,6 +70,8 @@ afterEach(() => {
   vi.doUnmock("@/lib/supabase");
   vi.doUnmock("@/lib/bot");
   vi.doUnmock("@/lib/onboarding/whatsapp-flow");
+  vi.doUnmock("@/lib/onboarding/retire-old");
+  vi.doUnmock("@/lib/onboarding/dina/whatsapp-turn");
   vi.doUnmock("next/server");
   vi.doUnmock("@/lib/queue/store");
   vi.doUnmock("@/lib/queue/kick");
@@ -175,12 +184,13 @@ describe("the WhatsApp webhook", () => {
     expect(sentToOwner).toEqual([SORRY]);
     expect(alerts[0]).toMatch(/couldn't be answered: Supabase down/);
   });
-  test("an owner whose restaurant is still being set up gets onboarding, with every photo", async () => {
+  test("an owner still on the older (retired) setup is moved to Dina, with every photo", async () => {
     settingUp = true;
     const m = { ...message(), Body: "", NumMedia: "2", MediaUrl0: "https://x/0", MediaContentType0: "image/jpeg", MediaUrl1: "https://x/1", MediaContentType1: "image/png" };
     await post(m, sign(m));
     expect(handleMessage).not.toHaveBeenCalled();
-    const call = (handleOnboardingMessage.mock.calls[0] as unknown as [{ restaurantId: string; media: { url: string }[] }])[0];
+    expect(handleOnboardingMessage).not.toHaveBeenCalled();
+    const call = (handleDinaWhatsApp.mock.calls[0] as unknown as [{ restaurantId: string; media: { url: string }[] }])[0];
     expect(call.restaurantId).toBe("r1");
     expect(call.media.map((x) => x.url)).toEqual(["https://x/0", "https://x/1"]);
   });

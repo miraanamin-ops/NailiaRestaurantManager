@@ -2,7 +2,8 @@ import { after, type NextRequest } from "next/server";
 import twilio from "twilio";
 import { handleMessage } from "@/lib/bot";
 import { findLinkCode } from "@/lib/onboarding/steps";
-import { handleOnboardingMessage, linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
+import { linkFromWhatsApp, onboardingInProgress } from "@/lib/onboarding/whatsapp-flow";
+import { moveOldSetupToDina } from "@/lib/onboarding/retire-old";
 import { dinaSetupInProgress, handleDinaWhatsApp } from "@/lib/onboarding/dina/whatsapp-turn";
 import { findStaff } from "@/lib/sales/staff";
 import { handleStaffMessage } from "@/lib/sales/whatsapp";
@@ -176,11 +177,10 @@ export async function POST(req: NextRequest) {
   // gets the onboarding conversation instead (decided by the worker).
   const payload: OwnerMessagePayload = { kind: "owner", owner, sandbox, body, buttonPayload: params.ButtonPayload, listId: params.ListId, messageSid: params.MessageSid, media: allMedia };
   await queueMessage(payload, restaurant.id, params.MessageSid, async () => {
+    // The older setup is retired: someone part-way through it is moved into Dina's chapters (retire-old.ts).
+    if ((await onboardingInProgress(restaurant.id)) && !(await dinaSetupInProgress(restaurant.id))) await moveOldSetupToDina(restaurant.id);
     if (await dinaSetupInProgress(restaurant.id)) {
       return handleDinaWhatsApp({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, listId: params.ListId, media: allMedia, messageSid: params.MessageSid });
-    }
-    if (await onboardingInProgress(restaurant.id)) {
-      return handleOnboardingMessage({ restaurantId: restaurant.id, owner, sandbox, body, media: allMedia });
     }
     await handleMessage({ restaurantId: restaurant.id, owner, sandbox, body, buttonPayload: params.ButtonPayload, media });
   });

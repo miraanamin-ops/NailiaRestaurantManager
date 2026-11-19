@@ -198,7 +198,7 @@ describe("the spreadsheets sent back (5 Nov)", () => {
     expect(await saveCostsSheet(r() as never, null)).toMatchObject({ ok: false, message: "I couldn't use that sheet: nothing was filled in yet." });
 
     const saved: unknown[] = [];
-    vi.doMock("@/lib/onboarding/dina/ops-step", () => ({ saveTeamMembers: async (_id: string, staff: unknown[]) => void saved.push(...staff) }));
+    vi.doMock("@/lib/onboarding/dina/ops-step", () => ({ saveTeamMembers: async (_id: string, staff: unknown[]) => (saved.push(...staff), [] as string[]) }));
     const { saveTeamSheet: fresh } = await import("@/lib/templates/import");
     const team = { headers: ["Name", "Role", "Hourly rate (£)"], rows: [["Aisha (example)", "Kitchen", 12.5], ["Bilal", "chef", 13], ["Omar", "boss", 15]] };
     expect(await fresh(R, team)).toEqual({ ok: true, message: '✅ Saved 1 person to your team: Bilal. Not saved: Omar\'s role ("boss") isn\'t one I know: pick from the list (Manager, Head chef, Chef, Kitchen porter, Server, Host, Bar, Runner, Counter or Driver).' });
