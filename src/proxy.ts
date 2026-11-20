@@ -57,4 +57,4 @@ export async function proxy(req: NextRequest) {
 }
 
 // Every page, but not Next.js's own files or images.
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|_vercel|favicon.ico).*)"] };

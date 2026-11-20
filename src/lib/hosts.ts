@@ -22,7 +22,7 @@ export type HostRoute =
 
 // Files every host serves as they are (the site's share picture included).
 const isAsset = (path: string) =>
-  path.startsWith("/_next/") || path.startsWith("/site/opengraph-image") || /\.(ico|png|jpg|jpeg|svg|webp|txt|xml|webmanifest)$/.test(path);
+  path.startsWith("/_next/") || path.startsWith("/_vercel/") || path.startsWith("/site/opengraph-image") || /\.(ico|png|jpg|jpeg|svg|webp|txt|xml|webmanifest)$/.test(path);
 
 export function hostRoute(input: { host: string | null; path: string; search: string; method: string; appUrl: string }): HostRoute {
   const host = (input.host ?? "").toLowerCase().replace(/:\d+$/, "");

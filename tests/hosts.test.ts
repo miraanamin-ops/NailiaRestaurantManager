@@ -50,6 +50,7 @@ describe("the app", () => {
   });
   test("the site's share picture, robots.txt and sitemap load on the main domain", () => {
     expect(route("dinerai.co.uk", "/site/opengraph-image")).toEqual({ kind: "app" });
+    expect(route("www.dinerai.co.uk", "/_vercel/insights/script.js")).toEqual({ kind: "app" });
     expect(route("dinerai.co.uk", "/robots.txt")).toEqual({ kind: "app" });
     expect(route("dinerai.co.uk", "/sitemap.xml")).toEqual({ kind: "app" });
   });
